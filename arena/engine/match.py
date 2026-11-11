@@ -1,8 +1,9 @@
 """Runs one match: asks agents, validates their actions and records every event."""
 
 import asyncio
+import json
 import random
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
 import jsonschema
@@ -24,13 +25,20 @@ from arena.engine.types import (
 
 MAX_CORRECTIONS = 2  # retries after a rejected action, before the random fallback plays
 
+# Receives new events with the log position of the first one. Called once per turn.
+EventSink = Callable[[int, Sequence[Event]], Awaitable[None]]
+
 
 class PluginError(Exception):
     """A game plugin broke the engine contract."""
 
 
 class Match[StateT: BaseModel]:
-    """One match of one game. Create it, `await run()` once, then read `events` and `state`."""
+    """One match of one game. Create it, `await run()` once, then read `events` and `state`.
+
+    With a `sink`, the events of each turn are handed over together when the
+    turn is complete, so a stored log never ends in the middle of a turn.
+    """
 
     def __init__(
         self,
@@ -39,6 +47,7 @@ class Match[StateT: BaseModel]:
         *,
         seed: int,
         settings: Mapping[str, Any] | None = None,
+        sink: EventSink | None = None,
     ):
         players = list(agents)
         if not plugin.min_players <= len(players) <= plugin.max_players:
@@ -52,6 +61,8 @@ class Match[StateT: BaseModel]:
         self.state = plugin.initial_state(players, self.settings)
         self.events: list[Event] = []
         self._agents = dict(agents)
+        self._sink = sink
+        self._flushed = 0
         self._game_events = 0
         self._used_streams: set[tuple[str | int, ...]] = set()
         self._ctx = TurnContext(self._stream, self._record_game_event)
@@ -71,13 +82,21 @@ class Match[StateT: BaseModel]:
             visible_to=(),
         )
         plugin.setup(self.state, self._ctx)
+        await self._flush()
         while not plugin.is_over(self.state):
             await self._advance()
+            await self._flush()
         placements = plugin.results(self.state)
         self._record_engine_event(
             "match_finished", {"placements": [p.model_dump() for p in placements]}
         )
+        await self._flush()
         return placements
+
+    async def _flush(self) -> None:
+        if self._sink is not None:
+            await self._sink(self._flushed, self.events[self._flushed :])
+        self._flushed = len(self.events)
 
     async def _advance(self) -> None:
         plugin = self.plugin
@@ -151,6 +170,12 @@ class Match[StateT: BaseModel]:
         return derive_rng(self.seed, "game", *key)
 
     def _record_game_event(self, event: Event) -> None:
+        # A stored event must come back exactly as it was applied here.
+        if json.loads(json.dumps(event.data)) != event.data:
+            raise PluginError(
+                f"{self.plugin.id} event {event.type!r} has data that JSON would change "
+                "(use lists, not tuples, and string keys)"
+            )
         self.plugin.apply_event(self.state, event)
         self.events.append(event)
         self._game_events += 1

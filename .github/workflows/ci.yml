@@ -17,6 +17,22 @@ jobs:
   test:
     name: Lint and tests
     runs-on: ubuntu-latest
+    services:
+      # Same address and throwaway password as the Compose default, so the
+      # database tests run unchanged. With CI set they fail instead of skipping.
+      db:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: arena
+          POSTGRES_DB: arena
+          POSTGRES_PASSWORD: arena_dev
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready --username=arena --dbname=arena"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3

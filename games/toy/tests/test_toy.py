@@ -4,6 +4,7 @@ import pytest
 
 from arena.agents.random_bot import random_bots
 from arena.engine.match import Match
+from arena.engine.replay import replay
 from arena.engine.types import Action, Event, EventSource
 from games.toy.plugin import ToyGame
 
@@ -88,6 +89,22 @@ def test_same_seed_gives_the_same_match():
     assert first.events == second.events
     assert first.state == second.state
     assert first_placements == second_placements
+
+
+def test_replaying_the_log_rebuilds_the_exact_end_state():
+    match, _ = bot_match(SEATS, seed=11)
+
+    assert replay(ToyGame(), match.events) == match.state
+
+
+def test_replaying_up_to_the_deal_gives_the_dealt_hands():
+    match, _ = bot_match(SEATS[:3], seed=11)
+    deal_end = 1 + len(SEATS[:3])
+
+    state = replay(ToyGame(), match.events[:deal_end])
+
+    assert state.hands == dealt_hands(match)
+    assert state.tricks_played == 0
 
 
 def test_another_seed_deals_other_hands():

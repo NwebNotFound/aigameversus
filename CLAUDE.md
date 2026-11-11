@@ -11,10 +11,11 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.2. The engine runs complete matches of
-any plugin with random bots, in memory. There is one reference game, High Card
-(`games/toy`). The arena API still exposes only `GET /health`, the worker is a
-heartbeat placeholder, the web UI is a static page. Sections below marked *not
+**State of the build:** roadmap step 1.3. The engine runs complete matches of
+any plugin with random bots, stores their event logs in Postgres and rebuilds
+the state from a log. There is one reference game, High Card (`games/toy`). The
+arena API still exposes only `GET /health` (it migrates the database at
+startup), the worker is a heartbeat placeholder, the web UI is a static page. Sections below marked *not
 built yet* describe the target from the spec and get filled in as their phase
 lands.
 
@@ -45,8 +46,7 @@ lands.
 3. `apply_actions`, then `step`, let the plugin emit game events.
 4. A turn without a game event is a plugin bug and stops the match.
 
-*Not built yet:* prompts and model calls (step 1.4), persistence and replay
-(1.3), streaming to the UI (1.6).
+*Not built yet:* prompts and model calls (step 1.4), streaming to the UI (1.6).
 
 ### Events and state
 
@@ -60,6 +60,24 @@ to the plugin's `apply_event` at once. Replaying the game events over
 Every event says who may see it: `visible_to=None` is public, a list of
 players is private to them, an empty list is spectators only. The seed is
 spectators only.
+
+Event data must be plain JSON (lists, not tuples; string keys), because a
+stored event has to come back exactly as it was applied. The engine stops a
+match that emits anything else.
+
+### Storage and replay
+
+- `replay(plugin, events)` in `arena/engine/replay.py` returns the state after
+  a log, or after any prefix of it. It needs no seed and runs no rules. It
+  refuses a log recorded by another game or another plugin `version`.
+- `Match(..., sink=...)` hands over the new events once per completed turn, so
+  a stored log never ends in the middle of a turn.
+- `EventStore` in `arena/db/event_store.py` keeps logs in the `match_events`
+  table: `sink=partial(store.append, match_id)` to write, `store.load(match_id)`
+  to read.
+- Schema changes are numbered SQL files in `arena/db/migrations/`. The arena
+  applies new ones at startup. Add a new file; never edit one that has been
+  merged.
 
 ### Randomness
 
@@ -103,6 +121,7 @@ arena/
   agents/       agent runner, prompts, model calls, mock LLM
   memory/       profiles and the three memory layers
   gamemaster/   match setup, scheduling, narrator
+  db/           connection pool, SQL migrations, event store
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
@@ -117,6 +136,7 @@ tests/          tests for the arena core
 
 ```bash
 uv sync                       # install into .venv from uv.lock
+docker compose up -d db       # Postgres for the database tests (skipped without it)
 uv run pytest                 # all tests
 uv run ruff check .           # lint
 uv run ruff format .          # format

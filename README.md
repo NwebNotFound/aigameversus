@@ -9,9 +9,10 @@ The first build targets four games: a bluffing card game with a revolver,
 No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens*, a Civ-like strategy
 game.
 
-> **Status: early.** The engine core runs complete matches with random bots
-> (roadmap step 1.2), so far only of a small reference game. None of the four
-> games exists yet.
+> **Status: early.** The engine core runs complete matches with random bots,
+> stores every match as an event log and rebuilds any moment of it from that
+> log (roadmap step 1.3), so far only for a small reference game. None of the
+> four games exists yet.
 
 <!-- Screenshot placeholder: live match view and match GIFs arrive with the spectator UI (phase 5). -->
 *Screenshots and match GIFs will appear here once the spectator UI exists.*
@@ -30,7 +31,7 @@ That builds and starts five services, each with a healthcheck:
 | --- | --- | --- |
 | Web UI | <http://localhost:3100> | placeholder page until phase 5 |
 | Arena API | <http://localhost:8100> | `GET /health`, interactive docs at `/docs` |
-| PostgreSQL | `localhost:5433` | user and database `arena`; nothing is stored yet |
+| PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs |
 | Redis | `localhost:6380` | match queue; today only the worker pings it |
 
 All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
@@ -60,6 +61,7 @@ requirements besides Docker.
 
 ```bash
 uv sync                      # create .venv from the lockfile
+docker compose up -d db      # Postgres for the database tests (skipped without it)
 uv run pytest                # tests
 uv run ruff check .          # lint
 uv run ruff format --check . # formatting

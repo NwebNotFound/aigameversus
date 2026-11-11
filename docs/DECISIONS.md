@@ -162,3 +162,54 @@ Each entry: date, decision, why, alternatives considered.
 - **Why:** It is the game the CLI runs before a real game exists, and the
   template `CLAUDE.md` points to for adding a game.
 - **Alternatives:** A fixture under `tests/` only.
+
+## D-014 · asyncpg and SQL migration files, no ORM
+
+- **Date:** 2026-11-11
+- **Decision:** Postgres access uses asyncpg with plain SQL. Schema changes are
+  numbered `.sql` files in `arena/db/migrations/`, applied in order inside one
+  transaction and recorded in `schema_migrations`; an advisory lock keeps two
+  processes from migrating at once. The arena applies them at startup.
+- **Why:** The data model is an append-only event table plus a few lookup
+  tables later; SQL says that more directly than an ORM mapping. The engine is
+  async, so the driver is too. A migration runner of thirty lines is easier to
+  read than an Alembic setup for forward-only migrations.
+- **Alternatives:** SQLAlchemy with Alembic; psycopg 3 (its async mode needs a
+  different event loop on Windows).
+
+## D-015 · The log is stored once per turn, and replay is strict about versions
+
+- **Date:** 2026-11-11
+- **Decision:** A match hands its new events to the store after setup, after
+  every completed turn and at the end, each batch in one transaction with
+  explicit positions (`match_id`, `seq` is the primary key). `replay` refuses a
+  log whose game id or plugin version differs from the plugin it is given.
+- **Why:** A stored log then always ends at a turn boundary, so a crashed match
+  can be replayed to a state the game really had, and a second writer for the
+  same match fails instead of interleaving. A plugin of another version may
+  apply old events differently; failing loudly beats a silently wrong state.
+  The stored events themselves stay readable for any version.
+- **Alternatives:** One write per event (a crash could cut a turn in half);
+  replaying across versions and hoping.
+
+## D-016 · Event data is plain JSON, enforced at emit
+
+- **Date:** 2026-11-11
+- **Decision:** The engine rejects a game event whose data would change in a
+  JSON round trip (tuples, non-string keys) and stops the match with a plugin
+  error.
+- **Why:** The live state is built from the same events that are stored. If
+  storage changed an event, a replay would differ from the match. Checking at
+  emit finds this in every bot match, without a database.
+- **Alternatives:** Normalising silently; finding it only in database tests.
+
+## D-017 · Database tests use a real Postgres, one schema per test
+
+- **Date:** 2026-11-11
+- **Decision:** Tests under `tests/db/` connect to the Compose database on
+  `127.0.0.1:5433` (or `ARENA_TEST_DATABASE_URL`), each in a fresh schema that
+  is dropped afterwards. Without a reachable server they are skipped locally;
+  with `CI` set they fail. CI starts Postgres as a service container.
+- **Why:** The store is SQL, so only the real database proves it. Schemas keep
+  tests independent of each other and of development data.
+- **Alternatives:** Mocking the driver; an in-memory fake store; testcontainers.

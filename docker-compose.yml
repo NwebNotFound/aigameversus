@@ -18,6 +18,8 @@ services:
     <<: *arena-image
     ports:
       - "127.0.0.1:8100:8000"
+    environment:
+      DATABASE_URL: postgresql://arena:${POSTGRES_PASSWORD:-arena_dev}@db:5432/arena
     depends_on:
       db:
         condition: service_healthy
