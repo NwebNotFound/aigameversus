@@ -446,3 +446,15 @@ describe('werewolf setup', () => {
 		});
 	});
 });
+
+describe('relations', () => {
+	it('asks for what a profile thinks of the others', async () => {
+		const body = { profile_id: 'a1', relations: [] };
+		const { calls, fetchFn } = fakeFetch(() => Response.json(body));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).relations('a1');
+
+		expect(result).toEqual({ state: 'ok', data: body });
+		expect(calls).toEqual(['http://arena:8000/profiles/a1/relations']);
+	});
+});
