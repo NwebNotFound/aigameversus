@@ -154,6 +154,23 @@ def test_the_seed_is_nowhere_in_a_transcript_without_spoilers_not_even_in_raw(ga
     assert '"seed"' in full
 
 
+def started(settings: dict, spoilers: bool) -> dict:
+    event = Event(
+        source=EventSource.ENGINE,
+        type="match_started",
+        data={"game": "werewolf", "players": ["p1", "p2"], "seed": 7, "settings": settings},
+    )
+    return render_match([event], spoilers=spoilers)[0].raw["data"]["settings"]
+
+
+def test_the_role_mix_is_not_in_raw_without_spoilers_unless_roles_are_public():
+    mix = {"template": "classic", "roles": {"seer": 1}, "language": "de", "captain": True}
+
+    assert started(mix, spoilers=False) == {"language": "de", "captain": True}
+    assert started({**mix, "roles_public": True}, spoilers=False) == {**mix, "roles_public": True}
+    assert started(mix, spoilers=True) == mix
+
+
 def test_german_and_english_differ_and_names_are_used():
     events = bot_events("liars_deck")
     names = labels({"p1": "glm", "p2": "gpt", "p3": "claude", "p4": "gemini"})
