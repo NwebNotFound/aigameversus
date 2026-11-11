@@ -22,7 +22,7 @@ starts a match with a real model yet: the `arena` command and `POST /matches`
 seat random bots only, and there is no API key before phase 2. Three games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
-matches, lists them and streams their events over WebSocket, next to
+matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard and the
 Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page and placeholders for the other pages.
@@ -85,8 +85,9 @@ Two ways, both with random bots in every seat for now:
   stores nothing. `arena games` lists the games.
 - `POST /matches` (`arena/api/matches.py`) starts a match as a task inside the
   API process (`arena/api/live.py`). Its record is a row in `matches`
-  (`running`, `finished`, `failed`, or `interrupted` when the server stopped
-  under it), its events go to the event store turn by turn.
+  (`running`, `finished`, `failed`, `aborted` by a spectator, or
+  `interrupted` when the server stopped under it), its events go to the event
+  store turn by turn.
   `WS /matches/{id}/events` sends the log from its first event, one JSON object
   per event with its position `seq`, waits for further turns while the match
   runs and closes when it stops; a finished match is sent in one go.
@@ -95,6 +96,12 @@ Two ways, both with random bots in every seat for now:
   The server plays at most 10 matches at a time (`MAX_RUNNING`) and answers
   429 to a start beyond that; a match that never ends stops at its turn limit
   and is marked `failed`.
+- A running match can be paused, resumed, sped up or slowed down and aborted:
+  `POST /matches/{id}/pause`, `/resume`, `/abort`, `PUT /matches/{id}/speed`,
+  state in `GET /matches/{id}/control`. A pause takes effect between turns,
+  so no agent is asked while a match is paused. `GET /matches/{id}/board`
+  returns the game's `render_spec` after the stored turns and
+  `GET /matches/{id}/cost` what its model calls cost per player.
 
 The API shows a match as a spectator sees it, thoughts and hidden cards
 included. It has no authentication and listens on localhost only.
