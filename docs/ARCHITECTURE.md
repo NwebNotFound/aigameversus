@@ -141,12 +141,13 @@ flowchart LR
 - `arena/ratings/`: multiplayer Elo (`elo.update_ratings`, `overall_rating`),
   count-based statistics (`stats`), and `RatingStore` on the `player_profiles`,
   `ratings` and `rated_matches` tables. `apply_match_result(match_id, game_id,
-  placements)` counts each match once and stores every player's rank and rating
-  change in `match_placements`. `GET /leaderboard?game=` and
-  `GET /profiles/{id}` (`arena/api/ratings.py`) read them, and
+  placements, seats)` counts each match once and stores every player's rank and
+  rating change in `match_placements`, and which seat of the log each profile
+  played in `match_seats`. `GET /leaderboard?game=`, `GET /profiles/{id}` and
+  `GET /profiles/{id}/stats?game=` (`arena/api/ratings.py`) read them; the stats
+  replay the logs of a profile's seats through `arena/stats` (`STATS`).
   `python -m arena.ratings.demo_seed` fills them with DEMO random-bot data.
-  Nothing rates real matches yet; match setup (1.6)
-  and profiles with memory (phase 6) will.
+  A finished API match rates its random bots (D-052).
 
 ## Matches over the API
 
