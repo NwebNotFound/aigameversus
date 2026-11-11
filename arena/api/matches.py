@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
-from arena.config import load_config, missing_keys
+from arena.config import load_config, load_keys
 from arena.db.match_store import MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
@@ -132,7 +132,7 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
             f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
             f"{', '.join(config.models)}",
         )
-    if missing := missing_keys(config, new.models):
+    if missing := load_keys(config, new.models):
         raise HTTPException(
             503,
             f"The server lacks {', '.join(missing)}, the provider's API key. Nothing was started.",
@@ -311,6 +311,8 @@ async def get_cost(match_id: UUID, live: Live) -> Cost:
 @router.get("/replays")
 async def list_replays(live: Live) -> list[Replay]:
     """The newest 100 finished matches, newest first, with winners and cost."""
+    records = await live.matches.finished()
+    costs = await live.ledger.costs([record.id for record in records])
     return [
         Replay(
             id=record.id,
@@ -319,10 +321,10 @@ async def list_replays(live: Live) -> list[Replay]:
             winners=[p.player for p in record.placements or [] if p.rank == 1],
             started_at=record.started_at,
             finished_at=record.finished_at,
-            cost_micro_eur=cost,
+            cost_micro_eur=costs[record.id],
             seats=record.seats,
             origin=record.origin,
             real=record.real,
         )
-        for record, cost in await live.matches.finished_with_cost()
+        for record in records
     ]

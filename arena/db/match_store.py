@@ -119,19 +119,21 @@ class MatchStore:
         profiles = await self.seat_profiles(match_id)
         return {seat: f"{name} ({model})" for seat, (name, model) in profiles.items()}
 
-    async def finished_with_cost(self, limit: int = 100) -> list[tuple[MatchRecord, int]]:
-        """The newest finished matches, newest first, each with its model cost in micro-euros."""
+    async def finished(self, limit: int = 100) -> list[MatchRecord]:
+        """The newest finished matches, newest first."""
         rows = await self._pool.fetch(
-            f"SELECT {_COLUMNS}, coalesce(c.cost, 0) AS cost FROM matches "
-            "LEFT JOIN (SELECT match_id, sum(cost_micro_eur) AS cost FROM model_calls "
-            "GROUP BY match_id) c ON c.match_id = matches.id "
-            "WHERE status = 'finished' ORDER BY finished_at DESC, id LIMIT $1",
+            f"SELECT {_COLUMNS} FROM matches WHERE status = 'finished' "
+            "ORDER BY finished_at DESC, id LIMIT $1",
             limit,
         )
-        return [
-            (MatchRecord(**{k: v for k, v in row.items() if k != "cost"}), int(row["cost"]))
-            for row in rows
-        ]
+        return [MatchRecord(**row) for row in rows]
+
+    async def model_matches(self) -> int:
+        """How many finished matches had a model in a seat."""
+        return await self._pool.fetchval(
+            "SELECT count(*) FROM matches WHERE status = 'finished' AND EXISTS "
+            "(SELECT 1 FROM jsonb_each(seats) seat WHERE seat.value->>'kind' = 'model')"
+        )
 
     async def recent(self, statuses: Sequence[Status] | None = None) -> list[MatchRecord]:
         """The newest 100 matches, newest first; only those in `statuses` if given."""

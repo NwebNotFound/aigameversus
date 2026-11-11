@@ -157,10 +157,11 @@ matches. Without Docker, `uv run arena run --game toy --bots` does the same as
 the first command. `arena games` lists what can be played: `toy` is High Card,
 the small reference game, `liars_deck` is Liar's Deck, `poker` is Poker and `werewolf` is Werewolf.
 
-Configuration is optional. To change the database password or add a
-model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
-and Compose passes the key on to the arena. Only matches with model seats
-use the key (see Cost safety).
+Configuration is optional. To change the database password, copy
+`.env.example` to `.env` and edit it; `.env` is gitignored. The stack above
+plays random bots only and holds no API key. Real models in the stack need
+`docker-compose.models.yml`, a key file and the spend ledger: see
+[docs/COSTS.md](docs/COSTS.md).
 
 ## Real models: first matches
 
@@ -193,7 +194,8 @@ platform, not an afterthought.
   [config/models.yaml](config/models.yaml) next to the models and their
   prices.
 - **Counted before it is spent:** every model call is written to a ledger in
-  Postgres before it is sent, at the most it can cost, and corrected when the
+  Postgres (its own database, `LEDGER_DATABASE_URL`, backed up daily; see
+  [docs/COSTS.md](docs/COSTS.md)) before it is sent, at the most it can cost, and corrected when the
   provider reports the real token counts. A call that fails or times out
   keeps its worst case. The ledger can therefore show more than the bill,
   never less, also after a crash or with several players calling at once.
@@ -207,11 +209,14 @@ platform, not an afterthought.
   `"models": [...]` and `"confirm_spend": true`. The API refuses model seats
   unless the server was started with `ARENA_ALLOW_MODEL_SEATS=1`, because it
   has no login: anything on this machine that reaches it could otherwise
-  spend. Both need the key in the environment and refuse to start without
-  it. Development, tests and CI use random bots and a mock LLM only, and CI
+  spend. Both need the key and refuse to start without it, and both refuse
+  model seats when the ledger cannot be read, or is empty while finished
+  model matches exist (a wrong or lost ledger would let the month cap be
+  passed). Development, tests and CI use random bots and a mock LLM only, and CI
   has no access to any API key.
-- **Keys stay in `.env`:** never in code, config files, logs, the event log or
-  the database. Provider error texts are dropped, because they can quote a
+- **Keys stay out of the repository:** in the stack the key is a file mounted
+  read-only (`OPENROUTER_API_KEY_FILE`), for the command line it is in `.env`;
+  never in code, config files, logs, the event log or the database. Provider error texts are dropped, because they can quote a
   key.
 
 ## Development
@@ -244,7 +249,7 @@ games/      one package per game: toy, liars_deck, poker, werewolf, civ (data, m
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)
-scripts/    make_showcase.sh: records the README GIFs and screenshots
+scripts/    make_showcase.sh (README GIFs and screenshots), backup-ledger.sh (daily ledger dump)
 docs/       design spec, architecture, testing, decisions, credits
 tests/      tests for the arena core
 ```
@@ -253,6 +258,7 @@ tests/      tests for the arena core
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the building blocks and one turn, with diagrams.
 - [docs/TESTING.md](docs/TESTING.md): tests, lint, secret scan and the compose smoke test.
+- [docs/COSTS.md](docs/COSTS.md): real models in the stack: key file, spend ledger, backups.
 - [docs/DESIGN.md](docs/DESIGN.md): the full design spec (German).
 - [docs/DECISIONS.md](docs/DECISIONS.md): decisions taken where the spec is open or overridden.
 - [docs/CREDITS.md](docs/CREDITS.md): origin of every asset.
