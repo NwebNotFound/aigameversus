@@ -314,3 +314,34 @@ def test_model_profile_ids_follow_model_and_personality(database):
 
     assert plain == again
     assert len({plain, with_personality, other}) == 3
+
+
+def test_model_seats_get_the_prompt_version_of_the_settings(
+    database, answer_with, capsys, tmp_path
+):
+    sent = answer_with(
+        mock_response="Check.",
+        mock_tool_calls=[{**CALL, "function": {"name": "check", "arguments": "{}"}}],
+    )
+
+    code, _, complaints = arena(
+        capsys,
+        "run",
+        "--game",
+        "poker",
+        "--models",
+        "glm-flash,deepseek-flash",
+        "--setting",
+        "prompt_version=poker-p2",
+        "--setting",
+        "hand_limit=1",
+        "--save",
+        str(tmp_path / "match.json"),
+    )
+
+    assert (code, complaints) == (0, "")
+    (match,), events, _ = stored(database)
+    assert events[match.id][0].data["prompt_version"] == "poker-p2"
+    saved = json.loads((tmp_path / "match.json").read_text(encoding="utf-8"))
+    assert saved["prompt_version"] == "poker-p2"
+    assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")
