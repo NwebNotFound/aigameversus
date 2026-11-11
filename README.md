@@ -64,11 +64,13 @@ spoilers off, no role and no hole card is shown anywhere on the page.
   per game, in German and English, shared by the API, the `arena` command, the
   live view, replays and exports; with spoilers off it shows no hidden card or
   role.
-- **Prompt versions (game side only):** Poker and Werewolf have a second prompt
-  (`poker-p2`, `werewolf-p2`): crisper rules, a "how to play well" section and a
-  situation summary computed from what the player sees. The `prompt_version`
-  setting chooses it (default `-p1`, the prompt as before). The agent runner does
-  not pass the setting or show the summary yet, so no match uses `-p2` today.
+- **Prompt versions:** Poker and Werewolf have a second prompt (`poker-p2`,
+  `werewolf-p2`): crisper rules, a "how to play well" section and a situation
+  summary computed from what the player sees, shown in a `<summary>` block above
+  the game data. The `prompt_version` setting chooses it (default `-p1`, the
+  prompt as before; for models, `arena run ... --setting prompt_version=poker-p2`)
+  and is recorded in the match's `match_started` event and in `--save`. Liar's
+  Deck gets its second prompt in a pending change.
 - **Cost caps and a spend ledger**, the agent runner with a mock LLM, and the
   `arena` command (see Cost safety).
 
