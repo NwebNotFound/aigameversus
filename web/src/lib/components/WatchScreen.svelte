@@ -185,6 +185,10 @@
 		.stage.shake {
 			animation: none;
 		}
+
+		.cast li {
+			transition: none;
+		}
 	}
 
 	/* Square boards would grow past the screen; keep the stage and its controls in view. */
