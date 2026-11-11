@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from arena.api import (
     analytics,
+    batches,
     chronicle,
     matches,
     memory,
@@ -20,6 +21,7 @@ from arena.api import (
     werewolf,
 )
 from arena.api.live import LiveMatches
+from arena.api.matches import Estimates
 from arena.db.database import connect, ledger_url, migrate
 from arena.db.ledger import Ledger, LedgerUnavailable
 from arena.games import load_games
@@ -51,6 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 log.warning("%s Model seats are refused until it answers.", down)
         app.state.pool = pool
         app.state.live = live = LiveMatches(pool, load_games(), ledger)
+        app.state.estimates = Estimates()
         await live.matches.interrupt_running()
         try:
             yield
@@ -72,6 +75,7 @@ app.include_router(chronicle.router)
 app.include_router(models.router)
 app.include_router(transcript.router)
 app.include_router(analytics.router)
+app.include_router(batches.router)
 
 
 @app.exception_handler(LedgerUnavailable)

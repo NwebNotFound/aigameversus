@@ -3,12 +3,14 @@
 	import { goto, replaceState } from '$app/navigation';
 	import type { Board } from '#lib/api.js';
 	import ChroniclePanel from '#lib/components/ChroniclePanel.svelte';
+	import AnalyticsPanel from '#lib/components/analytics/AnalyticsPanel.svelte';
 	import Timeline from '#lib/components/Timeline.svelte';
 	import ViewSwitch from '#lib/components/ViewSwitch.svelte';
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { euros } from '#lib/live.js';
-	import { PLAY_SPEEDS, clampStep, shareLink, stepFromQuery } from '#lib/replay.js';
+	import { dwellMs, SPEEDS } from '#lib/pacing.js';
+	import { clampStep, shareLink, stepFromQuery } from '#lib/replay.js';
 	import {
 		linesUpTo,
 		marks,
@@ -16,7 +18,9 @@
 		previousStop,
 		stops,
 		mergeSeats,
-		namedLines
+		namedLines,
+		seatName,
+		colourKey
 	} from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
@@ -31,17 +35,24 @@
 			? mergeSeats(match.match.players, match.match.seats, transcript?.players, data.roster)
 			: undefined
 	);
-	const lines = $derived(namedLines(transcript?.lines ?? [], players));
+	const lines = $derived(
+		namedLines(
+			transcript?.lines ?? [],
+			players,
+			Object.values(transcript?.players ?? {}).some((p) => p.display)
+		)
+	);
 
 	// svelte-ignore state_referenced_locally
 	let step = $state(stepFromQuery(page.url.searchParams.get('step'), log.length));
 	let playing = $state(false);
-	let playMs = $state(PLAY_SPEEDS[1].ms);
+	let speed = $state(1);
 	let highlightsOnly = $state(false);
 	let copied = $state(false);
 	// svelte-ignore state_referenced_locally
-	let tab = $state<'replay' | 'chronicle'>(
-		page.url.searchParams.get('tab') === 'chronicle' ? 'chronicle' : 'replay'
+	let tab = $state<'replay' | 'analytics' | 'chronicle'>(
+		(['analytics', 'chronicle'] as const).find((t) => t === page.url.searchParams.get('tab')) ??
+			'replay'
 	);
 
 	/** Position in the full log after the shown events: what the arena's board needs. */
@@ -116,27 +127,41 @@
 		};
 	});
 
-	// Playback: from moment to moment (bookkeeping is skipped), or highlight to highlight.
+	// Playback: moment to moment (bookkeeping is skipped), or highlight to highlight. Each
+	// moment stays as long as the playout director says for what it shows (reading time for
+	// words, longer for highlights), not as long as the models took: replays run in
+	// normalised time.
 	$effect(() => {
 		if (!playing) return;
-		const timer = setInterval(
-			() => {
-				if (step >= log.length) playing = false;
-				else step = nextStop(highlightsOnly ? highlights : moments, step, log.length);
-			},
-			highlightsOnly ? playMs * 2 : playMs
-		);
-		return () => clearInterval(timer);
+		const at = step;
+		const from = at === 0 ? -1 : log[at - 1].seq;
+		const before = previousStop(highlightsOnly ? highlights : moments, at);
+		const since = before === 0 ? -1 : log[before - 1].seq;
+		const showing = lines.filter((l) => l.seq !== null && l.seq > since && l.seq <= from);
+		const hold = at === 0 ? 300 : dwellMs(showing, speed);
+		const timer = setTimeout(() => {
+			if (step >= log.length) playing = false;
+			else step = nextStop(highlightsOnly ? highlights : moments, step, log.length);
+		}, hold);
+		return () => clearTimeout(timer);
 	});
 
 	// The address follows the step, so reloading or copying it keeps the place.
 	$effect(() => {
 		const url = new URL(page.url.href);
 		url.searchParams.set('step', String(step));
-		if (tab === 'chronicle') url.searchParams.set('tab', 'chronicle');
-		else url.searchParams.delete('tab');
+		if (tab === 'replay') url.searchParams.delete('tab');
+		else url.searchParams.set('tab', tab);
 		if (url.href !== page.url.href) replaceState(url, {});
 	});
+
+	/** From a chart: show the replay at the event at `seq`, on the Watch tab. */
+	function jumpToSeq(seq: number) {
+		const at = log.findIndex((event) => event.seq === seq);
+		if (at < 0) return;
+		go(at + 1);
+		tab = 'replay';
+	}
 
 	function go(to: number) {
 		playing = false;
@@ -213,6 +238,15 @@
 				>
 				<button
 					role="tab"
+					aria-selected={tab === 'analytics'}
+					onclick={() => {
+						playing = false;
+						tab = 'analytics';
+					}}
+					data-testid="tab-analytics">Analytics</button
+				>
+				<button
+					role="tab"
 					aria-selected={tab === 'chronicle'}
 					onclick={() => {
 						playing = false;
@@ -286,9 +320,9 @@
 						<button onclick={() => go(log.length)} aria-label="To the end">⏭</button>
 						<label>
 							<span class="sr-only">Speed</span>
-							<select bind:value={playMs} aria-label="Speed">
-								{#each PLAY_SPEEDS as speed (speed.ms)}
-									<option value={speed.ms}>{speed.label}</option>
+							<select bind:value={speed} aria-label="Speed">
+								{#each SPEEDS as option (option.factor)}
+									<option value={option.factor}>{option.label}</option>
 								{/each}
 							</select>
 						</label>
@@ -304,6 +338,20 @@
 				</div>
 			{/snippet}
 		</WatchScreen>
+	{:else if tab === 'analytics'}
+		<div class="analytics-tab">
+			<p class="where" data-testid="analytics-step">
+				At step {step} of {log.length}{#if caption}: {caption.text}{/if}
+			</p>
+			<AnalyticsPanel
+				id={params.id}
+				{view}
+				lastSeq={step === 0 ? -1 : (log[step - 1]?.seq ?? null)}
+				names={Object.fromEntries(match.match.players.map((s) => [s, seatName(s, players)]))}
+				colours={Object.fromEntries(match.match.players.map((s) => [s, colourKey(s, players)]))}
+				onjump={jumpToSeq}
+			/>
+		</div>
 	{:else}
 		<ChroniclePanel id={params.id} spoilers={view === 'spectator'} onreveal={revealChronicle} />
 	{/if}
@@ -499,5 +547,16 @@
 	.problem {
 		margin: 0;
 		color: var(--danger);
+	}
+	.analytics-tab {
+		display: grid;
+		gap: 0.6rem;
+		padding-block: 0.75rem 2rem;
+	}
+
+	.where {
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--muted);
 	}
 </style>
