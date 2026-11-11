@@ -37,10 +37,20 @@ def report(
     rows, columns, moments, length = (
         build(log, spoilers, numbers, players, name) if build else ([], [], [], {})
     )
+    columns = [*columns, *ENGINE_COLUMNS]
+    for column in columns:
+        column["better"] = BETTER.get(column["key"])
+    ranking = []
     for row in rows:
-        row["rank"] = ranks.get(row["player"])
         row.update(engine["per_player"][row["player"]])
-    rows.sort(key=lambda row: (row["rank"] is None, row["rank"] or 0, players.index(row["player"])))
+        ranking.append(
+            {
+                "seat": row["player"],
+                "rank": ranks.get(row["player"]),
+                "values": [cell(column, row[column["key"]]) for column in columns],
+            }
+        )
+    ranking.sort(key=lambda r: (r["rank"] is None, r["rank"] or 0, players.index(r["seat"])))
     moments.sort(key=lambda m: m["seq"])
     turning = max(
         moments, key=lambda m: (m.get("turning", False), m["importance"], -m["seq"]), default=None
@@ -50,12 +60,19 @@ def report(
             "over": finished is not None,
             "winners": sorted((p for p, r in ranks.items() if r == 1), key=players.index),
             "players": len(players),
-            "length": length,
+            "length": {"unit": unit, "count": count}
+            if (unit := next(iter(length), None)) and (count := length[unit]) is not None
+            else None,
             **engine["totals"],
-            "turning_point": turning if turning and turning.get("turning") else None,
+            "tool_errors": engine["totals"]["refused"],
+            "turning_point": (
+                {k: turning[k] for k in ("seq", "kind", "players", "text")}
+                if turning and turning.get("turning")
+                else None
+            ),
         },
-        "columns": [*COMMON_COLUMNS, *columns, *ENGINE_COLUMNS],
-        "ranking": rows,
+        "columns": columns,
+        "ranking": ranking,
         "key_moments": moments,
     }
 
@@ -64,7 +81,36 @@ def _label(en: str, de: str) -> dict[str, str]:
     return {"en": en, "de": de}
 
 
-COMMON_COLUMNS = [{"key": "rank", "label": _label("Rank", "Platz"), "kind": "number"}]
+# Which way a value is better, for bars and sorting; None: neither (a style, not a score).
+BETTER = {
+    "call_accuracy": "higher",
+    "chips": "higher",
+    "pots_won": "higher",
+    "biggest_pot": "higher",
+    "out_in_hand": "higher",
+    "survived": "higher",
+    "vote_accuracy": "higher",
+    "refused": "lower",
+    "fallbacks": "lower",
+    "response_ms_mean": "lower",
+    "tokens": "lower",
+    "cost_micro_eur": "lower",
+}
+
+
+def cell(column: dict[str, Any], raw: Any) -> dict[str, Any]:
+    """One value of a ranking row with what a table needs to draw it: a rate keeps its n."""
+    out = {k: column[k] for k in ("key", "label", "kind", "better")}
+    for flag in ("spoilers", "heuristic"):
+        if column.get(flag):
+            out[flag] = True
+    if isinstance(raw, dict) and "value" in raw:
+        out.update(value=raw["value"], n=raw["n"], of=raw["of"])
+    else:
+        out["value"] = raw
+    return out
+
+
 ENGINE_COLUMNS = [
     {"key": "moves", "label": _label("Moves", "Züge"), "kind": "number", "spoilers": True},
     {
@@ -130,9 +176,21 @@ def _engine_counts(log: Log, players: list[str], spoilers: bool) -> dict[str, An
 
 
 def _moment(
-    seq: int, kind: str, importance: int, en: str, de: str, turning: bool = False
+    seq: int,
+    kind: str,
+    players: list[str],
+    importance: int,
+    en: str,
+    de: str,
+    turning: bool = False,
 ) -> dict[str, Any]:
-    out = {"seq": seq, "kind": kind, "importance": importance, "text": _label(en, de)}
+    out = {
+        "seq": seq,
+        "kind": kind,
+        "players": list(players),
+        "importance": importance,
+        "text": _label(en, de),
+    }
     if turning:
         out["turning"] = True
     return out
@@ -148,9 +206,9 @@ def _liars(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
             "player": p,
             "plays": totals[p]["plays"],
             "lies": totals[p]["lies"] if spoilers else None,
-            "lie_rate": (totals[p]["lie_rate"] or {}).get("value"),
+            "lie_rate": totals[p]["lie_rate"],  # a rate with its n; null without spoilers
             "calls": totals[p]["calls"],
-            "call_accuracy": totals[p]["call_accuracy"]["value"],
+            "call_accuracy": totals[p]["call_accuracy"],
             "pulls": totals[p]["pulls"],
             "max_risk": max(
                 (pull["risk"] for pull in numbers["pulls"] if pull["player"] == p), default=None
@@ -190,6 +248,7 @@ def _liars(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
                     _moment(
                         seq,
                         "wrong_call",
+                        [call["caller"], call["target"]],
                         2,
                         f"{caller} called {target} a liar, but {target} told the truth.",
                         f"{caller} nannte {target} einen Lügner, aber {target} sagte die Wahrheit.",
@@ -200,6 +259,7 @@ def _liars(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
                     _moment(
                         seq,
                         "caught",
+                        [call["caller"], call["target"]],
                         2,
                         f"{caller} caught {target} lying.",
                         f"{caller} erwischte {target} beim Lügen.",
@@ -214,6 +274,7 @@ def _liars(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
                     _moment(
                         seq,
                         "eliminated",
+                        [p],
                         3,
                         f"{name(p)} is out{' and the match is decided' if final else ''}.",
                         f"{name(p)} ist raus{' und die Partie entschieden' if final else ''}.",
@@ -225,6 +286,7 @@ def _liars(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
                 _moment(
                     seq,
                     "winner",
+                    [data["winner"]],
                     3,
                     f"{name(data['winner'])} wins.",
                     f"{name(data['winner'])} gewinnt.",
@@ -261,6 +323,7 @@ def _poker(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
                     _moment(
                         seq,
                         "eliminated",
+                        [p],
                         3,
                         f"{name(p)} is out in hand {hand}.",
                         f"{name(p)} scheidet in Hand {hand} aus.",
@@ -273,6 +336,7 @@ def _poker(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
             _moment(
                 seq,
                 "big_pot",
+                to,
                 2,
                 f"{who} wins a pot of {amount:,}.",
                 f"{who} gewinnt einen Pot von {amount:,}.".replace(",", "."),
@@ -329,7 +393,7 @@ def _werewolf(
             "accused_by_others": accused[p],
             "accusations_made": made[p],
             "claims": claims.get(p, []),
-            "vote_accuracy": (accuracy.get(p) or {}).get("value"),
+            "vote_accuracy": accuracy.get(p),
         }
         for p in players
     ]
@@ -388,6 +452,7 @@ def _werewolf(
                 _moment(
                     death["seq"],
                     "execution" if executed else "death",
+                    [p],
                     3 if executed else 2,
                     f"{name(p)}{role_en} was {cause_en}.",
                     f"{name(p)}{role_de} wurde {cause_de}.",
@@ -400,6 +465,7 @@ def _werewolf(
                 _moment(
                     claim["seq"],
                     "false_claim",
+                    [claim["player"]],
                     3,
                     f"{name(claim['player'])} claimed to be the {claim['role'].replace('_', ' ')}, but was not.",
                     f"{name(claim['player'])} behauptete, {load_roles()[claim['role']].name} zu sein, und war es nicht.",
@@ -410,6 +476,7 @@ def _werewolf(
                 _moment(
                     claim["seq"],
                     "counterclaim",
+                    [claim["player"], *claim["counterclaimed_by"]],
                     2,
                     f"{name(claim['player'])} claims the {claim['role'].replace('_', ' ')}, against {', '.join(name(c) for c in claim['counterclaimed_by'])}.",
                     f"{name(claim['player'])} beansprucht {load_roles()[claim['role']].name}, gegen {', '.join(name(c) for c in claim['counterclaimed_by'])}.",

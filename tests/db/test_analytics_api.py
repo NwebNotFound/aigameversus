@@ -80,6 +80,9 @@ def test_the_report_adds_duration_and_cost_from_the_record_and_the_ledger(client
 
     glance = report["at_a_glance"]
     assert glance["duration_s"] >= 0 and glance["cost_micro_eur"] == 0  # bots cost nothing
-    assert all(row["cost_micro_eur"] == 0 for row in report["ranking"])
+    assert glance["cost_by_seat"] == {"p1": 0, "p2": 0}
+    assert all(
+        row["values"][-1] == {**report["columns"][-1], "value": 0} for row in report["ranking"]
+    )
     assert report["columns"][-1]["key"] == "cost_micro_eur"
-    assert glance["winners"] == [report["ranking"][0]["player"]]
+    assert glance["winners"] == [report["ranking"][0]["seat"]]

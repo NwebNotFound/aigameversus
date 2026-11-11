@@ -49,14 +49,19 @@ async def analytics(
         glance["duration_s"] = round((end - record.started_at).total_seconds())
         try:
             costs = await live.ledger.match_costs(match_id)
-            glance["cost_micro_eur"] = sum(costs.values())
-            for row in result["report"]["ranking"]:
-                row["cost_micro_eur"] = costs.get(row["player"], 0)
+            by_seat = {seat: costs.get(seat, 0) for seat in record.players}
         except LedgerUnavailable:  # the report stays readable; the cost is unknown, not 0
-            glance["cost_micro_eur"] = None
-            for row in result["report"]["ranking"]:
-                row["cost_micro_eur"] = None
-        result["report"]["columns"].append(
-            {"key": "cost_micro_eur", "label": {"en": "Cost", "de": "Kosten"}, "kind": "micro_eur"}
-        )
+            by_seat = None
+        glance["cost_micro_eur"] = None if by_seat is None else sum(by_seat.values())
+        glance["cost_by_seat"] = by_seat
+        column = {
+            "key": "cost_micro_eur",
+            "label": {"en": "Cost", "de": "Kosten"},
+            "kind": "micro_eur",
+            "better": "lower",
+        }
+        result["report"]["columns"].append(column)
+        for row in result["report"]["ranking"]:
+            value = None if by_seat is None else by_seat[row["seat"]]
+            row["values"].append({**column, "value": value})
     return result
