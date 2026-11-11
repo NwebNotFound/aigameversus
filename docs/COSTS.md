@@ -49,8 +49,8 @@ the caps of [config/models.yaml](../config/models.yaml) (0.50 EUR per match,
 
    Compose refuses to start when either variable is missing. The arena starts
    without a reachable ledger, but then refuses model seats and
-   `GET /matches/{id}/cost` with 503, and `GET /replays` shows every cost as
-   null, until the ledger answers. After a restart of the computer, check that
+   `GET /matches/{id}/cost` with 503, and `GET /replays`, the leaderboard and
+   the model page show every cost as null, until the ledger answers. After a restart of the computer, check that
    `aigv-ledger` runs again (`docker ps`).
 
 `arena run --models` reads the same `LEDGER_DATABASE_URL` from the

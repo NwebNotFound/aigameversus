@@ -1780,9 +1780,11 @@ Each entry: date, decision, why, alternatives considered.
   daily by `scripts/backup-ledger.sh`. The server starts without the ledger;
   a model match starts only when the ledger answers and is not empty beside
   finished model matches played here (503 otherwise; imported matches booked
-  elsewhere). While it is down `/matches/{id}/cost` answers 503 and
-  `/replays` shows every cost as null: the replay list stays usable, and an
-  unknown cost is not shown as 0. The stack gets the provider key as a read-only file
+  elsewhere). Every cost is read from the ledger, also the leaderboard's
+  cost per game and the model page (`RatingStore.usage` maps the ledger's
+  costs per seat to profiles). While it is down `/matches/{id}/cost`
+  answers 503, and `/replays`, the leaderboard and the model page show every
+  cost as null: the lists stay usable, and an unknown cost is not shown as 0. The stack gets the provider key as a read-only file
   (`OPENROUTER_API_KEY_FILE`), read at every start of a model match; model
   seats, ledger URL and key come in one override file,
   `docker-compose.models.yml`, and the plain stack has no key.

@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from arena.api.live import LiveMatches
 from arena.config import load_config
 from arena.db.event_store import EventStore
 from arena.ratings.store import BOT_MODEL_ID, RatingStore, Standing, Usage
@@ -50,7 +51,9 @@ class LeaderboardRow(StandingOut):
     vendor: str | None = Field(None, description="Who makes the model, from config/models.yaml")
     members: int = Field(1, description="Profiles in this row: more than 1 for grouped bot seats")
     cost_per_game_micro_eur: int | None = Field(
-        None, description="Average cost of one rated game, in millionths of a euro"
+        None,
+        description="Average cost of one rated game, in millionths of a euro; null without "
+        "cost or while the ledger cannot be read",
     )
     tool_error_rate: float | None = Field(
         None, description="Share of answers the server refused (a wrong tool or an illegal move)"
@@ -134,8 +137,9 @@ def group_seat_bots(standings: list[Standing], usage: dict[UUID, Usage]):
         win_rate=weighted(lambda s: s.win_rate),
         average_placement=weighted(lambda s: s.average_placement),
     )
+    costs = [usage.get(s.profile_id, Usage()).cost_micro_eur for s in bots]
     combined = Usage(
-        sum(usage.get(s.profile_id, Usage()).cost_micro_eur for s in bots),
+        None if None in costs else sum(costs),
         sum(usage.get(s.profile_id, Usage()).accepted for s in bots),
         sum(usage.get(s.profile_id, Usage()).rejected for s in bots),
     )
@@ -145,6 +149,7 @@ def group_seat_bots(standings: list[Standing], usage: dict[UUID, Usage]):
 
 @router.get("/leaderboard")
 async def leaderboard(
+    request: Request,
     store: Store,
     game: Annotated[str | None, Query(description="A game id; omit for the overall rating")] = None,
     kind: Annotated[
@@ -162,7 +167,8 @@ async def leaderboard(
     unless `group_bots=false`.
     """
     standings = await store.leaderboard(game)
-    usage = await store.usage(game)
+    live: LiveMatches = request.app.state.live
+    usage = await store.usage(live.ledger, game)
     grouped, others = group_seat_bots(standings, usage) if group_bots else (None, standings)
     entries: list[tuple[Standing, str, int]] = [
         (s, "bot" if s.model_id == BOT_MODEL_ID else "model", 1) for s in others
