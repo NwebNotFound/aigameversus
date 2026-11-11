@@ -23,6 +23,7 @@ from uuid import UUID, uuid4
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
+from arena.catalog import resolve
 from arena.config import display_name, load_config, load_keys
 from arena.db.database import connect, ledger_url, migrate
 from arena.db.event_store import EventStore
@@ -176,7 +177,7 @@ async def _play_models(
     save: str | None,
     args: argparse.Namespace,
 ) -> int:
-    config = load_config()
+    config = await resolve(load_config(), model_ids)
     unknown = [model_id for model_id in model_ids if model_id not in config.models]
     if unknown:
         raise _WrongCall(

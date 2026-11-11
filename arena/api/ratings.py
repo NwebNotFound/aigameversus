@@ -101,9 +101,13 @@ class ProfileOut(BaseModel):
 
 
 def vendor_of(model_id: str) -> str | None:
-    """The maker of a model, from its provider name in config/models.yaml: "z-ai/glm" is z-ai."""
+    """The maker of a model, from its provider name: "z-ai/glm" is z-ai.
+
+    A model of config/models.yaml has it there; any other model is its OpenRouter id.
+    """
     configured = load_config().models.get(model_id)
-    return configured.model.split("/", 1)[0] if configured and "/" in configured.model else None
+    name = configured.model if configured else model_id
+    return name.split("/", 1)[0] if "/" in name else None
 
 
 def is_seat_bot(standing: Standing) -> bool:

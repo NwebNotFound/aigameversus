@@ -539,7 +539,20 @@ or field shows nothing there until it is listed as public. A game without
 
 ### A model
 
-An entry under `models` in `config/models.yaml`: an id of your choice,
+Any model in `GET /models/catalog` can take a seat without a code or config
+change (`arena/catalog.py`): OpenRouter's public model list (no key), kept to
+the models that write text and take a forced tool call (`tools` and
+`tool_choice` in `supported_parameters`), cached for an hour in the file
+`ARENA_CATALOG_CACHE` (default in the temp folder), the last copy when
+OpenRouter cannot be reached, and only the config models without any copy.
+Such a model goes by its OpenRouter id (`vendor/model`), at OpenRouter's
+prices, behind the same caps; `catalog.resolve` adds it to the config where
+a match is started, so the budget, the seats and the ledger treat it like any
+other. Tests never download it: the autouse fixture `offline_catalog` in
+`tests/conftest.py` refuses, and `tests/test_catalog.py` hands over a sample.
+
+A model you checked yourself is *verified*: an entry under `models` in
+`config/models.yaml`, under an id of your choice that the catalog then uses,
 `provider` (only `openrouter` today), `model` (the provider's name for it) and
 the prices `input_usd_per_mtok` and `output_usd_per_mtok` in US dollars per
 million tokens, as the provider lists them. The cost caps count with these

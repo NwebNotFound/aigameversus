@@ -1858,3 +1858,30 @@ Each entry: date, decision, why, alternatives considered.
   their ratings comparable.
 - **Alternatives:** summing all personalities of a model (hides what a personality
   changes); keying the page by profile id (the profile page already does that).
+
+## D-102 · Any OpenRouter model that can call tools may take a seat
+
+- **Date:** 2026-11-11
+- **Decision:** `GET /models/catalog` lists the models of
+  `config/models.yaml` (verified, under their own ids) and then every other
+  model of OpenRouter's public model list that writes text and supports
+  `tools` and `tool_choice`, with vendor, context length, price per million
+  tokens and flags for reasoning, moderation, free and high price (output
+  above 10 USD per million tokens). `POST /matches` and `arena run --models`
+  take any of these ids; an unverified model goes by its OpenRouter id at
+  OpenRouter's prices. The list is cached for an hour, the last copy is used
+  when OpenRouter cannot be reached, and without one only the config models
+  can play. The caps, `confirm_spend` and the key rules are the same for
+  every model. Every model gets the options of `limits` (reasoning effort,
+  output limit, a forced tool call); a provider that refuses them gets the
+  request once more without them, as before.
+- **Why:** The project owner wants to choose any compatible model from the
+  launch form, not only the eight that were added by hand. The price is what
+  the caps count with, so it has to come from the same place the bill comes
+  from; OpenRouter publishes it with the list. `tool_choice` is required
+  because the runner forces a tool call: a model without it answers in prose.
+- **Alternatives:** Adding models to `config/models.yaml` by hand (slow, and
+  the owner cannot do it from the UI); allowing models without
+  `tool_choice` (they could not be forced to move); options per model from
+  OpenRouter's metadata (a second source of behaviour to keep right; the
+  retry without options already covers a refusal).
