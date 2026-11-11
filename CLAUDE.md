@@ -262,10 +262,29 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
 ### Prompts
 
 The system message is what the server says: who the player is, the game's
-`rules.md`, how to answer. The user message is game data: the observation in
+rules (`rules.md`), how to answer. The user message is game data: the game's
+summary of the turn in `<summary>` if it has one, the observation in
 `<situation>`, the last 40 visible events in `<events>`, then the ask (with
 the server's error on a correction).
 
+- A game can have prompt versions, chosen per match by its settings
+  (Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
+  prompt as it was, or `<game>-p2`). `ModelAgent(call, plugin,
+  settings=...)` asks the plugin for `rules(settings)` once and for
+  `situation_summary(observation, settings)` on every turn; the API and the
+  command pass the match settings. `prompt_version(settings)` is recorded in
+  `match_started` and in the `--save` export, so an analysis can tell the
+  versions apart. A game without versions inherits `"v1"`, `rules.md` and no
+  summary, and its prompt is byte for byte what it was.
+- A summary is built from the player's observation only, so it can never
+  hold what the player may not see; its `<` is escaped like all game data.
+
+- The player's seat is named three times: at the top of the system message
+  ("wherever the game data names p8, that is you"), in the ask at the end
+  ("You are p8."), and on every event the player did, which starts with
+  `[you]` (the doer is the event's `player`, `caller` or `from`:
+  `ACTOR_FIELDS` in `arena/agents/prompt.py`; add a game's field there). In the first real Werewolf match a model argued against its own
+  claim and voted for itself; it had read its seat once, far above.
 - A prompt is built only from the `TurnRequest`, and the engine fills that
   with events the player may see. Thoughts and other players' private events
   never get there.
@@ -457,7 +476,8 @@ Copy the shape of `games/toy/`, the smallest complete game.
 1. Create `games/<id>/` with `__init__.py`, `plugin.py`, `rules.md` and
    `tests/`. `rules.md` is the English rule summary models get in their
    prompt: short and complete. The prompt puts the game's `name` above it, so
-   the text does not need the title.
+   the text does not need the title. For a second prompt version, override
+   `prompt_version`, `rules` and `situation_summary` (see `games/poker/prompt.py`).
 2. Define the state as a Pydantic model and subclass `GamePlugin`
    (`arena/engine/plugin.py`), once, in `plugin.py`. Set `id` (the folder
    name), `name`, `version`, `min_players`, `max_players`, `turn_mode` and

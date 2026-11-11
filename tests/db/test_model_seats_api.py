@@ -220,3 +220,22 @@ def test_key_is_read_from_its_file_at_every_start(client, answer_with, monkeypat
     assert refused.status_code == 503
     assert "OPENROUTER_API_KEY" in refused.json()["detail"]
     assert KEY not in started.text + refused.text
+
+
+def test_model_seats_get_the_prompt_version_of_the_settings(client, answer_with):
+    sent = answer_with(
+        mock_response="Check.",
+        mock_tool_calls=[{**CALL, "function": {"name": "check", "arguments": "{}"}}],
+    )
+    settings = {"prompt_version": "poker-p2", "hand_limit": 1}
+
+    response = client.post(
+        "/matches",
+        json={"game": "poker", "models": MODELS, "confirm_spend": True, "settings": settings},
+    )
+
+    match = finish(client, response.json()["id"])
+    assert match["status"] == "finished"
+    started = client.get(f"/matches/{match['id']}/events").json()[0]
+    assert started["data"]["prompt_version"] == "poker-p2"
+    assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")

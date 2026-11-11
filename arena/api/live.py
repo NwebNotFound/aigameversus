@@ -145,7 +145,8 @@ class LiveMatches:
             config = load_config()
             budget = Budget(self.ledger, match_id, config)
             agents = {
-                seat: ModelAgent(budget.model(seat, models[seat]), plugin) for seat in players
+                seat: ModelAgent(budget.model(seat, models[seat]), plugin, settings=settings)
+                for seat in players
             }
             seats = {
                 seat: Seat(
