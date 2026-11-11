@@ -286,11 +286,14 @@ def test_the_backfill_rates_the_model_matches_played_before_and_only_once(
         return "not rated in those days"
 
     monkeypatch.setattr(RatingStore, "rate_model_match", not_yet)
+    ended = {}
     for seed in (4, 5):
         started = client.post(
             "/matches", json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": seed}
         )
-        assert finish(client, started.json()["id"])["status"] == "finished"
+        match = finish(client, started.json()["id"])
+        assert match["status"] == "finished"
+        ended[match["id"]] = match["finished_at"]
     assert client.get("/leaderboard", params={"kind": "models"}).json()["rows"] == []
     monkeypatch.setattr(RatingStore, "rate_model_match", real)
 
@@ -302,6 +305,10 @@ def test_the_backfill_rates_the_model_matches_played_before_and_only_once(
     board = client.get("/leaderboard", params={"kind": "models"}).json()["rows"]
     assert sorted(row["name"] for row in board) == sorted(MODELS)
     assert {row["games_played"] for row in board} == {2}
+    # The model page dates a backfilled match by when it ended, not by when it was rated.
+    recent = client.get("/models/glm-flash").json()["recent_matches"]
+    assert {m["match_id"]: m["played_at"] for m in recent} == ended
+    assert all(m["played_at"] < m["rated_at"] for m in recent)
 
 
 def test_key_is_read_from_its_file_at_every_start(client, answer_with, monkeypatch, tmp_path):

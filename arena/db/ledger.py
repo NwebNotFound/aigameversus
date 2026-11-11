@@ -130,6 +130,16 @@ class Ledger:
                 month,
             )
 
+    async def output_tokens(self, model_ids: Sequence[str]) -> dict[str, tuple[int, float]]:
+        """For each of these models with reported answers: (answers, output tokens per answer)."""
+        async with _reading():
+            rows = await self._pool.fetch(
+                "SELECT model, count(*) AS answers, avg(output_tokens) AS mean FROM model_calls "
+                "WHERE model = ANY($1::text[]) AND output_tokens IS NOT NULL GROUP BY model",
+                list(model_ids),
+            )
+        return {row["model"]: (int(row["answers"]), float(row["mean"])) for row in rows}
+
     async def match_costs(self, match_id: UUID) -> dict[PlayerId, int]:
         """What each player of a match has cost so far, in millionths of a euro."""
         async with _reading():
