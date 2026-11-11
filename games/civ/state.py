@@ -21,6 +21,7 @@ Stock = dict[Resource, int]
 class Nation(BaseModel):
     stock: Stock  # what the nation owns of every resource; never below 0
     hungry_rounds: int = 0  # rounds in a row in which upkeep was not paid in full
+    reputation: int = 50  # public, between the limits in treaties.yaml; new_game sets the start
 
 
 class Site(BaseModel):
@@ -66,6 +67,43 @@ class Army(BaseModel):
         return self.col, self.row
 
 
+class Pact(BaseModel):
+    """A treaty in force between two nations."""
+
+    id: str  # "t1", "t2", ... in the order treaties were signed
+    kind: str  # a treaty id from the data
+    parties: list[str]  # the two nations, sorted
+    ends_round: int | None = None  # the last round it holds; None: until broken
+    payer: str | None = None  # a tribute: who pays `payment` to the other every round
+    payment: dict[Resource, int] = {}
+
+
+class Offer(BaseModel):
+    """A treaty or trade one nation offered another, open until answered or the round ends."""
+
+    id: str  # "o1", "o2", ... in the order offers were made
+    sender: str
+    to: str
+    round: int  # offered in this round; it lapses when the next one starts
+    treaty: str | None = None  # a treaty offer: the treaty id; None: a trade offer
+    rounds: int | None = None  # how long the treaty or trade runs; None: until broken
+    payer: str | None = None
+    payment: dict[Resource, int] = {}
+    gives: dict[Resource, int] = {}  # a trade: what the sender hands over every round
+    wants: dict[Resource, int] = {}  # and what it gets for it
+
+
+class Deal(BaseModel):
+    """An accepted trade, carried out in the trade step of each round until it is done."""
+
+    id: str  # the id of the offer it came from
+    sender: str
+    to: str
+    gives: dict[Resource, int]
+    wants: dict[Resource, int]
+    rounds_left: int
+
+
 class CivState(BaseModel):
     round: int = 0  # the round being played; 0 before the first
     world: WorldMap = WorldMap(rows=[], starts=[])
@@ -73,6 +111,12 @@ class CivState(BaseModel):
     cities: list[City] = []  # in founding order: the older city wins a tie over a tile
     armies: list[Army] = []
     armies_raised: int = 0  # how many armies there have ever been, for the next id
+    treaties: list[Pact] = []
+    treaties_signed: int = 0  # for the next treaty id
+    offers: list[Offer] = []
+    offers_made: int = 0  # for the next offer id
+    deals: list[Deal] = []
+    wars: list[list[str]] = []  # pairs of nations at war, each sorted
 
     def city(self, city_id: str) -> City:
         return next(city for city in self.cities if city.id == city_id)
@@ -89,4 +133,7 @@ def new_game(players: Sequence[str], data: CivData) -> CivState:
     """The state before the map is drawn: every nation with its starting stock."""
     start = data.balance.start.resources
     stock = {resource: start.get(resource, 0) for resource in get_args(Resource)}
-    return CivState(nations={player: Nation(stock=dict(stock)) for player in players})
+    reputation = data.reputation.start
+    return CivState(
+        nations={player: Nation(stock=dict(stock), reputation=reputation) for player in players}
+    )

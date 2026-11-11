@@ -3,7 +3,11 @@
 The steps of a round, in the order they must run:
 
     begin_round(state, ctx)
+    diplomacy.expire(state, ctx)
     economy.finish_construction(state, ctx)
+    # diplomacy phase: diplomacy.message, propose_treaty, respond_treaty, propose_trade,
+    #                  respond_trade, break_treaty, declare_war
+    diplomacy.settle(state, data, ctx)  # the trade step: tributes and agreed trades
     # orders for cities: economy.build, demolish, set_focus; armies.train
     # orders for armies: armies.disband, split, merge, settle, move
     economy.produce(state, data, ctx)
@@ -20,7 +24,7 @@ from typing import Any
 
 from arena.engine.plugin import TurnContext
 from arena.engine.types import Event
-from games.civ import armies, economy
+from games.civ import armies, diplomacy, economy
 from games.civ.state import CivState
 
 
@@ -37,4 +41,9 @@ def _round_started(state: CivState, data: dict[str, Any]) -> None:
     state.round = data["round"]
 
 
-_APPLY = {"round_started": _round_started, **economy.APPLIERS, **armies.APPLIERS}
+_APPLY = {
+    "round_started": _round_started,
+    **economy.APPLIERS,
+    **armies.APPLIERS,
+    **diplomacy.APPLIERS,
+}
