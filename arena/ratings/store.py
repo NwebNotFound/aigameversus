@@ -83,6 +83,23 @@ class RatingStore:
         )
         return profile_id
 
+    async def model_profile(self, model_id: str, personality_id: str | None = None) -> UUID:
+        """The profile of a model with a personality, created on first use (D-081).
+
+        One profile per model and personality, the same in every match and every seat, so
+        its rating, statistics and cost add up. The id derives from both, so it never changes.
+        """
+        profile_id = uuid5(NAMESPACE_URL, f"aigameversus/model/{model_id}/{personality_id or ''}")
+        await self._pool.execute(
+            "INSERT INTO player_profiles (id, name, model_id, personality_id) "
+            "VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING",
+            profile_id,
+            model_id,
+            model_id,
+            personality_id,
+        )
+        return profile_id
+
     async def bot_profiles(self, seats: Sequence[str]) -> dict[str, UUID]:
         """The profile of the random bot on each seat, created on first use (D-052).
 
