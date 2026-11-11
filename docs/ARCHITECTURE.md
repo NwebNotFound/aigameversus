@@ -196,6 +196,11 @@ sequenceDiagram
   `state/+server.ts` returns record, board, cost and controls, and runs a
   control; the page reloads it after new events, at most about three times a
   second.
+- Replays (`web/src/routes/replays`) list `GET /replays` (finished matches with
+  winners and cost) and step through a stored log one event per step. The board
+  of a step is `GET /matches/{id}/board?events=N`, the state after the first N
+  events; the columns are the live view's `MatchColumns`. `?step=N` in the
+  address is the share link; `export.json` is the record with the whole log.
 - `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
   its own process and prints the events. With `--models` it seats real models
   behind a `Budget` and writes the match, its events and the ledger to the

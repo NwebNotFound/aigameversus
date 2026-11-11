@@ -27,7 +27,8 @@ matches, lists, controls and streams them over WebSocket, next to
 profiles with their game statistics (`GET /profiles/{id}/stats`) and the
 Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
-live view of a match (`/matches/<id>`); New match and Replays are placeholders.
+live view of a match (`/matches/<id>`) and replays (`/replays`, `/replays/<id>`);
+New match is a placeholder.
 Sections below marked *not built yet* describe the target from the spec and
 get filled in as their phase lands.
 
