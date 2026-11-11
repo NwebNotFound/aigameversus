@@ -72,6 +72,24 @@ def test_events_about_the_reader_are_marked_as_theirs_and_others_are_not():
     assert 'night_started {"night": 1}' in lines
 
 
+@pytest.mark.parametrize(
+    ("type", "mine", "theirs"),
+    [
+        ("liar_called", {"caller": "p1", "accused": "p2"}, {"caller": "p2", "accused": "p1"}),
+        ("captain_passed", {"from": "p1", "to": "p2"}, {"from": "p2", "to": "p1"}),
+    ],
+)
+def test_events_whose_actor_has_another_field_name_are_marked_for_the_actor_only(
+    type, mine, theirs
+):
+    _, user = prompt(game_event(type, mine), game_event(type, theirs))
+
+    lines = user.splitlines()
+    assert f"[you] {type} " in "\n".join(lines)
+    assert sum(line.startswith("[you] ") for line in lines) == 1
+    assert any(line.startswith(f"{type} ") and '"p2"' in line.split(",")[0] for line in lines)
+
+
 def test_text_of_another_player_is_labelled_as_their_words():
     _, user = prompt(said("p2", "I hold the 9"))
 

@@ -15,6 +15,9 @@ from arena.engine.types import MESSAGE, Event, PlayerId, ToolSpec, TurnRequest
 
 HISTORY_LIMIT = 40  # a prompt shows this many of the most recent events
 THOUGHT = "thought"  # the argument of every tool call that holds the player's private thinking
+# Fields that name who did an event, across the games. Fields that name whom it was done to
+# (a vote's target) are not here: a vote against the reader is not the reader's doing.
+ACTOR_FIELDS = ("player", "caller", "from")
 
 _SYSTEM = """\
 You are player {player} in a match of {game} against other AI players. Play to win.
@@ -102,7 +105,7 @@ def _line(event: Event, reader: PlayerId) -> str:
     if event.visible_to is not None:
         private = f" (seen only by {', '.join(event.visible_to)})"
     if event.type != MESSAGE:
-        mine = "[you] " if event.data.get("player") == reader else ""
+        mine = "[you] " if any(event.data.get(key) == reader for key in ACTOR_FIELDS) else ""
         return f"{mine}{event.type}{private} {_json(event.data)}"
     author = event.data["player"]
     speaker = "you said" if author == reader else f"player {author} says"

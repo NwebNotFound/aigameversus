@@ -1507,7 +1507,7 @@ Each entry: date, decision, why, alternatives considered.
 - **Decision:** Besides the first line of the system message, the prompt now
   says once more that every mention of the seat is the player, ends the ask
   with "You are p8.", and starts every event line that the player did (its
-  `player` is the reader) with `[you]`. Events that only name the reader in
+  `player`, `caller` or `from` is the reader) with `[you]`. Events that only name the reader in
   another field (a vote against them) are not marked: the player did not do
   them. Other players' words stay as they were written.
 - **Why:** In the first real Werewolf match the seer (seat p8) wrote about
