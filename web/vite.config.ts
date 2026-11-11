@@ -11,7 +11,10 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			// A Node server, so pages can call the arena API server-side (D-030).
-			adapter: adapter()
+			adapter: adapter(),
+			// Form posts are refused from any origin but ORIGIN (CSRF check). The
+			// local stack answers on both names of this machine (D-054).
+			csrf: { trustedOrigins: ['http://127.0.0.1:3100', 'http://localhost:3100'] }
 		})
 	],
 	test: {

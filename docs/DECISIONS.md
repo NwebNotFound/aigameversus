@@ -1056,7 +1056,9 @@ Each entry: date, decision, why, alternatives considered.
   - Speed is one of the live view's speeds (default Normal, 1 s per turn).
   - The web container gets `ORIGIN: http://127.0.0.1:3100`. SvelteKit refuses a
     form POST from another origin, and without `ORIGIN` adapter-node expects
-    https, which refused every submit of the local stack.
+    https, which refused every submit of the local stack. `csrf.trustedOrigins`
+    in `web/vite.config.ts` also lets `http://localhost:3100` post; any other
+    origin is still refused.
 - **Why:** The form can be used today for bot matches and already has the
   shape the spec asks for (game, players, models, personalities, cost limit,
   seed), without an API for model seats before the runner can play them.

@@ -132,3 +132,35 @@ test('the form fits the viewport', async ({ page }) => {
 	);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+// A form post that the action itself refuses (a bad seed), so no match starts.
+const REFUSED_FORM = {
+	game: 'liars_deck',
+	players: '2',
+	seat: 'random_bot',
+	language: 'de',
+	turn_delay: '1',
+	seed: '-1'
+};
+
+for (const origin of ['http://127.0.0.1:3100', 'http://localhost:3100']) {
+	test(`a form post from ${origin} reaches the form`, async ({ request }) => {
+		const response = await request.post('/matches/new', {
+			headers: { origin },
+			form: REFUSED_FORM,
+			maxRedirects: 0
+		});
+
+		expect(response.status()).toBe(400);
+	});
+}
+
+test('a form post from a foreign origin is refused', async ({ request }) => {
+	const response = await request.post('/matches/new', {
+		headers: { origin: 'https://attacker.example' },
+		form: REFUSED_FORM,
+		maxRedirects: 0
+	});
+
+	expect(response.status()).toBe(403);
+});
