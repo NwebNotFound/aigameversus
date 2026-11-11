@@ -349,7 +349,8 @@ def _werewolf_facts(log: Log, spoilers: bool) -> dict[str, Any]:
         elif event.type == "day_started":
             facts.update(phase="day", number=data["day"], votes={})
         elif event.type == "vote_cast":
-            facts["votes"][data["target"]] = facts["votes"].get(data["target"], 0) + 1
+            if data["target"] is not None:  # None: the player abstained
+                facts["votes"][data["target"]] = facts["votes"].get(data["target"], 0) + 1
         elif event.type == "player_died":
             if data["player"] in facts["alive"]:
                 facts["alive"].remove(data["player"])
