@@ -231,6 +231,28 @@ def test_classic_template_has_the_spec_roles():
     }  # fmt: skip
 
 
+def test_classic_wolves_scale_with_the_table():
+    wolves = {n: apply_template("classic", n)["werewolf"] for n in PLAYER_COUNTS}
+
+    assert wolves == {n: max(2, n // 4) for n in PLAYER_COUNTS}
+    assert set(load_templates()["classic"].by_players["werewolf"]) == set(PLAYER_COUNTS)
+
+
+# With seer, witch and hunter fixed, 2 wolves cannot stay even above 8 players: the total is
+# 11 + players - 7 * wolves, so 9, 10 and 11 players give +6, +7, +8 (D-023).
+CLASSIC_VILLAGE_SIDED = {9: 6, 10: 7, 11: 8}
+
+
+@pytest.mark.parametrize("players", PLAYER_COUNTS)
+def test_classic_is_never_village_favoured_except_the_documented_sizes(players: int):
+    result = balance(apply_template("classic", players))
+
+    if players in CLASSIC_VILLAGE_SIDED:
+        assert (result.total, result.verdict) == (CLASSIC_VILLAGE_SIDED[players], "village")
+    else:
+        assert result.verdict == "even"
+
+
 @pytest.mark.parametrize("players", PLAYER_COUNTS)
 def test_random_balanced_is_valid_and_near_zero(players: int):
     for seed in range(5):

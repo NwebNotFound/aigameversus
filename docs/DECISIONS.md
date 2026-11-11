@@ -300,3 +300,19 @@ Each entry: date, decision, why, alternatives considered.
   from passing as "3 wolves".
 - **Alternatives:** a margin scaled by player count; counting only team
   `wolves`; picking the random mix by search instead of sampling.
+
+## D-023 · Werewolf "Klassisch" scales its wolves with the table
+
+- **Date:** 2026-11-11
+- **Decision:** The Klassisch template has `by_players`, a per-size table in
+  `games/werewolf/templates.yaml` that overrides the werewolf count:
+  `max(2, players // 4)`, i.e. 2 wolves for 6-11 players, 3 for 12-15, 4 for 16.
+  Seer, witch and hunter stay one each; villagers fill the rest.
+  `apply_template` reads the table; there is no wolf formula in code.
+- **Why:** With a fixed 2 wolves the wolves are too few at big tables. The
+  balance light (D-022) shows *even* for 6-8 and 12-16 players. For 9, 10 and
+  11 players it stays *village* (+6, +7, +8), because the total is
+  `11 + players - 7 * wolves` and a whole number of wolves cannot reach the
+  even band there. A test pins these three values.
+- **Alternatives:** 3 wolves from 9 players (gives -1, 0, 1 for 9-11, one-line
+  table change if wanted); a formula field in the template format.
