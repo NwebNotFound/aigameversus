@@ -23,11 +23,11 @@ from uuid import UUID, uuid4
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
-from arena.config import KEY_VARIABLES, load_config
+from arena.config import display_name, load_config, missing_keys
 from arena.db.database import connect, migrate
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
-from arena.db.match_store import MatchStore
+from arena.db.match_store import MatchStore, Seat
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.replay import replay
@@ -183,11 +183,7 @@ async def _play_models(
             f"unknown model {', '.join(unknown)}; config/models.yaml has: "
             f"{', '.join(config.models)}"
         )
-    # Without its key every seat would fail at its first call, after that call was booked,
-    # and random bots would play on under the models' names.
-    needed = {KEY_VARIABLES[config.models[model_id].provider] for model_id in model_ids}
-    missing = sorted(name for name in needed if not os.environ.get(name))
-    if missing:
+    if missing := missing_keys(config, model_ids):
         raise _WrongCall(
             f"--models needs {', '.join(missing)} in the environment, the provider's API key. "
             "Nothing was sent or booked"
@@ -211,11 +207,21 @@ async def _play_models(
 
         show = _printer(plugin.id, labels(seats), args)
         agents = {
-            player: ModelAgent(budget.model(player, model_id), plugin)
+            player: ModelAgent(budget.model(player, model_id), plugin, settings=options["settings"])
             for player, model_id in seats.items()
         }
         match = _match(plugin, agents, options, store_and_print)
-        await matches.create(match_id, plugin.id, list(seats), match.seed, match.settings)
+        await matches.create(
+            match_id,
+            plugin.id,
+            list(seats),
+            match.seed,
+            match.settings,
+            seats={
+                player: Seat(name=display_name(config, model), model_id=model, kind="model")
+                for player, model in seats.items()
+            },
+        )
         print(f"{plugin.name} ({plugin.id}), match {match_id}, seed {match.seed}")
         print("Seats: " + "  ".join(f"{player} {model}" for player, model in seats.items()))
         placements = None
@@ -258,6 +264,7 @@ async def _play_models(
                 "version": plugin.version,
                 "seed": match.seed,
                 "settings": match.settings,
+                "prompt_version": plugin.prompt_version(match.settings),
                 "seats": seats,
                 "status": "finished" if placements is not None else "stopped_at_cost_cap",
                 "placements": [placement.model_dump() for placement in placements or []],

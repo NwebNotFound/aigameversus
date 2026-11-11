@@ -9,6 +9,7 @@ is, a quick start and what is built.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The building blocks, one turn of a match, events and replay, the Compose services, and what is still planned. |
 | [TESTING.md](TESTING.md) | How to run the tests, the linters, the secret scan and the Compose smoke test; Windows notes. |
 | [DECISIONS.md](DECISIONS.md) | Every decision where the spec is open or overridden: date, decision, why, alternatives. Numbers `D-001` and up, ascending, never reused. |
+| [UI-DESIGN.md](UI-DESIGN.md) | How the spectator UI looks and moves: tokens, type, the watch screen, viewer modes, replay timeline, motion, boards. |
 | [CREDITS.md](CREDITS.md) | Where every asset and library comes from. |
 | [images/](images/) | Screenshots and GIFs used in the README (made by `scripts/make_showcase.sh`). |
 

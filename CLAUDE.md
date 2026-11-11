@@ -20,8 +20,8 @@ agent runner, which prompts a model and reads its answer; in tests and CI that
 model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models. The `arena`
-command can seat them (`--models`, paid calls inside the caps); `POST /matches`
-seats random bots only. Four games can
+command (`--models`) and `POST /matches` (`models`, on a server started with
+`ARENA_ALLOW_MODEL_SEATS=1`) can seat them, paid calls inside the caps. Four games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`), Poker (`games/poker`) and Werewolf (`games/werewolf`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
@@ -84,14 +84,14 @@ have without the pause.
 
 ### Running matches
 
-Three ways. The first and the last seat random bots only:
+Three ways:
 
 - `arena run --game toy --bots` (`arena/cli.py`) plays a match in its own
   process and prints every event. It needs no server and no database, and
   stores nothing. `arena games` lists the games.
 - `arena run --game liars_deck --models glm-flash,deepseek-flash,...` seats
   models from `config/models.yaml`, one per seat in that order. **This makes
-  paid model calls**, and it is the only thing in the repository that does.
+  paid model calls**, like model seats in `POST /matches` (below).
   Every call goes through one `Budget` (see Cost caps), so the command needs
   `DATABASE_URL` for the ledger; it applies the migrations, records the match
   in `matches` and stores its events like the API does. The provider's key
@@ -115,6 +115,14 @@ Three ways. The first and the last seat random bots only:
   The server plays at most 10 matches at a time (`MAX_RUNNING`) and answers
   429 to a start beyond that; a match that never ends stops at its turn limit
   and is marked `failed`.
+  With `"models": ["glm-flash", ...]` (one per seat) and `"confirm_spend":
+  true` the seats are models behind one `Budget`, as with the command. Model
+  seats are refused (403) unless the server runs with
+  `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key; a cap
+  ends the match as `interrupted`. Every match record has `seats` (seat ->
+  `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
+  the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
+  `GET /replays` adds `real`.
 - A running match can be paused, resumed, sped up or slowed down and aborted:
   `POST /matches/{id}/pause`, `/resume`, `/abort`, `PUT /matches/{id}/speed`,
   state in `GET /matches/{id}/control`. A pause takes effect between turns,
@@ -241,10 +249,29 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
 ### Prompts
 
 The system message is what the server says: who the player is, the game's
-`rules.md`, how to answer. The user message is game data: the observation in
+rules (`rules.md`), how to answer. The user message is game data: the game's
+summary of the turn in `<summary>` if it has one, the observation in
 `<situation>`, the last 40 visible events in `<events>`, then the ask (with
 the server's error on a correction).
 
+- A game can have prompt versions, chosen per match by its settings
+  (Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
+  prompt as it was, or `<game>-p2`). `ModelAgent(call, plugin,
+  settings=...)` asks the plugin for `rules(settings)` once and for
+  `situation_summary(observation, settings)` on every turn; the API and the
+  command pass the match settings. `prompt_version(settings)` is recorded in
+  `match_started` and in the `--save` export, so an analysis can tell the
+  versions apart. A game without versions inherits `"v1"`, `rules.md` and no
+  summary, and its prompt is byte for byte what it was.
+- A summary is built from the player's observation only, so it can never
+  hold what the player may not see; its `<` is escaped like all game data.
+
+- The player's seat is named three times: at the top of the system message
+  ("wherever the game data names p8, that is you"), in the ask at the end
+  ("You are p8."), and on every event the player did, which starts with
+  `[you]` (the doer is the event's `player`, `caller` or `from`:
+  `ACTOR_FIELDS` in `arena/agents/prompt.py`; add a game's field there). In the first real Werewolf match a model argued against its own
+  claim and voted for itself; it had read its seat once, far above.
 - A prompt is built only from the `TurnRequest`, and the engine fills that
   with events the player may see. Thoughts and other players' private events
   never get there.
@@ -434,7 +461,8 @@ Copy the shape of `games/toy/`, the smallest complete game.
 1. Create `games/<id>/` with `__init__.py`, `plugin.py`, `rules.md` and
    `tests/`. `rules.md` is the English rule summary models get in their
    prompt: short and complete. The prompt puts the game's `name` above it, so
-   the text does not need the title.
+   the text does not need the title. For a second prompt version, override
+   `prompt_version`, `rules` and `situation_summary` (see `games/poker/prompt.py`).
 2. Define the state as a Pydantic model and subclass `GamePlugin`
    (`arena/engine/plugin.py`), once, in `plugin.py`. Set `id` (the folder
    name), `name`, `version`, `min_players`, `max_players`, `turn_mode` and
