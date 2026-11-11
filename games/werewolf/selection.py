@@ -30,7 +30,7 @@ MAX_PLAYERS = 16
 FILL_ROLE = "villager"
 
 # Balance verdict: a total within +-EVEN_MARGIN is even, i.e. less than one werewolf's
-# weight (6) away from 0 (D-021).
+# weight (6) away from 0 (D-022).
 EVEN_MARGIN = 5
 # Random mixes the "random_balanced" template draws before keeping the most even one.
 RANDOM_CANDIDATES = 300

@@ -1,0 +1,11 @@
+id: base
+name: Base
+description: >
+  Classic rules: bluff with face-down cards, call "Liar!", the loser pulls
+  the trigger of their own revolver.
+players: {min: 2, max: 4}
+deck: {kings: 6, queens: 6, aces: 6, jokers: 2}
+hand_size: 5
+play: {min_cards: 1, max_cards: 3}
+revolver: {chambers: 6, live: 1}
+devil_card: null

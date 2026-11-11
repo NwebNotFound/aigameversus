@@ -203,15 +203,59 @@ Copy the shape of `games/toy/`, the smallest complete game.
    other players' hidden information, private events are private, rejected
    actions carry a useful message.
 
-*Not built yet:* `rules.md` for model prompts (step 1.4), the registry that
+Every game also ships a `rules.md`: an English summary for the players'
+prompts (see `games/werewolf/rules.md`). *Not built yet:* the code that puts it
+into prompts (step 1.4), the registry that
 finds games by id (1.6), and what the UI needs to draw a game (phase 5).
 
-### A role or variant
+### A Werewolf role
 
-*Not built yet: variants land in phase 2, Werewolf roles in phase 4.* Target: a
-new YAML file in the game's data folder (for example
-`games/werewolf/roles/<id>.yaml`); it is validated at startup and appears in
-the role selection automatically. Only a new ability needs code.
+One YAML file in `games/werewolf/roles/<id>.yaml`; the id is snake_case English
+and equals the file name. Fields, checked by
+`games/werewolf/roles/role.schema.json`: `id`, `name` (German display name),
+`team` (`village`, `wolves`, `solo`), `unique`, `weight` (integer),
+`night_order` (integer or `null`), optional `first_night_only`, `hooks`
+(hook name to handler name), `description` and `rules_snippet` (1-3 sentences
+that go into the prompt when the role is in play).
+`games/werewolf/roles/README.md` has the night order.
+
+```bash
+uv run pytest games/werewolf   # schema check of every role and template
+```
+
+To make the role selectable in a template, add it to
+`games/werewolf/templates.yaml`; the test checks that the template stays
+fillable (counts, unique roles, wolves below half). Today nothing loads the
+roles at startup; the test is the check. A new ability needs a handler in code
+(planned, phase 4); a role without new abilities needs none.
+
+### A Werewolf template or option
+
+`games/werewolf/templates.yaml` (role counts per template, `fill` for villagers)
+and `games/werewolf/options.yaml` (captain, role visibility). Same test command.
+
+### A personality
+
+One YAML file in `config/personalities/<id>.yaml`, checked against
+`config/personalities/personality.schema.json`: `id`, `name`, `description`,
+`values` (`risk_taking`, `honesty`, `aggression`, integers 0-100) and
+`speech_style`.
+
+```bash
+uv run pytest tests/config
+```
+
+### A Liar's Deck variant
+
+One YAML file in
+`games/liars_deck/variants/<id>.yaml`, validated by `games/liars_deck/variants.py`
+(`load_variant`, `load_variants`; errors name file and field). The schema file
+`variants/variant.schema.json` is generated from the models:
+
+```bash
+uv run python -m games.liars_deck.variants   # regenerate the schema
+uv run pytest games/liars_deck
+```
 
 A new Werewolf role already shows up in the role selection
 (`games/werewolf/selection.py`, served at `GET /games/werewolf/roles` and
@@ -220,8 +264,10 @@ balance `weight`.
 
 ### A unit, building or event
 
-*Not built yet: phase 7.* Target: a new YAML file under the strategy game's
-`data/` folder, no code.
+An entry in `games/civ/data/units.yaml` or `buildings.yaml`, or a new file in
+`games/civ/data/events/`; no code. `games/civ/data/README.md` lists the fields;
+`uv run python -m games.civ.data_loader` checks the result. The systems that
+use the data land in phase 7.
 
 ### A system
 

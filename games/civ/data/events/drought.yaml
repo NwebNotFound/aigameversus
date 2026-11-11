@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=event.schema.json
+id: drought
+name: Drought
+name_de: Dürre
+probability_per_round: 0.03
+target: region
+region_radius: 2
+duration_rounds: 3
+effects:
+  yield_modifiers: {food: -0.5}

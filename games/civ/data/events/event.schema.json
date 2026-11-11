@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "EventEffects": {
+      "additionalProperties": false,
+      "properties": {
+        "population_change": {
+          "default": 0,
+          "title": "Population Change",
+          "type": "integer"
+        },
+        "yield_modifiers": {
+          "additionalProperties": {
+            "description": "Relative change: 0.25 = +25 %",
+            "maximum": 10,
+            "minimum": -1,
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Yield Modifiers",
+          "type": "object"
+        },
+        "resources": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Granted once",
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Resources",
+          "type": "object"
+        },
+        "city_becomes_neutral": {
+          "default": false,
+          "title": "City Becomes Neutral",
+          "type": "boolean"
+        },
+        "spawn_neutral_army": {
+          "items": {
+            "$ref": "#/$defs/UnitCount"
+          },
+          "title": "Spawn Neutral Army",
+          "type": "array"
+        }
+      },
+      "title": "EventEffects",
+      "type": "object"
+    },
+    "UnitCount": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "unit",
+        "count"
+      ],
+      "title": "UnitCount",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "snake_case English id",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "description": "English display name",
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "name_de": {
+      "description": "German display name",
+      "minLength": 1,
+      "title": "Name De",
+      "type": "string"
+    },
+    "probability_per_round": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Probability Per Round",
+      "type": "number"
+    },
+    "target": {
+      "enum": [
+        "city",
+        "region",
+        "nation",
+        "map"
+      ],
+      "title": "Target",
+      "type": "string"
+    },
+    "region_radius": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Region Radius"
+    },
+    "duration_rounds": {
+      "default": 1,
+      "description": "1 = this round only",
+      "minimum": 1,
+      "title": "Duration Rounds",
+      "type": "integer"
+    },
+    "only_conquered_within_rounds": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Only Conquered Within Rounds"
+    },
+    "effects": {
+      "$ref": "#/$defs/EventEffects"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "name_de",
+    "probability_per_round",
+    "target",
+    "effects"
+  ],
+  "title": "Event",
+  "type": "object"
+}

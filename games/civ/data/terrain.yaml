@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=terrain.schema.json
+# Hex terrain. yields are per round for the city that works the tile.
+# movement_cost: null = impassable. defense: bonus for the defender on the tile.
+terrains:
+  - id: plains
+    name: Plains
+    name_de: Ebene
+    yields: {food: 2}
+    movement_cost: 1
+    defense: 0.0
+
+  - id: forest
+    name: Forest
+    name_de: Wald
+    yields: {wood: 2}
+    movement_cost: 2
+    defense: 0.25
+
+  - id: hills
+    name: Hills
+    name_de: Hügel
+    yields: {iron: 1, food: 1}
+    movement_cost: 2
+    defense: 0.5
+
+  - id: iron_deposit
+    name: Iron Deposit
+    name_de: Eisenvorkommen
+    yields: {iron: 3}
+    movement_cost: 2
+    defense: 0.25
+    rare: true
+
+  - id: gold_vein
+    name: Gold Vein
+    name_de: Goldader
+    yields: {gold: 3}
+    movement_cost: 2
+    defense: 0.0
+    rare: true
+
+  - id: river
+    name: River
+    name_de: Fluss
+    yields: {food: 1, gold: 1}
+    movement_cost: 1
+    crossing_extra_cost: 1
+    defense: 0.0
+    attacker_modifier: -0.25
+
+  - id: mountains
+    name: Mountains
+    name_de: Berge
+    movement_cost: null
+
+  - id: water
+    name: Water
+    name_de: Wasser
+    movement_cost: null

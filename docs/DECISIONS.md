@@ -229,7 +229,60 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** Keeping the working title; a different title, which
   remains possible because of the single definition.
 
-## D-021 · Werewolf role selection: wolf count and balance light
+## D-019 · Throne of Tokens data: layout and loader
+
+- **Date:** 2026-11-11
+- **Decision:** Content lives in `games/civ/data/` (events in
+  `games/civ/data/events/`, not `games/civ/events/` as one spec line says, to
+  match the repo layout in the same spec). Lists are YAML lists of entries with
+  an `id`, so duplicates are caught (YAML mappings silently drop duplicate
+  keys). One event per file, file name = id. Pydantic models in
+  `games/civ/data_loader.py` are the single source of the schema; the
+  `*.schema.json` files are generated from them and a test fails when they are
+  stale. Building-slot numbers sit in `balance.yaml` only, not also in
+  `buildings.yaml`.
+- **Why:** One place for each number; readable errors; editor validation for
+  free.
+- **Alternatives:** hand-written JSON schemas validated with `jsonschema`;
+  one file per unit and building; id-keyed mappings.
+
+## D-020 · Throne of Tokens values the spec leaves open
+
+- **Date:** 2026-11-11
+- **Decision:** Starting values, all in the data files and meant to be tuned:
+  - Event chance per round: plague 4 %, drought 3 % (food −50 %, radius 2,
+    3 rounds), rebellion 5 % (only cities conquered within 10 rounds), barbarians
+    5 % (2 spearmen, 1 swordsman), gold find 5 % (+25 gold), good harvest 6 %
+    (+5 food).
+  - Treaties: peace and alliance last until broken; non-aggression and open
+    borders 3–30 rounds (default 10); tribute 1–20 (default 5). An alliance
+    includes open borders.
+  - Reputation starts at 50. Trade fee 10 %, +10 % below reputation 30.
+  - Start stock 5 food, 5 wood, 0 iron, 5 gold, besides the capital and units.
+  - City focus: growth → food, production → wood, military → iron.
+  - Pillage yields 50 % of the building's cost. One of each building per city.
+  - Divisions in the score and in building slots round down.
+  - English ids: Reiter = `horseman`, Belagerung = `siege_engine`,
+    Schmiede = `forge`, Speicher = `granary`.
+- **Why:** The spec gives no number for these; these keep events rare enough
+  not to decide a 60-round match on their own.
+- **Alternatives:** leave them out until the systems need them (phase 7
+  engine work would then block on data).
+
+## D-021 · Liar's Deck devil card is one of the jokers
+
+- **Date:** 2026-11-11
+- **Decision:** In the devil-card variant the devil card is one of the two jokers
+  (`devil_card: {card: joker, count: 1, trigger: revealed_on_liar_call, effect:
+  all_others_shoot}` in `games/liars_deck/variants/devil_card.yaml`). The deck
+  stays at 20 cards. When a "Liar!" call reveals it, every living player
+  except the one who played it (the caller included) shoots at the same time,
+  and the normal shot of that round is skipped (`replaces_normal_shot: true`).
+- **Why:** The spec says "one card is the devil card" without saying which. A
+  joker keeps the deck size and the table-card rules unchanged.
+- **Alternatives:** A 21st card; one king, queen or ace marked as devil.
+
+## D-022 · Werewolf role selection: wolf count and balance light
 
 - **Date:** 2026-11-11
 - **Decision:** For the selection rules ("at least 1 wolf", "wolves fewer
