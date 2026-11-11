@@ -108,3 +108,48 @@ def test_the_seed_is_not_in_the_json_of_a_transcript_without_spoilers(client):
 
     assert "seed" not in plain
     assert '"seed"' in spoiled
+
+
+def test_the_json_names_who_sits_in_each_seat_the_same_with_and_without_spoilers(client):
+    match_id = start(client, "liars_deck", players=3, seed=5)
+    finish(client, match_id)
+    url = f"/matches/{match_id}/transcript"
+
+    plain = client.get(url, params={"spoilers": False}).json()["players"]
+    spoiled = client.get(url, params={"spoilers": True}).json()["players"]
+
+    assert list(plain) == ["p1", "p2", "p3"]  # in seat order
+    assert plain == spoiled
+    # Random bots have no name or model of their own to show.
+    assert plain == {seat: {"name": None, "model": None} for seat in ("p1", "p2", "p3")}
+
+
+def test_a_rated_model_seat_gives_its_name_and_model_as_separate_fields(client):
+    import asyncio
+    import os
+    from uuid import UUID
+
+    from arena.db.database import connect
+    from arena.ratings.store import RatingStore
+
+    match_id = start(client, "toy", players=2, seed=3)
+    finish(client, match_id)
+
+    async def seat_a_model():
+        pool = await connect(os.environ["DATABASE_URL"])
+        try:
+            store = RatingStore(pool)
+            profile = await store.create_profile("Mia", "glm-flash")
+            await pool.execute(
+                "UPDATE match_seats SET profile_id = $2 WHERE match_id = $1 AND seat = 'p1'",
+                UUID(match_id),
+                profile,
+            )
+        finally:
+            await pool.close()
+
+    asyncio.run(seat_a_model())
+    players = client.get(f"/matches/{match_id}/transcript").json()["players"]
+
+    assert players["p1"] == {"name": "Mia", "model": "glm-flash"}
+    assert players["p2"] == {"name": None, "model": None}

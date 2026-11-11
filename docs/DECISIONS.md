@@ -1501,7 +1501,85 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** No monthly cap (one runaway batch could spend without
   limit); a higher cap per match for everyone (a mistake would cost more).
 
-## D-077 · Experiments are registered as files before their first paid match
+## D-077 · A game card starts a match only when the arena has the game
+
+- **Date:** 2026-11-11
+- **Decision:** A home card links to the new-match form with its game chosen
+  (`/matches/new?game=<id>`) only when `GET /games` lists the game; otherwise
+  it says "Coming soon" and has no link. Throne of Tokens therefore turns
+  active by itself when its plugin is installed. The form reads `?game=`
+  as its first choice.
+- **Why:** A card that leads to a form which cannot start the game is a dead
+  end; the arena's game list is the one source of what can be played.
+- **Alternatives:** a hard-coded "coming soon" flag per card (needs a code
+  change when a plugin lands); hiding the card (the game should still be
+  announced).
+
+## D-078 · One transcript renders every match for every reader
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/transcript/` turns the events of a match into readable
+  lines, one per event, in English and German (`TranscriptLine`: `kind`, `actor`,
+  `text`, `detail`, `importance`, `raw`). Each game has a renderer class with a
+  `handle_<type>` method per event type; the engine's own events are handled once
+  in the base class. A test reads the plugins' source and fails when one emits a
+  type without a method. Hidden information (hands, roles, private choices,
+  thoughts, whispers, the seed) is written only with `spoilers=True`; public talk
+  always. `importance` is 1 for bookkeeping, 2 normal, 3 highlight; `kind` is one of
+  heading, action, speech, whisper, thought, reveal, result, narration, info.
+  It is served by `GET /matches/{id}/transcript?lang=&spoilers=&format=json|text|markdown`
+  and printed by `arena run` (live, instead of raw events; `--raw` keeps them) and
+  `arena transcript <match-id|file>`. Players are "Name (model)" where the match
+  was rated or a file names its seats, else the seat id. The Werewolf narrator's own
+  lines are shown only in the language the match was played in, as bookkeeping.
+- **Why:** The live view, replays, exports and the terminal need the same words
+  or they drift apart; one renderer per game, tested against what the plugins emit,
+  keeps them equal. Keeping the raw event on each line lets a UI fold it away
+  without a second request.
+- **Alternatives:** a formatter in TypeScript for the web (a second copy to keep
+  in step, and no help for the CLI); text written by the plugins themselves (puts
+  words into rules code, and names are a presentation matter).
+
+## D-080 · The spectator UI: one watch screen, the transcript as its only text, two viewer modes
+
+- **Date:** 2026-11-11
+- **Decision:** `docs/UI-DESIGN.md` sets the look. Live view and replay become
+  one "watch" screen: the board as a large stage, one commentary column built
+  from `TranscriptLine` (`kind`, `importance`), and a timeline with chapters
+  and highlight markers. There are two named viewer modes: "Spectator view"
+  (the default: thoughts, hands and roles visible) and "Spoiler-free". In
+  spoiler-free mode the transcript is fetched with `spoilers=false`. The web
+  server strips spectator-only events and the secret board fields before they
+  reach the browser, and there is no seed and no export.
+- **Why:** The audit (screenshots of the bot demo at 375 and 1280) found raw
+  engine lines, three equal columns with a small board, pages 11–17k px tall on
+  mobile, and replays without rounds or highlights. One text source keeps the
+  CLI, the API and the UI from telling a match in different words.
+- **Alternatives:** Keep three equal columns and polish them (keeps the board
+  small); a formatter in the browser (a second wording to keep in sync); hide
+  thoughts by default (hides the project's main attraction).
+
+## D-082 · Model seats in POST /matches, off by default and confirmed per match
+
+- **Date:** 2026-11-11
+- **Decision:** `POST /matches` takes `models` (model ids, one per seat) and
+  then plays those seats behind one `Budget`, like `arena run --models`. The
+  server refuses model seats unless it was started with
+  `ARENA_ALLOW_MODEL_SEATS=1`, the request must carry `confirm_spend: true`,
+  and the provider's key must be set; otherwise nothing is recorded or sent.
+  A cost cap ends the match as `interrupted`. Model matches are not rated yet.
+  Every match records who sat where (`seats`: name, model id, kind) and
+  whether it was played here or imported (`origin`).
+- **Why:** The project owner wants to start and watch real matches from the
+  UI. The API has no login and listens on localhost, so anything on the
+  machine could start paid matches: off by default plus an explicit flag per
+  request keeps a mistake from spending. Seats with names are what viewers
+  read instead of p1..pN.
+- **Alternatives:** Authentication (a bigger change, not needed on loopback
+  yet); model seats always on (any local script could spend); a separate
+  table for seats (the record is read with the match anyway).
+
+## D-090 · Experiments are registered as files before their first paid match
 
 - **Date:** 2026-11-11
 - **Decision:**
@@ -1531,28 +1609,3 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** random seatings and seeds (more matches for the same
   precision); a full round robin of all 70 tables of four (5 times the cost);
   plans as prose only (nothing to check a schedule against).
-
-## D-078 · One transcript renders every match for every reader
-
-- **Date:** 2026-11-11
-- **Decision:** `arena/transcript/` turns the events of a match into readable
-  lines, one per event, in English and German (`TranscriptLine`: `kind`, `actor`,
-  `text`, `detail`, `importance`, `raw`). Each game has a renderer class with a
-  `handle_<type>` method per event type; the engine's own events are handled once
-  in the base class. A test reads the plugins' source and fails when one emits a
-  type without a method. Hidden information (hands, roles, private choices,
-  thoughts, whispers, the seed) is written only with `spoilers=True`; public talk
-  always. `importance` is 1 for bookkeeping, 2 normal, 3 highlight; `kind` is one of
-  heading, action, speech, whisper, thought, reveal, result, narration, info.
-  It is served by `GET /matches/{id}/transcript?lang=&spoilers=&format=json|text|markdown`
-  and printed by `arena run` (live, instead of raw events; `--raw` keeps them) and
-  `arena transcript <match-id|file>`. Players are "Name (model)" where the match
-  was rated or a file names its seats, else the seat id. The Werewolf narrator's own
-  lines are shown only in the language the match was played in, as bookkeeping.
-- **Why:** The live view, replays, exports and the terminal need the same words
-  or they drift apart; one renderer per game, tested against what the plugins emit,
-  keeps them equal. Keeping the raw event on each line lets a UI fold it away
-  without a second request.
-- **Alternatives:** a formatter in TypeScript for the web (a second copy to keep
-  in step, and no help for the CLI); text written by the plugins themselves (puts
-  words into rules code, and names are a presentation matter).

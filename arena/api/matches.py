@@ -4,6 +4,7 @@ Everything here shows a match the way a spectator sees it: all events, also
 thoughts and hidden cards. The API listens on localhost only.
 """
 
+import os
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
@@ -13,7 +14,8 @@ from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
-from arena.db.match_store import MatchRecord, Status
+from arena.config import load_config, missing_keys
+from arena.db.match_store import MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 
@@ -39,6 +41,16 @@ class Game(BaseModel):
 class NewMatch(BaseModel):
     game: str = Field(description="Game id, see GET /games")
     players: int | None = Field(None, description="Number of seats; default: the game's minimum")
+    models: list[str] | None = Field(
+        None,
+        min_length=1,
+        description="Model ids from config/models.yaml, one per seat in order (p1, p2, ...). "
+        "Makes paid model calls inside the cost caps. Only on a server started with "
+        "ARENA_ALLOW_MODEL_SEATS=1, and with confirm_spend. Without: every seat is a random bot",
+    )
+    confirm_spend: bool = Field(
+        False, description="Must be true for a match with model seats: it spends money."
+    )
     seed: int | None = Field(None, ge=0, lt=2**63, description="Default: a random seed")
     settings: dict[str, Any] = Field(default_factory=dict, description="Settings of the game")
     turn_delay: float = Field(
@@ -59,24 +71,73 @@ def list_games(live: Live) -> list[Game]:
     ]
 
 
+ALLOW_MODEL_SEATS = "ARENA_ALLOW_MODEL_SEATS"
+
+
 @router.post("/matches", status_code=201)
 async def start_match(new: NewMatch, live: Live) -> MatchRecord:
-    """Start a match in which every seat is a random bot. It plays on in the background.
+    """Start a match of random bots, or of models (`models`). It plays on in the background.
 
-    Answers 429 while the server already plays as many matches as it does at a time.
+    Model seats cost money and are refused (403) unless the server was started
+    with ARENA_ALLOW_MODEL_SEATS=1: the API has no login. Answers 429 while the
+    server already plays as many matches as it does at a time.
     """
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
-    players = [f"p{seat}" for seat in range(1, (new.players or plugin.min_players) + 1)]
+    models = None
+    if new.models is None:
+        count = new.players or plugin.min_players
+    else:
+        models = _model_seats(new)
+        count = len(models)
+    players = [f"p{seat}" for seat in range(1, count + 1)]
     try:
         return await live.start(
-            plugin, players, seed=new.seed, settings=new.settings, turn_delay=new.turn_delay
+            plugin,
+            players,
+            seed=new.seed,
+            settings=new.settings,
+            turn_delay=new.turn_delay,
+            models=models,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
     except ArenaBusy as busy:
         raise HTTPException(429, str(busy)) from busy
+
+
+def _model_seats(new: NewMatch) -> dict[str, str]:
+    """Seat -> model id, after every check that can refuse a paid match before it starts."""
+    if os.environ.get(ALLOW_MODEL_SEATS) != "1":
+        raise HTTPException(
+            403,
+            f"Model seats make paid calls and are off on this server. Start it with "
+            f"{ALLOW_MODEL_SEATS}=1 to allow them.",
+        )
+    assert new.models is not None
+    if not new.confirm_spend:
+        raise HTTPException(
+            422, "A match with model seats spends money: send confirm_spend: true to start it."
+        )
+    if new.players is not None and new.players != len(new.models):
+        raise HTTPException(
+            422, f"players is {new.players}, but {len(new.models)} models are named: one per seat"
+        )
+    config = load_config()
+    unknown = [model_id for model_id in new.models if model_id not in config.models]
+    if unknown:
+        raise HTTPException(
+            422,
+            f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
+            f"{', '.join(config.models)}",
+        )
+    if missing := missing_keys(config, new.models):
+        raise HTTPException(
+            503,
+            f"The server lacks {', '.join(missing)}, the provider's API key. Nothing was started.",
+        )
+    return {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
 
 
 @router.get("/matches")
@@ -152,6 +213,9 @@ class Replay(BaseModel):
     started_at: datetime
     finished_at: datetime
     cost_micro_eur: int = Field(description="What its model calls cost; 0 for bots")
+    seats: dict[str, Seat] | None = Field(description="Who played each seat; null for old rows")
+    origin: Origin
+    real: bool = Field(description="Whether a model played any seat")
 
 
 class Cost(BaseModel):
@@ -256,6 +320,9 @@ async def list_replays(live: Live) -> list[Replay]:
             started_at=record.started_at,
             finished_at=record.finished_at,
             cost_micro_eur=cost,
+            seats=record.seats,
+            origin=record.origin,
+            real=record.real,
         )
         for record, cost in await live.matches.finished_with_cost()
     ]

@@ -43,3 +43,24 @@ test('nothing overflows the viewport horizontally', async ({ page }) => {
 	);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('a game without its plugin yet is coming soon and starts nothing', async ({ page }) => {
+	await page.goto('/');
+
+	const civ = page.locator('[data-testid="game-card"][data-game="civ"]');
+	await expect(civ).toContainText('Coming soon');
+	await expect(civ.getByRole('link')).toHaveCount(0);
+});
+
+test('a playable game starts the new-match form with it chosen', async ({ page }) => {
+	await page.goto('/');
+
+	await page
+		.locator('[data-testid="game-card"][data-game="poker"]')
+		.getByRole('link', { name: 'Start a match' })
+		.click();
+
+	await expect(page).toHaveURL('/matches/new?game=poker');
+	await expect(page.getByRole('radio', { name: /Poker/ })).toBeChecked();
+	await expect(page.getByLabel('Number of players')).toHaveValue('2');
+});

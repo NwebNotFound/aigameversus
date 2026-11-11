@@ -11,8 +11,24 @@ from pydantic import BaseModel
 from arena.engine.types import Placement, PlayerId
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
+Origin = Literal["played", "imported"]
 
-_COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements"
+
+class Seat(BaseModel):
+    """Who played a seat, for the people who watch: the event log only knows the seat id."""
+
+    name: str
+    model_id: str | None = None  # an id from config/models.yaml; None for a bot
+    kind: Literal["model", "bot"]
+
+
+def bot_seats(players: Sequence[PlayerId]) -> dict[PlayerId, Seat]:
+    return {player: Seat(name=f"Random Bot {player}", kind="bot") for player in players}
+
+
+_COLUMNS = (
+    "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, origin"
+)
 
 
 class MatchRecord(BaseModel):
@@ -25,6 +41,13 @@ class MatchRecord(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     placements: list[Placement] | None
+    seats: dict[PlayerId, Seat] | None = None  # None for matches recorded before seats were
+    origin: Origin = "played"
+
+    @property
+    def real(self) -> bool:
+        """Whether a model played any seat."""
+        return any(seat.kind == "model" for seat in (self.seats or {}).values())
 
 
 class MatchStore:
@@ -38,16 +61,20 @@ class MatchStore:
         players: Sequence[PlayerId],
         seed: int,
         settings: dict[str, Any],
+        seats: dict[PlayerId, Seat] | None = None,
+        origin: Origin = "played",
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
-            "INSERT INTO matches (id, game, status, players, seed, settings) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5) RETURNING {_COLUMNS}",
+            "INSERT INTO matches (id, game, status, players, seed, settings, seats, origin) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
             seed,
             settings,
+            None if seats is None else {p: s.model_dump() for p, s in seats.items()},
+            origin,
         )
         return MatchRecord(**row)
 
@@ -78,14 +105,19 @@ class MatchStore:
         row = await self._pool.fetchrow(f"SELECT {_COLUMNS} FROM matches WHERE id = $1", match_id)
         return None if row is None else MatchRecord(**row)
 
-    async def seat_names(self, match_id: UUID) -> dict[str, str]:
-        """ "Name (model)" for each seat of a rated match; empty for a match that was not rated."""
+    async def seat_profiles(self, match_id: UUID) -> dict[str, tuple[str, str]]:
+        """(profile name, model id) for each seat of a rated match; empty if it was not rated."""
         rows = await self._pool.fetch(
             "SELECT s.seat, p.name, p.model_id FROM match_seats s "
             "JOIN player_profiles p ON p.id = s.profile_id WHERE s.match_id = $1 ORDER BY s.seat",
             match_id,
         )
-        return {row["seat"]: f"{row['name']} ({row['model_id']})" for row in rows}
+        return {row["seat"]: (row["name"], row["model_id"]) for row in rows}
+
+    async def seat_names(self, match_id: UUID) -> dict[str, str]:
+        """ "Name (model)" for each seat of a rated match; empty for a match that was not rated."""
+        profiles = await self.seat_profiles(match_id)
+        return {seat: f"{name} ({model})" for seat, (name, model) in profiles.items()}
 
     async def finished_with_cost(self, limit: int = 100) -> list[tuple[MatchRecord, int]]:
         """The newest finished matches, newest first, each with its model cost in micro-euros."""
