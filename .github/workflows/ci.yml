@@ -61,6 +61,45 @@ jobs:
         if: always()
         run: docker compose down --volumes
 
+  web:
+    name: Web UI lint, build and Playwright
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Start the stack and wait for every healthcheck
+        working-directory: .
+        run: docker compose up --build --detach --wait --wait-timeout 180
+      - run: npx playwright install --with-deps chromium
+      - name: Playwright smoke tests on port 3100 (375 and 1280 px)
+        run: npx playwright test
+      - name: Keep the Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: web/test-results
+          retention-days: 7
+      - name: Show logs
+        if: failure()
+        working-directory: .
+        run: docker compose logs
+      - name: Stop the stack
+        if: always()
+        working-directory: .
+        run: docker compose down --volumes
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest

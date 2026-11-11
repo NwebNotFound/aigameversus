@@ -61,13 +61,38 @@ On Linux or macOS use `--volume "$PWD:/repo"` and drop `MSYS_NO_PATHCONV`.
 ```bash
 docker compose up --build --detach --wait --wait-timeout 180
 curl --fail http://127.0.0.1:8100/health
-curl --fail --output /dev/null http://127.0.0.1:3100/
+curl --fail --output /dev/null http://127.0.0.1:3100/   # the SvelteKit web UI
 docker compose logs      # on failure
 docker compose down      # add --volumes to also delete the database
 ```
 
 Stop only this project (`aigameversus`); other stacks may run on the same
 machine.
+
+## Web UI
+
+The spectator UI in `web/` is a SvelteKit app (TypeScript). Run these in `web/`:
+
+```bash
+npm ci                 # install from package-lock.json
+npm run lint           # Prettier check + svelte-check
+npm run test:unit      # Vitest
+npm run build          # production build
+```
+
+The Playwright smoke tests open the running UI on port 3100, so start the stack
+first and then run them:
+
+```bash
+docker compose up --build --detach --wait --wait-timeout 180   # from the repo root
+cd web && npx playwright test
+```
+
+- `WEB_URL` overrides the address, for example `WEB_URL=http://127.0.0.1:5173`
+  against `npm run dev`.
+- Two projects run every test: `mobile-375` and `desktop-1280` (viewport widths).
+- Traces are written to `web/test-results`; CI uploads them when a test fails.
+  Open one with `npx playwright show-trace <trace.zip>`.
 
 ## Windows notes
 
