@@ -388,6 +388,7 @@ arena/
   gamemaster/   match setup, scheduling, narrator
   db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
+  research/     experiment plans, balanced seatings, match schedules, power
   chronicle/    the chronicler: a finished match as a story (templates, styles, languages)
   transcript/   the one readable play-by-play of a match: a renderer per game, de and en
   cli.py        the `arena` command
@@ -404,6 +405,8 @@ config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
 docs/           DESIGN.md, DECISIONS.md, CREDITS.md
+experiments/    one plan per experiment (YAML) and the schedule it fixes (CSV)
+research/       research plan and reports
 tests/          tests for the arena core
 ```
 
@@ -688,6 +691,22 @@ How these follow the engine's rules, and what the next systems should copy:
   in `games/civ/tests/realm.py`, which is as strict as the engine about
   random streams and event data; `games/civ/tests/test_sessions.py` plays
   random legal orders of all systems and should learn the new orders.
+
+### An experiment
+
+One YAML file in `experiments/`, written before its first paid match and
+loaded by `arena/research/experiment.py`: models with their ids and prices,
+stages (`league`, `mirror` or `guests`, the seatings of
+`arena/research/design.py`), hypotheses with their tests, stopping rules and
+budgets. Loading refuses unknown fields and budgets above the monthly cap.
+The schedule, every match with seed, seating and order, is stored next to the
+plan and checked by the tests. [experiments/README.md](experiments/README.md)
+has the rules; a plan spends nothing until it is approved.
+
+```bash
+uv run python -m arena.research.experiment experiments/<name>.yaml > experiments/<name>_schedule.csv
+uv run pytest tests/research
+```
 
 ### A system
 

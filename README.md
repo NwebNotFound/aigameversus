@@ -273,6 +273,8 @@ mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)
 scripts/    make_showcase.sh (README GIFs and screenshots), backup-ledger.sh (daily ledger dump)
 docs/       design spec, architecture, testing, decisions, credits
+experiments/ one plan per experiment, written before its first paid match
+research/   research plan and reports
 tests/      tests for the arena core
 ```
 
@@ -284,4 +286,5 @@ tests/      tests for the arena core
 - [docs/DESIGN.md](docs/DESIGN.md): the full design spec (German).
 - [docs/DECISIONS.md](docs/DECISIONS.md): decisions taken where the spec is open or overridden.
 - [docs/CREDITS.md](docs/CREDITS.md): origin of every asset.
+- [research/README.md](research/README.md): how the models are evaluated; plans in [experiments/](experiments/README.md).
 - [CLAUDE.md](CLAUDE.md): architecture and conventions for contributors, human or AI.
