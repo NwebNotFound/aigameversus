@@ -76,3 +76,69 @@ test('the footer says what this server plays with, not a promise', async ({ page
 	await expect(footer).not.toContainText('until real models are on');
 	await expect(footer).toContainText(setup.model_seats ? 'Real models enabled' : 'Bots only');
 });
+
+test('a running match reads as its players, kind and round, never as seat ids', async ({
+	page,
+	request
+}) => {
+	const arena = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
+	// Slow enough to still run while the page loads; aborted at the end.
+	const started = await request.post(`${arena}/matches`, {
+		data: { game: 'liars_deck', players: 3, seed: 11, turn_delay: 2 }
+	});
+	expect(started.ok()).toBe(true);
+	const { id } = await started.json();
+	try {
+		await expect
+			.poll(async () => {
+				const board = await (await request.get(`${arena}/matches/${id}/board`)).json();
+				return board.spec?.round ?? 0;
+			})
+			.toBeGreaterThan(0);
+
+		await page.goto('/');
+
+		const row = page.locator(`[data-testid="running-match"][data-match="${id}"]`);
+		await expect(row.getByTestId('player-name')).toHaveText(['Bot 1', 'Bot 2', 'Bot 3']);
+		await expect(row.getByTestId('kind')).toHaveText('bots');
+		await expect(row.getByTestId('progress')).toHaveText(/^round \d+$/);
+		// A bot match costs nothing, so no cost is shown; no seat id appears anywhere.
+		await expect(row.getByTestId('cost')).toHaveCount(0);
+		await expect(row).not.toContainText(/\bp[1-3]\b/);
+	} finally {
+		await request.post(`${arena}/matches/${id}/abort`);
+	}
+});
+
+test('the running matches of one batch are one row that says how far the batch is', async ({
+	page,
+	request
+}) => {
+	const arena = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
+	const setup = await request.get(`${arena}/batches/none-yet`);
+	test.skip(
+		!(await setup.text()).includes('No match is in batch'),
+		'this arena has no batches yet'
+	);
+	const id = `pw-${test.info().project.name}-${Date.now()}`;
+	const batch = { id, label: 'Test league', of: 5, budget_eur: 1 };
+	const ids: string[] = [];
+	for (const index of [1, 2]) {
+		const started = await request.post(`${arena}/matches`, {
+			data: { game: 'liars_deck', players: 3, turn_delay: 2, batch: { ...batch, index } }
+		});
+		expect(started.ok()).toBe(true);
+		ids.push((await started.json()).id);
+	}
+	try {
+		await page.goto('/');
+
+		const row = page.locator(`[data-testid="batch-row"][data-batch="${id}"]`);
+		await expect(row.getByTestId('batch-line')).toHaveText(
+			/^Test league · 0 of 5 done, 2 running · 0\.0000 € of 1\.00 €$/
+		);
+		await expect(row.getByTestId('running-match')).toHaveCount(2);
+	} finally {
+		await Promise.all(ids.map((match) => request.post(`${arena}/matches/${match}/abort`)));
+	}
+});

@@ -105,6 +105,7 @@ with `python scripts/decisions.py adopt`.
 - [D-099](decisions/D-099-key-moments-are-staged-by-the-watch-screen-from-the.md) · Key moments are staged by the watch screen, from the transcript's highlights
 - [D-100](decisions/D-100-a-finished-match-ends-on-a-result-card-showdowns-and-the.md) · A finished match ends on a result card; showdowns and the final ranking are structured
 - [D-101](decisions/D-101-an-estimate-before-a-match-bots-play-it-the-prompts-are.md) · An estimate before a match: bots play it, the prompts are measured
+- [D-102](decisions/D-102-any-openrouter-model-that-can-call-tools-may-take-a-seat.md) · Any OpenRouter model that can call tools may take a seat
 - [D-103](decisions/D-103-a-seat-s-identity-comes-from-the-match-record-first-a-model.md) · A seat's identity comes from the match record first; a model seat never reads as a bot
 - [D-104](decisions/D-104-one-display-name-per-seat-computed-by-the-server-never-the.md) · One display name per seat, computed by the server, never the seat id
 - [D-106](decisions/D-106-match-analytics-a-pure-function-of-the-log-public-events.md) · Match analytics: a pure function of the log, public events only without spoilers
