@@ -62,6 +62,7 @@ describe('describe', () => {
 		expect(describeEvent(call)).toEqual({
 			kind: 'event',
 			player: null,
+			sentence: null, // no game given: no sentence
 			title: 'liar called',
 			details: 'caller: p2 · target: p1 · automatic: false'
 		});
@@ -112,5 +113,20 @@ describe('euros', () => {
 		expect(euros(1_234_567)).toBe('1.2346 €');
 		expect(euros(1)).toBe('0.0001 €');
 		expect(euros(500_000)).toBe('0.5000 €');
+	});
+});
+
+describe('describe with a game', () => {
+	it('adds the sentence of the event and keeps the raw form', () => {
+		const call = event(0, 'liar_called', { caller: 'p2', target: 'p1', automatic: false });
+
+		expect(describeEvent(call, 'liars_deck', 'en')).toMatchObject({
+			kind: 'event',
+			sentence: 'p2 calls p1 a liar!',
+			title: 'liar called'
+		});
+		expect(describeEvent(call, 'liars_deck', 'de')).toMatchObject({
+			sentence: 'p2 nennt p1 einen Lügner!'
+		});
 	});
 });

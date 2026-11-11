@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { ControlAction, LiveState, MatchEvent } from '#lib/api.js';
 	import MatchColumns from '#lib/components/MatchColumns.svelte';
+	import { matchLang } from '#lib/event-text.js';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS, euros, merge } from '#lib/live.js';
 	import type { PageProps } from './$types';
@@ -163,7 +164,14 @@
 		{#if problem}<p class="problem" role="alert">{problem}</p>{/if}
 	</section>
 
-	<MatchColumns spec={live.board.spec} {spoilers} events={log} players={live.match.players} />
+	<MatchColumns
+		spec={live.board.spec}
+		{spoilers}
+		events={log}
+		players={live.match.players}
+		game={live.match.game}
+		lang={matchLang(live.match.settings)}
+	/>
 {/if}
 
 <style>
