@@ -164,8 +164,8 @@ the small reference game, `liars_deck` is Liar's Deck, `poker` is Poker and `wer
 
 Configuration is optional. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
-and Compose passes the key on to the arena. Only `arena run --models` uses
-the key (see Cost safety).
+and Compose passes the key on to the arena. Only matches with model seats
+use the key (see Cost safety).
 
 ## Real models: first matches
 
@@ -207,12 +207,14 @@ platform, not an afterthought.
   and can resume it later from the same turn, unchanged. Today nothing asks you
   to raise a cap or resume: a match started from the command line ends at a
   cap.
-- **One door for real models:** `arena run --game <id> --models <id>,<id>,...`
-  seats models from `config/models.yaml` and is the only thing here that
-  spends money. It needs a database for the ledger and the key in the
-  environment, and prints what each seat cost. Matches started through the
-  API seat random bots. Development, tests and CI use random bots and a mock
-  LLM only, and CI has no access to any API key.
+- **Two doors for real models, both behind the same budget:**
+  `arena run --game <id> --models <id>,<id>,...` and `POST /matches` with
+  `"models": [...]` and `"confirm_spend": true`. The API refuses model seats
+  unless the server was started with `ARENA_ALLOW_MODEL_SEATS=1`, because it
+  has no login: anything on this machine that reaches it could otherwise
+  spend. Both need the key in the environment and refuse to start without
+  it. Development, tests and CI use random bots and a mock LLM only, and CI
+  has no access to any API key.
 - **Keys stay in `.env`:** never in code, config files, logs, the event log or
   the database. Provider error texts are dropped, because they can quote a
   key.

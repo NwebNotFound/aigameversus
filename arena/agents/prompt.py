@@ -15,9 +15,14 @@ from arena.engine.types import MESSAGE, Event, PlayerId, ToolSpec, TurnRequest
 
 HISTORY_LIMIT = 40  # a prompt shows this many of the most recent events
 THOUGHT = "thought"  # the argument of every tool call that holds the player's private thinking
+# Fields that name who did an event, across the games. Fields that name whom it was done to
+# (a vote's target) are not here: a vote against the reader is not the reader's doing.
+ACTOR_FIELDS = ("player", "caller", "from")
 
 _SYSTEM = """\
 You are player {player} in a match of {game} against other AI players. Play to win.
+Your seat is {player}. Wherever the game data or another player names {player}, \
+that is you; every other seat is someone else.
 
 # Rules of {game}
 
@@ -51,12 +56,16 @@ def build_messages(game: str, rules: str, request: TurnRequest) -> list[Message]
     earlier = len(request.events) - len(shown)
     if earlier:
         lines.insert(0, f"({earlier} earlier events are not shown)")
+    # Said again at the end, where a model reads last: in a long match models lost track of
+    # which seat was theirs and argued against themselves.
+    you = f"You are {request.player}. "
     if request.error is None:
-        ask = "It is your turn. Answer with one tool call."
+        ask = you + "It is your turn. Answer with one tool call."
     else:
         ask = (
             f"The server rejected your last answer: {request.error}\n"
-            "Answer again with one tool call."
+            + you
+            + "Answer again with one tool call."
         )
     user = "\n\n".join(
         [
@@ -96,7 +105,8 @@ def _line(event: Event, reader: PlayerId) -> str:
     if event.visible_to is not None:
         private = f" (seen only by {', '.join(event.visible_to)})"
     if event.type != MESSAGE:
-        return f"{event.type}{private} {_json(event.data)}"
+        mine = "[you] " if any(event.data.get(key) == reader for key in ACTOR_FIELDS) else ""
+        return f"{mine}{event.type}{private} {_json(event.data)}"
     author = event.data["player"]
     speaker = "you said" if author == reader else f"player {author} says"
     return f"{speaker}{private}: {_json(event.data['text'])}"

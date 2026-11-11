@@ -304,7 +304,7 @@ def test_match_that_could_not_be_recorded_does_not_keep_its_place(client, monkey
     monkeypatch.setattr(live, "MAX_RUNNING", 1)
     matches = client.app.state.live.matches
 
-    async def database_is_down(*arguments):
+    async def database_is_down(*arguments, **options):
         raise ConnectionError("no database")
 
     with monkeypatch.context() as broken:
