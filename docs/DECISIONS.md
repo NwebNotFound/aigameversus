@@ -1121,7 +1121,6 @@ Each entry: date, decision, why, alternatives considered.
   the numbers up (an old log would change its meaning when a number is
   tuned); one event per city and round.
 
-
 ## D-058 · Match controls: pause between turns, abort as its own status
 
 - **Date:** 2026-11-11
@@ -1195,6 +1194,30 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** telling the story live from public events only (much
   thinner, and the replay page can use the finished one); one free-text
   generator without beats (not testable).
+
+## D-063 · Profile statistics: seats stored at rating time, totals read from the logs
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The rating of a match also stores which seat of its log each profile
+    played (`match_seats`, migration `0007`), in the same transaction as the
+    ratings. Matches rated without seats (the DEMO seed) have no statistics.
+  - `GET /profiles/{id}/stats?game=` loads the log of every rated match of the
+    profile in that game, runs the game's `match_stats` from `arena/stats` and
+    returns its `aggregate` per game. Nothing is cached: the logs are the truth
+    and the statistics follow any fix of a stats module at once. Without
+    `game`, every game with statistics the profile played; a game without
+    statistics answers 404.
+  - At most the newest 200 rated matches per game count (`MAX_STATS_MATCHES`);
+    `matches` says how many did.
+  - The profile page shows one table per game, the fields of the game's totals
+    in their order, shares as percent.
+- **Why:** The seat is the only link between a profile and its events; storing
+  it when the match is rated keeps one place that knows both. Computing on
+  request is fast enough for today's match counts, and the cap bounds a
+  random-bot profile, which sits in every bot match.
+- **Alternatives:** stored totals per profile and game (to be added when a
+  profile has thousands of matches); seats in `match_placements`.
 
 ## D-064 · Live view: SSE relay on the web server, a generic board, spoilers in the UI
 
@@ -1313,3 +1336,28 @@ Each entry: date, decision, why, alternatives considered.
   needs no UI state. The spec carries seats and phase only.
 - **Alternatives:** adding the votes to `render_spec`; passing the model names to
   the board (needs the match record in the board props, a later step).
+
+## D-070 · Real models take their seats from the command line first
+
+- **Date:** 2026-11-11
+- **Decision:** `arena run --game <id> --models <id>,<id>,...` is the first
+  and for now the only way to start a match with real models. Each named
+  model from `config/models.yaml` takes one seat, in order. The command
+  builds one `Budget` for the match, so it needs `DATABASE_URL`; it records
+  the match and its events in the same tables as the API. When a cost cap
+  is reached it does not ask: the match is closed as `interrupted` and the
+  command exits with 3. After the match it prints what each seat cost from
+  the ledger and checks that the stored log rebuilds the final state;
+  `--save FILE` writes seats, result, cost and all events as JSON. Which
+  model sat where is in the ledger rows and in the saved file, not in the
+  event log.
+- **Why:** The first real matches are run by hand, one at a time, by whoever
+  holds the key, and a command in a terminal is the smallest thing that
+  does that with the caps in force. A match that stops at a cap cannot
+  overrun while nobody watches. The API keeps seating bots only until the
+  UI can show a pause and ask.
+- **Alternatives:** Model seats in `POST /matches` first (needs the pause
+  question in the UI and a way to keep a key out of requests); a script
+  outside the package (would not be tested with the rest); raising the cap
+  from a prompt in the terminal (a second way to spend that tests cannot
+  cover).

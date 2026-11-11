@@ -1,13 +1,15 @@
 """Leaderboard and player profile endpoints."""
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from arena.db.event_store import EventStore
 from arena.ratings.store import RatingStore, Standing
+from arena.stats import STATS
 
 router = APIRouter(tags=["ratings"])
 
@@ -126,3 +128,53 @@ async def profile(profile_id: UUID, store: Store) -> ProfileOut:
             for m in found.recent_matches
         ],
     )
+
+
+# Statistics count the newest matches of a game only, so a page view stays cheap
+# also for a random-bot profile, which sits in every bot match.
+MAX_STATS_MATCHES = 200
+
+
+class GameStatsOut(BaseModel):
+    game_id: str
+    matches: int = Field(
+        description="Rated matches of this game counted: the newest, at most MAX_STATS_MATCHES"
+    )
+    stats: dict[str, Any] | None = Field(
+        description="The game's totals (see arena/stats/<game>.py); null without matches"
+    )
+
+
+class ProfileStats(BaseModel):
+    profile_id: UUID
+    games: list[GameStatsOut]
+
+
+@router.get("/profiles/{profile_id}/stats")
+async def profile_stats(
+    profile_id: UUID,
+    store: Store,
+    request: Request,
+    game: Annotated[str | None, Query(description="Only this game")] = None,
+) -> ProfileStats:
+    """The player's statistics per game, computed from the logs of its rated matches.
+
+    Without `game`, every game with statistics the player has played. Each game
+    counts its newest `MAX_STATS_MATCHES` rated matches.
+    """
+    if game is not None and game not in STATS:
+        raise HTTPException(status_code=404, detail=f"no statistics for the game {game!r}")
+    if await store.profile(profile_id) is None:
+        raise HTTPException(status_code=404, detail="profile not found")
+    played = await store.seats(profile_id)
+    logs = EventStore(request.app.state.pool)
+    games = []
+    for game_id in [game] if game else sorted(g for g in played if g in STATS):
+        per_match = []
+        for match_id, seat in played.get(game_id, [])[-MAX_STATS_MATCHES:]:
+            seat_stats = STATS[game_id].match_stats(await logs.load(match_id)).get(seat)
+            if seat_stats is not None:
+                per_match.append(seat_stats)
+        totals = STATS[game_id].aggregate(per_match).model_dump() if per_match else None
+        games.append(GameStatsOut(game_id=game_id, matches=len(per_match), stats=totals))
+    return ProfileStats(profile_id=profile_id, games=games)
