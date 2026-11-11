@@ -64,3 +64,15 @@ test('a playable game starts the new-match form with it chosen', async ({ page }
 	await expect(page.getByRole('radio', { name: /Poker/ })).toBeChecked();
 	await expect(page.getByLabel('Number of players')).toHaveValue('2');
 });
+
+test('the footer says what this server plays with, not a promise', async ({ page, request }) => {
+	const setup = await (
+		await request.get(`${process.env.ARENA_URL ?? 'http://127.0.0.1:8100'}/setup`)
+	).json();
+
+	await page.goto('/');
+
+	const footer = page.getByTestId('footer-status');
+	await expect(footer).not.toContainText('until real models are on');
+	await expect(footer).toContainText(setup.model_seats ? 'Real models enabled' : 'Bots only');
+});

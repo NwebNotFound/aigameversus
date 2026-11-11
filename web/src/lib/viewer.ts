@@ -4,7 +4,7 @@
  *
  * Text comes only from the transcript (`arena/transcript`); nothing here words an event.
  */
-import type { MatchEvent, Seat, TranscriptLine } from './api.js';
+import type { MatchEvent, RecordSeat, Seat, SetupOptions, TranscriptLine } from './api.js';
 
 /** Spectator view shows thoughts, hands and roles; spoiler-free shows what every player saw. */
 export type View = 'spectator' | 'spoiler-free';
@@ -93,7 +93,13 @@ export function chapterLabel(line: TranscriptLine): string | null {
 
 /** How a seat is named: the model's player name, else the seat id. */
 export function seatName(seat: string, players: Record<string, Seat> | undefined): string {
-	return players?.[seat]?.name ?? seat;
+	const info = players?.[seat];
+	return info?.display ?? info?.name ?? seat;
+}
+
+/** "p3" as 3, for the small seat badge: the only place a seat id is shown. */
+export function seatNumber(seat: string): string {
+	return seat.replace(/^p/, '');
 }
 
 /** The model of a seat, or null for bots and unrated matches. */
@@ -261,4 +267,118 @@ export function showdownHands(lines: TranscriptLine[], index: number): ShownHand
 			}
 		];
 	});
+}
+
+/**
+ * Who sits in each seat, from every source the page has. The match record's seats come
+ * first (they exist for running and finished matches), then the transcript's players,
+ * then the roster for vendor and price. A model seat is never shown as a bot.
+ */
+export function mergeSeats(
+	order: string[],
+	record: Record<string, RecordSeat> | undefined,
+	transcript: Record<string, Seat> | undefined,
+	roster: SetupOptions['models'] = []
+): Record<string, Seat> {
+	const byId = new Map(roster.map((m) => [m.id, m]));
+	const merged: Record<string, Seat> = Object.fromEntries(
+		order.map((seat) => {
+			const stored = record?.[seat];
+			const told = transcript?.[seat];
+			const model = stored?.model_id ?? told?.model ?? null;
+			const known = model ? byId.get(model) : undefined;
+			const kind: 'model' | 'bot' | undefined =
+				stored?.kind ?? (model ? 'model' : told?.name ? 'bot' : undefined);
+			return [
+				seat,
+				{
+					display: told?.display ?? stored?.display ?? null,
+					name: told?.name ?? stored?.name ?? null,
+					model,
+					kind,
+					vendor: known?.model.includes('/') ? known.model.split('/')[0] : null,
+					personality: stored?.personality ?? null,
+					price: known
+						? { input: known.input_usd_per_mtok, output: known.output_usd_per_mtok }
+						: null
+				}
+			];
+		})
+	);
+	return withDisplayNames(order, merged);
+}
+
+/**
+ * The display name of every seat (Lead's rule), unless the API already gave one: a model
+ * by its short name, with "#2" for the second seat of the same model; a bot "Bot 1",
+ * "Bot 2" in seat order. Unique within the match; the seat id is never the name.
+ */
+export function withDisplayNames(
+	order: string[],
+	seats: Record<string, Seat>
+): Record<string, Seat> {
+	const seen = new Map<string, number>();
+	let bots = 0;
+	for (const seat of order) {
+		const info = seats[seat];
+		if (!info || info.display) continue;
+		if (info.kind === 'bot' || (!info.model && /^Random Bot/i.test(info.name ?? ''))) {
+			bots += 1;
+			info.display = `Bot ${bots}`;
+			continue;
+		}
+		const base = info.model
+			? info.name && info.name !== info.model
+				? info.name
+				: info.model
+			: info.name;
+		if (!base) continue;
+		const count = (seen.get(base) ?? 0) + 1;
+		seen.set(base, count);
+		info.display = count === 1 ? base : `${base} #${count}`;
+	}
+	return seats;
+}
+
+/**
+ * A transcript sentence with every seat id ("p3", also inside "Random Bot p3 (random-bot)")
+ * replaced by that seat's display name. Until the transcript names players itself, this is
+ * how a sentence reads; it adds no words of its own.
+ */
+export function namedText(text: string, players: Record<string, Seat> | undefined): string {
+	if (!players) return text;
+	return text.replace(/(?:Random Bot )?\b(p\d+)\b(?: \(random-bot\))?/g, (whole, seat: string) =>
+		players[seat] ? seatName(seat, players) : whole
+	);
+}
+
+/** The colour key of a seat: its vendor, so one company's models share a family of hues. */
+export function colourKey(seat: string, players: Record<string, Seat> | undefined): string {
+	const info = players?.[seat];
+	return info?.vendor ?? info?.model ?? seat;
+}
+
+/** The lines with every seat id in their text and detail replaced by display names. */
+export function namedLines(
+	lines: TranscriptLine[],
+	players: Record<string, Seat> | undefined
+): TranscriptLine[] {
+	if (!players) return lines;
+	return lines.map((line) => ({
+		...line,
+		text: namedText(line.text, players),
+		detail: line.detail === null ? null : namedText(line.detail, players)
+	}));
+}
+
+/**
+ * The small line under a seat's name: the model id when the name does not already say it,
+ * and the vendor; "Random Bot" for a bot. Null when there is nothing to add.
+ */
+export function seatSub(seat: string, players: Record<string, Seat> | undefined): string | null {
+	const info = players?.[seat];
+	const shown = seatName(seat, players).replace(/ #\d+$/, '');
+	const model = info?.model && info.model !== shown ? info.model : null;
+	const line = [model, info?.vendor].filter(Boolean).join(' · ');
+	return line || (info?.kind === 'bot' ? 'Random Bot' : null);
 }

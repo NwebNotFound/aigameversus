@@ -5,7 +5,7 @@
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS, euros, merge } from '#lib/live.js';
-	import { langOf } from '#lib/viewer.js';
+	import { langOf, mergeSeats, namedLines } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -31,6 +31,11 @@
 	const base = $derived(`/matches/${encodeURIComponent(params.id)}`);
 	const lang = $derived(live ? langOf(live.match.settings) : 'en');
 	const turn = $derived(live?.board.spec?.turn);
+	const players = $derived(
+		live
+			? mergeSeats(live.match.players, live.match.seats, transcript?.players, data.roster)
+			: undefined
+	);
 
 	let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 	/** Board, cost, status and commentary after new turns; at most about three times a second. */
@@ -134,9 +139,9 @@
 		spec={live.board.spec}
 		{view}
 		events={log}
-		lines={transcript?.lines ?? []}
+		lines={namedLines(transcript?.lines ?? [], players)}
 		seats={live.match.players}
-		players={transcript?.players}
+		{players}
 		costs={live.cost.players}
 		active={typeof turn === 'string' ? turn : null}
 		placements={live.match.placements}

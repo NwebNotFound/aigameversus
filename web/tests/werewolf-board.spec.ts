@@ -71,7 +71,7 @@ test('after the match roles and deaths on the circle are those of the stored log
 	for (const [player, role] of roles) {
 		const word = role.replaceAll('_', ' ');
 		await expect(
-			page.getByTestId('seat').filter({ hasText: player }).getByTestId('role')
+			page.locator(`[data-testid="seat"][data-seat="${player}"]`).getByTestId('role')
 		).toHaveText(new RegExp(`^${word}$`, 'i'));
 	}
 	await expect(page.locator('.seat.dead')).toHaveCount(dead);
