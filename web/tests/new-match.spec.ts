@@ -90,12 +90,16 @@ test('without model seats on the server, models are listed but not selectable', 
 	await page.goto('/matches/new');
 
 	const seat = page.getByLabel('Player of p1');
-	await expect(seat).toHaveValue('random_bot');
+	await expect(seat).toHaveAttribute('data-value', 'random_bot');
+	await seat.click();
+	const picker = page.getByTestId('picker-p1');
 	for (const model of setup.models) {
-		await expect(seat.locator(`option[value="${model.id}"]`)).toBeDisabled();
+		await expect(picker.locator(`li[data-id="${model.id}"] .option`)).toBeDisabled();
 	}
 	await expect(page.getByLabel('Personality of p1')).toBeDisabled();
-	await expect(page.getByText('This server plays random bots only')).toBeVisible();
+	await expect(
+		page.getByText('This server plays random bots only: it was not started')
+	).toBeVisible();
 	await expect(page.getByTestId('spend')).toHaveCount(0);
 	await expect(page.getByText('Bots cost nothing.')).toBeVisible();
 });

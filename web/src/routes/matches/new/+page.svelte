@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
+	import { cheapSeats, loadFavourites, saveFavourites } from '#lib/catalog.js';
+	import ModelPicker from '#lib/components/ModelPicker.svelte';
 	import WerewolfRoles from '#lib/components/WerewolfRoles.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS } from '#lib/live.js';
@@ -32,6 +35,58 @@
 
 	// Who takes each seat: a random bot or a model id. A match is all bots or all models.
 	let choices = $state<string[]>([]);
+	// Every seat has a choice before a picker binds to it: a new seat starts as a bot.
+	$effect.pre(() => {
+		if (choices.length < seatCount) {
+			choices = [...choices, ...Array(seatCount - choices.length).fill(BOT)];
+		}
+	});
+	// Every model that can take a seat (GET /models/catalog); the verified ones without it.
+	const catalog = $derived(
+		data.catalog.state === 'ok'
+			? data.catalog.data.models
+			: (setup?.models ?? []).map((m) => ({
+					id: m.id,
+					openrouter_id: m.model,
+					name: m.name,
+					vendor: m.model.split('/')[0],
+					context_length: null,
+					input_usd_per_mtok: m.input_usd_per_mtok,
+					output_usd_per_mtok: m.output_usd_per_mtok,
+					reasoning: false,
+					moderated: false,
+					free: false,
+					verified: true,
+					high_price: m.output_usd_per_mtok > 10
+				}))
+	);
+	const seatIds = $derived(Array.from({ length: seatCount }, (_, i) => choices[i] ?? BOT));
+	const expensive = $derived(
+		catalog.filter((m) => m.high_price && seatIds.includes(m.id)).map((m) => m.name)
+	);
+	const unverified = $derived(
+		catalog.filter((m) => !m.verified && seatIds.includes(m.id)).map((m) => m.name)
+	);
+
+	let favourites = $state(new Set<string>());
+	onMount(() => (favourites = loadFavourites(localStorage)));
+	function toggleFavourite(id: string) {
+		const next = new Set(favourites);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		favourites = next;
+		saveFavourites(localStorage, next);
+	}
+
+	function sameInAllSeats() {
+		const first = choices[0] ?? BOT;
+		choices = Array.from({ length: seatCount }, () => first);
+	}
+
+	function fillCheap() {
+		const cheap = cheapSeats(catalog, seatCount);
+		if (cheap.length) choices = cheap;
+	}
 	const usesModels = $derived(
 		Array.from({ length: seatCount }, (_, i) => choices[i] ?? BOT).some((c) => c !== BOT)
 	);
@@ -41,7 +96,6 @@
 	const monthEmpty = $derived(usesModels && month !== null && month.remaining_micro_eur <= 0);
 	const blocked = $derived(usesModels && (month === null || month.remaining_micro_eur <= 0));
 	const euro = (micro: number) => `${(micro / 1_000_000).toFixed(2)} €`;
-	const price = (usd: number) => `$${usd < 1 ? usd.toFixed(3) : usd.toFixed(2)}`;
 
 	const werewolfRoles = $derived(data.werewolfRoles.state === 'ok' ? data.werewolfRoles.data : []);
 	// The role counts entered before a refused submit.
@@ -134,32 +188,14 @@
 				{#each Array.from({ length: seatCount }, (_, i) => `p${i + 1}`) as seat, index (seat)}
 					<li>
 						<span class="seat">{seat}</span>
-						<label>
-							<span class="sr-only">Player of {seat}</span>
-							<select
-								name="seat"
-								aria-label="Player of {seat}"
-								value={choices[index] ?? BOT}
-								onchange={(e) => (choices[index] = e.currentTarget.value)}
-							>
-								<option value={BOT}>Random bot</option>
-								{#if setup?.models.length}
-									<optgroup
-										label={setup.model_seats
-											? 'Models (paid, price per 1M tokens in / out)'
-											: 'Models (off on this server)'}
-									>
-										{#each setup.models as model (model.id)}
-											<option value={model.id} disabled={!setup.model_seats}>
-												{model.name} · {price(model.input_usd_per_mtok)} / {price(
-													model.output_usd_per_mtok
-												)}
-											</option>
-										{/each}
-									</optgroup>
-								{/if}
-							</select>
-						</label>
+						<ModelPicker
+							{seat}
+							bind:value={choices[index]}
+							models={catalog}
+							enabled={setup?.model_seats ?? false}
+							{favourites}
+							ontogglefavourite={toggleFavourite}
+						/>
 						<label>
 							<span class="sr-only">Personality of {seat}</span>
 							<select
@@ -176,6 +212,30 @@
 					</li>
 				{/each}
 			</ol>
+			{#if setup?.model_seats}
+				<div class="shortcuts" role="group" aria-label="Seat shortcuts">
+					<button type="button" onclick={sameInAllSeats}>Same as p1 in every seat</button>
+					<button type="button" onclick={fillCheap}>Fill with cheap models</button>
+					<button
+						type="button"
+						onclick={() => (choices = Array.from({ length: seatCount }, () => BOT))}
+					>
+						All random bots
+					</button>
+				</div>
+			{/if}
+			{#if expensive.length}
+				<p class="field-error" role="alert" data-testid="high-price">
+					Expensive: {expensive.join(', ')} cost{expensive.length === 1 ? 's' : ''} more than $10 per
+					million output tokens; the match still stops at its cap.
+				</p>
+			{/if}
+			{#if unverified.length}
+				<p class="hint" data-testid="unverified">
+					Not checked by us yet: {unverified.join(', ')}. They play at OpenRouter's prices and may
+					handle the tools less well.
+				</p>
+			{/if}
 			<p class="hint">
 				{#if setup?.model_seats}
 					Every seat a random bot (free), or every seat a model (paid); no mixed tables yet.
@@ -396,13 +456,14 @@
 	.seats li {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
+		align-items: flex-start;
 		gap: 0.4rem;
 	}
 
 	.seat {
 		min-width: 2.5rem;
 		font-weight: 600;
+		padding-top: 0.45rem;
 	}
 
 	.field-error,
@@ -445,5 +506,17 @@
 
 	.spend p {
 		margin: 0;
+	}
+
+	.shortcuts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.shortcuts button {
+		font-size: 0.9rem;
+		padding: 0.25rem 0.6rem;
+		cursor: pointer;
 	}
 </style>

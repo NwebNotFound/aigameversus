@@ -200,6 +200,32 @@ export interface NewMatch {
 	confirm_spend?: boolean;
 }
 
+/** One model of `GET /models/catalog`: every model that can take a seat. */
+export interface CatalogModel {
+	/** The id for POST /matches: config/models.yaml's when verified, else OpenRouter's. */
+	id: string;
+	openrouter_id: string;
+	name: string;
+	vendor: string;
+	context_length: number | null;
+	input_usd_per_mtok: number;
+	output_usd_per_mtok: number;
+	reasoning: boolean;
+	moderated: boolean;
+	free: boolean;
+	/** In config/models.yaml: prices and behaviour checked by the team. */
+	verified: boolean;
+	/** Output above 10 USD per million tokens: the form warns. */
+	high_price: boolean;
+}
+
+export interface Catalog {
+	models: CatalogModel[];
+	fetched_at: string | null;
+	/** Read within the last hour; false: an older copy or only the verified models. */
+	fresh: boolean;
+}
+
 /** `GET /ledger/month`: what model calls cost this month and what the cap still allows. */
 export interface MonthSpend {
 	month: string;
@@ -352,6 +378,7 @@ export interface ArenaClient {
 	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
 	monthSpend(): Promise<ApiResult<MonthSpend>>;
+	catalog(): Promise<ApiResult<Catalog>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
@@ -553,6 +580,13 @@ export function createArenaClient(
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ roles, player_count: players })
 				}
+			);
+		},
+
+		catalog() {
+			return getJson<Catalog>(
+				'/models/catalog',
+				(body) => isObject(body) && Array.isArray(body.models)
 			);
 		},
 
