@@ -1,0 +1,1446 @@
+{
+	"game": "liars_deck",
+	"spoilers": true,
+	"events": 251,
+	"meta": {
+		"version": "1",
+		"prompt_version": null,
+		"seed": 2027,
+		"settings": {}
+	},
+	"players": ["p1", "p2", "p3", "p4"],
+	"moves": [
+		{
+			"seq": 12,
+			"round": 1,
+			"player": "p1",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 1,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 0
+		},
+		{
+			"seq": 18,
+			"round": 1,
+			"player": "p2",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 1
+		},
+		{
+			"seq": 23,
+			"round": 1,
+			"player": "p3",
+			"kind": "play",
+			"cards": 3,
+			"hand_before": 5,
+			"cards_left": 2,
+			"table_cards_held": 2,
+			"honest": false,
+			"false_cards": 2,
+			"lie_size": 0.6666666666666666,
+			"forced": false,
+			"called": false,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": true,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 2
+		},
+		{
+			"seq": 29,
+			"round": 1,
+			"player": "p4",
+			"kind": "play",
+			"cards": 3,
+			"hand_before": 5,
+			"cards_left": 2,
+			"table_cards_held": 3,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": true,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 3
+		},
+		{
+			"seq": 35,
+			"round": 1,
+			"player": "p1",
+			"kind": "call",
+			"target": "p4",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 4
+		},
+		{
+			"seq": 48,
+			"round": 2,
+			"player": "p1",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.2,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 5
+		},
+		{
+			"seq": 54,
+			"round": 2,
+			"player": "p2",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 6
+		},
+		{
+			"seq": 58,
+			"round": 2,
+			"player": "p3",
+			"kind": "call",
+			"target": "p2",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": true,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 7
+		},
+		{
+			"seq": 71,
+			"round": 3,
+			"player": "p2",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 1,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 8
+		},
+		{
+			"seq": 77,
+			"round": 3,
+			"player": "p4",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 9
+		},
+		{
+			"seq": 83,
+			"round": 3,
+			"player": "p1",
+			"kind": "play",
+			"cards": 3,
+			"hand_before": 5,
+			"cards_left": 2,
+			"table_cards_held": 3,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.2,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 10
+		},
+		{
+			"seq": 91,
+			"round": 3,
+			"player": "p2",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 1,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 11
+		},
+		{
+			"seq": 103,
+			"round": 4,
+			"player": "p1",
+			"kind": "play",
+			"cards": 3,
+			"hand_before": 5,
+			"cards_left": 2,
+			"table_cards_held": 2,
+			"honest": false,
+			"false_cards": 3,
+			"lie_size": 1.0,
+			"forced": false,
+			"called": true,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.2,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 12
+		},
+		{
+			"seq": 109,
+			"round": 4,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": true,
+			"facing_lie": true,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 13
+		},
+		{
+			"seq": 120,
+			"round": 5,
+			"player": "p1",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 1,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 14
+		},
+		{
+			"seq": 126,
+			"round": 5,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.16666666666666666,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 15
+		},
+		{
+			"seq": 137,
+			"round": 6,
+			"player": "p4",
+			"kind": "play",
+			"cards": 3,
+			"hand_before": 5,
+			"cards_left": 2,
+			"table_cards_held": 0,
+			"honest": false,
+			"false_cards": 3,
+			"lie_size": 1.0,
+			"forced": true,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.2,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 16
+		},
+		{
+			"seq": 143,
+			"round": 6,
+			"player": "p1",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 3,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": true,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 17
+		},
+		{
+			"seq": 149,
+			"round": 6,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.2,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 18
+		},
+		{
+			"seq": 160,
+			"round": 7,
+			"player": "p4",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 1,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 19
+		},
+		{
+			"seq": 166,
+			"round": 7,
+			"player": "p1",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 4,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 20
+		},
+		{
+			"seq": 172,
+			"round": 7,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 21
+		},
+		{
+			"seq": 183,
+			"round": 8,
+			"player": "p4",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.3333333333333333,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 22
+		},
+		{
+			"seq": 189,
+			"round": 8,
+			"player": "p1",
+			"kind": "play",
+			"cards": 1,
+			"hand_before": 5,
+			"cards_left": 4,
+			"table_cards_held": 1,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 23
+		},
+		{
+			"seq": 195,
+			"round": 8,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.3333333333333333,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 24
+		},
+		{
+			"seq": 206,
+			"round": 9,
+			"player": "p4",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 3,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 0.5,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 25
+		},
+		{
+			"seq": 212,
+			"round": 9,
+			"player": "p1",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 26
+		},
+		{
+			"seq": 218,
+			"round": 9,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 0.5,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 27
+		},
+		{
+			"seq": 229,
+			"round": 10,
+			"player": "p4",
+			"kind": "play",
+			"cards": 2,
+			"hand_before": 5,
+			"cards_left": 3,
+			"table_cards_held": 2,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": false,
+			"could_call": false,
+			"facing_lie": null,
+			"risk": 1.0,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 28
+		},
+		{
+			"seq": 237,
+			"round": 10,
+			"player": "p1",
+			"kind": "play",
+			"cards": 3,
+			"hand_before": 5,
+			"cards_left": 2,
+			"table_cards_held": 4,
+			"honest": true,
+			"false_cards": 0,
+			"lie_size": 0.0,
+			"forced": null,
+			"called": true,
+			"could_call": true,
+			"facing_lie": false,
+			"risk": 0.25,
+			"fallback": false,
+			"rejected": 1,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 29
+		},
+		{
+			"seq": 243,
+			"round": 10,
+			"player": "p4",
+			"kind": "call",
+			"target": "p1",
+			"automatic": false,
+			"correct": false,
+			"facing_lie": false,
+			"risk": 1.0,
+			"fallback": false,
+			"rejected": 0,
+			"latency_ms": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null,
+			"retries": null,
+			"index": 30
+		}
+	],
+	"pulls": [
+		{
+			"seq": 38,
+			"round": 1,
+			"player": "p1",
+			"pull": 1,
+			"live": false,
+			"risk": 0.16666666666666666
+		},
+		{
+			"seq": 61,
+			"round": 2,
+			"player": "p3",
+			"pull": 1,
+			"live": true,
+			"risk": 0.16666666666666666
+		},
+		{
+			"seq": 94,
+			"round": 3,
+			"player": "p2",
+			"pull": 1,
+			"live": true,
+			"risk": 0.16666666666666666
+		},
+		{
+			"seq": 112,
+			"round": 4,
+			"player": "p1",
+			"pull": 2,
+			"live": false,
+			"risk": 0.2
+		},
+		{
+			"seq": 129,
+			"round": 5,
+			"player": "p4",
+			"pull": 1,
+			"live": false,
+			"risk": 0.16666666666666666
+		},
+		{
+			"seq": 152,
+			"round": 6,
+			"player": "p4",
+			"pull": 2,
+			"live": false,
+			"risk": 0.2
+		},
+		{
+			"seq": 175,
+			"round": 7,
+			"player": "p4",
+			"pull": 3,
+			"live": false,
+			"risk": 0.25
+		},
+		{
+			"seq": 198,
+			"round": 8,
+			"player": "p4",
+			"pull": 4,
+			"live": false,
+			"risk": 0.3333333333333333
+		},
+		{
+			"seq": 221,
+			"round": 9,
+			"player": "p4",
+			"pull": 5,
+			"live": false,
+			"risk": 0.5
+		},
+		{
+			"seq": 246,
+			"round": 10,
+			"player": "p4",
+			"pull": 6,
+			"live": true,
+			"risk": 1.0
+		}
+	],
+	"rounds": [
+		{
+			"round": 1,
+			"table_card": "king",
+			"players": ["p1", "p2", "p3", "p4"]
+		},
+		{
+			"round": 2,
+			"table_card": "ace",
+			"players": ["p1", "p2", "p3", "p4"]
+		},
+		{
+			"round": 3,
+			"table_card": "queen",
+			"players": ["p1", "p2", "p4"]
+		},
+		{
+			"round": 4,
+			"table_card": "queen",
+			"players": ["p1", "p4"]
+		},
+		{
+			"round": 5,
+			"table_card": "queen",
+			"players": ["p1", "p4"]
+		},
+		{
+			"round": 6,
+			"table_card": "king",
+			"players": ["p1", "p4"]
+		},
+		{
+			"round": 7,
+			"table_card": "queen",
+			"players": ["p1", "p4"]
+		},
+		{
+			"round": 8,
+			"table_card": "king",
+			"players": ["p1", "p4"]
+		},
+		{
+			"round": 9,
+			"table_card": "queen",
+			"players": ["p1", "p4"]
+		},
+		{
+			"round": 10,
+			"table_card": "queen",
+			"players": ["p1", "p4"]
+		}
+	],
+	"totals": {
+		"p1": {
+			"plays": 10,
+			"plays_known": 10,
+			"honest": 9,
+			"lies": 1,
+			"lies_called": 1,
+			"lie_rate": {
+				"value": 0.1,
+				"n": 1,
+				"of": 10
+			},
+			"chosen_lie_rate": {
+				"value": 0.1,
+				"n": 1,
+				"of": 10
+			},
+			"forced_lies": 0,
+			"mean_lie_size": 1.0,
+			"calls": 1,
+			"calls_correct": 0,
+			"calls_wrong": 1,
+			"call_accuracy": {
+				"value": 0.0,
+				"n": 0,
+				"of": 1
+			},
+			"call_rate": {
+				"value": 0.14285714285714285,
+				"n": 1,
+				"of": 7
+			},
+			"hit_rate": {
+				"value": 0.0,
+				"n": 0,
+				"of": 1
+			},
+			"false_alarm_rate": {
+				"value": 0.16666666666666666,
+				"n": 1,
+				"of": 6
+			},
+			"cards_claimed": 18,
+			"pulls": 2,
+			"pulls_survived": 2,
+			"fallbacks": 0,
+			"fallback_share": {
+				"value": 0.0,
+				"n": 0,
+				"of": 11
+			},
+			"rejected_per_move": 0.09090909090909091,
+			"response_ms_total": null,
+			"response_ms_mean": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null
+		},
+		"p2": {
+			"plays": 3,
+			"plays_known": 3,
+			"honest": 3,
+			"lies": 0,
+			"lies_called": 0,
+			"lie_rate": {
+				"value": 0.0,
+				"n": 0,
+				"of": 3
+			},
+			"chosen_lie_rate": {
+				"value": 0.0,
+				"n": 0,
+				"of": 3
+			},
+			"forced_lies": 0,
+			"mean_lie_size": null,
+			"calls": 1,
+			"calls_correct": 0,
+			"calls_wrong": 1,
+			"call_accuracy": {
+				"value": 0.0,
+				"n": 0,
+				"of": 1
+			},
+			"call_rate": {
+				"value": 0.3333333333333333,
+				"n": 1,
+				"of": 3
+			},
+			"hit_rate": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"false_alarm_rate": {
+				"value": 0.3333333333333333,
+				"n": 1,
+				"of": 3
+			},
+			"cards_claimed": 5,
+			"pulls": 1,
+			"pulls_survived": 0,
+			"fallbacks": 0,
+			"fallback_share": {
+				"value": 0.0,
+				"n": 0,
+				"of": 4
+			},
+			"rejected_per_move": 0.25,
+			"response_ms_total": null,
+			"response_ms_mean": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null
+		},
+		"p3": {
+			"plays": 0,
+			"plays_known": 0,
+			"honest": 0,
+			"lies": 0,
+			"lies_called": 0,
+			"lie_rate": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"chosen_lie_rate": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"forced_lies": 0,
+			"mean_lie_size": null,
+			"calls": 0,
+			"calls_correct": 0,
+			"calls_wrong": 0,
+			"call_accuracy": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"call_rate": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"hit_rate": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"false_alarm_rate": {
+				"value": null,
+				"n": 0,
+				"of": 0
+			},
+			"cards_claimed": 0,
+			"pulls": 1,
+			"pulls_survived": 0,
+			"fallbacks": 2,
+			"fallback_share": {
+				"value": 1.0,
+				"n": 2,
+				"of": 2
+			},
+			"rejected_per_move": 0.0,
+			"response_ms_total": null,
+			"response_ms_mean": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null
+		},
+		"p4": {
+			"plays": 7,
+			"plays_known": 7,
+			"honest": 6,
+			"lies": 1,
+			"lies_called": 0,
+			"lie_rate": {
+				"value": 0.14285714285714285,
+				"n": 1,
+				"of": 7
+			},
+			"chosen_lie_rate": {
+				"value": 0.0,
+				"n": 0,
+				"of": 6
+			},
+			"forced_lies": 1,
+			"mean_lie_size": 1.0,
+			"calls": 7,
+			"calls_correct": 1,
+			"calls_wrong": 6,
+			"call_accuracy": {
+				"value": 0.14285714285714285,
+				"n": 1,
+				"of": 7
+			},
+			"call_rate": {
+				"value": 0.7777777777777778,
+				"n": 7,
+				"of": 9
+			},
+			"hit_rate": {
+				"value": 0.5,
+				"n": 1,
+				"of": 2
+			},
+			"false_alarm_rate": {
+				"value": 0.8571428571428571,
+				"n": 6,
+				"of": 7
+			},
+			"cards_claimed": 14,
+			"pulls": 6,
+			"pulls_survived": 5,
+			"fallbacks": 0,
+			"fallback_share": {
+				"value": 0.0,
+				"n": 0,
+				"of": 14
+			},
+			"rejected_per_move": 0.0,
+			"response_ms_total": null,
+			"response_ms_mean": null,
+			"tokens_in": null,
+			"tokens_out": null,
+			"reasoning_tokens": null
+		}
+	},
+	"by_round": [
+		{
+			"round": 1,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 1
+				},
+				"p4": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 2,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 1
+				},
+				"p4": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 3,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 4,
+			"players": {
+				"p1": {
+					"honest": 0,
+					"lies": 1,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 5,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 6,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 0,
+					"lies": 1,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 7,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 8,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 9,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		},
+		{
+			"round": 10,
+			"players": {
+				"p1": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p2": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p3": {
+					"honest": 0,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 0,
+					"fallbacks": 0
+				},
+				"p4": {
+					"honest": 1,
+					"lies": 0,
+					"unknown": 0,
+					"calls": 1,
+					"fallbacks": 0
+				}
+			}
+		}
+	]
+}
