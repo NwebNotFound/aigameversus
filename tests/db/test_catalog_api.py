@@ -4,9 +4,12 @@ OpenRouter's list is the sample of tests/test_catalog.py; LiteLLM answers from
 its own mock with every name lookup refused. Nothing costs money.
 """
 
+from decimal import Decimal
+
 import pytest
 from fastapi.testclient import TestClient
 
+import arena.catalog as catalog
 from arena.api.app import app
 from tests.db.test_model_seats_api import KEY, PLAY_3, calls, finish
 from tests.test_catalog import serve
@@ -100,3 +103,40 @@ def test_the_command_seats_a_catalog_model_too(database_url, monkeypatch, answer
 
     assert (code, complaints) == (0, "")
     assert {model for _, _, model in calls(database_url)} == {"acme/plays", "glm-flash"}
+
+
+def test_an_unverified_model_is_estimated_at_the_price_it_is_booked_at(client, monkeypatch):
+    serve(monkeypatch)
+    body = {"game": "toy", "models": ["acme/plays", "acme/plays"]}
+
+    booked = client.post("/matches/estimate", json=body).json()
+    client.app.state.estimates.answers.clear()
+    monkeypatch.setattr(catalog, "UNVERIFIED_PRICE_MARGIN", Decimal(1))
+    listed = client.post("/matches/estimate", json=body).json()
+
+    assert booked["estimate_micro_eur"] == pytest.approx(
+        1.25 * listed["estimate_micro_eur"], rel=0.01
+    )
+    assert booked["high_price"] == []
+
+
+def test_an_estimate_names_the_models_that_cost_a_lot(client, monkeypatch):
+    serve(monkeypatch)
+
+    out = client.post(
+        "/matches/estimate", json={"game": "toy", "models": ["acme/pricey", "glm-flash"]}
+    )
+
+    assert out.status_code == 200, out.text
+    assert out.json()["high_price"] == ["acme/pricey"]
+
+
+def test_an_estimate_refuses_an_id_in_no_catalog(client, monkeypatch):
+    serve(monkeypatch)
+
+    out = client.post(
+        "/matches/estimate", json={"game": "toy", "models": ["acme/no-tools", "glm-flash"]}
+    )
+
+    assert out.status_code == 422
+    assert "GET /models/catalog" in out.json()["detail"]

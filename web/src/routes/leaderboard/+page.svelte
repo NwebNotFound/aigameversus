@@ -126,10 +126,12 @@
 								{:else}
 									<a href="/profiles/{row.profile_id}">{row.name}</a>
 								{/if}
-								<span class="narrow model">{row.model_id}</span>
+								{#if row.model_id !== row.name}<span class="narrow model">{row.model_id}</span>{/if}
 							</td>
 							<td class="wide model">
-								{row.model_id}{#if row.vendor}<span class="vendor"> · {row.vendor}</span>{/if}
+								{#if row.model_id !== row.name}{row.model_id}{/if}{#if row.vendor}<span
+										class="vendor">{row.model_id !== row.name ? ' · ' : ''}{row.vendor}</span
+									>{/if}
 							</td>
 							<td class="num strong">{rating(row.rating)}</td>
 							<td class="num">{row.games_played}</td>

@@ -3,6 +3,7 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
+from typing import Literal
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import asyncpg
@@ -53,6 +54,7 @@ class MatchResult:
     match_id: UUID
     game_id: str
     rated_at: datetime
+    played_at: datetime  # when the match itself ended (not when its rating was applied)
     rank: int
     players: int
     rating_change: float
@@ -317,9 +319,23 @@ class RatingStore:
             "JOIN ratings r ON r.profile_id = p.id AND r.games_played > 0 WHERE p.is_demo"
         )
 
-    async def rated_games(self) -> list[str]:
-        """Ids of the games that have at least one rated match, sorted."""
-        rows = await self._pool.fetch("SELECT DISTINCT game_id FROM ratings ORDER BY game_id")
+    async def rated_games(
+        self, kind: Literal["models", "bots", "all"] = "all", *, demo: bool = True
+    ) -> list[str]:
+        """Ids of the games with at least one rated match of `kind`, sorted.
+
+        `kind` limits it to real models or to random bots; demo profiles count only if `demo`.
+        """
+        rows = await self._pool.fetch(
+            "SELECT DISTINCT r.game_id FROM ratings r "
+            "JOIN player_profiles p ON p.id = r.profile_id "
+            "WHERE r.games_played > 0 AND ($1 OR NOT p.is_demo) "
+            "AND ($2 = 'all' OR ($2 = 'bots') = (p.model_id = $3)) "
+            "ORDER BY r.game_id",
+            demo,
+            kind,
+            BOT_MODEL_ID,
+        )
         return [row["game_id"] for row in rows]
 
     async def leaderboard(
@@ -371,9 +387,11 @@ class RatingStore:
         )
         matches = await self._pool.fetch(
             "SELECT rm.match_id, rm.game_id, rm.rated_at, mp.rank, mp.players, "
-            "mp.rating_before, mp.rating_after "
+            "mp.rating_before, mp.rating_after, "
+            "coalesce(m.finished_at, m.started_at, rm.rated_at) AS played_at "
             "FROM match_placements mp JOIN rated_matches rm ON rm.match_id = mp.match_id "
-            "WHERE mp.profile_id = $1 ORDER BY rm.rated_at DESC, rm.match_id LIMIT $2",
+            "LEFT JOIN matches m ON m.id = rm.match_id "
+            "WHERE mp.profile_id = $1 ORDER BY played_at DESC, rm.match_id LIMIT $2",
             profile_id,
             recent,
         )
@@ -389,6 +407,7 @@ class RatingStore:
                     match_id=m["match_id"],
                     game_id=m["game_id"],
                     rated_at=m["rated_at"],
+                    played_at=m["played_at"],
                     rank=m["rank"],
                     players=m["players"],
                     rating_change=m["rating_after"] - m["rating_before"],

@@ -226,6 +226,9 @@ platform, not an afterthought.
   are the ones in [config/models.yaml](config/models.yaml), whose prices and
   behaviour were checked by hand. Every one of them plays behind the same
   caps and needs the same `confirm_spend`.
+- **Estimate first:** `POST /matches/estimate` with the game and the models
+  says what the match would cost per seat, what the month has cost so far and
+  whether it fits, without calling any model.
 - **Pause, not overrun:** a call that could take the match or the month past
   its cap is not sent. The engine pauses the match with the amounts in its log
   and can resume it later from the same turn, unchanged. Today nothing asks you
