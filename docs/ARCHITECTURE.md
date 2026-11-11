@@ -82,7 +82,9 @@ sequenceDiagram
     M->>S: events of this turn
 ```
 
-A turn without a game event stops the match with a `PluginError`.
+A turn without a game event stops the match with a `PluginError`. So does a
+match that is not over after `max_turns` turns (set per game on the plugin,
+or per match): the log then ends with `turn_limit_reached`.
 
 ## Agent runner
 
@@ -118,7 +120,8 @@ flowchart LR
 
 - A match is a list of `Event`s. Engine events (`match_started`, `thought`,
   `action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-  `match_paused`, `match_resumed`, `match_finished`) are bookkeeping; game
+  `match_paused`, `match_resumed`, `turn_limit_reached`, `match_finished`) are
+  bookkeeping; game
   events come from the plugin and are the only thing that changes game state.
 - Each event has `visible_to`: `None` public, a tuple of players, or an empty
   tuple for spectators only. The seed in `match_started`, thoughts,
