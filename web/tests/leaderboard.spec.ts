@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
+
 // Needs demo data: `docker compose exec arena python -m arena.ratings.demo_seed`
 // (CI does this after starting the stack). Demo profiles play High Card (`toy`).
 
 test('overall leaderboard lists the demo players by rating', async ({ page }) => {
-	await page.goto('/leaderboard?kind=all');
+	await page.goto('/leaderboard?kind=all&demo=1');
 
 	const tabs = page.getByRole('navigation', { name: 'Games' });
 	await expect(tabs.getByRole('link', { name: 'Overall' })).toHaveAttribute('aria-current', 'page');
@@ -21,7 +23,7 @@ test('overall leaderboard lists the demo players by rating', async ({ page }) =>
 });
 
 test('a game tab shows that game', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?demo=1');
 
 	await page
 		.getByRole('navigation', { name: 'Games' })
@@ -48,7 +50,7 @@ test('a game without matches shows the empty state', async ({ page }) => {
 });
 
 test('a player links to a profile with rating bars and stats', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?demo=1');
 	const first = page
 		.getByTestId('leaderboard')
 		.locator('tbody tr')
@@ -94,12 +96,12 @@ for (const path of ['/leaderboard', '/leaderboard?game=toy']) {
 
 // No real model is rated in the demo stack, so the default view falls back to everyone.
 test('real models are the default and the filter can show bots or all', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?demo=1');
 
 	const filter = page.getByRole('navigation', { name: 'Who' });
 	// Real models are asked for; none is rated, so the board shows everyone and says so.
 	await expect(filter.getByTestId('kind-all')).toHaveAttribute('aria-current', 'page');
-	await expect(page.getByTestId('kind-fallback')).toContainText('No real model is rated yet');
+	await expect(page.getByTestId('kind-fallback')).toContainText('No rated real-model matches yet');
 	await expect(
 		page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / })
 	).toHaveCount(6);
@@ -111,6 +113,20 @@ test('real models are the default and the filter can show bots or all', async ({
 	await filter.getByTestId('kind-bots').click();
 	await expect(filter.getByTestId('kind-bots')).toHaveAttribute('aria-current', 'page');
 	await expect(page.getByTestId('leaderboard')).toBeVisible();
+});
+
+test('demo data is hidden until the switch is used', async ({ page }) => {
+	await page.goto('/leaderboard?kind=all');
+
+	const demo = page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / });
+	await expect(demo).toHaveCount(0);
+	await expect(page.getByTestId('demo-switch')).toContainText('6 demo profiles hidden');
+
+	await page.getByTestId('demo-toggle').click();
+
+	await expect(page).toHaveURL(/demo=1/);
+	await expect(demo).toHaveCount(6);
+	await expect(page.getByTestId('demo-toggle')).toHaveText('Hide demo data');
 });
 
 test('the table shows model, cost per game and tool errors, and bot seats are one row', async ({
@@ -126,4 +142,22 @@ test('the table shows model, cost per game and tool errors, and bot seats are on
 		.locator('tbody tr')
 		.filter({ hasText: /Random Bot p\d/ });
 	await expect(seatRows).toHaveCount(0);
+});
+
+// Needs a rated real model whose name is its model id (every configured model without a
+// personality); skipped on a stack without one.
+test('a model named like its id shows the name once, then the vendor', async ({
+	page,
+	request
+}) => {
+	const board = await (await request.get(`${ARENA}/leaderboard?kind=models`)).json();
+	const row = board.rows.find((r: { name: string; model_id: string }) => r.name === r.model_id);
+	test.skip(!row, 'no rated real model in this stack');
+
+	await page.goto('/leaderboard?kind=models');
+
+	const line = page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: row.name });
+	const text = await line.first().innerText(); // hidden columns are not part of the text
+	expect(text.split(row.model_id).length - 1).toBe(1);
+	if (row.vendor) expect(text).toContain(row.vendor);
 });

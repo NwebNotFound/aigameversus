@@ -69,12 +69,16 @@ async def _demo_profiles(pool: asyncpg.Pool, store: RatingStore) -> list[str]:
             "SELECT id, name FROM player_profiles WHERE name = ANY($1::text[])", DEMO_NAMES
         )
     }
+    await pool.execute(
+        "UPDATE player_profiles SET is_demo = true WHERE name = ANY($1::text[])", DEMO_NAMES
+    )
     ids: list[UUID] = []
     for name in DEMO_NAMES:
         # Fixed ids: bots draw their moves from streams keyed by player id.
         demo_id = uuid5(NAMESPACE_URL, f"aigameversus-demo/profile/{name}")
         ids.append(
-            existing.get(name) or await store.create_profile(name, DEMO_MODEL, None, demo_id)
+            existing.get(name)
+            or await store.create_profile(name, DEMO_MODEL, None, demo_id, is_demo=True)
         )
     return [str(profile_id) for profile_id in ids]
 

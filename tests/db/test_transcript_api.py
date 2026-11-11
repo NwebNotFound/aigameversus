@@ -81,7 +81,7 @@ def test_players_are_named_after_their_profile_and_model_when_the_match_was_rate
 
     text = client.get(f"/matches/{match_id}/transcript", params={"format": "text"}).text
 
-    assert "Random Bot p1" in text and "(random-bot)" not in text
+    assert "Bot 1" in text and "(random-bot)" not in text and "p1" not in text
 
 
 def test_unknown_match_game_and_options_are_refused(client):
@@ -120,14 +120,21 @@ def test_the_json_names_who_sits_in_each_seat_the_same_with_and_without_spoilers
 
     assert list(plain) == ["p1", "p2", "p3"]  # in seat order
     assert plain == spoiled
-    # A random bot is named as the lines name it, and has no model.
+    # A random bot is "Bot 3" with its seat number as a separate badge, and has no model.
     assert plain == {
-        seat: {"name": f"Random Bot {seat}", "model": None, "kind": "bot", "vendor": None}
+        seat: {
+            "seat": seat,
+            "display": f"Bot {seat[1:]}",
+            "name": f"Random Bot {seat}",
+            "model": None,
+            "kind": "bot",
+            "vendor": None,
+        }
         for seat in ("p1", "p2", "p3")
     }
 
 
-def test_the_name_in_players_is_the_label_the_lines_use(client):
+def test_the_display_name_in_players_is_the_name_the_lines_use(client):
     match_id = start(client, "liars_deck", players=3, seed=5)
     finish(client, match_id)
     url = f"/matches/{match_id}/transcript"
@@ -136,8 +143,9 @@ def test_the_name_in_players_is_the_label_the_lines_use(client):
     text = client.get(url, params={"format": "text"}).text
 
     for seat, player in players.items():
-        assert player["name"] in text, seat
-    assert "Random Bot p1" in text and "(random-bot)" not in text
+        assert player["display"] in text, seat
+    assert len({player["display"] for player in players.values()}) == len(players)
+    assert "Bot 1" in text and "(random-bot)" not in text
 
 
 def test_a_rated_model_seat_gives_its_name_and_model_as_separate_fields(client):
@@ -168,12 +176,16 @@ def test_a_rated_model_seat_gives_its_name_and_model_as_separate_fields(client):
     players = client.get(f"/matches/{match_id}/transcript").json()["players"]
 
     assert players["p1"] == {
+        "seat": "p1",
+        "display": "Bot 1",  # the display name follows the match record, not the profile
         "name": "Mia",
         "model": "glm-flash",
         "kind": "model",
         "vendor": "z-ai",
     }
     assert players["p2"] == {
+        "seat": "p2",
+        "display": "Bot 2",
         "name": "Random Bot p2",
         "model": None,
         "kind": "bot",

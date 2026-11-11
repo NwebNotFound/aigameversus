@@ -15,9 +15,13 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 		error(404, 'No match with this id');
 	}
 	const lang = match.state === 'ok' ? langOf(match.data.match.settings) : 'en';
-	const transcript = await arena.transcript(params.id, spectator, lang);
+	const [transcript, setup] = await Promise.all([
+		arena.transcript(params.id, spectator, lang),
+		arena.setup()
+	]);
 	return {
 		view,
+		roster: setup.state === 'ok' ? setup.data.models : [],
 		match: match.state === 'ok' && !spectator ? { ...match, data: publicState(match.data) } : match,
 		events:
 			events.state === 'ok' && !spectator ? { ...events, data: publicEvents(events.data) } : events,

@@ -9,6 +9,7 @@
 		themeOf
 	} from '#lib/boards/werewolfCircle.js';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import SeatTag from '#lib/components/SeatTag.svelte';
 	import { hidden } from '#lib/live.js';
 
 	/**
@@ -21,13 +22,15 @@
 		spoilers,
 		events = [],
 		names = {},
-		colours = {}
+		colours = {},
+		subs = {}
 	}: {
 		spec: Record<string, unknown>;
 		spoilers: boolean;
 		events?: MatchEvent[];
 		names?: Record<string, string>;
 		colours?: Record<string, string>;
+		subs?: Record<string, string | null>;
 	} = $props();
 	const label = (seat: string) => names[seat] ?? seat;
 
@@ -129,6 +132,7 @@
 			class:turn={seat.player === spec.turn}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
+			data-seat={seat.player}
 			aria-label={label(seat.player)}
 		>
 			<span class="avatar">
@@ -145,7 +149,7 @@
 					>
 				{/if}
 			</span>
-			<span class="name">{label(seat.player)}</span>
+			<SeatTag seat={seat.player} name={label(seat.player)} sub={subs[seat.player]} compact />
 			{#if hideRoles}
 				<span class="role" data-testid="secret">?</span>
 			{:else}

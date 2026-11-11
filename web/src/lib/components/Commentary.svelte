@@ -3,7 +3,9 @@
 	import type { Seat, TranscriptLine } from '#lib/api.js';
 	import { card } from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import RichText from '#lib/components/RichText.svelte';
 	import {
+		colourKey,
 		commentary,
 		ordinal,
 		seatModel,
@@ -33,6 +35,8 @@
 	let tab = $state<'all' | 'thoughts'>('all');
 	let who = $state('all');
 	let bookkeeping = $state(false);
+	/** Show what the players wrote exactly, seat ids and all, instead of name chips. */
+	let raw = $state(false);
 	let list = $state<HTMLOListElement>();
 	let pinned = true;
 
@@ -60,7 +64,7 @@
 		[...(((line.raw?.data as { placements?: Placement[] })?.placements ?? []) as Placement[])].sort(
 			(a, b) => a.rank - b.rank
 		);
-	const colour = (seat: string) => seatModel(seat, players) ?? seat;
+	const colour = (seat: string) => colourKey(seat, players);
 </script>
 
 <section class="commentary" aria-labelledby="commentary-title">
@@ -123,7 +127,12 @@
 								<span class="tag whisper-tag">whispers</span>
 							{/if}
 						</span>
-						<p class="bubble">{words(line) ?? line.text}</p>
+						<div class="bubble">
+							{#if raw}<span class="raw-words">{words(line) ?? line.text}</span>{:else}<RichText
+									text={words(line) ?? line.text}
+									{players}
+								/>{/if}
+						</div>
 					</div>
 				{:else if line.raw?.type === 'match_finished' && ranksOf(line).length}
 					<div class="final" data-testid="final-ranks">
@@ -175,10 +184,16 @@
 		{/each}
 	</ol>
 
-	<label class="bookkeeping">
-		<input type="checkbox" bind:checked={bookkeeping} />
-		Show bookkeeping
-	</label>
+	<div class="switches">
+		<label class="bookkeeping">
+			<input type="checkbox" bind:checked={bookkeeping} />
+			Show bookkeeping
+		</label>
+		<label class="bookkeeping">
+			<input type="checkbox" bind:checked={raw} data-testid="raw-words" />
+			Show raw words
+		</label>
+	</div>
 </section>
 
 <style>
@@ -308,6 +323,10 @@
 		color: var(--muted);
 	}
 
+	.raw-words {
+		white-space: pre-wrap;
+	}
+
 	.bubble {
 		margin: 0;
 		padding: 0.5rem 0.75rem;
@@ -317,18 +336,19 @@
 		line-height: 1.4;
 	}
 
-	.speech .bubble::before {
-		content: '“';
-		color: var(--accent);
-		font-weight: 700;
-		margin-right: 0.1rem;
+	/* Speech: one hanging opening quote, so text of several paragraphs still reads as said. */
+	.speech .bubble {
+		position: relative;
+		padding-left: 1.1rem;
 	}
 
-	.speech .bubble::after {
-		content: '”';
+	.speech .bubble::before {
+		content: '“';
+		position: absolute;
+		left: 0.4rem;
+		top: 0.35rem;
 		color: var(--accent);
 		font-weight: 700;
-		margin-left: 0.1rem;
 	}
 
 	/* A thought is never a bubble: a dashed, tinted cloud with a lock. */
@@ -526,6 +546,16 @@
 		color: var(--muted);
 		font-size: 0.8rem;
 		padding-left: 0.2rem;
+	}
+
+	.switches {
+		display: flex;
+		flex-wrap: wrap;
+		border-top: 1px solid var(--border);
+	}
+
+	.switches .bookkeeping {
+		border-top: 0;
 	}
 
 	.bookkeeping {

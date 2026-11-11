@@ -14,10 +14,11 @@
 		...(board?.games ?? []).map((id) => ({ id, label: gameName(id) }))
 	]);
 	// The kind filter and the game tab are kept when the other one is changed.
-	const href = (id: string | null, kind: LeaderboardKind | null) => {
+	const href = (id: string | null, kind: LeaderboardKind | null, demo = data.demo) => {
 		const params = new URLSearchParams();
 		if (id) params.set('game', id);
 		if (kind) params.set('kind', kind);
+		if (demo) params.set('demo', '1');
 		return params.size ? `/leaderboard?${params}` : '/leaderboard';
 	};
 	const kindFromUrl = $derived(page.url.searchParams.get('kind') as LeaderboardKind | null);
@@ -60,9 +61,22 @@
 	</nav>
 	{#if board.fallback}
 		<p class="muted" role="status" data-testid="kind-fallback">
-			No real model is rated yet, so everyone is shown.
+			No rated real-model matches yet. Start one in <a href="/matches/new">New match</a>. Random
+			bots are shown meanwhile.
 		</p>
 	{/if}
+	<p class="demo" data-testid="demo-switch">
+		<a href={href(data.game, kindFromUrl, !data.demo)} data-testid="demo-toggle">
+			{data.demo ? 'Hide demo data' : 'Show demo data'}
+		</a>
+		<span class="muted">
+			{#if data.demo}
+				Demo profiles are shown.
+			{:else if board.demo_hidden > 0}
+				{board.demo_hidden} demo profile{board.demo_hidden === 1 ? '' : 's'} hidden.
+			{/if}
+		</span>
+	</p>
 	<nav class="tabs" aria-label="Games">
 		{#each tabs as tab (tab.id ?? 'overall')}
 			<a href={href(tab.id, kindFromUrl)} aria-current={tab.id === data.game ? 'page' : undefined}>
@@ -73,11 +87,12 @@
 
 	{#if board.rows.length === 0}
 		<div class="notice" role="status" data-testid="empty-leaderboard">
-			<strong>No rated matches yet</strong>
+			<strong>No rated real-model matches yet</strong>
 			<span>
 				{data.game
 					? `Nobody has a rating in ${gameName(data.game)} yet.`
 					: 'Finished matches show up here.'}
+				Start one in <a href="/matches/new">New match</a>.
 			</span>
 		</div>
 	{:else}
@@ -111,10 +126,12 @@
 								{:else}
 									<a href="/profiles/{row.profile_id}">{row.name}</a>
 								{/if}
-								<span class="narrow model">{row.model_id}</span>
+								{#if row.model_id !== row.name}<span class="narrow model">{row.model_id}</span>{/if}
 							</td>
 							<td class="wide model">
-								{row.model_id}{#if row.vendor}<span class="vendor"> · {row.vendor}</span>{/if}
+								{#if row.model_id !== row.name}{row.model_id}{/if}{#if row.vendor}<span
+										class="vendor">{row.model_id !== row.name ? ' · ' : ''}{row.vendor}</span
+									>{/if}
 							</td>
 							<td class="num strong">{rating(row.rating)}</td>
 							<td class="num">{row.games_played}</td>
@@ -141,6 +158,11 @@
 	h1 {
 		margin: 0;
 		font-size: clamp(1.8rem, 6vw, 2.6rem);
+	}
+
+	.demo {
+		margin: 0 0 1rem;
+		font-size: 0.9rem;
 	}
 
 	.lead {

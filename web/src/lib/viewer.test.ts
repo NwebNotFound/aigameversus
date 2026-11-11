@@ -5,6 +5,10 @@ import {
 	chapterLabel,
 	commentary,
 	langOf,
+	mentionParts,
+	mergeSeats,
+	namedText,
+	withDisplayNames,
 	linesUpTo,
 	marks,
 	newBeats,
@@ -224,5 +228,165 @@ describe('results', () => {
 			{ player: 'p3', cards: ['6s', 'Kd'], hand: 'one pair', won: 0 },
 			{ player: 'p4', cards: ['Qs', '4s'], hand: 'two pair', won: 1000 }
 		]);
+	});
+});
+
+describe('mergeSeats', () => {
+	const roster = [
+		{
+			id: 'gemini-flash-lite',
+			model: 'google/gemini-2.5-flash-lite',
+			name: 'Gemini Flash Lite',
+			input_usd_per_mtok: 0.1,
+			output_usd_per_mtok: 0.4
+		}
+	];
+
+	it('takes a running model match from the record, though the transcript knows nothing', () => {
+		const seats = mergeSeats(
+			['p1', 'p2'],
+			{
+				p1: { name: 'gemini-flash-lite', model_id: 'gemini-flash-lite', kind: 'model' },
+				p2: { name: 'Random Bot p2', model_id: null, kind: 'bot' }
+			},
+			{ p1: { name: null, model: null }, p2: { name: null, model: null } },
+			roster
+		);
+		expect(seats.p1).toEqual({
+			display: 'gemini-flash-lite',
+			name: 'gemini-flash-lite',
+			model: 'gemini-flash-lite',
+			kind: 'model',
+			vendor: 'google',
+			personality: null,
+			price: { input: 0.1, output: 0.4 }
+		});
+		expect(seats.p2).toMatchObject({ name: 'Random Bot p2', model: null, kind: 'bot' });
+	});
+
+	it("prefers the transcript's player name (a profile name) over the record's", () => {
+		const seats = mergeSeats(
+			['p1'],
+			{ p1: { name: 'glm-flash', model_id: 'glm-flash', kind: 'model' } },
+			{ p1: { name: 'Juniper', model: 'glm-flash' } }
+		);
+		expect(seats.p1).toMatchObject({
+			name: 'Juniper',
+			model: 'glm-flash',
+			kind: 'model',
+			vendor: null
+		});
+	});
+
+	it('keeps an old match without seats as it was', () => {
+		expect(mergeSeats(['p1'], undefined, undefined).p1).toMatchObject({
+			name: null,
+			kind: undefined
+		});
+	});
+});
+
+describe('display names', () => {
+	it('names like the arena: every repeat numbered, bots by seat number', () => {
+		const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p2: { name: 'Random Bot p2', model: null, kind: 'bot' },
+			p3: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p4: { name: 'Random Bot p4', model: null, kind: 'bot' }
+		});
+		expect(['p1', 'p2', 'p3', 'p4'].map((s) => seatName(s, seats))).toEqual([
+			'gpt-luna #1',
+			'Bot 2',
+			'gpt-luna #2',
+			'Bot 4'
+		]);
+	});
+
+	it('keeps a display name the API gave, and a profile name over the model id', () => {
+		const seats = withDisplayNames(['p1', 'p2'], {
+			p1: { name: 'Juniper', model: 'glm-flash', kind: 'model' },
+			p2: { name: 'x', model: 'x', kind: 'model', display: 'Server name' }
+		});
+		expect(seatName('p1', seats)).toBe('Juniper');
+		expect(seatName('p2', seats)).toBe('Server name');
+	});
+
+	it('replaces seat ids in transcript text, also inside the old bot label', () => {
+		const seats = withDisplayNames(['p1', 'p2'], {
+			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p2: { name: 'Random Bot p2', model: null, kind: 'bot' }
+		});
+		expect(namedText('p1 calls LIAR on Random Bot p2 (random-bot)', seats)).toBe(
+			'gpt-luna calls LIAR on Bot 2'
+		);
+		expect(namedText('Ergebnis: 1. p2  2. p1', seats)).toBe('Ergebnis: 1. Bot 2  2. gpt-luna');
+		expect(namedText('top10 and p9 stay', seats)).toBe('top10 and p9 stay');
+	});
+});
+
+describe('mentionParts', () => {
+	const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+		p1: { name: 'mistral-small', model: 'mistral-small', kind: 'model' },
+		p2: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+		p3: { name: 'qwen-flash', model: 'qwen-flash', kind: 'model' },
+		p4: { name: 'gemini-flash-lite', model: 'gemini-flash-lite', kind: 'model' }
+	});
+
+	it("turns the seat a model named into a mention (Nils' sentence)", () => {
+		expect(mentionParts('p2, two kings with your history? I doubt it!', seats)).toEqual([
+			{ seat: 'p2', text: 'p2' },
+			{ text: ', two kings with your history? I doubt it!' }
+		]);
+	});
+
+	it('leaves a seat that is not in the match, and words that only contain p2, as text', () => {
+		expect(mentionParts('p9 and top2 and mp3', seats)).toEqual([{ text: 'p9 and top2 and mp3' }]);
+	});
+
+	it('finds several mentions, in any case', () => {
+		const parts = mentionParts('P3 bluffs; p4 called p3.', seats);
+		expect(parts.filter((p) => 'seat' in p).map((p) => (p as { seat: string }).seat)).toEqual([
+			'p3',
+			'p4',
+			'p3'
+		]);
+		expect(parts.map((p) => p.text).join('')).toBe('P3 bluffs; p4 called p3.');
+	});
+});
+
+describe('mentions with what a language glues to them', () => {
+	const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+		p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+		p2: { name: 'mistral-small', model: 'mistral-small', kind: 'model' },
+		p3: { name: 'deepseek-flash', model: 'deepseek-flash', kind: 'model' },
+		p4: { name: 'gemini-flash-lite', model: 'gemini-flash-lite', kind: 'model' }
+	});
+	const seatsOf = (text: string) =>
+		mentionParts(text, seats).flatMap((p) => ('seat' in p ? [p.seat] : []));
+
+	it('takes "Auf p4s Frage" as p4, with the "s" left as text', () => {
+		expect(mentionParts('Auf p4s Frage: …', seats)).toEqual([
+			{ text: 'Auf ' },
+			{ seat: 'p4', text: 'p4' },
+			{ text: 's Frage: …' }
+		]);
+	});
+
+	it("takes p3's vote, p4’s, p4-Antwort and p4: as mentions", () => {
+		expect(seatsOf("p3's vote")).toEqual(['p3']);
+		expect(seatsOf('p4’s turn, p4-Antwort, p4: yes')).toEqual(['p4', 'p4', 'p4']);
+	});
+
+	it('reads upper case and lists', () => {
+		expect(seatsOf('P4 lügt; p1/p2/p3 stimmen')).toEqual(['p4', 'p1', 'p2', 'p3']);
+	});
+
+	it('leaves seats not in the match, ids inside words and longer numbers alone', () => {
+		expect(seatsOf('p9, mp3, top2, p41')).toEqual([]);
+	});
+
+	it('names plain text by the same rule', () => {
+		expect(namedText('Auf p4s Frage', seats)).toBe('Auf gemini-flash-lites Frage');
+		expect(namedText('P2 calls p9', seats)).toBe('mistral-small calls p9');
 	});
 });

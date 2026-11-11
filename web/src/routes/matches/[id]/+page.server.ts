@@ -7,10 +7,12 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	const view = viewFrom(url.searchParams.get('view'));
-	const result = await createArenaClient(ARENA_API_URL, fetch).liveState(params.id);
+	const arena = createArenaClient(ARENA_API_URL, fetch);
+	const [result, setup] = await Promise.all([arena.liveState(params.id), arena.setup()]);
+	const roster = setup.state === 'ok' ? setup.data.models : [];
 	if (result.state === 'not_found') error(404, 'No match with this id');
 	if (result.state === 'ok' && view === 'spoiler-free') {
-		return { view, result: { ...result, data: publicState(result.data) } };
+		return { view, roster, result: { ...result, data: publicState(result.data) } };
 	}
-	return { view, result };
+	return { view, roster, result };
 };

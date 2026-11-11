@@ -110,9 +110,34 @@ def names_from(players: Sequence[str] | Mapping[str, str]) -> dict[str, str]:
     return {p: p for p in players}
 
 
+def display_names(seats: Mapping[str, tuple[str, str]]) -> dict[str, str]:
+    """The name every reader sees for each seat, unique within the match.
+
+    `seats` maps a seat id to (kind, name): a model is shown by its short name ("gpt-luna"),
+    numbered "gpt-luna #1", "gpt-luna #2" when the same model sits more than once; a bot is
+    "Bot 3" with the number of its seat. The seat id itself is never the name.
+    """
+    count: dict[str, int] = {}
+    for kind, name in seats.values():
+        if kind != "bot":
+            count[name] = count.get(name, 0) + 1
+    seen: dict[str, int] = {}
+    shown = {}
+    for number, (seat, (kind, name)) in enumerate(seats.items(), start=1):
+        if kind == "bot":
+            digits = "".join(c for c in str(seat) if c.isdigit())
+            shown[seat] = f"Bot {digits or number}"
+        elif count[name] > 1:
+            seen[name] = seen.get(name, 0) + 1
+            shown[seat] = f"{name} #{seen[name]}"
+        else:
+            shown[seat] = name
+    return shown
+
+
 def labels(seats: Mapping[str, str]) -> dict[str, str]:
-    """Display names "p1 (glm-flash)" from a mapping seat to model (or profile) name."""
-    return {seat: f"{seat} ({model})" for seat, model in seats.items()}
+    """Display names from a mapping seat to model name (a saved `arena run --models` match)."""
+    return display_names({seat: ("model", model) for seat, model in seats.items()})
 
 
 class Base:
@@ -243,6 +268,29 @@ class Base:
         return self.out(
             "info", text, actor=event.data["player"], detail=self.tool(event.data), importance=2
         )
+
+    def handle_decision(self, event: Event):
+        """What a move took: bookkeeping for statistics, shown only at the finest detail."""
+        data = event.data
+        parts = []
+        if data.get("latency_ms") is not None:
+            parts.append(f"{data['latency_ms'] / 1000:.1f} s")
+        if data.get("tokens_in") is not None or data.get("tokens_out") is not None:
+            parts.append(
+                self.w.pick(
+                    f"{data.get('tokens_in') or 0} tokens in, {data.get('tokens_out') or 0} out",
+                    f"{data.get('tokens_in') or 0} Tokens rein, {data.get('tokens_out') or 0} raus",
+                )
+            )
+        if data.get("retries"):
+            parts.append(
+                self.w.pick(f"{data['retries']} retries", f"{data['retries']} Wiederholungen")
+            )
+        who = self.w.who(data["player"])
+        text = self.w.pick(f"{who}'s move", f"Zug von {who}") + (
+            ": " + ", ".join(parts) if parts else ""
+        )
+        return self.out("info", text, actor=data["player"], importance=1)
 
     def handle_agent_failed(self, event: Event):
         who = self.w.who(event.data["player"])

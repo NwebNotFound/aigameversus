@@ -15,6 +15,7 @@ import json
 import os
 import random
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -23,22 +24,26 @@ from uuid import UUID, uuid4
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
+from arena.catalog import resolve
 from arena.config import display_name, load_config, load_keys
 from arena.db.database import connect, ledger_url, migrate
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger, LedgerUnavailable
-from arena.db.match_store import MatchStore, Seat
+from arena.db.match_store import Batch, MatchStore, Seat
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.replay import replay
 from arena.engine.types import Event, MatchPaused, Placement
 from arena.games import load_games
 from arena.memory.store import MemoryStore
+from arena.ratings.backfill import backfill_model_ratings
 from arena.ratings.store import RatingStore
+from arena.research.batches import backfill, read_seeds, read_started
 from arena.transcript import (
     RENDERERS,
     Transcriber,
     TranscriptError,
+    display_names,
     from_export,
     labels,
     render_match,
@@ -66,6 +71,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     reset.add_argument(
         "--yes", action="store_true", help="really forget; needed, it cannot be undone"
     )
+    ratings = commands.add_parser("ratings", help="the ratings of players")
+    ratings_commands = ratings.add_subparsers(dest="ratings_command", required=True)
+    ratings_commands.add_parser(
+        "backfill", help="rate the finished model matches that no rating has counted yet"
+    )
+    batches = commands.add_parser("batches", help="matches played as one batch, such as a league")
+    batch_commands = batches.add_subparsers(dest="batches_command", required=True)
+    tag = batch_commands.add_parser(
+        "backfill", help="tag matches played before matches had a batch, from a runner's log"
+    )
+    tag.add_argument("started", type=Path, help='JSON lines {"order": N, "match_id": "..."}')
+    tag.add_argument("--id", required=True, help="the batch id, e.g. E1-A2")
+    tag.add_argument("--label", required=True, help="what people read")
+    tag.add_argument("--of", type=int, required=True, help="how many matches the batch plans")
+    tag.add_argument(
+        "--first-order", type=int, default=1, help="the order of the batch's first match"
+    )
+    tag.add_argument("--schedule", type=Path, help="the plan's schedule CSV: check every seed")
     show = commands.add_parser(
         "transcript", help="print a stored match, or a saved match file, as a readable play-by-play"
     )
@@ -137,6 +160,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return asyncio.run(_reset_memory(args.profile, args.yes))
         except _WrongCall as error:
             parser.error(str(error))
+    if args.command == "ratings":
+        try:
+            return asyncio.run(_backfill_ratings())
+        except _WrongCall as error:
+            parser.error(str(error))
+    if args.command == "batches":
+        try:
+            return asyncio.run(_backfill_batch(args))
+        except (_WrongCall, ValueError, OSError) as error:
+            parser.error(str(error))
     if args.command == "games":
         for game in games.values():
             print(f"{game.id:<12} {game.name} ({game.min_players} to {game.max_players} players)")
@@ -169,6 +202,49 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(str(error))
 
 
+async def _backfill_ratings() -> int:
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise _WrongCall("ratings backfill needs DATABASE_URL")
+    pool = await connect(url)
+    try:
+        await migrate(pool)
+        done = await backfill_model_ratings(pool)
+    finally:
+        await pool.close()
+    print(f"Rated {done.rated} model match(es).")
+    for note in done.unrated:
+        print(f"Left unrated: {note}")
+    return 0
+
+
+async def _backfill_batch(args: argparse.Namespace) -> int:
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise _WrongCall("batches backfill needs DATABASE_URL")
+    started = read_started(args.started)
+    seeds = None if args.schedule is None else read_seeds(args.schedule)
+    Batch(id=args.id, label=args.label, of=args.of)  # a bad id or label fails before any write
+    pool = await connect(url)
+    try:
+        await migrate(pool)
+        done = await backfill(
+            MatchStore(pool),
+            started,
+            batch_id=args.id,
+            label=args.label,
+            first_order=args.first_order,
+            of=args.of,
+            seeds=seeds,
+        )
+    finally:
+        await pool.close()
+    print(f"Tagged {len(done.tagged)} match(es); {len(done.already)} already in {args.id}.")
+    for problem in done.problems:
+        print(f"Not tagged: {problem}")
+    return 1 if done.problems else 0
+
+
 async def _reset_memory(profile: str | None, yes: bool) -> int:
     try:
         profile_id = None if profile is None else UUID(profile)
@@ -198,7 +274,10 @@ def _play_bots(
     players = [f"p{seat}" for seat in range(1, (count or plugin.min_players) + 1)]
     seed = options["seed"]
     match = _match(
-        plugin, random_bots(plugin, players, seed), options, _printer(plugin.id, players, args)
+        plugin,
+        random_bots(plugin, players, seed),
+        options,
+        _printer(plugin.id, display_names({p: ("bot", p) for p in players}), args),
     )
     print(f"{plugin.name} ({plugin.id}), players {' '.join(players)}, seed {seed}")
     placements = asyncio.run(match.run())
@@ -214,7 +293,7 @@ async def _play_models(
     save: str | None,
     args: argparse.Namespace,
 ) -> int:
-    config = load_config()
+    config = await resolve(load_config(), model_ids)
     unknown = [model_id for model_id in model_ids if model_id not in config.models]
     if unknown:
         raise _WrongCall(
@@ -253,7 +332,7 @@ async def _play_models(
             player: ModelAgent(budget.model(player, model_id), plugin, settings=options["settings"])
             for player, model_id in seats.items()
         }
-        match = _match(plugin, agents, options, store_and_print)
+        match = _match(plugin, agents, {**options, "clock": time.monotonic}, store_and_print)
         await matches.create(
             match_id,
             plugin.id,
@@ -329,27 +408,9 @@ async def _play_models(
 async def _rate_models(
     pool: Any, match_id: UUID, game: str, seats: dict[str, str], placements: Sequence[Placement]
 ) -> str | None:
-    """Rate a finished model match: one profile per model, the same in every match (D-081).
-
-    Returns a sentence when the match is not rated, else None. A profile is rated once
-    per match, so a model in several seats leaves the match unrated.
-    """
-    models = list(seats.values())
-    if len(set(models)) != len(models):
-        repeated = sorted({m for m in models if models.count(m) > 1})
-        return (
-            f"Not rated: {', '.join(repeated)} sits in several seats, "
-            "and a model is rated once per match"
-        )
-    store = RatingStore(pool)
-    profiles = {seat: await store.model_profile(model) for seat, model in seats.items()}
-    await store.apply_match_result(
-        match_id,
-        game,
-        [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
-        seats=profiles,
-    )
-    return None
+    """Rate a finished model match (D-081). Returns a sentence when it is not rated."""
+    result = await RatingStore(pool).rate_model_match(match_id, game, seats, placements)
+    return result if isinstance(result, str) else None
 
 
 def _match(plugin: GamePlugin, agents: dict, options: dict[str, Any], sink: Any) -> Match:
@@ -444,7 +505,7 @@ async def _transcript(args: argparse.Namespace) -> int:
             raise _WrongCall(f"no match {match_id} in the database")
         if record.game not in RENDERERS:
             raise _WrongCall(f"no transcript for {record.game}")
-        names = {**{p: p for p in record.players}, **await matches.seat_names(match_id)}
+        names = await matches.display_names(record)
         if not args.follow:
             _print_transcript(record.game, await log.load(match_id), names, args)
             return 0

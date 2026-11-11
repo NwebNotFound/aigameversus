@@ -183,7 +183,7 @@ def test_a_saved_match_file_is_printed_as_a_transcript(capsys, tmp_path):
     _, as_json, _ = arena(capsys, "transcript", str(path), "--format", "json")
 
     assert code == 0
-    assert "p1 (glm-flash)" in text and "Runde 1, Tischkarte:" in text
+    assert "glm-flash" in text and "Runde 1, Tischkarte:" in text and "p1" not in text
     assert markdown.startswith("## ")
     assert {line["kind"] for line in json.loads(as_json)} >= {"heading", "action", "result"}
 

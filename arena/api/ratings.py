@@ -62,12 +62,16 @@ class LeaderboardRow(StandingOut):
 
 class Leaderboard(BaseModel):
     game: str | None = Field(description="The game shown, or null for the overall rating")
-    games: list[str] = Field(description="Every game with at least one rated match")
+    games: list[str] = Field(
+        description="Every game with at least one rated match of the kind shown (tabs)"
+    )
     kind: Literal["models", "bots", "all"] = Field(description="Who is shown")
     fallback: bool = Field(
         False, description="True when real models were asked for but none is rated yet: all shown"
     )
     counts: dict[str, int] = Field(description="Rows per kind with the other filters applied")
+    show_demo: bool = Field(False, description="Whether the demo profiles are included")
+    demo_hidden: int = Field(0, description="Demo profiles left out, when `show_demo` is false")
     rows: list[LeaderboardRow]
 
 
@@ -79,6 +83,7 @@ class RecentMatch(BaseModel):
     match_id: UUID
     game_id: str
     rated_at: datetime
+    played_at: datetime = Field(description="When the match itself ended")
     rank: int
     players: int
     rating_change: float
@@ -95,9 +100,13 @@ class ProfileOut(BaseModel):
 
 
 def vendor_of(model_id: str) -> str | None:
-    """The maker of a model, from its provider name in config/models.yaml: "z-ai/glm" is z-ai."""
+    """The maker of a model, from its provider name: "z-ai/glm" is z-ai.
+
+    A model of config/models.yaml has it there; any other model is its OpenRouter id.
+    """
     configured = load_config().models.get(model_id)
-    return configured.model.split("/", 1)[0] if configured and "/" in configured.model else None
+    name = configured.model if configured else model_id
+    return name.split("/", 1)[0] if "/" in name else None
 
 
 def is_seat_bot(standing: Standing) -> bool:
@@ -153,6 +162,9 @@ async def leaderboard(
     group_bots: Annotated[
         bool, Query(description="One row for all random-bot seats; false lists every seat")
     ] = True,
+    demo: Annotated[
+        bool, Query(description="Include the demo profiles (random bots from demo_seed)")
+    ] = False,
 ) -> Leaderboard:
     """Players by rating, best first: in one game, or overall across all games.
 
@@ -160,7 +172,7 @@ async def leaderboard(
     `fallback` is true. The seats of random bots are grouped into one "Random Bot" row
     unless `group_bots=false`.
     """
-    standings = await store.leaderboard(game)
+    standings = await store.leaderboard(game, demo=demo)
     live: LiveMatches = request.app.state.live
     usage = await store.usage(live.ledger, game)
     grouped, others = group_seat_bots(standings, usage) if group_bots else (None, standings)
@@ -201,10 +213,12 @@ async def leaderboard(
         )
     return Leaderboard(
         game=game,
-        games=await store.rated_games(),
+        games=await store.rated_games(shown, demo=demo),
         kind=shown,
         fallback=fallback,
         counts=counts,
+        show_demo=demo,
+        demo_hidden=0 if demo else await store.demo_profiles(),
         rows=rows,
     )
 
@@ -230,6 +244,7 @@ async def profile(profile_id: UUID, store: Store) -> ProfileOut:
                 match_id=m.match_id,
                 game_id=m.game_id,
                 rated_at=m.rated_at,
+                played_at=m.played_at,
                 rank=m.rank,
                 players=m.players,
                 rating_change=round(m.rating_change, 1),

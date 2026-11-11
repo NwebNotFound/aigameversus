@@ -4,6 +4,7 @@ import ast
 import asyncio
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from arena.transcript import (
     RENDERERS,
     Transcriber,
     TranscriptError,
+    display_names,
     from_export,
     known_event_types,
     labels,
@@ -179,8 +181,40 @@ def test_german_and_english_differ_and_names_are_used():
     de = to_text(render_match(events, names, "de"))
 
     assert "Round 1, table card" in en and "Runde 1, Tischkarte" in de
-    assert "p1 (glm)" in en and "p1 (glm)" in de
+    assert "glm" in en and "glm" in de and "p1" not in en and "p1" not in de
     assert en != de
+
+
+def test_every_seat_gets_one_unique_display_name_and_never_its_seat_id():
+    shown = display_names(
+        {
+            "p1": ("model", "gpt-luna"),
+            "p2": ("bot", "Random Bot p2"),
+            "p3": ("model", "gpt-luna"),
+            "p4": ("model", "gemini-flash-lite"),
+            "p5": ("bot", "Random Bot p5"),
+        }
+    )
+
+    assert shown == {
+        "p1": "gpt-luna #1",
+        "p2": "Bot 2",
+        "p3": "gpt-luna #2",
+        "p4": "gemini-flash-lite",
+        "p5": "Bot 5",
+    }
+    assert len(set(shown.values())) == len(shown)
+
+
+def test_the_display_names_replace_the_seat_ids_in_every_line_of_every_game():
+    for game in GAMES:
+        events = bot_events(game)
+        start = next(e for e in events if e.type == "match_started")
+        names = display_names({p: ("bot", p) for p in start.data["players"]})
+
+        for lang in LANGS:
+            for line in render_match(events, names, lang, spoilers=True):
+                assert not re.search(r"p\d+", line.text), (game, lang, line.text)
 
 
 def test_one_event_alone_is_a_line_and_the_log_gives_context():
@@ -226,7 +260,8 @@ def test_a_saved_match_file_renders_with_its_model_names():
 
     text = to_text(render_match(events, names, "de", game=game), min_importance=2)
 
-    assert game == "liars_deck" and "p1 (glm-flash)" in text and "Runde 1" in text
+    assert game == "liars_deck" and "glm-flash" in text and "Runde 1" in text
+    assert "p1 (" not in text and "p1 legt" not in text  # models may say p1 in their own words
 
 
 def test_a_replay_export_renders_too():
