@@ -1,5 +1,6 @@
 """The page of one model: its rating, cost and tool errors per game."""
 
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -7,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from arena.api.ratings import RecentMatch, StandingOut, vendor_of
+from arena.catalog import load
 from arena.config import load_config
 from arena.ratings.elo import PROVISIONAL_GAMES
 from arena.ratings.store import RatingStore, Usage
@@ -74,6 +76,67 @@ class ModelPage(BaseModel):
     recent_matches: list[RecentMatch]
     personalities: list[Personality] = Field(
         description="Profiles of this model with a personality"
+    )
+
+
+class CatalogModel(BaseModel):
+    id: str = Field(description="The id for POST /matches: config/models.yaml's if verified")
+    openrouter_id: str
+    name: str
+    vendor: str
+    context_length: int | None
+    input_usd_per_mtok: float
+    output_usd_per_mtok: float
+    reasoning: bool = Field(description="Whether the model can think before it answers")
+    moderated: bool
+    free: bool
+    verified: bool = Field(description="In config/models.yaml: prices and behaviour checked")
+    price_source: str = Field(
+        description='"config/models.yaml" (checked by hand) or "openrouter list" (not checked; '
+        "booked at the listed price x 1.25)"
+    )
+    high_price: bool = Field(description="Output costs more than 10 USD per million tokens")
+
+
+class CatalogOut(BaseModel):
+    models: list[CatalogModel]
+    fetched_at: datetime | None = Field(
+        description="When OpenRouter's list was read; null: only config/models.yaml is known"
+    )
+    fresh: bool = Field(description="Read within the last hour; false: an older copy or none")
+
+
+@router.get("/models/catalog")
+async def model_catalog() -> CatalogOut:
+    """Every model that can take a seat: config/models.yaml's, then OpenRouter's others.
+
+    A model can play when it writes text and takes a forced tool call. The caps and
+    confirm_spend hold for every model; unverified ones are priced at OpenRouter's prices.
+    """
+    catalog = await load(load_config())
+    return CatalogOut(
+        models=[
+            CatalogModel(
+                id=e.id,
+                openrouter_id=e.openrouter_id,
+                name=e.name,
+                vendor=e.vendor,
+                context_length=e.context_length,
+                input_usd_per_mtok=float(e.input_usd_per_mtok),
+                output_usd_per_mtok=float(e.output_usd_per_mtok),
+                reasoning=e.reasoning,
+                moderated=e.moderated,
+                free=e.free,
+                verified=e.verified,
+                price_source=e.price_source,
+                high_price=e.high_price,
+            )
+            for e in catalog.entries
+        ],
+        fetched_at=None
+        if catalog.fetched_at is None
+        else datetime.fromtimestamp(catalog.fetched_at, UTC),
+        fresh=catalog.fresh,
     )
 
 

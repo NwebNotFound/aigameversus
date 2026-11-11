@@ -3,11 +3,10 @@
 	import type { Seat, TranscriptLine } from '#lib/api.js';
 	import { card } from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import Mention from '#lib/components/Mention.svelte';
+	import RichText from '#lib/components/RichText.svelte';
 	import {
 		colourKey,
 		commentary,
-		mentionParts,
 		ordinal,
 		seatModel,
 		seatName,
@@ -128,15 +127,12 @@
 								<span class="tag whisper-tag">whispers</span>
 							{/if}
 						</span>
-						<p class="bubble">
-							{#if raw}{words(line) ??
-									line.text}{:else}{#each mentionParts(words(line) ?? line.text, players) as part, i (i)}{#if 'seat' in part}<Mention
-											seat={part.seat}
-											name={name(part.seat)}
-											colourKey={colour(part.seat)}
-											written={part.text}
-										/>{:else}{part.text}{/if}{/each}{/if}
-						</p>
+						<div class="bubble">
+							{#if raw}<span class="raw-words">{words(line) ?? line.text}</span>{:else}<RichText
+									text={words(line) ?? line.text}
+									{players}
+								/>{/if}
+						</div>
 					</div>
 				{:else if line.raw?.type === 'match_finished' && ranksOf(line).length}
 					<div class="final" data-testid="final-ranks">
@@ -327,6 +323,10 @@
 		color: var(--muted);
 	}
 
+	.raw-words {
+		white-space: pre-wrap;
+	}
+
 	.bubble {
 		margin: 0;
 		padding: 0.5rem 0.75rem;
@@ -336,18 +336,19 @@
 		line-height: 1.4;
 	}
 
-	.speech .bubble::before {
-		content: '“';
-		color: var(--accent);
-		font-weight: 700;
-		margin-right: 0.1rem;
+	/* Speech: one hanging opening quote, so text of several paragraphs still reads as said. */
+	.speech .bubble {
+		position: relative;
+		padding-left: 1.1rem;
 	}
 
-	.speech .bubble::after {
-		content: '”';
+	.speech .bubble::before {
+		content: '“';
+		position: absolute;
+		left: 0.4rem;
+		top: 0.35rem;
 		color: var(--accent);
 		font-weight: 700;
-		margin-left: 0.1rem;
 	}
 
 	/* A thought is never a bubble: a dashed, tinted cloud with a lock. */
