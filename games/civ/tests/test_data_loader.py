@@ -3,6 +3,8 @@ import shutil
 from pathlib import Path
 
 import pytest
+import yaml
+from jsonschema import Draft202012Validator
 
 from games.civ.data_loader import DATA_DIR, CivDataError, json_schemas, load_civ_data
 
@@ -77,6 +79,17 @@ def test_committed_json_schemas_match_the_models():
         assert committed == schema, (
             f"{name} is stale: run `uv run python -m games.civ.data_loader --write-schemas`"
         )
+
+
+def test_yaml_files_pass_their_json_schema():
+    """Editors validate against the JSON schemas, so the shipped data must pass them too."""
+    for name, schema in json_schemas().items():
+        directory = (DATA_DIR / name).parent
+        stem = "*" if name.startswith("events/") else name.removesuffix(".schema.json")
+        for path in directory.glob(f"{stem}.yaml"):
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            errors = [e.message for e in Draft202012Validator(schema).iter_errors(data)]
+            assert not errors, f"{path.name}: {errors}"
 
 
 def test_misspelled_field_names_file_field_and_problem(data_dir: Path):
