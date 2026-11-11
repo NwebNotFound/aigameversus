@@ -18,6 +18,12 @@ from arena.engine.types import Event
 
 log = logging.getLogger(__name__)
 
+MAX_RUNNING = 10  # matches this server plays at the same time
+
+
+class ArenaBusy(Exception):
+    """The server already plays as many matches as it does at a time."""
+
 
 class _Running:
     """A match of this process and how much of its log spectators may read."""
@@ -61,7 +67,7 @@ class LiveMatches:
 
         Between two turns the match waits `turn_delay` seconds, so that
         people can follow it. Raises ValueError for a player count or settings
-        the game refuses.
+        the game refuses, and ArenaBusy while MAX_RUNNING matches are running.
         """
         match_id = uuid4()
         if seed is None:
@@ -76,9 +82,19 @@ class LiveMatches:
         match = Match(
             plugin, random_bots(plugin, players, seed), seed=seed, settings=settings, sink=sink
         )
+        if len(self._running) >= MAX_RUNNING:
+            raise ArenaBusy(
+                f"{MAX_RUNNING} matches are running, the most this server plays at a time. "
+                "Try again when one has ended."
+            )
         running = _Running(match)
-        record = await self.matches.create(match_id, plugin.id, players, seed, match.settings)
+        # The place is taken before the first await, so two requests cannot share the last one.
         self._running[match_id] = running
+        try:
+            record = await self.matches.create(match_id, plugin.id, players, seed, match.settings)
+        except BaseException:
+            del self._running[match_id]
+            raise
         task = asyncio.create_task(self._play(match_id, running))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)

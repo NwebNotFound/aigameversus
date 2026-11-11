@@ -703,7 +703,9 @@ Each entry: date, decision, why, alternatives considered.
   for and how it ended: `running`, `finished`, `failed`, `interrupted`. When
   the server stops, its matches stop; the next start marks them
   `interrupted`. `turn_delay` (0 to 60 s) paces a match for watching. Seats
-  are random bots only until model seats come with phase 2. The server speaks
+  are random bots only until model seats come with phase 2. The server plays
+  at most 10 matches at a time and answers 429 to a start beyond that; with
+  the turn limit (D-039) this bounds what requests can make it store. The server speaks
   WebSocket through the `websockets` package, a dependency of its own because
   plain `uvicorn` brings none.
 - **Why:** One process needs no queue and no message bus to get a live

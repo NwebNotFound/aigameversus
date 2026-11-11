@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
 from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
-from arena.api.live import LiveMatches
+from arena.api.live import ArenaBusy, LiveMatches
 from arena.db.match_store import MatchRecord, Status
 from arena.engine.types import Event
 
@@ -59,7 +59,10 @@ def list_games(live: Live) -> list[Game]:
 
 @router.post("/matches", status_code=201)
 async def start_match(new: NewMatch, live: Live) -> MatchRecord:
-    """Start a match in which every seat is a random bot. It plays on in the background."""
+    """Start a match in which every seat is a random bot. It plays on in the background.
+
+    Answers 429 while the server already plays as many matches as it does at a time.
+    """
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
@@ -70,6 +73,8 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
+    except ArenaBusy as busy:
+        raise HTTPException(429, str(busy)) from busy
 
 
 @router.get("/matches")

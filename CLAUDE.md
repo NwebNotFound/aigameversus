@@ -92,6 +92,9 @@ Two ways, both with random bots in every seat for now:
   runs and closes when it stops; a finished match is sent in one go.
   `GET /matches/{id}/events` returns the same log as a list. `turn_delay` in
   the request makes the match wait between turns so that people can follow.
+  The server plays at most 10 matches at a time (`MAX_RUNNING`) and answers
+  429 to a start beyond that; a match that never ends stops at its turn limit
+  and is marked `failed`.
 
 The API shows a match as a spectator sees it, thoughts and hidden cards
 included. It has no authentication and listens on localhost only.

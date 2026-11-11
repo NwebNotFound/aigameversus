@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from arena.agents.random_bot import random_bots
+from arena.api import live
 from arena.api.app import app
 from arena.db.database import connect, migrate
 from arena.db.match_store import MatchStore
@@ -26,6 +27,19 @@ class Plugin(SequentialCounter):
 
     def step(self, state, ctx):
         pass  # never closes a round: after both players moved, a turn passes without an event
+"""
+
+
+NEVER_OVER = """
+from tests.engine.counter_game import SequentialCounter
+
+
+class Plugin(SequentialCounter):
+    id = "endless"
+    max_turns = 40
+
+    def is_over(self, state):
+        return False  # round after round, each with progress, and no end
 """
 
 
@@ -238,3 +252,58 @@ def test_match_of_a_broken_game_fails_and_says_so(database_url, monkeypatch, fak
     assert close_code == 1000
     assert (record["status"], record["placements"]) == ("failed", None)
     assert "made no progress" in caplog.text
+
+
+def test_match_of_a_game_that_never_ends_stops_at_the_turn_limit_and_fails(
+    database_url, monkeypatch, fake_games
+):
+    fake_games(endless=NEVER_OVER)
+    monkeypatch.setenv("DATABASE_URL", database_url)
+
+    with TestClient(app) as client:
+        match = client.post("/matches", json={"game": "endless"}).json()
+        log, close_code = follow(client, match["id"])
+        record = client.get(f"/matches/{match['id']}").json()
+        stored = client.get(f"/matches/{match['id']}/events").json()
+
+    # The match did not fill the database: forty turns, then the reason, then nothing.
+    assert [message["type"] for message in log].count("action_accepted") == 40
+    assert (log[-1]["type"], log[-1]["data"]) == ("turn_limit_reached", {"max_turns": 40})
+    assert close_code == 1000
+    assert (record["status"], record["placements"]) == ("failed", None)
+    assert stored == log
+
+
+def test_server_plays_only_so_many_matches_at_a_time(client, monkeypatch):
+    monkeypatch.setattr(live, "MAX_RUNNING", 2)
+    slow = start(client, turn_delay=30)
+    quick = start(client)
+    follow(client, quick["id"])  # until it has ended and its place is free again
+    second_slow = start(client, turn_delay=30)
+
+    refused = client.post("/matches", json={"game": "toy"})
+    wrong = client.post("/matches", json={"game": "toy", "players": 9})
+
+    assert refused.status_code == 429
+    assert "2 matches are running" in refused.json()["detail"]
+    # A request that could not be played anyway is told why, not to come back later.
+    assert wrong.status_code == 422
+    running = client.get("/matches", params={"status": "running"}).json()
+    assert sorted(m["id"] for m in running) == sorted([slow["id"], second_slow["id"]])
+    assert len(client.get("/matches").json()) == 3
+
+
+def test_match_that_could_not_be_recorded_does_not_keep_its_place(client, monkeypatch):
+    monkeypatch.setattr(live, "MAX_RUNNING", 1)
+    matches = client.app.state.live.matches
+
+    async def database_is_down(*arguments):
+        raise ConnectionError("no database")
+
+    with monkeypatch.context() as broken:
+        broken.setattr(matches, "create", database_is_down)
+        with pytest.raises(ConnectionError):
+            client.post("/matches", json={"game": "toy"})
+
+    # The one place is still free.
+    assert start(client)["status"] == "running"

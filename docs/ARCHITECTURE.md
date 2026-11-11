@@ -175,6 +175,8 @@ sequenceDiagram
 - Only completed turns are shown: the stream follows what the sink has stored.
 - When the server stops, running matches stop with it. The next start marks
   them `interrupted`; their stored turns stay readable.
+- At most `MAX_RUNNING` (10) matches run at a time; `POST /matches` answers
+  429 beyond that. A match that is not over at its turn limit ends `failed`.
 - `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
   its own process and prints the events.
 - Games come from `arena/games.py`: one plugin per folder `games/<id>/` with a
