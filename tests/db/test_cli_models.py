@@ -232,3 +232,85 @@ def test_models_need_a_database(answer_with, capsys, monkeypatch):
     assert (code, output) == (2, "")
     assert "--models needs DATABASE_URL" in complaints
     assert sent == {}
+
+
+def ratings_of(database_url):
+    """(profile name, model id, game, games played) of every rating, by profile name."""
+
+    async def read():
+        pool = await connect(database_url)
+        try:
+            rows = await pool.fetch(
+                "SELECT p.name, p.model_id, r.game_id, r.games_played, "
+                "(SELECT count(*) FROM match_seats s WHERE s.profile_id = p.id) AS seats "
+                "FROM ratings r JOIN player_profiles p ON p.id = r.profile_id ORDER BY p.name"
+            )
+            return [tuple(row) for row in rows]
+        finally:
+            await pool.close()
+
+    return asyncio.run(read())
+
+
+def test_a_model_has_one_profile_that_every_match_rates_again(database, answer_with, capsys):
+    answer_with(**PLAY_3)
+    models = "glm-flash,deepseek-flash"
+
+    for seed in ("7", "8"):
+        code, _, _ = arena(capsys, "run", "--game", "toy", "--models", models, "--seed", seed)
+        assert code == 0
+
+    assert ratings_of(database) == [
+        ("deepseek-flash", "deepseek-flash", "toy", 2, 2),
+        ("glm-flash", "glm-flash", "toy", 2, 2),
+    ]
+
+
+def test_the_same_model_in_the_other_seat_is_still_the_same_profile(database, answer_with, capsys):
+    answer_with(**PLAY_3)
+
+    arena(capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash", "--seed", "7")
+    arena(capsys, "run", "--game", "toy", "--models", "deepseek-flash,glm-flash", "--seed", "8")
+
+    assert [(name, played) for name, _, _, played, _ in ratings_of(database)] == [
+        ("deepseek-flash", 2),
+        ("glm-flash", 2),
+    ]
+
+
+def test_a_model_in_several_seats_leaves_the_match_unrated_and_says_so(
+    database, answer_with, capsys
+):
+    answer_with(**PLAY_3)
+
+    code, output, _ = arena(
+        capsys, "run", "--game", "toy", "--models", "glm-flash,glm-flash", "--seed", "3"
+    )
+
+    assert code == 0
+    assert "Not rated: glm-flash sits in several seats" in output
+    assert ratings_of(database) == []
+
+
+def test_model_profile_ids_follow_model_and_personality(database):
+    from arena.ratings.store import RatingStore
+
+    async def ids():
+        pool = await connect(database)
+        try:
+            await migrate(pool)
+            store = RatingStore(pool)
+            plain = await store.model_profile("glm-flash")
+            return (
+                plain,
+                await store.model_profile("glm-flash"),
+                await store.model_profile("glm-flash", "silent_observer"),
+                await store.model_profile("deepseek-flash"),
+            )
+        finally:
+            await pool.close()
+
+    plain, again, with_personality, other = asyncio.run(ids())
+
+    assert plain == again
+    assert len({plain, with_personality, other}) == 3
