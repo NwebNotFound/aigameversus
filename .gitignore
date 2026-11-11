@@ -30,3 +30,6 @@ htmlcov/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Research runs: logs of played matches, kept out of the repository
+runs/

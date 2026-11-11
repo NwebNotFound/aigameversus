@@ -2,6 +2,7 @@
 
 import io
 from collections import Counter
+from itertools import combinations
 from pathlib import Path
 
 import pytest
@@ -101,10 +102,43 @@ def test_guest_stage_seats_each_guest_six_times_per_seat_with_the_three_hosts():
 
 def test_seeds_of_different_stages_never_meet():
     matches = schedule(load_experiment(E1))
-    seeds = {stage: {m.seed for m in matches if m.stage == stage} for stage in "ABC"}
+    stages = ["A", "A2", "B", "C"]
+    seeds = {stage: {m.seed for m in matches if m.stage == stage} for stage in stages}
 
-    assert not seeds["A"] & seeds["B"] and not seeds["A"] & seeds["C"]
-    assert not seeds["B"] & seeds["C"]
+    for first, second in combinations(stages, 2):
+        assert not seeds[first] & seeds[second], (first, second)
+
+
+def test_six_model_league_is_balanced_over_models_pairs_seats_and_seeds():
+    experiment = load_experiment(E1)
+    stage = next(stage for stage in experiment.stages if stage.id == "A2")
+    matches = [match for match in schedule(experiment) if match.stage == "A2"]
+
+    assert len(matches) == 120 and not any(match.pilot for match in matches)
+    played = Counter(model for match in matches for model in _models(match.seats))
+    assert played == dict.fromkeys(stage.models, 80)
+    seat_of = Counter(
+        (model, seat) for match in matches for seat, model in enumerate(_models(match.seats))
+    )
+    assert len(seat_of) == 24 and set(seat_of.values()) == {20}
+    pairs = Counter(
+        pair
+        for match in matches
+        if match.seating == 1 and match.replicate == 1
+        for pair in combinations(sorted(_models(match.seats)), 2)
+    )
+    assert len(pairs) == 15 and set(pairs.values()) == {6}
+    assert {"qwen-flash", "gemini-flash-lite"}.isdisjoint(played)
+
+
+def test_versions_2_and_3_are_amendments_and_a2_has_its_approval():
+    experiment = load_experiment(E1)
+
+    assert experiment.version == 3
+    assert [entry["version"] for entry in experiment.amendments] == [2, 3]
+    assert any("A2" in entry["stages"] for entry in experiment.approvals)
+    stage_a = next(stage for stage in experiment.stages if stage.id == "A")
+    assert stage_a.budget_eur == stage_a.pilot_budget_eur
 
 
 def test_roster_models_in_the_plan_match_the_config():
@@ -184,7 +218,7 @@ def test_command_prints_the_schedule_and_reports_a_broken_plan(tmp_path, capsys)
     assert main([str(E1)]) == 0
     printed = capsys.readouterr().out
     assert printed.splitlines()[0] == "order,stage,table,seating,replicate,seed,pilot,p1,p2,p3,p4"
-    assert len(printed.splitlines()) == 305
+    assert len(printed.splitlines()) == 425
 
     broken = tmp_path / "broken.yaml"
     broken.write_text("id: E0\n", encoding="utf-8")

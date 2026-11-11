@@ -40,6 +40,23 @@ A call cost 0.0001 to 0.001 EUR with the cheap roster. Random bots need about
 42 moves for a Liar's Deck match (4 000 matches, 5 % to 95 %: 19 to 69) and win
 24.1, 24.2, 26.0 and 25.7 % of them from seats `p1` to `p4`.
 
+## Notes from matches outside the experiments
+
+- **Poker, heads-up, deepseek-flash against gpt-luna (match 0cee2bac, played
+  by the owner on 2026-11-11):** 14 of 66 answers were rejected, all of them
+  gpt-luna's, none caused by the game. Three kinds: arguments with the model's
+  own reasoning text inside ("} } (oops syntax) } (Malformed) {"), garbled or
+  empty keys on tools that take no arguments (call, check, fold, all_in), and
+  arguments that were not a JSON object. A single match, so not a finding
+  about the model yet. It shows that "rejected answers" mixes format failures
+  with real rule mistakes, so the analysis counts clean, repaired and
+  rejected moves separately.
+- **Answer repair is a setting, like the prompt version.** The arena is
+  getting an optional repair of malformed tool calls. For research it must be
+  chosen per match in the settings, recorded in `match_started`, and off by
+  default, so that matches with and without repair are never mixed in one
+  comparison. Experiment 1 runs without repair in every stage (plan version 3).
+
 ## What blocks serious experiments
 
 Needed from the arena core (Arena Builder), most of it already planned:
@@ -75,11 +92,12 @@ the cap stays unplanned.
 | Line | Matches | Estimate | Budget |
 | --- | --- | --- | --- |
 | Spent before | 6 | | 0.18 |
-| E1 stage A: league of the 8 cheap models, Liar's Deck (approved; pilot of 8 matches up to 0.30, stop at 90 %) | 112 | 2.20 | 3.00 |
+| E1 stage A: pilot of the 8 cheap models (played: 6 matches, 0.23 EUR, stopped by the budget rule; league dropped in version 2) | 6 | 0.30 | 0.30 |
+| E1 stage A2: league of the 6 models that passed the pilot (approved) | 120 | 2.40 | 3.00 |
 | E1 stage B: one model at high and low reasoning effort (approved, after A) | 96 | 4.20 | 4.50 |
 | E1 stage C: 4 stronger models as guests among cheap hosts (approved, after A) | 96 | 7.20 | 7.50 |
 | Poker in duplicate mode, cheap roster (own plan, later; not approved) | 48 | 2.60 | 2.80 |
-| Not assigned | | | 2.02 |
+| Not assigned | | | 1.72 |
 | Reserve, 20 % | | | 5.00 |
 | **Sum** | | | **25.00** |
 
@@ -126,6 +144,40 @@ Seen by Arena Coder while writing v2: the Werewolf rules of p1 do not name
 the tools `stay_in_bed` and `let_them_die`. That is a likely cause of tool
 errors in Werewolf and a confound for any Werewolf comparison across the two
 versions.
+
+## Proposal: a short headline next to the thought (p3, not approved, no spend)
+
+Viewers read long thoughts badly. Prompt version `<game>-p3` would ask for a
+required `headline` (at most 15 words) next to the private `thought` in every
+tool call; the UI shows the headline and keeps the full thought one click away.
+Until p3 exists the UI takes the first sentence of the thought.
+
+What could go wrong, and so what the pilot measures: one more required
+argument may make weak models fail tool calls more often, cost more output
+tokens, or change how they play.
+
+- **Design:** the prompt version is set per match, so p3 is compared with p1 on
+  the same seeds and seatings: the first 24 matches of league A2 (the 6 clean
+  models, Liar's Deck) are played again with p3. Each p3 match has a p1 twin
+  with the same cards and seats.
+- **Outcomes, per model and pooled:** rejected answers per move, share of
+  moves played by the fallback, output tokens and response time per move, cost
+  per match. As a check on play: lie rate and call rate. Win shares cannot
+  move, because every seat reads the same prompt.
+- **Test:** Wilcoxon signed rank on the paired per-match rejected answers per
+  move, two-sided, alpha 0.05; the rest as paired differences with bootstrap
+  intervals over matches. The pilot is a safety check: with 24 pairs it finds
+  only large changes, and "no change found" is not "no change".
+- **Stop rule:** p3 does not become the default if the fallback share of any
+  model rises above 10 % or the pooled rejected answers per move rise by more
+  than 0.1.
+- **Cost:** about 0.50 EUR (24 matches at league A2's 0.02 EUR each, plus a
+  margin for the extra tokens); budget 0.60 EUR from the unassigned 1.72 EUR.
+  Needs the owner's yes. Werewolf, where headlines matter most, follows only
+  after the two weak models are fixed, because a full table needs 8 clean
+  models.
+- **Needs from the arena:** `headline` as a required argument in the tool
+  schema for p3 (Builder), recorded in the `thought` event next to the text.
 
 ## Build steps
 

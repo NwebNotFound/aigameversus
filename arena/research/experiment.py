@@ -19,7 +19,13 @@ from typing import Annotated, Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from arena.research.design import blocks_of_four, guest_seatings, mirror_seatings, rotations
+from arena.research.design import (
+    all_tables,
+    blocks_of_four,
+    guest_seatings,
+    mirror_seatings,
+    rotations,
+)
 
 Effort = Literal["minimal", "low", "medium", "high"]
 
@@ -54,13 +60,24 @@ class _Stage(_Strict):
 
 
 class League(_Stage):
-    """Eight models, every balanced table of four, each seed with four seatings."""
+    """Six or eight models at balanced tables of four, each seed with four seatings.
+
+    Eight models: the 14 tables of `blocks_of_four`. Six models: all 15 tables.
+    """
 
     kind: Literal["league"]
-    models: list[str] = Field(min_length=8, max_length=8)
+    models: list[str] = Field(min_length=6, max_length=8)
     effort: Effort
     pilot_tables: int = Field(ge=0)  # these tables' first seed is played before the rest
-    pilot_budget_eur: Decimal = Field(gt=0)  # for the pilot matches; part of `budget_eur`
+    pilot_budget_eur: Decimal | None = Field(None, gt=0)  # for the pilot; part of `budget_eur`
+
+    @model_validator(mode="after")
+    def _size(self) -> "League":
+        if len(self.models) not in (6, 8):
+            raise ValueError("a league has 6 or 8 models")
+        if self.pilot_tables and self.pilot_budget_eur is None:
+            raise ValueError("a league with pilot tables needs pilot_budget_eur")
+        return self
 
 
 class Mirror(_Stage):
@@ -124,7 +141,11 @@ class Experiment(_Strict):
             unknown = sorted(set(_stage_models(stage)) - set(self.models))
             if unknown:
                 raise ValueError(f"stage {stage.id} names models the plan does not list: {unknown}")
-            if isinstance(stage, League) and stage.pilot_budget_eur > stage.budget_eur:
+            if (
+                isinstance(stage, League)
+                and stage.pilot_budget_eur is not None
+                and stage.pilot_budget_eur > stage.budget_eur
+            ):
                 raise ValueError(f"stage {stage.id}: the pilot budget is above the stage budget")
         budget = self.budget
         planned = (
@@ -209,7 +230,10 @@ def _stage_rows(stage: League | Mirror | Guests) -> list[tuple]:
     rows = []
     replicates = range(1, stage.seeds + 1)
     if isinstance(stage, League):
-        for number, block in enumerate(blocks_of_four(stage.models), start=1):
+        tables = (
+            blocks_of_four(stage.models) if len(stage.models) == 8 else all_tables(stage.models)
+        )
+        for number, block in enumerate(tables, start=1):
             for replicate in replicates:
                 seed = stage.seed_base + 10 * number + replicate
                 pilot = number <= stage.pilot_tables and replicate == 1
