@@ -450,6 +450,8 @@ PUBLIC_EVENTS = {
     "captain_passed",
     "idiot_revealed",
     "powers_lost",
+    "raven_mark_announced",
+    "bear_growled",
 }
 # Game events that may reach a player privately (their audience is checked below).
 PRIVATE_EVENTS = {
@@ -466,6 +468,12 @@ PRIVATE_EVENTS = {
     "protected",
     "spied",
     "elder_survived",
+    "raven_chose",
+    "model_chosen",
+    "infection_chosen",
+    "infected",
+    "joined_pack",
+    "white_wolf_chose",
 }
 
 
