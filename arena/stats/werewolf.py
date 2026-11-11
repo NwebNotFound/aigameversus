@@ -1,6 +1,8 @@
 """Werewolf statistics: pure functions over the event log of one match.
 
 Input is the whole stored log as a spectator sees it (roles included).
+These numbers use hidden information: they must never reach a player's prompt or
+memory while a match is running (roadmap 6.3).
 Definitions, per player:
 
 - **Rounds**: a round is a night and the day after it, numbered by
