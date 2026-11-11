@@ -31,7 +31,14 @@ test("a bot's profile shows its Liar's Deck statistics", async ({ page, request 
 test('a player without statistics says so', async ({ page }) => {
 	// The demo players only play High Card, which has no statistics.
 	await page.goto('/leaderboard?game=toy');
-	await page.getByTestId('leaderboard').locator('tbody tr').first().getByRole('link').click();
+	// Random bots of other tests' matches are on this board too, with statistics.
+	await page
+		.getByTestId('leaderboard')
+		.locator('tbody tr')
+		.filter({ hasText: /DEMO / })
+		.first()
+		.getByRole('link')
+		.click();
 
 	await expect(page.getByTestId('no-game-stats')).toBeVisible();
 	await expect(page.getByTestId('game-stats')).toHaveCount(0);

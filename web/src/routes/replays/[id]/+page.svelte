@@ -166,7 +166,17 @@
 				<input type="checkbox" bind:checked={spoilers} />
 				Show spoilers
 			</label>
-			<a class="button" href="/replays/{params.id}/export.json" download>Export JSON</a>
+			<a
+				class="button"
+				href="/replays/{params.id}/export.json"
+				download
+				title="The whole spectator log: hidden cards, roles and the players' thoughts included"
+			>
+				Export JSON
+			</a>
+			<small class="muted export-note">
+				Includes hidden cards, roles and thoughts.
+			</small>
 			<span class="share">
 				<input
 					readonly
