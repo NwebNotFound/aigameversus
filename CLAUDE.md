@@ -407,7 +407,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
-docs/           DESIGN.md, DECISIONS.md, CREDITS.md
+docs/           DESIGN.md, DECISIONS.md (the index) and decisions/ (one file each), CREDITS.md
 experiments/    one plan per experiment (YAML) and the schedule it fixes (CSV)
 research/       research plan and reports
 tests/          tests for the arena core
@@ -477,11 +477,16 @@ commit `pyproject.toml` together with `uv.lock`.
   bots, mock-LLM error paths, and a replay rebuild where they apply.
 - Arena tests live in `tests/`; a game's tests live in `games/<id>/tests/`.
 - No dead code and no abstraction without a second user.
-- Where the spec is open, decide, and record it in `docs/DECISIONS.md`
-  (date, decision, why, alternatives).
+- Where the spec is open, decide, and record it (date, decision, why, alternatives)
+  as its own file in `docs/decisions/`: `python scripts/decisions.py new D-0NN
+  "Title"` makes the file and its line in the index `docs/DECISIONS.md`. Claim the
+  number first (see the team's number list). Never write a decision into the
+  index itself: that is what used to conflict. An old-style `## D-0NN · Title`
+  block that a merge brings into the index is moved with `python
+  scripts/decisions.py adopt`.
 - One roadmap step is one branch and one pull request. Update a branch by
   merging `main` into it; do not rebase or force-push. Keep `README.md`, this
-  file and `docs/DECISIONS.md` current in the same pull request.
+  file and the decision files current in the same pull request.
 
 ## How to add things
 
