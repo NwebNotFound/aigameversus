@@ -48,10 +48,13 @@ services:
   web:
     build: ./web
     ports:
-      - "127.0.0.1:3100:80"
+      - "127.0.0.1:3100:3000"
+    environment:
+      # Pages call the API server-side, inside the Compose network.
+      ARENA_API_URL: http://arena:8000
     healthcheck:
       <<: *healthcheck-timing
-      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/"]
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:3000/"]
 
   db:
     image: postgres:18-alpine

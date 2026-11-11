@@ -15,7 +15,8 @@ memory, spectator UI, replays and rankings are shared by all games.
 any plugin with random bots, stores their event logs in Postgres and rebuilds
 the state from a log. There is one reference game, High Card (`games/toy`). The
 arena API still exposes only `GET /health` (it migrates the database at
-startup), the worker is a heartbeat placeholder, the web UI is a static page. Sections below marked *not
+startup), the worker is a heartbeat placeholder, the web UI
+(`web/`, SvelteKit) has a home page and placeholders for the other pages. Sections below marked *not
 built yet* describe the target from the spec and get filled in as their phase
 lands.
 
@@ -142,6 +143,16 @@ uv run ruff check .           # lint
 uv run ruff format .          # format
 docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, Redis 6380
 docker compose down           # stop it (--volumes also deletes the database)
+```
+
+Web UI (`web/`, Node 24):
+
+```bash
+cd web && npm ci              # install from package-lock.json
+npm run dev                   # dev server; reads ARENA_API_URL (default http://127.0.0.1:8100)
+npm run lint                  # prettier + svelte-check
+npm run test:unit             # vitest
+npx playwright test           # smoke tests against the UI on 3100 (WEB_URL overrides)
 ```
 
 Secret scan (same as CI):

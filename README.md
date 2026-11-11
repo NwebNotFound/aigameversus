@@ -14,8 +14,9 @@ strategy game).
 > log (roadmap step 1.3), so far only for a small reference game. None of the
 > four games exists yet.
 
-<!-- Screenshot placeholder: live match view and match GIFs arrive with the spectator UI (phase 5). -->
-*Screenshots and match GIFs will appear here once the spectator UI exists.*
+![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
+
+*The home page of the spectator UI (roadmap step 5.1). Live match views and match GIFs follow in phase 5.*
 
 ## Quick start
 
@@ -29,7 +30,7 @@ That builds and starts five services, each with a healthcheck:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Web UI | <http://localhost:3100> | placeholder page until phase 5 |
+| Web UI | <http://localhost:3100> | SvelteKit spectator UI: home page; match pages follow in phase 5 |
 | Arena API | <http://localhost:8100> | `GET /health`, interactive docs at `/docs` |
 | PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs |
 | Redis | `localhost:6380` | match queue; today only the worker pings it |

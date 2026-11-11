@@ -7,7 +7,7 @@ What is built on `main` today, and what is planned. Spec: [DESIGN.md](DESIGN.md)
 
 ```mermaid
 flowchart LR
-    UI["6. Spectator UI<br/>(planned: web/ is a static page)"]
+    UI["6. Spectator UI<br/>(web/, SvelteKit: home page)"]
     SRV["1. Arena server<br/>arena/api, arena/engine<br/>(engine built, API: /health only)"]
     PLG["2. Game plugins<br/>games/*<br/>(High Card built)"]
     AGT["3. Agent runner<br/>arena/agents<br/>(random bot built, models planned)"]
@@ -29,7 +29,7 @@ flowchart LR
 | 3. Agent runner | `arena/agents/random_bot.py` | random bot only; prompts, model calls, mock LLM planned |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
-| 6. Spectator UI | `web/` | static placeholder page |
+| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches; New match, Leaderboard, Replays are placeholders |
 
 ## Engine
 
@@ -99,7 +99,7 @@ Compose project `aigameversus`, host ports bound to `127.0.0.1`:
 | --- | --- | --- |
 | `arena` | 8100 | FastAPI app, `GET /health`, runs migrations at startup |
 | `worker` | none | heartbeat placeholder: pings Redis; `python -m arena.worker --check` is its healthcheck. Does not run matches yet (planned) |
-| `web` | 3100 | static placeholder page |
+| `web` | 3100 | SvelteKit app (`node build`); calls the arena at `ARENA_API_URL=http://arena:8000` inside the Compose network |
 | `db` | 5433 | PostgreSQL 18, user and database `arena` |
 | `redis` | 6380 | planned match queue; only the worker pings it |
 
