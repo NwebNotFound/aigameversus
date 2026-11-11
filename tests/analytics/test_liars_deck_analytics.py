@@ -238,3 +238,21 @@ def test_the_spoiler_free_start_keeps_only_the_public_settings():
 
     assert public["meta"]["settings"] == {"variant": "devil_card"}
     assert "hidden" not in json.dumps(public)
+
+
+@pytest.mark.parametrize("events", [played(8), example()], ids=["bot match", "real models"])
+def test_the_round_cells_add_up_to_the_totals_and_leave_fallbacks_out(events):
+    analytics = match_analytics("liars_deck", events, spoilers=True)
+
+    for player, total in analytics["totals"].items():
+        cells = [r["players"][player] for r in analytics["by_round"]]
+        assert sum(c["lies"] for c in cells) == total["lies"]
+        assert sum(c["honest"] for c in cells) == total["honest"]
+        assert sum(c["calls"] for c in cells) == total["calls"]
+        assert sum(c["fallbacks"] for c in cells) == total["fallbacks"]
+    # The real example has random-bot moves of p3: they are counted, but only as fallbacks.
+    if analytics["totals"]["p3"]["fallbacks"]:
+        p3 = [r["players"]["p3"] for r in analytics["by_round"]]
+        assert sum(c["lies"] + c["calls"] for c in p3) == (
+            analytics["totals"]["p3"]["lies"] + analytics["totals"]["p3"]["calls"]
+        )

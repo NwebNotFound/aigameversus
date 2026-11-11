@@ -284,18 +284,22 @@ def _sum(moves: list[dict[str, Any]], field: str) -> int | None:
 
 
 def _by_round(players: list[PlayerId], moves: list[dict[str, Any]], rounds: list[dict]) -> list:
-    """Per round and player: honest plays, lies, unknown plays and calls (for the heatmap)."""
+    """Per round and player: honest plays, lies, unknown plays and calls (for the heatmap).
+
+    Like the totals, these count the model's own moves; fallbacks are counted apart.
+    """
     out = []
     for r in rounds:
         cell = {}
         for player in players:
             mine = [m for m in moves if m["round"] == r["round"] and m["player"] == player]
-            plays = [m for m in mine if m["kind"] == "play"]
+            own = [m for m in mine if not m["fallback"]]  # as in the totals: the model's moves
+            plays = [m for m in own if m["kind"] == "play"]
             cell[player] = {
                 "honest": sum(1 for m in plays if m["honest"] is True),
                 "lies": sum(1 for m in plays if m["honest"] is False),
                 "unknown": sum(1 for m in plays if m["honest"] is None),
-                "calls": sum(1 for m in mine if m["kind"] == "call" and not m["automatic"]),
+                "calls": sum(1 for m in own if m["kind"] == "call" and not m["automatic"]),
                 "fallbacks": sum(1 for m in mine if m["fallback"]),
             }
         out.append({"round": r["round"], "players": cell})
