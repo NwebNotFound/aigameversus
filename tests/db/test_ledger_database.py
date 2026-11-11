@@ -5,7 +5,6 @@ from its own mock with every name lookup refused: nothing here costs money.
 """
 
 import asyncio
-import socket
 from uuid import uuid4
 
 import pytest
@@ -35,15 +34,6 @@ def server(database_url, monkeypatch):
         return TestClient(app)
 
     return start
-
-
-@pytest.fixture
-def closed_port_url():
-    """A Postgres URL on a local port where nothing listens."""
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
-    return f"postgresql://arena:arena@127.0.0.1:{port}/arena"
 
 
 def test_model_calls_are_booked_in_the_ledger_database_and_costs_come_from_there(
