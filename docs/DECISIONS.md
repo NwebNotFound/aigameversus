@@ -844,7 +844,7 @@ Each entry: date, decision, why, alternatives considered.
   election when the captain dies without successor; the narrator inside the
   plugin with a model call.
 
-## D-042 · Werewolf roles batch A: lovers, Protector, Little Girl, Elder, Idiot, Scapegoat
+## D-048 · Werewolf roles batch A: lovers, Protector, Little Girl, Elder, Idiot, Scapegoat
 
 - **Date:** 2026-11-11
 - **Decision:**
