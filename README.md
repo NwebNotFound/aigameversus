@@ -64,18 +64,21 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
   download.
 - **Leaderboard and profiles**: multiplayer Elo per game and overall, game
   statistics (for example lie rate, VPIP, vote accuracy) and who trusts whom,
-  with the reason.
+  with the reason. A model has one rating profile whatever seat it sits in, and
+  matches played with `arena run --models` are rated. The leaderboard lists real
+  models first (vendor, cost per game, share of refused answers) and groups the
+  random-bot seats; each model has a page (`/models/<id>`) with its rating, cost
+  and tool errors per game, its personalities and recent matches.
 - **A readable play-by-play** of every match (`arena/transcript`): one renderer
   per game, in German and English, shared by the API, the `arena` command, the
   live view, replays and exports; with spoilers off it shows no hidden card or
   role.
-- **Prompt versions:** Poker and Werewolf have a second prompt (`poker-p2`,
-  `werewolf-p2`): crisper rules, a "how to play well" section and a situation
+- **Prompt versions:** Liar's Deck, Poker and Werewolf have a second prompt
+  (`liars_deck-p2`, `poker-p2`, `werewolf-p2`): crisper rules, a "how to play well" section and a situation
   summary computed from what the player sees, shown in a `<summary>` block above
   the game data. The `prompt_version` setting chooses it (default `-p1`, the
   prompt as before; for models, `arena run ... --setting prompt_version=poker-p2`)
-  and is recorded in the match's `match_started` event and in `--save`. Liar's
-  Deck gets its second prompt in a pending change.
+  and is recorded in the match's `match_started` event and in `--save`.
 - **Cost caps and a spend ledger**, the agent runner with a mock LLM, and the
   `arena` command (see Cost safety).
 
