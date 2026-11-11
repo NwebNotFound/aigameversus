@@ -257,7 +257,7 @@ export interface Profile {
 
 /** What a model cost and how often the server refused its answers. */
 export interface Usage {
-	cost_total_micro_eur: number;
+	cost_total_micro_eur: number | null; // null while the ledger cannot be read
 	cost_per_game_micro_eur: number | null;
 	answers: number;
 	tool_error_rate: number | null;
