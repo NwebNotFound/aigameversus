@@ -154,6 +154,8 @@ def move_problem(
 ) -> str | None:
     if problem := _not_their_army(state, player, army_id):
         return problem
+    if state.army(army_id).moved_in_round == state.round:
+        return f"{army_id} already moved this round. An army moves once per round."
     ways = reachable(state, data, army_id)
     if tuple(target) in ways:
         return None
@@ -165,7 +167,7 @@ def move_problem(
 def move(
     state: CivState, data: CivData, ctx: TurnContext, player: str, army_id: str, target: Hex
 ) -> None:
-    """Walk the army to a tile it can reach this round. An army moves once per round."""
+    """Walk the army to a tile it can reach. That was its move for this round."""
     must_be_legal(move_problem(state, data, player, army_id, target))
     path = reachable(state, data, army_id)[tuple(target)]
     ctx.emit(
@@ -367,6 +369,7 @@ def _army_raised(state: CivState, data: dict[str, Any]) -> None:
 def _army_moved(state: CivState, data: dict[str, Any]) -> None:
     army = state.army(data["army"])
     army.col, army.row = data["path"][-1]
+    army.moved_in_round = state.round
 
 
 def _army_split(state: CivState, data: dict[str, Any]) -> None:
@@ -381,6 +384,7 @@ def _army_split(state: CivState, data: dict[str, Any]) -> None:
             col=army.col,
             row=army.row,
             units=[troop for index, troop in enumerate(units) if index in taken],
+            moved_in_round=army.moved_in_round,  # units that walked stay walked
         )
     )
 
@@ -390,6 +394,9 @@ def _armies_merged(state: CivState, data: dict[str, Any]) -> None:
     for army_id in data["armies"]:
         joining = state.army(army_id)
         into.units.extend(joining.units)
+        # If any part has moved this round, the whole has.
+        moved = [a.moved_in_round for a in (into, joining) if a.moved_in_round is not None]
+        into.moved_in_round = max(moved, default=None)
         state.armies.remove(joining)
 
 

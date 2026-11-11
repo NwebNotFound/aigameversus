@@ -13,6 +13,7 @@ from games.civ.armies import (
     merge,
     merge_problem,
     move,
+    move_problem,
     reachable,
     settle,
     settle_problem,
@@ -84,6 +85,7 @@ def play(seed: int, count: int = 4, rounds: int = 40, data: CivData = DATA):
     for start in state.world.starts:
         found_city(state, realm.ctx, start.player, start.tile)
     deploy_start_units(state, data, realm.ctx)
+    moves: dict[str, int] = {}  # per army, in the round being played
 
     for _ in range(rounds):
         realm.start_round()
@@ -93,10 +95,16 @@ def play(seed: int, count: int = 4, rounds: int = 40, data: CivData = DATA):
         for player in players:
             for _ in range(rng.randrange(3)):
                 organise_an_army(realm, player, rng)
-        for army in list(state.armies):  # every army moves once at most
+        asked = state.armies * 2  # every army is asked twice
+        rng.shuffle(asked)
+        for army in asked:
             ways = sorted(reachable(state, data, army.id))
-            if ways and rng.random() < 0.6:
-                move(state, data, realm.ctx, army.owner, army.id, rng.choice(ways))
+            target = rng.choice(ways) if ways else army.tile
+            if move_problem(state, data, army.owner, army.id, target) is None:
+                move(state, data, realm.ctx, army.owner, army.id, target)
+                moves[army.id] = moves.get(army.id, 0) + 1
+        assert not moves or max(moves.values()) == 1
+        moves.clear()
         realm.end_round()
         yield realm
 

@@ -59,6 +59,7 @@ class Army(BaseModel):
     col: int
     row: int
     units: list[Troop]  # never empty: an army that loses its last unit is gone
+    moved_in_round: int | None = None  # the round of its last move; an army moves once a round
 
     @property
     def tile(self) -> Hex:

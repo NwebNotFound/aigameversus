@@ -1132,8 +1132,10 @@ Each entry: date, decision, why, alternatives considered.
     step, and a tile that costs more than it has left ends its move. A move
     order names a tile the army can reach this round; the server picks the
     way that leaves the most points, the shorter of two equal ones. An order
-    lasts one round. Armies of different nations may pass each other and
-    stand on one tile until combat (step 7.4) says what happens then.
+    lasts one round, and an army moves once per round: it remembers the round
+    of its last move, and so do units split off from it and an army it is
+    merged into. Armies of different nations may pass each other and stand on
+    one tile until combat (step 7.4) says what happens then.
   - **Training.** One order trains 1 to 10 units of one kind. They are paid at
     once and stand in the city at once, as a new army. Discounts (barracks)
     apply to the whole order and each resource is rounded up, so a single

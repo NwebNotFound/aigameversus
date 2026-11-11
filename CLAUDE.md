@@ -543,9 +543,10 @@ How these follow the engine's rules, and what the next systems should copy:
   come first and may have used up what it needs.
 - Randomness: `ctx.rng("hunger", state.round, player)`. Every stream name
   carries the round, because a stream can be asked for once per match.
-- What the turn flow must see to: armies are organised (disband, split,
-  merge, settle) before any army moves, and an army gets one move order per
-  round. The modules do not remember who has moved.
+- "Once per round" is kept in the state, not left to the caller: an army
+  remembers the round of its last move, units split off from it and an army
+  it is merged into inherit that, and `move_problem` refuses a second move.
+  Do the same for any later rule of this kind.
 - A new system: a module with its functions and `APPLIERS`, its part of the
   state in `state.py`, one line in `turn.py`. Tests drive it through `Realm`
   in `games/civ/tests/realm.py`, which is as strict as the engine about

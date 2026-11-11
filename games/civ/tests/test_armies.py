@@ -209,8 +209,85 @@ def test_armies_of_two_nations_can_pass_each_other_and_share_a_tile(realm):
     move(realm.state, DATA, realm.ctx, "bo", theirs, (2, 2))
     assert (realm.state.army(ours).tile, realm.state.army(theirs).tile) == ((3, 2), (2, 2))
 
+    realm.round()
     move(realm.state, DATA, realm.ctx, "bo", theirs, (3, 2))
     assert realm.state.army(ours).tile == realm.state.army(theirs).tile
+
+
+def test_army_moves_once_per_round(realm):
+    army = realm.army("ada", CENTER, "horseman", "spearman")
+    realm.start_round()
+
+    move(realm.state, DATA, realm.ctx, "ada", army, (3, 3))
+
+    assert move_problem(realm.state, DATA, "ada", army, (3, 4)) == (
+        "a1 already moved this round. An army moves once per round."
+    )
+    with pytest.raises(ValueError, match="already moved this round"):
+        move(realm.state, DATA, realm.ctx, "ada", army, (3, 4))
+    assert realm.state.army(army).tile == (3, 3)
+
+    realm.end_round()
+    realm.start_round()
+    assert move_problem(realm.state, DATA, "ada", army, (3, 4)) is None
+
+
+def test_units_split_off_after_a_move_have_moved_too(realm):
+    army = realm.army("ada", CENTER, "horseman", "spearman")
+    realm.start_round()
+    move(realm.state, DATA, realm.ctx, "ada", army, (3, 3))
+
+    rider = split(realm.state, realm.ctx, "ada", army, ["horseman"])
+
+    assert move_problem(realm.state, DATA, "ada", rider, (5, 4)) == (
+        "a2 already moved this round. An army moves once per round."
+    )
+    realm.end_round()
+    realm.start_round()
+    assert move_problem(realm.state, DATA, "ada", rider, (5, 4)) is None
+
+
+def test_army_split_off_before_any_move_can_still_move(realm):
+    army = realm.army("ada", CENTER, "horseman", "spearman")
+    realm.start_round()
+
+    rider = split(realm.state, realm.ctx, "ada", army, ["horseman"])
+    move(realm.state, DATA, realm.ctx, "ada", rider, (6, 2))
+
+    assert move_problem(realm.state, DATA, "ada", army, (3, 3)) is None
+
+
+@pytest.mark.parametrize("mover", ["first", "second"])
+def test_merged_army_has_moved_if_any_part_of_it_has(realm, mover):
+    walked = realm.army("ada", (2, 2), "spearman")
+    waited = realm.army("ada", CENTER, "spearman")
+    realm.round()  # the army that waits moved last round, which does not count
+    move(realm.state, DATA, realm.ctx, "ada", waited, (4, 2))
+    realm.round()
+    move(realm.state, DATA, realm.ctx, "ada", waited, CENTER)
+    realm.start_round()
+    assert move_problem(realm.state, DATA, "ada", waited, (4, 2)) is None
+    move(realm.state, DATA, realm.ctx, "ada", walked, CENTER)
+
+    order = [walked, waited] if mover == "first" else [waited, walked]
+    merge(realm.state, DATA, realm.ctx, "ada", order)
+
+    assert move_problem(realm.state, DATA, "ada", order[0], (4, 2)) == (
+        f"{order[0]} already moved this round. An army moves once per round."
+    )
+    realm.end_round()
+    realm.start_round()
+    assert move_problem(realm.state, DATA, "ada", order[0], (4, 2)) is None
+
+
+def test_armies_that_have_not_moved_stay_free_to_move_after_merging(realm):
+    first = realm.army("ada", CENTER, "spearman")
+    second = realm.army("ada", CENTER, "spearman")
+    realm.start_round()
+
+    merge(realm.state, DATA, realm.ctx, "ada", [first, second])
+
+    assert move_problem(realm.state, DATA, "ada", first, (4, 2)) is None
 
 
 # --- training -----------------------------------------------------------------

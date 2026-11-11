@@ -5,14 +5,13 @@ The steps of a round, in the order they must run:
     begin_round(state, ctx)
     economy.finish_construction(state, ctx)
     # orders for cities: economy.build, demolish, set_focus; armies.train
-    # orders that organise armies: armies.disband, split, merge, settle
-    # then, once per army: armies.move
+    # orders for armies: armies.disband, split, merge, settle, move
     economy.produce(state, data, ctx)
     armies.starve(state, data, ctx)
     economy.grow(state, data, ctx)
 
-Armies are organised before any of them moves, so that no unit walks twice in
-a round as part of two armies.
+The round number is what "once per round" is counted against: an army
+remembers the round of its last move.
 """
 
 from __future__ import annotations
