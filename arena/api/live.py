@@ -17,7 +17,7 @@ from arena.agents.runner import ModelAgent
 from arena.config import display_name, load_config
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
-from arena.db.match_store import MatchRecord, MatchStore, Seat, bot_seats
+from arena.db.match_store import Batch, MatchRecord, MatchStore, Seat, bot_seats
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import Event, MatchPaused, Placement
@@ -111,6 +111,7 @@ class LiveMatches:
         turn_delay: float,
         models: Mapping[str, str] | None = None,
         memory: bool = True,
+        batch: Batch | None = None,
     ) -> MatchRecord:
         """Start a match and return its record. It plays on in the background.
 
@@ -176,6 +177,7 @@ class LiveMatches:
                 seats=seats,
                 memory=memory,
                 prompt_version=plugin.prompt_version(match.settings),
+                batch=batch,
             )
         except BaseException:
             del self._running[match_id]
