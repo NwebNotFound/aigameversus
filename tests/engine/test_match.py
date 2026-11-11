@@ -26,6 +26,15 @@ def play(plugin, agents, *, seed=1, settings=None, turn_timeout=60):
     return match, placements
 
 
+async def run_to_turn_limit(match):
+    """Run a match that must stop at its turn limit. One that plays on fails instead of hanging."""
+    try:
+        async with asyncio.timeout(10):
+            return await match.run()
+    except TimeoutError:
+        pytest.fail("match did not stop at its turn limit")
+
+
 def bot_match(plugin_class, *, seed=1, rounds=4):
     plugin = plugin_class()
     return play(plugin, random_bots(plugin, PLAYERS, seed), seed=seed, settings={"rounds": rounds})
@@ -388,7 +397,7 @@ def test_game_that_never_ends_is_stopped_at_its_turn_limit():
     match = Match(plugin, random_bots(plugin, PLAYERS, 1), seed=1, sink=sink)
 
     with pytest.raises(PluginError, match=r"counter is not over after 12 turns \(max_turns\)"):
-        asyncio.run(match.run())
+        asyncio.run(run_to_turn_limit(match))
 
     # Twelve turns were played, and the log says why there is no thirteenth.
     assert types(match).count("action_accepted") == 12

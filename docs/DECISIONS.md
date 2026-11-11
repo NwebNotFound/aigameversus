@@ -658,7 +658,40 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** the spec's literal "double the last bet" for every raise;
   odd chips to the best hand by suit; letting short all-ins reopen raising.
 
-## D-039 · A match has a turn limit
+## D-039 · Poker tournament: button, dealing, duplicate mode, statistics
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - Tournament defaults are settings: `starting_stack` 1000, `small_blind` 10
+    (big blind double), `double_every` 10 hands, `hand_limit` 100. At the limit
+    the bigger stack ranks higher; equal stacks share a rank.
+  - The button moves to the next seat that still has chips (a simple moving
+    button, no dead button). With two players the button posts the small blind
+    and acts first before the flop, last after it. A blind a player cannot
+    afford is posted all-in. No antes, no burn cards.
+  - The deck is shuffled once per hand and logged for spectators only. Hole
+    cards go out by seat position, two per seat, in seat order; the board takes
+    the next cards. Duplicate mode (`duplicate: {deck_seed, rotation}`) shuffles
+    from `deck_seed` instead of the match seed and rotates the seating by
+    `rotation`, so a rematch with the next rotation deals the same cards to the
+    same seats with different players in them (DESIGN.md "Fairness"). Pairing
+    the rematches is the game master's job.
+  - Players knocked out in the same hand rank by chips at the start of that
+    hand; equal chips share a rank.
+  - Opponent statistics in the observation: hands dealt, hands played
+    voluntarily (a call or raise before the flop), raises, showdowns, and
+    shown bluffs (made the last bet or raise of a hand that went to showdown
+    and won nothing).
+  - Like Liar's Deck: `table_talk` once per turn without ending it, at most
+    40 words, words only as `message` events; no `think` tool, thoughts are
+    the plain text of an answer. `render_spec` is a plain method, not part of
+    the interface yet.
+- **Why:** Standard tournament practice where the spec is silent; seat-based
+  dealing is what makes duplicate rematches fair.
+- **Alternatives:** dead-button rules; a random first button; dealing from the
+  small blind; a fixed duplicate pairing inside one match.
+
+## D-040 · A match has a turn limit
 
 - **Date:** 2026-11-11
 - **Decision:** `GamePlugin.max_turns` is the most turns a match of the game
@@ -676,7 +709,7 @@ Each entry: date, decision, why, alternatives considered.
   (harder to derive from the rules of a game); only a per-match setting (every
   caller would have to know every game).
 
-## D-040 · A game is found by its folder
+## D-041 · A game is found by its folder
 
 - **Date:** 2026-11-11
 - **Decision:** `arena/games.py` lists the games: every package `games/<id>/`
@@ -692,7 +725,7 @@ Each entry: date, decision, why, alternatives considered.
   edit); entry points (packaging for something that lives in this repo);
   skipping broken folders (a game silently missing from the list).
 
-## D-041 · Matches from the API run inside the API process; spectators read the log over WebSocket
+## D-042 · Matches from the API run inside the API process; spectators read the log over WebSocket
 
 - **Date:** 2026-11-11
 - **Decision:** `POST /matches` starts a match as an asyncio task of the API
@@ -705,7 +738,7 @@ Each entry: date, decision, why, alternatives considered.
   `interrupted`. `turn_delay` (0 to 60 s) paces a match for watching. Seats
   are random bots only until model seats come with phase 2. The server plays
   at most 10 matches at a time and answers 429 to a start beyond that; with
-  the turn limit (D-039) this bounds what requests can make it store. The server speaks
+  the turn limit (D-040) this bounds what requests can make it store. The server speaks
   WebSocket through the `websockets` package, a dependency of its own because
   plain `uvicorn` brings none.
 - **Why:** One process needs no queue and no message bus to get a live
@@ -721,7 +754,7 @@ Each entry: date, decision, why, alternatives considered.
   continuing interrupted matches from the log (needs agents that can be
   rebuilt; later).
 
-## D-042 · The `arena` command plays in its own process
+## D-043 · The `arena` command plays in its own process
 
 - **Date:** 2026-11-11
 - **Decision:** `arena run --game <id> --bots` runs the engine in the command's
@@ -735,7 +768,7 @@ Each entry: date, decision, why, alternatives considered.
   can be called with curl); storing command-line matches when a database is
   configured (behaviour that depends on the environment).
 
-## D-043 · A game reads nothing from the order of keys in event data
+## D-044 · A game reads nothing from the order of keys in event data
 
 - **Date:** 2026-11-11
 - **Decision:** Event data is JSON whose objects have no order: plugins use a
