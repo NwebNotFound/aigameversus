@@ -18,6 +18,7 @@ from starlette.websockets import WebSocketDisconnect
 from arena.agents.budget import MICRO
 from arena.agents.estimate import Basis, estimate
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
+from arena.catalog import HIGH_OUTPUT_USD_PER_MTOK, resolve
 from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
@@ -92,7 +93,8 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     """Start a match of random bots, or of models (`models`). It plays on in the background.
 
     Model seats cost money and are refused (403) unless the server was started
-    with ARENA_ALLOW_MODEL_SEATS=1: the API has no login. Answers 429 while the
+    with ARENA_ALLOW_MODEL_SEATS=1: the API has no login. A model is an id of
+    config/models.yaml or any other id of GET /models/catalog. Answers 429 while the
     server already plays as many matches as it does at a time.
     """
     plugin = live.games.get(new.game)
@@ -102,7 +104,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     if new.models is None:
         count = new.players or plugin.min_players
     else:
-        models = _model_seats(new)
+        models = await _model_seats(new)
         count = len(models)
     players = [f"p{seat}" for seat in range(1, count + 1)]
     try:
@@ -122,7 +124,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         raise HTTPException(429, str(busy)) from busy
 
 
-def _model_seats(new: NewMatch) -> dict[str, str]:
+async def _model_seats(new: NewMatch) -> dict[str, str]:
     """Seat -> model id, after every check that can refuse a paid match before it starts."""
     if os.environ.get(ALLOW_MODEL_SEATS) != "1":
         raise HTTPException(
@@ -139,8 +141,7 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
         raise HTTPException(
             422, f"players is {new.players}, but {len(new.models)} models are named: one per seat"
         )
-    config = load_config()
-    _refuse_unknown_models(config, new.models)
+    config = await _seat_config(new.models)
     if missing := load_keys(config, new.models):
         raise HTTPException(
             503,
@@ -149,20 +150,27 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
     return {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
 
 
-def _refuse_unknown_models(config: Config, model_ids: list[str]) -> None:
+async def _seat_config(model_ids: list[str]) -> Config:
+    """The config with these models in it: config/models.yaml's, or the catalog's.
+
+    An unverified catalog model comes at its listed price x1.25, as the budget books it.
+    Refuses (422) an id that is in neither.
+    """
+    config = await resolve(load_config(), model_ids)
     unknown = [model_id for model_id in model_ids if model_id not in config.models]
     if unknown:
         raise HTTPException(
             422,
-            f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
-            f"{', '.join(config.models)}",
+            f"Unknown model {', '.join(unknown)}. Take an id of GET /models/catalog; "
+            f"config/models.yaml has: {', '.join(load_config().models)}",
         )
+    return config
 
 
 class EstimateRequest(BaseModel):
     game: str = Field(description="Game id, see GET /games")
     models: list[str] = Field(
-        min_length=1, description="Model ids from config/models.yaml, one per seat in order"
+        min_length=1, description="Model ids of GET /models/catalog, one per seat in order"
     )
     settings: dict[str, Any] = Field(default_factory=dict, description="Settings of the game")
 
@@ -185,6 +193,9 @@ class EstimateOut(BaseModel):
     month_cap_micro_eur: int
     seats: dict[str, SeatEstimateOut]
     fits: bool = Field(description="Whether the estimate fits the match cap and the month left")
+    high_price: list[str] = Field(
+        description="Models whose output costs more than 10 USD per million tokens, as booked"
+    )
 
 
 class Estimates:
@@ -231,8 +242,7 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
-    config = load_config()
-    _refuse_unknown_models(config, new.models)
+    config = await _seat_config(new.models)
     seats = {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
     history = await live.ledger.output_tokens(sorted(set(new.models)))
     spent = await live.ledger.month_spent(datetime.now(UTC))
@@ -260,6 +270,13 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
             for seat, e in per_seat.items()
         },
         fits=total <= cap and spent + total <= month_cap,
+        high_price=sorted(
+            {
+                model_id
+                for model_id in new.models
+                if config.models[model_id].output_usd_per_mtok > HIGH_OUTPUT_USD_PER_MTOK
+            }
+        ),
     )
 
 
