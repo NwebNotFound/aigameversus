@@ -24,6 +24,7 @@ runner against a live server.
 
 import argparse
 import json
+import random
 import sys
 import time
 import urllib.error
@@ -49,6 +50,7 @@ STOP_SHARE = Decimal("0.9")  # of the budget
 FALLBACK_LIMIT = 0.10  # share of a model's turns
 FAILED_AGENT_LIMIT = 2  # matches of one model in which its agent gave up
 ENDED = {"finished", "failed", "interrupted", "aborted"}
+MAX_PARALLEL = 8  # the arena plays at most 10 matches at a time
 
 # One call of the arena API: method, path, JSON body or None -> status, JSON answer.
 Request = Callable[[str, str, Any], tuple[int, Any]]
@@ -192,6 +194,9 @@ class Runner:
         turn_delay: float = 0,
         pause: float = 0,
         poll: float = 5,
+        parallel: int = 1,
+        per_model: int = 3,
+        match_bound_eur: float = 0.08,
         web: str = "http://127.0.0.1:3100",
         sleep: Callable[[float], None] = time.sleep,
         say: Callable[[str], None] = print,
@@ -223,6 +228,11 @@ class Runner:
         self.turn_delay = turn_delay
         self.pause = pause
         self.poll = poll
+        if not 1 <= parallel <= MAX_PARALLEL:
+            raise PlanError(f"parallel must be 1 to {MAX_PARALLEL}")
+        self.parallel = parallel
+        self.per_model = per_model
+        self.match_bound = int(match_bound_eur * MICRO)
         self.web = web.rstrip("/")
         self.sleep = sleep
         self.say = say
@@ -245,27 +255,57 @@ class Runner:
             for line in self.log_path.read_text(encoding="utf-8").splitlines()
         )
 
-    def check_budget(self) -> None:
-        """Raise RunStopped if the next match may not start for money reasons."""
-        lines = (
-            self.log_path.read_text(encoding="utf-8").splitlines() if self.log_path.exists() else []
-        )
+    def check_budget(self, running: int = 0, running_cost: Sequence[int] = ()) -> None:
+        """Raise RunStopped if no further match may start for money reasons.
+
+        `running` matches have started and not ended; each counts with what it
+        has cost so far (`running_cost`) or `match_bound`, whichever is higher.
+        The run stops starting matches when what it has spent, plus that for
+        every running match, plus `match_bound` for the next one would pass 90 %
+        of the budget, or when the mean match for each of them and two more
+        would pass the budget.
+        """
         spent = self.spent()
-        if spent >= self.budget * STOP_SHARE:
+        lines = len(self._all_lines())
+        limit = self.budget * STOP_SHARE
+        if spent >= limit:
             raise RunStopped(
                 f"cost {spent / MICRO:.4f} EUR has reached 90 % of the budget "
                 f"{self.budget / MICRO:.2f} EUR"
             )
+        held = sum(max(cost, self.match_bound) for cost in running_cost)
+        held += max(0, running - len(running_cost)) * self.match_bound
+        if running and spent + held + self.match_bound > limit:
+            raise RunStopped(
+                f"cost {spent / MICRO:.4f} EUR plus {running + 1} matches at up to "
+                f"{self.match_bound / MICRO:.2f} EUR would pass 90 % of the budget"
+            )
         if lines:
-            mean = spent / len(lines)
-            if spent + 2 * mean > self.budget:
+            mean = spent / lines
+            if spent + (running + 2) * mean > self.budget:
                 raise RunStopped(
                     f"cost {spent / MICRO:.4f} EUR plus twice the mean match "
                     f"({mean / MICRO:.4f} EUR) would pass the budget {self.budget / MICRO:.2f} EUR"
                 )
 
+    def check_month(self, running: int) -> None:
+        """Stop starting when the month has less left than the running matches may cost."""
+        status, month = self.request("GET", "/ledger/month", None)
+        if status != 200 or not isinstance(month, dict):
+            return  # a server without the endpoint: its own cap still holds on every call
+        if month["remaining_micro_eur"] < (running + 1) * self.match_bound:
+            raise RunStopped(
+                f"the month has {month['remaining_micro_eur'] / MICRO:.2f} EUR left: "
+                "not enough for another match"
+            )
+
     def run(self) -> list[MatchReport]:
-        """Play every open match of the run; return all reports. Raises RunStopped."""
+        """Play every open match of the run, up to `parallel` at a time. Raises RunStopped.
+
+        Matches start in schedule order, skipping one whose models already play
+        `per_model` matches. A match that was started but not logged (the
+        runner stopped while it ran) is waited for, not started again.
+        """
         self.out.mkdir(parents=True, exist_ok=True)
         if not self.pilot and isinstance(self.stage, League) and self.stage.pilot_tables:
             pilot = [r for r in self.done() if r.pilot]
@@ -273,23 +313,90 @@ class Runner:
                 raise RunStopped("pilot rule broken: " + "; ".join(problems))
         finished = {r.order for r in self.done() if r.status == "finished"}
         attempts = Counter(r.order for r in self._all_lines())
-        for match in self.matches:
-            if match.order in finished:
-                continue
-            while True:
-                self.check_budget()
-                attempt = attempts[match.order] + 1
-                report = self.play(match, attempt)
-                attempts[match.order] = attempt
-                if report.status == "finished" or attempt >= 2:
+        by_order = {match.order: match for match in self.matches}
+        running: dict[str, tuple[ScheduledMatch, int]] = {}
+        logged = {r.match_id for r in self._all_lines()}
+        for order, match_id in self._started().items():
+            if match_id not in logged and order not in finished and order in by_order:
+                running[match_id] = (by_order[order], attempts[order] + 1)
+                self.say(f"match {order} was running when the runner stopped: waiting for it")
+        busy = {match.order for match, _ in running.values()}
+        pending = [m for m in self.matches if m.order not in finished and m.order not in busy]
+        stop: RunStopped | None = None
+        while running or (pending and stop is None):
+            while stop is None and pending and len(running) < self.parallel:
+                load = Counter(
+                    seat.split("@")[0] for match, _ in running.values() for seat in match.seats
+                )
+                match = next(
+                    (
+                        m
+                        for m in pending
+                        if all(load[seat.split("@")[0]] < self.per_model for seat in m.seats)
+                    ),
+                    None,
+                )
+                if match is None:
                     break
-                self.say(f"match {match.order} ended {report.status}: playing it once more")
-            if self.pause:
-                self.sleep(self.pause)
+                try:
+                    self.check_budget(len(running), self.running_costs(running))
+                    if not self.bots:
+                        self.check_month(len(running))
+                except RunStopped as stopped:
+                    stop = stopped
+                    self.say(f"no new match: {stopped}; waiting for {len(running)} running")
+                    break
+                match_id = self.start(match)
+                if match_id is None:  # the arena is full: try again after the next poll
+                    break
+                pending.remove(match)
+                running[match_id] = (match, attempts[match.order] + 1)
+                if self.pause:
+                    self.sleep(self.pause)
+            if not running:
+                break
+            self.sleep(self.poll)
+            for match_id, (match, attempt) in list(running.items()):
+                status, record = self.request("GET", f"/matches/{match_id}", None)
+                if status != 200:
+                    raise RunStopped(f"lost match {match_id} ({status}): {record}")
+                if record["status"] not in ENDED:
+                    continue
+                del running[match_id]
+                report = self.finish(match, match_id, record, attempt)
+                attempts[match.order] = attempt
+                if report.status != "finished" and attempt < 2:
+                    self.say(f"match {match.order} ended {report.status}: playing it once more")
+                    pending.insert(0, match)
+        if stop is not None:
+            raise stop
         reports = self.done()
         if self.pilot and (problems := pilot_problems(reports)):
             raise RunStopped("pilot rule broken: " + "; ".join(problems))
         return reports
+
+    def running_costs(self, running: Mapping[str, Any]) -> list[int]:
+        """What each running match has cost so far; the bound for one whose cost is unknown."""
+        costs = []
+        for match_id in running:
+            status, cost = self.request("GET", f"/matches/{match_id}/cost", None)
+            ok = status == 200 and isinstance(cost, dict)
+            costs.append(cost["total_micro_eur"] if ok else self.match_bound)
+        return costs
+
+    @property
+    def started_path(self) -> Path:
+        return self.out / "started.jsonl"
+
+    def _started(self) -> dict[int, str]:
+        """Order -> id of the last match started for it."""
+        if not self.started_path.exists():
+            return {}
+        started = {}
+        for line in self.started_path.read_text(encoding="utf-8").splitlines():
+            data = json.loads(line)
+            started[data["order"]] = data["match_id"]
+        return started
 
     def _all_lines(self) -> list[MatchReport]:
         if not self.log_path.exists():
@@ -301,8 +408,12 @@ class Runner:
             lines.append(MatchReport(**data))
         return lines
 
-    def play(self, match: ScheduledMatch, attempt: int = 1) -> MatchReport:
-        """Start one match, wait until it has ended, write its log and report."""
+    def start(self, match: ScheduledMatch) -> str | None:
+        """Start one match and note it in started.jsonl.
+
+        None while the arena is full (429) or its ledger is down (503) after five
+        tries with growing, jittered pauses: the caller tries again later.
+        """
         models = [seat.split("@")[0] for seat in match.seats]
         body: dict[str, Any] = {
             "game": self.game,
@@ -316,22 +427,48 @@ class Runner:
         else:
             body["models"] = models
             body["confirm_spend"] = True
-        status, record = self.request("POST", "/matches", body)
+        for tries in range(5):
+            status, record = self.request("POST", "/matches", body)
+            if status not in (429, 503):  # full, or the ledger is down: wait and try again
+                break
+            self.sleep(self.poll * (2**tries) * (1 + random.random()))  # backoff with jitter
+        else:
+            return None
         if status != 201:
             raise RunStopped(f"the arena refused match {match.order} ({status}): {record}")
         match_id = record["id"]
-        total = len(self.matches)
+        with self.started_path.open("a", encoding="utf-8", newline="\n") as log:
+            log.write(json.dumps({"order": match.order, "match_id": match_id}) + "\n")
         self.say(
-            f"match {match.order} ({self.matches.index(match) + 1} of {total}) started: "
-            f"{self.web}/matches/{match_id}  seats {' '.join(models)}"
+            f"match {match.order} ({self.matches.index(match) + 1} of {len(self.matches)}) "
+            f"started: {self.web}/matches/{match_id}  seats {' '.join(models)}"
         )
+        return match_id
+
+    def play(self, match: ScheduledMatch, attempt: int = 1) -> MatchReport:
+        """Start one match, wait until it has ended, write its log and report."""
+        match_id = self.start(match)
+        if match_id is None:
+            raise RunStopped(f"the arena stayed full: match {match.order} did not start")
+        record: dict[str, Any] = {"status": "running"}
         while record["status"] not in ENDED:
             self.sleep(self.poll)
             status, record = self.request("GET", f"/matches/{match_id}", None)
             if status != 200:
                 raise RunStopped(f"lost match {match_id} ({status}): {record}")
+        return self.finish(match, match_id, record, attempt)
+
+    def finish(
+        self, match: ScheduledMatch, match_id: str, record: dict[str, Any], attempt: int
+    ) -> MatchReport:
+        """Read the log and cost of an ended match, save them and append its line."""
+        models = [seat.split("@")[0] for seat in match.seats]
         _, events = self.request("GET", f"/matches/{match_id}/events", None)
-        status, cost = self.request("GET", f"/matches/{match_id}/cost", None)
+        for tries in range(5):
+            status, cost = self.request("GET", f"/matches/{match_id}/cost", None)
+            if status != 503:
+                break
+            self.sleep(self.poll * (2**tries))
         if status != 200:
             raise RunStopped(f"no cost for match {match_id} ({status}): stop and check the ledger")
         seats = {f"p{n}": model for n, model in enumerate(models, start=1)}
@@ -361,7 +498,8 @@ class Runner:
             log.write(json.dumps(line) + "\n")
         self.say(
             f"match {match.order} {report.status}, {report.cost_micro_eur / MICRO:.4f} EUR; "
-            f"run so far {self.spent() / MICRO:.4f} of {self.budget / MICRO:.2f} EUR"
+            f"run so far {self.spent() / MICRO:.4f} of {self.budget / MICRO:.2f} EUR, "
+            f"{len(self.done())} of {len(self.matches)} done"
         )
         return report
 
@@ -387,7 +525,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--api", default="http://127.0.0.1:8100")
     parser.add_argument("--web", default="http://127.0.0.1:3100")
     parser.add_argument("--turn-delay", type=float, default=0)
-    parser.add_argument("--pause", type=float, default=0, help="seconds between matches")
+    parser.add_argument("--pause", type=float, default=0, help="seconds between match starts")
+    parser.add_argument("--parallel", type=int, default=1, help="matches at a time (1 to 8)")
+    parser.add_argument(
+        "--per-model", type=int, default=3, help="most matches one model plays at a time"
+    )
+    parser.add_argument(
+        "--match-bound", type=float, default=0.08, help="EUR a running match may still cost"
+    )
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(errors="backslashreplace", line_buffering=True)
     settings = {}
@@ -408,6 +553,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             settings=settings,
             turn_delay=args.turn_delay,
             pause=args.pause,
+            parallel=args.parallel,
+            per_model=args.per_model,
+            match_bound_eur=args.match_bound,
             web=args.web,
         )
         reports = runner.run()

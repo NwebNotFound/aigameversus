@@ -2,6 +2,7 @@
 
 import itertools
 import json
+from collections import Counter
 
 import pytest
 import yaml
@@ -20,18 +21,38 @@ from tests.research.test_experiment import E1
 
 
 class FakeArena:
-    """Plays every match at once. `cost` and `status` say what each match turns into."""
+    """Plays matches without playing them.
 
-    def __init__(self, cost=10_000, status="finished", fallbacks=None):
+    `cost` and `status` say what each match turns into; a match ends after
+    `polls` looks at it, so several can run at once. `full` makes the next
+    starts answer 429.
+    """
+
+    def __init__(self, cost=10_000, status="finished", fallbacks=None, polls=1, month_left=None):
         self.cost = cost  # micro-euro per match, or a function of the match number
         self.status = status  # a status, or a function of the match number
         self.fallbacks = fallbacks or {}  # model -> fallback turns per match (of 10)
+        self.polls = polls
+        self.month_left = month_left  # micro-euro left in the month; None: no such endpoint
+        self.full = 0  # this many starts are refused with 429
         self.started = []
         self.ids = itertools.count(1)
         self.records = {}
+        self.most_running = 0
+        self.most_per_model = 0
+
+    def running(self):
+        return [r for r in self.records.values() if r["status"] == "running"]
 
     def __call__(self, method, path, body):
+        if path == "/ledger/month":
+            if self.month_left is None:
+                return 404, {"detail": "Not Found"}
+            return 200, {"remaining_micro_eur": self.month_left}
         if method == "POST" and path == "/matches":
+            if self.full:
+                self.full -= 1
+                return 429, {"detail": "10 matches are running"}
             number = next(self.ids)
             match_id = f"m{number}"
             self.started.append(body)
@@ -40,8 +61,13 @@ class FakeArena:
                 "status": "running",
                 "final": status,
                 "number": number,
+                "looks": 0,
                 "seats": body.get("models") or ["bot"] * body["players"],
             }
+            running = self.running()
+            self.most_running = max(self.most_running, len(running))
+            load = Counter(model for r in running for model in r["seats"])
+            self.most_per_model = max(self.most_per_model, max(load.values()))
             return 201, {"id": match_id, "status": "running"}
         match_id = path.split("/")[2]
         record = self.records[match_id]
@@ -56,7 +82,9 @@ class FakeArena:
         if path.endswith("/cost"):
             cost = self.cost(record["number"]) if callable(self.cost) else self.cost
             return 200, {"total_micro_eur": cost, "players": {}}
-        record["status"] = record["final"]
+        record["looks"] += 1
+        if record["looks"] >= self.polls:
+            record["status"] = record["final"]
         return 200, {
             "id": match_id,
             "status": record["status"],
@@ -258,3 +286,96 @@ def test_the_six_model_league_starts_without_a_pilot_and_plays_its_tables(tmp_pa
         "mistral-small",
         "llama-scout",
     }
+
+
+def league(tmp_path, arena, **options):
+    return Runner(
+        load_experiment(E1),
+        "A2",
+        tmp_path,
+        arena,
+        sleep=lambda _: None,
+        say=lambda _: None,
+        **options,
+    )
+
+
+def test_parallel_league_keeps_n_matches_running_and_caps_each_model(tmp_path):
+    arena = FakeArena(cost=1_000, polls=3)
+
+    reports = league(tmp_path, arena, parallel=4, per_model=3).run()
+
+    assert len(reports) == 120 and all(r.status == "finished" for r in reports)
+    assert arena.most_running == 4
+    assert arena.most_per_model <= 3
+    assert len({body["seed"] for body in arena.started}) == 30
+    started = (tmp_path / "started.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(started) == 120
+
+
+def test_per_model_cap_limits_how_many_matches_run_at_once(tmp_path):
+    # Six models, four seats: two matches per model allow at most three matches.
+    arena = FakeArena(cost=1_000, polls=3)
+
+    league(tmp_path, arena, parallel=4, per_model=2).run()
+
+    assert arena.most_running == 3 and arena.most_per_model == 2
+
+
+def test_parallel_run_stops_starting_by_the_running_bound_and_lets_them_finish(tmp_path):
+    # 3.00 EUR budget, 90 % = 2.70; matches cost 0.30 each, bound 0.30.
+    arena = FakeArena(cost=300_000, polls=2)
+
+    with pytest.raises(RunStopped, match="would pass"):
+        league(tmp_path, arena, parallel=4, match_bound_eur=0.30).run()
+
+    spent = sum(json.loads(line)["cost_micro_eur"] for line in _lines(tmp_path))
+    assert spent <= 2_700_000
+    assert len(_lines(tmp_path)) == len(arena.started)  # every started match was logged
+
+
+def test_a_full_arena_is_waited_for_with_backoff(tmp_path):
+    arena = FakeArena(cost=1_000)
+    arena.full = 3
+    pauses = []
+
+    Runner(
+        load_experiment(E1),
+        "A2",
+        tmp_path,
+        arena,
+        sleep=pauses.append,
+        say=lambda _: None,
+        parallel=2,
+    ).run()
+
+    assert len(arena.started) == 120
+    assert len([p for p in pauses if p > 5]) >= 2  # growing pauses after the 429s
+
+
+def test_a_month_without_money_left_stops_starting(tmp_path):
+    arena = FakeArena(cost=1_000, month_left=50_000)  # less than one bound of 0.08
+
+    with pytest.raises(RunStopped, match="month has 0.05 EUR left"):
+        league(tmp_path, arena, parallel=4).run()
+    assert arena.started == []
+
+
+def test_a_match_that_ran_when_the_runner_stopped_is_waited_for_not_started_again(tmp_path):
+    arena = FakeArena(cost=1_000, polls=1000)  # matches never end in the first run
+    first = league(tmp_path, arena, parallel=2)
+    first.start(first.matches[0])
+    first.start(first.matches[1])
+    arena.polls = 1  # the arena goes on; a new runner takes over
+
+    reports = league(tmp_path, arena, parallel=2).run()
+
+    assert len(reports) == 120
+    assert len(arena.started) == 120  # the two running ones were not started again
+    ids = [r.match_id for r in reports[:2]]
+    assert ids == ["m1", "m2"]
+
+
+def test_parallel_must_be_between_1_and_8(tmp_path):
+    with pytest.raises(PlanError, match="1 to 8"):
+        league(tmp_path, FakeArena(), parallel=9)
