@@ -17,13 +17,14 @@ rebuilds the state from a log. A seat is played by a random bot or by the
 agent runner, which prompts a model and reads its answer; in tests and CI that
 model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
-`config/models.yaml` lists the caps and a roster of real models, but nothing
-starts a match with a real model yet: the `arena` command and `POST /matches`
-seat random bots only, and there is no API key before phase 2. Three games can
+`config/models.yaml` lists the caps and a roster of real models. The `arena`
+command can seat them (`--models`, paid calls inside the caps); `POST /matches`
+seats random bots only. Three games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
-`GET /health` (it migrates the database at startup), the leaderboard and the
+`GET /health` (it migrates the database at startup), the leaderboard, player
+profiles with their game statistics (`GET /profiles/{id}/stats`) and the
 Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
 live view of a match (`/matches/<id>`); New match and Replays are placeholders.
@@ -79,11 +80,24 @@ have without the pause.
 
 ### Running matches
 
-Two ways, both with random bots in every seat for now:
+Three ways. The first and the last seat random bots only:
 
 - `arena run --game toy --bots` (`arena/cli.py`) plays a match in its own
   process and prints every event. It needs no server and no database, and
   stores nothing. `arena games` lists the games.
+- `arena run --game liars_deck --models glm-flash,deepseek-flash,...` seats
+  models from `config/models.yaml`, one per seat in that order. **This makes
+  paid model calls**, and it is the only thing in the repository that does.
+  Every call goes through one `Budget` (see Cost caps), so the command needs
+  `DATABASE_URL` for the ledger; it applies the migrations, records the match
+  in `matches` and stores its events like the API does. The provider's key
+  comes from the environment (`KEY_VARIABLES` in `arena/config.py` names the
+  variable per provider); without it the command refuses to start, before
+  anything is booked. After the events it prints the result, what
+  each seat cost, and whether the stored log rebuilds the final state;
+  `--save FILE` writes seats, result, cost and all events as JSON. Nobody is
+  there to allow more money, so a cost cap ends the match: it is closed as
+  `interrupted` and the command exits with 3 (1 if the replay differs).
 - `POST /matches` (`arena/api/matches.py`) starts a match as a task inside the
   API process (`arena/api/live.py`). Its record is a row in `matches`
   (`running`, `finished`, `failed`, `aborted` by a spectator, or
@@ -326,6 +340,8 @@ docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, 
 docker compose down           # stop it (--volumes also deletes the database)
 uv run arena games            # the games that can be played
 uv run arena run --game toy --bots --seed 7   # a bot match in the terminal
+# Real models: COSTS MONEY (inside the caps). Needs DATABASE_URL and OPENROUTER_API_KEY.
+uv run arena run --game liars_deck --models glm-flash,deepseek-flash --save match.json
 ```
 
 The same in the running stack, and a match through the API:
