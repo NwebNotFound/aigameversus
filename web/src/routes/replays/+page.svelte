@@ -1,9 +1,22 @@
 <script lang="ts">
 	import { gameName } from '#lib/games.js';
+	import type { ReplaySummary } from '#lib/api.js';
 	import { euros } from '#lib/live.js';
+	import { mergeSeats, seatName } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	/** Each replay's seats by display name, the same names as in the replay itself. */
+	const named = new WeakMap<ReplaySummary, ReturnType<typeof mergeSeats>>();
+	function label(replay: ReplaySummary, seat: string): string {
+		let seats = named.get(replay);
+		if (!seats) {
+			seats = mergeSeats(replay.players, replay.seats, undefined);
+			named.set(replay, seats);
+		}
+		return seatName(seat, seats);
+	}
 
 	const date = (iso: string) =>
 		new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
@@ -42,8 +55,8 @@
 				{#each data.replays.data as replay (replay.id)}
 					<tr data-id={replay.id}>
 						<td><a href="/replays/{replay.id}">{gameName(replay.game)}</a></td>
-						<td>{replay.players.join(' · ')}</td>
-						<td>{replay.winners.join(', ') || '–'}</td>
+						<td>{replay.players.map((seat) => label(replay, seat)).join(' · ')}</td>
+						<td>{replay.winners.map((seat) => label(replay, seat)).join(', ') || '–'}</td>
 						<td><time datetime={replay.finished_at}>{date(replay.finished_at)}</time></td>
 						<td class="num">{euros(replay.cost_micro_eur)}</td>
 					</tr>

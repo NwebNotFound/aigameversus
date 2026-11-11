@@ -273,3 +273,36 @@ def test_demo_profiles_are_hidden_unless_asked_for(database_url, client):
     assert hidden["demo_hidden"] == 6
     assert shown["show_demo"] is True and shown["demo_hidden"] == 0
     assert {row["name"].startswith("DEMO ") for row in shown["rows"]} == {True}
+
+
+def test_the_game_tabs_list_only_games_with_players_of_the_kind_shown(database_url, client):
+    async def play():
+        pool = await connect(database_url)
+        try:
+            await migrate(pool)
+            store = RatingStore(pool)
+            a, b = await store.model_profile("glm-flash"), await store.model_profile("gpt-luna")
+            await store.apply_match_result(
+                uuid4(),
+                "liars_deck",
+                [Placement(player=str(a), rank=1), Placement(player=str(b), rank=2)],
+            )
+            bots = await store.bot_profiles(["p1", "p2"])
+            await store.apply_match_result(
+                uuid4(),
+                "poker",
+                [Placement(player=str(bots[p]), rank=r) for p, r in (("p1", 1), ("p2", 2))],
+                seats=bots,
+            )
+        finally:
+            await pool.close()
+
+    asyncio.run(play())
+
+    models = client.get("/leaderboard", params={"kind": "models"}).json()
+    bots = client.get("/leaderboard", params={"kind": "bots"}).json()
+    both = client.get("/leaderboard", params={"kind": "all"}).json()
+
+    assert models["games"] == ["liars_deck"]
+    assert bots["games"] == ["poker"]
+    assert both["games"] == ["liars_deck", "poker"]
