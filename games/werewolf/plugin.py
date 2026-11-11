@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.types import MESSAGE, Action, Event, Placement, PlayerId, ToolSpec, TurnMode
+from games.werewolf import prompt
 from games.werewolf.abilities import NIGHT, implemented, target_schema, tool
 from games.werewolf.narrator import LANGUAGES, narrate
 from games.werewolf.selection import (
@@ -146,14 +147,39 @@ class Werewolf(GamePlugin[WerewolfState]):
     def __init__(self) -> None:
         self._roles = load_roles()
 
+    # --- the prompt --------------------------------------------------------
+
+    def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
+        """The prompt version of a match, recorded with it (see `prompt.py` next to this file)."""
+        return prompt.version_of(settings)
+
+    def rules(self, settings: Mapping[str, Any] | None = None) -> str:
+        return prompt.rules_text(prompt.version_of(settings))
+
+    def situation_summary(
+        self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
+    ) -> str | None:
+        """A short text for the top of the turn's prompt; only version p2 has one."""
+        if prompt.version_of(settings) == "werewolf-p1":
+            return None
+        return prompt.situation_summary(observation)
+
     # --- setup -------------------------------------------------------------
 
     def initial_state(
         self, players: Sequence[PlayerId], settings: Mapping[str, Any]
     ) -> WerewolfState:
-        unknown = set(settings) - {"template", "roles", "roles_public", "captain", "language"}
+        unknown = set(settings) - {
+            "template",
+            "roles",
+            "roles_public",
+            "captain",
+            "language",
+            "prompt_version",
+        }
         if unknown:
             raise ValueError(f"Unknown settings for werewolf: {sorted(unknown)}")
+        prompt.version_of(settings)
         language = settings.get("language", "de")
         if language not in LANGUAGES:
             raise ValueError(f"language must be one of {', '.join(LANGUAGES)}, got {language!r}")
