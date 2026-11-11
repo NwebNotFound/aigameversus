@@ -563,7 +563,12 @@ Copy the shape of `games/toy/`, the smallest complete game.
    bookkeeping, 2 normal, 3 highlight) and a kind; a test fails when a plugin
    emits an event type that has no method. The CLI, the API, the live view,
    replays and exports all show these lines; do not write a second formatter.
-9. Tests, as in `games/toy/tests/`: full bot matches for every player count,
+9. Viewer help for people who have never played it: `games/<id>/viewer/` with
+   `rules_30s.<lang>.yaml` (a title and 6-10 short lines) and `glossary.<lang>.yaml`
+   (8-12 terms), for `en` and `de`; plain words. `GET /games/<id>/viewer-help?lang=`
+   serves them (`arena/viewer_help.py`) and `tests/test_viewer_help.py` fails for a
+   game without them (the reference game `toy` is exempt).
+10. Tests, as in `games/toy/tests/`: full bot matches for every player count,
    same seed gives the same events and state, observations do not depend on
    other players' hidden information, private events are private, rejected
    actions carry a useful message. Add a match with mock-LLM players, as in

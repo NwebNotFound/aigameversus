@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from arena.api.live import LiveMatches
 from arena.config import load_config
 from arena.db.event_store import EventStore
+from arena.ratings.elo import PROVISIONAL_GAMES
 from arena.ratings.store import BOT_MODEL_ID, RatingStore, Standing, Usage
 from arena.stats import STATS
 
@@ -31,10 +32,14 @@ class StandingOut(BaseModel):
     games_played: int
     win_rate: float | None = Field(description="Share of matches won (rank 1), 0 to 1")
     average_placement: float | None = Field(description="Mean finishing rank, 1 = winner")
+    provisional: bool = Field(
+        description=f"Fewer than {PROVISIONAL_GAMES} rated games: the rating is not reliable yet"
+    )
 
     @classmethod
     def of(cls, standing: Standing) -> "StandingOut":
         return cls(
+            provisional=standing.games_played < PROVISIONAL_GAMES,
             profile_id=standing.profile_id,
             name=standing.name,
             model_id=standing.model_id,
@@ -70,6 +75,9 @@ class Leaderboard(BaseModel):
         False, description="True when real models were asked for but none is rated yet: all shown"
     )
     counts: dict[str, int] = Field(description="Rows per kind with the other filters applied")
+    provisional_games: int = Field(
+        PROVISIONAL_GAMES, description="Rated games a rating needs before it counts as reliable"
+    )
     show_demo: bool = Field(False, description="Whether the demo profiles are included")
     demo_hidden: int = Field(0, description="Demo profiles left out, when `show_demo` is false")
     rows: list[LeaderboardRow]
@@ -150,6 +158,31 @@ def group_seat_bots(standings: list[Standing], usage: dict[UUID, Usage]):
     return (grouped, len(bots)), rest
 
 
+PROVISIONAL_MARGIN = 25.0  # rating points within which an established player goes first
+
+
+def established_first(entries: list[tuple[Standing, str, int]]) -> list[tuple[Standing, str, int]]:
+    """Rating order, except that a provisional player does not stand above an established one
+    who is less than `PROVISIONAL_MARGIN` points behind (a few games prove little).
+
+    Beyond that margin the plain order holds. Every swap lifts an established player past a
+    provisional one, so the loop ends.
+    """
+    ordered = list(entries)
+    moved = True
+    while moved:
+        moved = False
+        for i in range(len(ordered) - 1):
+            above, below = ordered[i][0], ordered[i + 1][0]
+            if (
+                above.games_played < PROVISIONAL_GAMES <= below.games_played
+                and above.rating - below.rating < PROVISIONAL_MARGIN
+            ):
+                ordered[i], ordered[i + 1] = ordered[i + 1], ordered[i]
+                moved = True
+    return ordered
+
+
 @router.get("/leaderboard")
 async def leaderboard(
     request: Request,
@@ -189,8 +222,8 @@ async def leaderboard(
     if kind is None and counts["models"] == 0:
         shown, fallback = "all", True
     wanted = {"models": ("model",), "bots": ("bot",), "all": ("model", "bot")}[shown]
-    entries = sorted(
-        (e for e in entries if e[1] in wanted), key=lambda e: (-e[0].rating, e[0].name)
+    entries = established_first(
+        sorted((e for e in entries if e[1] in wanted), key=lambda e: (-e[0].rating, e[0].name))
     )
     rows = []
     for position, (s, row_kind, members) in enumerate(entries, start=1):
