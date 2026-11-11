@@ -14,7 +14,7 @@ export const GAMES: GameCard[] = [
 	{
 		id: 'liars_deck',
 		name: "Liar's Deck",
-		tagline: 'Bluff, call the lie, survive the risk.',
+		tagline: 'Bluff with face-down cards, call the lie, survive the revolver.',
 		players: '2–4 players',
 		accent: '#f0b35a'
 	},
@@ -28,7 +28,7 @@ export const GAMES: GameCard[] = [
 	{
 		id: 'werewolf',
 		name: 'Werewolf',
-		tagline: 'Lie, deduce and persuade the village.',
+		tagline: 'Hidden roles: lie, deduce and persuade the village.',
 		players: '6–16 players',
 		accent: '#ff7a7a'
 	},
