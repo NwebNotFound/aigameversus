@@ -17,7 +17,8 @@ from arena.db.ledger import Ledger
 from arena.db.match_store import MatchRecord, MatchStore
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Event
+from arena.engine.types import Event, Placement
+from arena.ratings.store import RatingStore
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class _Running:
         self.resumed = asyncio.Event()  # cleared while paused
         self.resumed.set()
         self.aborted = False
+        self.finished = False  # its match_finished is stored; it can no longer be aborted
         self.task: asyncio.Task | None = None
         self._delay_changed = asyncio.Event()
 
@@ -89,6 +91,7 @@ class LiveMatches:
         self.matches = MatchStore(pool)
         self._events = EventStore(pool)
         self.ledger = Ledger(pool)
+        self._ratings = RatingStore(pool)
         self._running: dict[UUID, _Running] = {}
         self._tasks: set[asyncio.Task] = set()
 
@@ -115,8 +118,11 @@ class LiveMatches:
             if first_seq:
                 await running.wait_delay()
             await self._events.append(match_id, first_seq, events)
+            if any(event.type == "match_finished" for event in events):
+                running.finished = True  # stored: the match is over, whatever comes now
             await running.publish(first_seq + len(events))
-            await running.resumed.wait()  # a paused match stops here, between two turns
+            if not running.finished:
+                await running.resumed.wait()  # a paused match stops here, between two turns
 
         match = Match(
             plugin, random_bots(plugin, players, seed), seed=seed, settings=settings, sink=sink
@@ -144,6 +150,7 @@ class LiveMatches:
         try:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
+            await self._rate(match_id, running.match.plugin.id, placements)
         except asyncio.CancelledError:
             if not running.aborted:
                 raise  # the server shuts down: the next start marks the match interrupted
@@ -185,11 +192,25 @@ class LiveMatches:
     async def abort(self, match_id: UUID) -> None:
         """Stop the match for good. Its log stays; its record says `aborted`."""
         running = self._get(match_id)
+        if running.finished:
+            raise NotRunning("The match has ended, so it cannot be aborted.")
         running.aborted = True
         running.resumed.set()
         assert running.task is not None
         running.task.cancel()
         await asyncio.gather(running.task, return_exceptions=True)
+
+    async def _rate(self, match_id: UUID, game_id: str, placements: Sequence[Placement]) -> None:
+        """Rate the bots of a finished match. A rating problem never fails the match."""
+        try:
+            profiles = await self._ratings.bot_profiles([p.player for p in placements])
+            await self._ratings.apply_match_result(
+                match_id,
+                game_id,
+                [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+            )
+        except Exception:
+            log.exception("Rating of match %s failed", match_id)
 
     async def log(self, match_id: UUID) -> list[Event]:
         """The log of a match so far: its completed turns."""

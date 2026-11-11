@@ -27,7 +27,7 @@ flowchart LR
 | Block | Where | State |
 | --- | --- | --- |
 | 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (roles, templates per table size and the selection check for the new-match form), `arena/api/setup.py` (`GET /setup`: models, personalities, cost caps), `arena/api/matches.py` and `live.py` (start, list, stream and control matches, board and cost), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats planned |
-| 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation and fog of war (`games/civ`), no plugin yet |
+| 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation, fog of war and city economy (`games/civ`), no plugin yet |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |

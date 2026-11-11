@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from arena.api import matches, ratings, setup, werewolf
+from arena.api import chronicle, matches, ratings, setup, werewolf
 from arena.api.live import LiveMatches
 from arena.db.database import connect, migrate
 from arena.games import load_games
@@ -38,6 +38,7 @@ app.include_router(werewolf.router)
 app.include_router(setup.router)
 app.include_router(ratings.router)
 app.include_router(matches.router)
+app.include_router(chronicle.router)
 
 
 @app.get("/health")

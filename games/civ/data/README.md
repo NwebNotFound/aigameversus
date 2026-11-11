@@ -55,7 +55,12 @@ Optional flags (`ranged`, `first_strike`, `city_defense`, `vs_walls_multiplier`,
 Append to `buildings.yaml` with `cost` and `effects`. Available effects:
 `yields`, `trade_fee_modifier`, `training_cost_modifier`, `city_defense`,
 `trained_unit_strength_bonus`, `famine_delay_rounds`, `vision_bonus`.
-`requires_adjacent_terrain` lists terrain ids the city must border.
+`requires_adjacent_terrain` lists terrain ids of which one must lie next to
+the city. `max_per_city` (default 1) is how many a city can have.
+
+In play so far (`games/civ/economy.py`): cost, slots, `yields`,
+`requires_adjacent_terrain`, `max_per_city`, `famine_delay_rounds` and
+`vision_bonus`. The other effects wait for units, combat and trade.
 
 ## Add an event
 
@@ -90,8 +95,8 @@ or mostly water, is refused when a match starts, with a message naming `map`.
 ## Something the fields cannot express
 
 A new kind of effect needs code: add the field to the model in
-`data_loader.py`, implement it in the matching system under `games/civ/systems/`,
-then regenerate the schemas:
+`data_loader.py`, implement it in the module that owns the rule (cities and
+buildings: `games/civ/economy.py`), then regenerate the schemas:
 
 ```bash
 uv run python -m games.civ.data_loader --write-schemas

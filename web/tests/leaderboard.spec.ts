@@ -10,11 +10,12 @@ test('overall leaderboard lists the demo players by rating', async ({ page }) =>
 	await expect(tabs.getByRole('link', { name: 'Overall' })).toHaveAttribute('aria-current', 'page');
 	await expect(tabs.getByRole('link', { name: 'High Card' })).toBeVisible();
 
-	const rows = page.getByTestId('leaderboard').locator('tbody tr');
+	// Bot matches of other tests rate their random bots too; the demo players are six.
+	const all = page.getByTestId('leaderboard').locator('tbody tr');
+	const rows = all.filter({ hasText: /DEMO / });
 	await expect(rows).toHaveCount(6);
-	await expect(rows.first().getByRole('link')).toHaveText(/^DEMO /);
 
-	const ratings = await rows.locator('td.strong').allInnerTexts();
+	const ratings = await all.locator('td.strong').allInnerTexts();
 	const values = ratings.map(Number);
 	expect(values).toEqual([...values].sort((a, b) => b - a));
 });
@@ -32,27 +33,37 @@ test('a game tab shows that game', async ({ page }) => {
 		'aria-current',
 		'page'
 	);
-	await expect(page.getByTestId('leaderboard').locator('tbody tr')).toHaveCount(6);
+	await expect(
+		page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / })
+	).toHaveCount(6);
 });
 
+// Other tests play bot matches of every game with a plugin; Throne of Tokens has none yet.
 test('a game without matches shows the empty state', async ({ page }) => {
-	await page.goto('/leaderboard?game=poker');
+	await page.goto('/leaderboard?game=civ');
 
 	await expect(page.getByTestId('empty-leaderboard')).toContainText(
-		'Nobody has a rating in Poker yet.'
+		'Nobody has a rating in Throne of Tokens yet.'
 	);
 });
 
 test('a player links to a profile with rating bars and stats', async ({ page }) => {
 	await page.goto('/leaderboard');
-	const first = page.getByTestId('leaderboard').locator('tbody tr').first().getByRole('link');
+	const first = page
+		.getByTestId('leaderboard')
+		.locator('tbody tr')
+		.filter({ hasText: /DEMO / })
+		.first()
+		.getByRole('link');
 	const name = await first.innerText();
 
 	await first.click();
 
 	await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 	await expect(page.getByTestId('rating-bars').getByText('High Card')).toBeVisible();
-	await expect(page.getByRole('region', { name: 'Statistics' })).toContainText('Win rate');
+	await expect(page.getByRole('region', { name: 'Statistics', exact: true })).toContainText(
+		'Win rate'
+	);
 	await expect(page.getByText('not available yet')).toBeVisible();
 });
 

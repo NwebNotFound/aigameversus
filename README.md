@@ -18,7 +18,7 @@ strategy game).
 | *Liar's Deck* (2-4 players) | built, bots only | rules engine, both variants (base, devil card), random bot, rules text |
 | Poker, No-Limit Hold'em (2-6) | built, bots only | betting rounds, side pots, tournament with duplicate mode, random bot, rules text |
 | Werewolf (6-16) | in progress | roles as data, templates, role selection checks and balance light, seeded deal; no game rules yet |
-| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text; no game rules yet |
+| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text, seeded hex map with fog of war, city economy (yields, buildings, upkeep, growth); no match yet |
 
 Also built: the agent runner with the mock LLM, cost caps with a spend ledger,
 the `arena` command, the match API with a WebSocket event stream, multiplayer
@@ -46,7 +46,7 @@ The stack has five services, each with a healthcheck:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, new-match form, live view of a match, leaderboard and player profiles; Replays is a "soon" placeholder. Open it as `127.0.0.1`, not `localhost`: form posts are checked against that origin |
+| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, new-match form, live view of a match, leaderboard and player profiles; Replays is a "soon" placeholder. Open it as <http://127.0.0.1:3100> or <http://localhost:3100>; form posts from any other address are refused |
 | Arena API | <http://127.0.0.1:8100> | health, matches, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
 | PostgreSQL | `127.0.0.1:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
 | Redis | `127.0.0.1:6380` | match queue; today only the worker pings it |
@@ -184,7 +184,7 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 
 ```
 arena/      core: API, engine, agent runner, cost caps, ratings, `arena` command
-games/      one package per game: toy, liars_deck, poker, werewolf (data), civ (data)
+games/      one package per game: toy, liars_deck, poker, werewolf (data), civ (data, map, economy)
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)
