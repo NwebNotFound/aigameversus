@@ -11,7 +11,9 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.6, the end of phase 1. The engine runs
+**State of the build:** phases 1 to 6 are built (platform, Liar's Deck, Poker, Werewolf,
+spectator UI, profiles with statistics and trust); the Throne of Tokens match (phase 7)
+is not playable yet. The engine runs
 complete matches of any plugin, stores their event logs in Postgres and
 rebuilds the state from a log. A seat is played by a random bot or by the
 agent runner, which prompts a model and reads its answer; in tests and CI that
@@ -19,9 +21,9 @@ model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models. The `arena`
 command can seat them (`--models`, paid calls inside the caps); `POST /matches`
-seats random bots only. Three games can
+seats random bots only. Four games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
-(`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
+(`games/liars_deck`), Poker (`games/poker`) and Werewolf (`games/werewolf`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard, player
 profiles with their game statistics (`GET /profiles/{id}/stats`), the
@@ -200,7 +202,7 @@ Failures:
 
 ### Cost caps
 
-`config/models.yaml` holds the limits (0.50 € per match, 5 € per calendar
+`config/models.yaml` holds the limits (0.50 € per match, 25 € per calendar
 month, token limits per call, how long reasoning models may think) and the
 models with their prices.
 `arena/config.py` loads and checks it.
@@ -338,6 +340,7 @@ arena/
   db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
   chronicle/    the chronicler: a finished match as a story (templates, styles, languages)
+  transcript/   the one readable play-by-play of a match: a renderer per game, de and en
   cli.py        the `arena` command
   config.py     loader of config/models.yaml (limits, models, prices)
   games.py      finds the games under games/
@@ -455,7 +458,13 @@ Copy the shape of `games/toy/`, the smallest complete game.
 7. If players can talk, emit their words as
    `ctx.emit(MESSAGE, {"player": author, "text": words}, visible_to=...)` and
    put player-written text in no other event.
-8. Tests, as in `games/toy/tests/`: full bot matches for every player count,
+8. A renderer for the transcript, `arena/transcript/<id>.py`: a class with one
+   `handle_<event type>` method per event the plugin emits (and register it in
+   `RENDERERS`). It returns a line in English and German, an importance (1
+   bookkeeping, 2 normal, 3 highlight) and a kind; a test fails when a plugin
+   emits an event type that has no method. The CLI, the API, the live view,
+   replays and exports all show these lines; do not write a second formatter.
+9. Tests, as in `games/toy/tests/`: full bot matches for every player count,
    same seed gives the same events and state, observations do not depend on
    other players' hidden information, private events are private, rejected
    actions carry a useful message. Add a match with mock-LLM players, as in
