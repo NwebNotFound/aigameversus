@@ -3,6 +3,7 @@
 	import { hidden } from '#lib/live.js';
 	import LiarsDeckTable from './LiarsDeckTable.svelte';
 	import PokerTable from './PokerTable.svelte';
+	import WerewolfCircle from './WerewolfCircle.svelte';
 
 	/**
 	 * The generic board: any game's render_spec as a header of fields and one card
@@ -50,6 +51,14 @@
 		);
 	}
 
+	/** The Werewolf circle needs seats with an alive flag; the role may be missing. */
+	function isPlayerCircle(spec: Record<string, unknown>): boolean {
+		return (
+			Array.isArray(spec.seats) &&
+			spec.seats.every((s) => typeof s?.player === 'string' && typeof s.alive === 'boolean')
+		);
+	}
+
 	const SEAT_FLAGS = ['player', 'alive', 'folded'];
 
 	const label = (key: string) => key.replaceAll('_', ' ');
@@ -75,6 +84,8 @@
 	<LiarsDeckTable {spec} {spoilers} {events} />
 {:else if spec.layout === 'poker_table' && isPokerTable(spec)}
 	<PokerTable {spec} {spoilers} />
+{:else if spec.layout === 'player_circle' && isPlayerCircle(spec)}
+	<WerewolfCircle {spec} {spoilers} {events} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}
