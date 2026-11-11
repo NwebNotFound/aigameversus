@@ -41,10 +41,10 @@
 			<span>Started matches show up here.</span>
 		</div>
 	{:else}
-		<ul class="match-list">
+		<ul class="match-list" data-testid="match-list">
 			{#each data.matches.matches as match (match.id)}
 				<li>
-					<span class="game">{gameName(match.game)}</span>
+					<a class="game" href="/matches/{match.id}">{gameName(match.game)}</a>
 					<span>{match.players.join(' · ')}</span>
 					<span class="muted">{match.status}</span>
 				</li>
