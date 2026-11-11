@@ -108,24 +108,8 @@ All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
 
 ### Play a match
 
-Every seat is a random bot for now, so a match costs nothing. In the terminal:
-
-```bash
-docker compose exec arena arena run --game toy --bots --seed 7
-```
-
-```
-High Card (toy), players p1 p2, seed 7
-   0  match_started    {"game": "toy", "version": "1", "players": ["p1", "p2"], "settings": {}, "seed": 7}  [spectators only]
-   1  hand_dealt       {"player": "p1", "cards": [1, 3, 5]}  [only p1]
-   ...
-  18  match_finished   {"placements": [{"player": "p1", "rank": 2}, {"player": "p2", "rank": 1}]}
-Result: 1. p2  2. p1
-```
-
-Liar's Deck and Poker work the same way (output shortened; the full logs are
-120 and 641 lines). Hidden cards are marked `[only p1]` or `[spectators only]`,
-as a spectator sees them:
+Every seat is a random bot for now, so a match costs nothing. In the terminal the
+match is printed as a play-by-play, in English or German (`--lang de`):
 
 ```bash
 docker compose exec arena arena run --game liars_deck --players 3 --bots --seed 7
@@ -133,33 +117,31 @@ docker compose exec arena arena run --game liars_deck --players 3 --bots --seed 
 
 ```
 Liar's Deck (liars_deck), players p1 p2 p3, seed 7
-   0  match_started    {"game": "liars_deck", "version": "1", "players": ["p1", "p2", "p3"], "settings": {}, "seed": 7}  [spectators only]
-   4  round_started    {"round": 1, "table_card": "queen", "starter": "p1", "hand_size": 5, "players": ["p1", "p2", "p3"]}
-   8  action_accepted  {"player": "p1", "tool": "play_cards", "arguments": {"card_ids": ["Q6"]}}  [only p1]
-   9  cards_played     {"player": "p1", "count": 1}
-  ...
-  24  trigger_pulled   {"player": "p3", "pull": 1, "live": true}
-  ...
- 116  match_over       {"winner": "p2"}
- 117  match_finished   {"placements": [{"player": "p2", "rank": 1}, {"player": "p1", "rank": 2}, {"player": "p3", "rank": 3}]}
+Match started: p1, p2 and p3 (seed 7)
+
+Round 1, table card: Queen
+    p1 starts; players: p1, p2 and p3
+p1 plays 1 card and claims: a queen
+p2 plays 2 cards and claims: two queens
+p3 plays 3 cards and claims: three queens
+p1 calls LIAR on p3
+The cards show: a queen, two aces. p3 was lying
+    Queen 5, Ace 2, Ace 6
+p3 must pull the trigger (caught lying)
+p3 pulls the trigger (pull 1): BANG
+p3 is out of the game
+...
+Match over: p2 is the last one standing
 Result: 1. p2  2. p1  3. p3
 ```
 
-```bash
-docker compose exec arena arena run --game poker --players 3 --bots --seed 7
-```
-
-```
-Poker (poker), players p1 p2 p3, seed 7
-   0  match_started    {"game": "poker", "version": "1", "players": ["p1", "p2", "p3"], "settings": {}, "seed": 7}  [spectators only]
-   1  hand_started     {"hand": 1, "button": "p1", "small_blind_player": "p2", "big_blind_player": "p3", "small_blind": 10, "big_blind": 20, "players": ["p1", "p2", "p3"]}
-   ...
-  10  bet_action       {"player": "p1", "kind": "raise", "street": "preflop", "to": 40, "added": 40}
-   ...
- 637  match_over       {"reason": "last_player", "winner": "p1"}
- 638  match_finished   {"placements": [{"player": "p1", "rank": 1}, {"player": "p3", "rank": 2}, {"player": "p2", "rank": 3}]}
-Result: 1. p1  2. p3  3. p2
-```
+The same lines are everywhere a match is shown: `GET /matches/<id>/transcript`
+(`?lang=de&spoilers=true&format=json|text|markdown`), the live view, replays and
+their exports. Hidden cards, roles, thoughts and whispers appear only with
+spoilers on (`arena run` shows them unless you pass `--no-spoilers`). With real
+models the seats read "p1 (glm-flash)". `--all` adds bookkeeping lines and
+`--raw` prints the raw events as stored. A stored or saved match is printed
+with `arena transcript <match-id | file.json> [--lang de] [--spoilers] [--follow]`.
 
 Or through the API, with a second between turns so that it can be watched:
 
@@ -207,7 +189,7 @@ second and third try, then a random legal move is played and the log says so.
 Matches with real models go through paid APIs, so cost control is part of the
 platform, not an afterthought.
 
-- **Hard caps:** €0.50 per match and €5 per calendar month by default, set in
+- **Hard caps:** €0.50 per match and €25 per calendar month by default, set in
   [config/models.yaml](config/models.yaml) next to the models and their
   prices.
 - **Counted before it is spent:** every model call is written to a ledger in

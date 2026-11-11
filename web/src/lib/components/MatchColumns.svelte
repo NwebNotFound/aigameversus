@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { MatchEvent } from '#lib/api.js';
 	import Board from '#lib/components/Board.svelte';
-	import type { Lang } from '#lib/event-text.js';
 	import { columnOf, describe, playersOf } from '#lib/live.js';
 
 	/**
@@ -13,22 +12,15 @@
 		spec,
 		spoilers,
 		events,
-		players,
-		game,
-		lang
+		players
 	}: {
 		spec: Record<string, unknown> | null;
 		spoilers: boolean;
 		events: MatchEvent[];
 		players: string[];
-		/** Game id, for the sentences of its events. */
-		game: string;
-		lang: Lang;
 	} = $props();
 
 	let player = $state('all');
-	/** Show every event as stored (type and data) instead of a sentence. */
-	let raw = $state(false);
 
 	const publicLines = $derived(events.filter((e) => columnOf(e) === 'public').toReversed());
 	const behindLines = $derived(
@@ -46,13 +38,7 @@
 	</section>
 
 	<section aria-labelledby="public-title">
-		<div class="feed-head">
-			<h2 id="public-title">Public</h2>
-			<label class="raw">
-				<input type="checkbox" bind:checked={raw} />
-				Raw events
-			</label>
-		</div>
+		<h2 id="public-title">Public</h2>
 		{#if publicLines.length === 0}
 			<p class="muted">Nothing public yet.</p>
 		{/if}
@@ -90,13 +76,8 @@
 </div>
 
 {#snippet line(event: MatchEvent)}
-	{@const shown = describe(event, game, lang)}
-	<li
-		data-seq={event.seq}
-		data-kind={shown.kind}
-		data-players={playersOf(event).join(' ')}
-		data-raw={shown.kind === 'event' && !shown.sentence}
-	>
+	{@const shown = describe(event)}
+	<li data-seq={event.seq} data-kind={shown.kind} data-players={playersOf(event).join(' ')}>
 		{#if shown.kind === 'message'}
 			<strong>{shown.player}</strong>
 			<q>{shown.text}</q>
@@ -105,8 +86,6 @@
 			<em>{shown.text}</em>
 		{:else if shown.kind === 'narration'}
 			<span class="narration">{shown.text}</span>
-		{:else if shown.sentence && !raw}
-			<span class="sentence">{shown.sentence}</span>
 		{:else}
 			{#if shown.player}<strong>{shown.player}</strong>{/if}
 			<span>{shown.title}</span>
@@ -203,22 +182,5 @@
 		border-radius: 8px;
 		padding: 0.35rem 0.8rem;
 		min-height: 2.25rem;
-	}
-
-	.feed-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 0.25rem 1rem;
-	}
-
-	.raw {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.8rem;
-		color: var(--muted);
-		margin-bottom: 0.75rem;
 	}
 </style>

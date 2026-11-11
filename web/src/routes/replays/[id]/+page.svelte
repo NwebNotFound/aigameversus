@@ -4,7 +4,6 @@
 	import type { Board } from '#lib/api.js';
 	import ChroniclePanel from '#lib/components/ChroniclePanel.svelte';
 	import MatchColumns from '#lib/components/MatchColumns.svelte';
-	import { matchLang } from '#lib/event-text.js';
 	import { gameName } from '#lib/games.js';
 	import { euros } from '#lib/live.js';
 	import {
@@ -221,14 +220,7 @@
 	</section>
 
 	{#if tab === 'replay'}
-		<MatchColumns
-			{spec}
-			{spoilers}
-			events={shown}
-			players={match.match.players}
-			game={match.match.game}
-			lang={matchLang(match.match.settings)}
-		/>
+		<MatchColumns {spec} {spoilers} events={shown} players={match.match.players} />
 	{:else}
 		<ChroniclePanel id={params.id} {spoilers} onreveal={() => (spoilers = true)} />
 	{/if}

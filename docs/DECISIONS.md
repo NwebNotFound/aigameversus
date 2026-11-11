@@ -1411,6 +1411,10 @@ Each entry: date, decision, why, alternatives considered.
     too does the seat lose its model. In a test of all eight roster models
     one refused the options outright, and another, served by several
     providers, took them in one match and refused them in the next.
+    The budget has booked that call once, at its upper bound; the second
+    request goes out under the same booking. That holds only because a
+    refused request is not billed, so at most one of the two costs money.
+    The set of statuses must therefore never grow to one a provider may bill.
 - **Why:** Two real matches with the cheapest models of the roster. In the
   first (Liar's Deck, four models) 83 of 130 answers were rejected and 18
   turns went to the random fallback: two reasoning models spent the whole
@@ -1483,25 +1487,55 @@ Each entry: date, decision, why, alternatives considered.
   every player); decay over time (not in the spec); notes for every match
   without a cap.
 
-## D-077 · Events as sentences, in the language of the match
+## D-076 · The monthly cap is 25 euros
 
 - **Date:** 2026-11-11
-- **Decision:**
-  - The live view and replays show each event as a sentence
-    (`web/src/lib/event-text.ts`): one phrase per event type and game, in
-    English and German, and the final placements as "1st p4 · 2nd p2, p3".
-    The language is the match's `language` setting; English when it has none.
-  - An event without a phrase, or with data of a shape the phrase does not
-    expect, keeps its raw line (type and data). A "Raw events" toggle in the
-    Public column shows every line raw.
-  - Player ids, role ids and card ids are shown as stored (p3, white wolf,
-    K4); names come with player profiles in the prompt and the profile pages.
-  - A home card links to the new-match form with its game chosen only when
-    `GET /games` lists the game; otherwise it says "Coming soon". Throne of
-    Tokens therefore turns active when its plugin is installed.
-- **Why:** Spectators should read what happened, not event names; keeping
-  the raw form one click away helps whoever debugs a match.
-- **Alternatives:** sentences written by the plugins (puts UI text in the
-  game rules); a UI language switch independent of the match (the match
-  already has one); translated role names (they come from the role files and
-  would need a second source of truth).
+- **Decision:** `limits.month_eur` in `config/models.yaml` is 25.00 (it was
+  5.00, D-001). The cap per match stays 0.50 EUR. Whatever is above 25 EUR a
+  month still pauses a match, as before.
+- **Why:** The project owner set it after the first real matches (six
+  matches, 0.18 EUR together): he wants stronger models and research runs,
+  which a 5 EUR month would stop early. He kept the per-match cap; a single
+  research run may get a larger budget only when that is set for the run
+  (a per-run budget is still to be built).
+- **Alternatives:** No monthly cap (one runaway batch could spend without
+  limit); a higher cap per match for everyone (a mistake would cost more).
+
+## D-078 · One transcript renders every match for every reader
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/transcript/` turns the events of a match into readable
+  lines, one per event, in English and German (`TranscriptLine`: `kind`, `actor`,
+  `text`, `detail`, `importance`, `raw`). Each game has a renderer class with a
+  `handle_<type>` method per event type; the engine's own events are handled once
+  in the base class. A test reads the plugins' source and fails when one emits a
+  type without a method. Hidden information (hands, roles, private choices,
+  thoughts, whispers, the seed) is written only with `spoilers=True`; public talk
+  always. `importance` is 1 for bookkeeping, 2 normal, 3 highlight; `kind` is one of
+  heading, action, speech, whisper, thought, reveal, result, narration, info.
+  It is served by `GET /matches/{id}/transcript?lang=&spoilers=&format=json|text|markdown`
+  and printed by `arena run` (live, instead of raw events; `--raw` keeps them) and
+  `arena transcript <match-id|file>`. Players are "Name (model)" where the match
+  was rated or a file names its seats, else the seat id. The Werewolf narrator's own
+  lines are shown only in the language the match was played in, as bookkeeping.
+- **Why:** The live view, replays, exports and the terminal need the same words
+  or they drift apart; one renderer per game, tested against what the plugins emit,
+  keeps them equal. Keeping the raw event on each line lets a UI fold it away
+  without a second request.
+- **Alternatives:** a formatter in TypeScript for the web (a second copy to keep
+  in step, and no help for the CLI); text written by the plugins themselves (puts
+  words into rules code, and names are a presentation matter).
+
+## D-077 · A game card starts a match only when the arena has the game
+
+- **Date:** 2026-11-11
+- **Decision:** A home card links to the new-match form with its game chosen
+  (`/matches/new?game=<id>`) only when `GET /games` lists the game; otherwise
+  it says "Coming soon" and has no link. Throne of Tokens therefore turns
+  active by itself when its plugin is installed. The form reads `?game=`
+  as its first choice.
+- **Why:** A card that leads to a form which cannot start the game is a dead
+  end; the arena's game list is the one source of what can be played.
+- **Alternatives:** a hard-coded "coming soon" flag per card (needs a code
+  change when a plugin lands); hiding the card (the game should still be
+  announced).

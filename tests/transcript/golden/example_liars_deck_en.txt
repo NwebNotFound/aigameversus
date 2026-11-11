@@ -1,0 +1,167 @@
+Match started: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout) and p4 (gemini-flash-lite)
+
+Round 1, table card: King
+    p1 (glm-flash) starts; players: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout) and p4 (gemini-flash-lite)
+p1 (glm-flash): "One true king."
+p1 (glm-flash) plays 1 card and claims: a king
+p2 (deepseek-flash) is next
+p2 (deepseek-flash): "Two more kings for you."
+p2 (deepseek-flash) plays 2 cards and claims: two kings
+p3 (llama-scout) is next
+p3 (llama-scout) plays 3 cards and claims: three kings
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "Three kings, for the crown!"
+p4 (gemini-flash-lite) plays 3 cards and claims: three kings
+p1 (glm-flash) is next
+p1 (glm-flash): "Nine kings claimed, but the deck holds only six. I don't buy your trio. Liar!"
+p1 (glm-flash) calls LIAR on p4 (gemini-flash-lite)
+The cards show: two kings, a joker. p4 (gemini-flash-lite) told the truth
+    King 4, King 3, Joker 2
+p1 (glm-flash) must pull the trigger (the call was wrong)
+p1 (glm-flash) pulls the trigger (pull 1): click
+Round 1 is over. p1 (glm-flash) starts the next round
+
+Round 2, table card: Ace
+    p1 (glm-flash) starts; players: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout) and p4 (gemini-flash-lite)
+p1 (glm-flash): "One honest ace to start."
+p1 (glm-flash) plays 1 card and claims: an ace
+p2 (deepseek-flash) is next
+p2 (deepseek-flash): "Two real aces on top of yours."
+p2 (deepseek-flash) plays 2 cards and claims: two aces
+p3 (llama-scout) is next
+p3 (llama-scout) calls LIAR on p2 (deepseek-flash)
+The cards show: two aces. p2 (deepseek-flash) told the truth
+    Ace 4, Ace 3
+p3 (llama-scout) must pull the trigger (the call was wrong)
+p3 (llama-scout) pulls the trigger (pull 1): BANG
+p3 (llama-scout) is out of the game
+Round 2 is over. p2 (deepseek-flash) starts the next round
+
+Round 3, table card: Queen
+    p2 (deepseek-flash) starts; players: p1 (glm-flash), p2 (deepseek-flash) and p4 (gemini-flash-lite)
+p2 (deepseek-flash): "One queen to open. A joker's as good as a queen, so this one's free."
+p2 (deepseek-flash) plays 1 card and claims: a queen
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "One queen, right on cue."
+p4 (gemini-flash-lite) plays 1 card and claims: a queen
+p1 (glm-flash) is next
+p1 (glm-flash): "Three queens, all genuine. Come check me if you dare."
+p1 (glm-flash) plays 3 cards and claims: three queens
+p2 (deepseek-flash) is next
+p2 (deepseek-flash): "Three queens with none in my hand? That's too rich. Liar!"
+p2 (deepseek-flash) calls LIAR on p1 (glm-flash)
+The cards show: two queens, a joker. p1 (glm-flash) told the truth
+    Queen 2, Queen 4, Joker 2
+p2 (deepseek-flash) must pull the trigger (the call was wrong)
+p2 (deepseek-flash) pulls the trigger (pull 1): BANG
+p2 (deepseek-flash) is out of the game
+Round 3 is over. p1 (glm-flash) starts the next round
+
+Round 4, table card: Queen
+    p1 (glm-flash) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p1 (glm-flash): "Three queens to open, straight from the top of the deck."
+p1 (glm-flash) plays 3 cards and claims: three queens
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "I don't believe you played three queens. Let's see them."
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: an ace, two kings. p1 (glm-flash) was lying
+    Ace 5, King 3, King 2
+p1 (glm-flash) must pull the trigger (caught lying)
+p1 (glm-flash) pulls the trigger (pull 2): click
+Round 4 is over. p1 (glm-flash) starts the next round
+
+Round 5, table card: Queen
+    p1 (glm-flash) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p1 (glm-flash): "A single honest queen."
+p1 (glm-flash) plays 1 card and claims: a queen
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "A single queen? Given your history, I doubt it. Let's see it."
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: a queen. p1 (glm-flash) told the truth
+    Queen 4
+p4 (gemini-flash-lite) must pull the trigger (the call was wrong)
+p4 (gemini-flash-lite) pulls the trigger (pull 1): click
+Round 5 is over. p4 (gemini-flash-lite) starts the next round
+
+Round 6, table card: King
+    p4 (gemini-flash-lite) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p4 (gemini-flash-lite): "I've got three kings here, straight from the deck. Let's see if anyone wants to call it."
+p4 (gemini-flash-lite) plays 3 cards and claims: three kings
+p1 (glm-flash) is next
+p1 (glm-flash): "Two honest kings on top of your three. Your move."
+p1 (glm-flash) plays 2 cards and claims: two kings
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "Two kings? I don't think so. Let's see what you've got."
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: two kings. p1 (glm-flash) told the truth
+    King 6, King 4
+p4 (gemini-flash-lite) must pull the trigger (the call was wrong)
+p4 (gemini-flash-lite) pulls the trigger (pull 2): click
+Round 6 is over. p4 (gemini-flash-lite) starts the next round
+
+Round 7, table card: Queen
+    p4 (gemini-flash-lite) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p4 (gemini-flash-lite): "I'll start us off with a queen."
+p4 (gemini-flash-lite) plays 1 card and claims: a queen
+p1 (glm-flash) is next
+p1 (glm-flash): "One honest queen, again. Worked last time."
+p1 (glm-flash) plays 1 card and claims: a queen
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "One honest queen, huh? I've been fooled by your 'honesty' before. Let's see what's really under that card."
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: a queen. p1 (glm-flash) told the truth
+    Queen 4
+p4 (gemini-flash-lite) must pull the trigger (the call was wrong)
+p4 (gemini-flash-lite) pulls the trigger (pull 3): click
+Round 7 is over. p4 (gemini-flash-lite) starts the next round
+
+Round 8, table card: King
+    p4 (gemini-flash-lite) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p4 (gemini-flash-lite): "I have two kings to go with that table card. Let's see what you do, p1."
+p4 (gemini-flash-lite) plays 2 cards and claims: two kings
+p1 (glm-flash) is next
+p1 (glm-flash): "One king, only one. I have no reason to lie this time. Call me again, p4 — that's your fourth pull."
+p1 (glm-flash) plays 1 card and claims: a king
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "You claim one king? Given your history, I"
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: a king. p1 (glm-flash) told the truth
+    King 4
+p4 (gemini-flash-lite) must pull the trigger (the call was wrong)
+p4 (gemini-flash-lite) pulls the trigger (pull 4): click
+Round 8 is over. p4 (gemini-flash-lite) starts the next round
+
+Round 9, table card: Queen
+    p4 (gemini-flash-lite) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p4 (gemini-flash-lite): "I've got two queens for you, p1. Let's see if you can match this."
+p4 (gemini-flash-lite) plays 2 cards and claims: two queens
+p1 (glm-flash) is next
+p1 (glm-flash): "Two honest queens. You've been wrong four times, p4 — your next pull is near-certain death. Truth is your only friend now."
+p1 (glm-flash) plays 2 cards and claims: two queens
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "You say two queens, p1? That's convenient. Let's see if they're as honest as you claim."
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: two queens. p1 (glm-flash) told the truth
+    Queen 6, Queen 1
+p4 (gemini-flash-lite) must pull the trigger (the call was wrong)
+p4 (gemini-flash-lite) pulls the trigger (pull 5): click
+Round 9 is over. p4 (gemini-flash-lite) starts the next round
+
+Round 10, table card: Queen
+    p4 (gemini-flash-lite) starts; players: p1 (glm-flash) and p4 (gemini-flash-lite)
+p4 (gemini-flash-lite): "I have two queens for you, p1. Let's see if you can do better."
+p4 (gemini-flash-lite) plays 2 cards and claims: two queens
+p1 (glm-flash) is next
+p1 (glm-flash): "Three honest queens, p4. Every one of your five pulls came up empty, so your last chamber is the live one — call me and you die for certain. Even if you don't, you can't survive the next call."
+p1 (glm-flash) plays 3 cards and claims: three queens
+p4 (gemini-flash-lite) is next
+p4 (gemini-flash-lite): "Three queens? You only have two cards, p1. You're bluffing, and I will call you out."
+p4 (gemini-flash-lite) calls LIAR on p1 (glm-flash)
+The cards show: three queens. p1 (glm-flash) told the truth
+    Queen 1, Queen 6, Queen 3
+p4 (gemini-flash-lite) must pull the trigger (the call was wrong)
+p4 (gemini-flash-lite) pulls the trigger (pull 6): BANG
+p4 (gemini-flash-lite) is out of the game
+Round 10 is over. p1 (glm-flash) starts the next round
+Match over: p1 (glm-flash) is the last one standing
+Result: 1. p1 (glm-flash)  2. p4 (gemini-flash-lite)  3. p2 (deepseek-flash)  4. p3 (llama-scout)

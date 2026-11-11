@@ -3,7 +3,6 @@
  * how it reads, and which parts of the board are spoilers.
  */
 import type { MatchEvent } from './api.js';
-import { eventText, type Lang } from './event-text.js';
 
 /** Middle column: what every player sees. Right column: thoughts and private events. */
 export type Column = 'public' | 'behind';
@@ -26,21 +25,10 @@ export type Line =
 	| { kind: 'message'; player: string; text: string }
 	| { kind: 'thought'; player: string; text: string }
 	| { kind: 'narration'; text: string }
-	| {
-			kind: 'event';
-			player: string | null;
-			/** The event as a sentence (`event-text.ts`); null when there is none. */
-			sentence: string | null;
-			/** The raw form: type and data. */
-			title: string;
-			details: string;
-	  };
+	| { kind: 'event'; player: string | null; title: string; details: string };
 
-/**
- * One event as the live view shows it. Player text stays text: it is never
- * rendered as HTML. `game` and `lang` choose the sentence of other events.
- */
-export function describe(event: MatchEvent, game = '', lang: Lang = 'en'): Line {
+/** One event as the live view shows it. Player text stays text: it is never rendered as HTML. */
+export function describe(event: MatchEvent): Line {
 	const { type, data } = event;
 	const player = typeof data.player === 'string' ? data.player : null;
 	const text = typeof data.text === 'string' ? data.text : null;
@@ -51,7 +39,6 @@ export function describe(event: MatchEvent, game = '', lang: Lang = 'en'): Line 
 	return {
 		kind: 'event',
 		player,
-		sentence: eventText(game, event, lang),
 		title: type.replaceAll('_', ' '),
 		details: rest.map(([key, value]) => `${key.replaceAll('_', ' ')}: ${show(value)}`).join(' · ')
 	};
