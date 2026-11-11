@@ -35,7 +35,6 @@ test('the web reaches the arena and shows no running matches', async ({ page }) 
 
 for (const [label, title] of [
 	['New match', 'New match'],
-	['Leaderboard', 'Leaderboard'],
 	['Replays', 'Replays']
 ]) {
 	test(`${label} is a coming-soon page`, async ({ page }) => {
