@@ -96,7 +96,7 @@ def test_profile(database_url, client):
     assert [m["game_id"] for m in body["recent_matches"]] == ["werewolf", "poker"]
     assert body["recent_matches"][1]["rating_change"] == 16.0
     assert "relations" not in body  # GET /profiles/{id}/relations
-    assert body["memory"] == {"available": False, "note": "not available yet"}
+    assert "memory" not in body  # GET /profiles/{id}/memories
 
 
 def test_unknown_profile_is_404(client):

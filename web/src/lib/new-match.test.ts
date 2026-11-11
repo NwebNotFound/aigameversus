@@ -21,7 +21,14 @@ describe('parseForm', () => {
 	it('builds the start request of a bot match', () => {
 		expect(parseForm(form({ ...LIARS, seed: '42', language: 'en' }), GAMES)).toEqual({
 			ok: true,
-			match: { game: 'liars_deck', players: 3, seed: 42, settings: {}, turn_delay: 1 }
+			match: {
+				game: 'liars_deck',
+				players: 3,
+				seed: 42,
+				settings: {},
+				turn_delay: 1,
+				memory: true
+			}
 		});
 	});
 
@@ -61,5 +68,13 @@ describe('parseForm', () => {
 			ok: false,
 			errors: { [field]: message }
 		});
+	});
+
+	it('turns memory off when the box asks for a match without it', () => {
+		expect(parseForm(form({ ...LIARS, no_memory: 'on' }), GAMES)).toMatchObject({
+			ok: true,
+			match: { memory: false }
+		});
+		expect(parseForm(form(LIARS), GAMES)).toMatchObject({ ok: true, match: { memory: true } });
 	});
 });

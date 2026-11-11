@@ -335,7 +335,7 @@ describe('eventsUrl', () => {
 });
 
 describe('startMatch', () => {
-	const BODY = { game: 'toy', players: 2, settings: {}, turn_delay: 1 };
+	const BODY = { game: 'toy', players: 2, settings: {}, turn_delay: 1, memory: true };
 
 	function answering(response: Response) {
 		const sent: { url: string; init?: RequestInit }[] = [];

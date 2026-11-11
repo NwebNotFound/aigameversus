@@ -15,7 +15,7 @@ export const actions: Actions = {
 		const form = await request.formData();
 		// Sent back with every refusal, so the form keeps what was entered.
 		const values = Object.fromEntries(
-			['game', 'players', 'seed', 'language', 'turn_delay'].map((name) => [
+			['game', 'players', 'seed', 'language', 'turn_delay', 'no_memory'].map((name) => [
 				name,
 				String(form.get(name) ?? '')
 			])

@@ -106,6 +106,16 @@ export interface NewMatch {
 	seed?: number;
 	settings: Record<string, unknown>;
 	turn_delay: number;
+	/** false: a fair benchmark, the match neither reads nor writes memory. */
+	memory: boolean;
+}
+
+/** `GET /profiles/{id}/memories`: the player's own summaries of past matches. */
+export interface MatchMemory {
+	match_id: string;
+	game_id: string;
+	summary: string;
+	created_at: string;
 }
 
 /** A start the arena refused, with its reason (422: the game refused, 429: arena full). */
@@ -151,7 +161,6 @@ export interface Profile {
 	overall: Standing | null;
 	ratings: (Standing & { game_id: string })[];
 	recent_matches: RecentMatch[];
-	memory: { available: boolean; note: string };
 }
 
 /** `GET /profiles/{id}/stats`: totals per game, from the logs of the rated matches. */
@@ -184,6 +193,7 @@ export interface ArenaClient {
 	profile(id: string): Promise<ApiResult<Profile>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
+	memories(id: string): Promise<ApiResult<MatchMemory[]>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
 	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
@@ -270,6 +280,14 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}`,
 				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
 				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
+			);
+		},
+
+		memories(id) {
+			return getJson<MatchMemory[]>(
+				`/profiles/${encodeURIComponent(id)}/memories`,
+				Array.isArray,
 				[404, 422]
 			);
 		},

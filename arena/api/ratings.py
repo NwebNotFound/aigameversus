@@ -1,7 +1,7 @@
 """Leaderboard and player profile endpoints."""
 
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -66,11 +66,6 @@ class RecentMatch(BaseModel):
     rating_change: float
 
 
-class NotAvailable(BaseModel):
-    available: Literal[False] = False
-    note: str = "not available yet"
-
-
 class ProfileOut(BaseModel):
     id: UUID
     name: str
@@ -79,7 +74,6 @@ class ProfileOut(BaseModel):
     overall: StandingOut | None = Field(description="null until the first rated match")
     ratings: list[GameStanding]
     recent_matches: list[RecentMatch]
-    memory: NotAvailable = Field(default_factory=NotAvailable)
 
 
 @router.get("/leaderboard")

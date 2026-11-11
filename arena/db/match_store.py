@@ -12,7 +12,7 @@ from arena.engine.types import Placement, PlayerId
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 
-_COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements"
+_COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements, memory"
 
 
 class MatchRecord(BaseModel):
@@ -25,6 +25,7 @@ class MatchRecord(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     placements: list[Placement] | None
+    memory: bool = True  # False: the match neither reads nor writes memory
 
 
 class MatchStore:
@@ -38,16 +39,19 @@ class MatchStore:
         players: Sequence[PlayerId],
         seed: int,
         settings: dict[str, Any],
+        *,
+        memory: bool = True,
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
-            "INSERT INTO matches (id, game, status, players, seed, settings) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5) RETURNING {_COLUMNS}",
+            "INSERT INTO matches (id, game, status, players, seed, settings, memory) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
             seed,
             settings,
+            memory,
         )
         return MatchRecord(**row)
 

@@ -66,7 +66,9 @@ export function parseForm(form: FormData, games: GameInfo[]): Parsed {
 			players,
 			...(seed === undefined ? {} : { seed }),
 			settings: GAMES_WITH_LANGUAGE.has(game.id) ? { language } : {},
-			turn_delay: turnDelay
+			turn_delay: turnDelay,
+			// The box says "without memory", so a form that leaves it out keeps memory on.
+			memory: form.get('no_memory') === null
 		}
 	};
 }

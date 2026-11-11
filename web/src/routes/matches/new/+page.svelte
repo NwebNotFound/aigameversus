@@ -182,6 +182,20 @@
 			{#if errors.seed}<p class="field-error">{errors.seed}</p>{/if}
 
 			<label class="row">
+				<input
+					type="checkbox"
+					name="no_memory"
+					checked={form?.values?.no_memory === 'on'}
+					aria-describedby="memory-hint"
+				/>
+				<span>Play without memory (fair benchmark)</span>
+			</label>
+			<p class="hint" id="memory-hint">
+				With memory, players remember this match: trust in the others and a short summary, and they
+				bring it to later matches. Without it, nothing is read or written.
+			</p>
+
+			<label class="row">
 				<span>Cost limit (€)</span>
 				<input
 					type="number"
