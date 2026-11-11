@@ -257,6 +257,18 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   ledger answers. Read costs only through `Ledger` (`RatingStore.usage` takes
   it): a query that joins `model_calls` in the match database finds nothing
   when the ledger lives elsewhere.
+- `POST /matches/estimate` (`arena/agents/estimate.py`) says what a match of
+  given models would cost before anyone spends: random bots play it three
+  times (seeds 1 to 3), every prompt a seat's model would get is built as the
+  runner builds it and measured, and each seat is priced at its most
+  expensive trial: prompt bytes / 3.5 as input tokens, one answer per prompt
+  at the model's mean output in the ledger (the output limit with fewer than
+  10 answers there), times 1.3 for corrections and retries. The answer has
+  the month so far and whether the estimate fits the match cap and the month
+  left, and per seat its `basis` (`ledger history` or `output limit`). It
+  calls no model, needs no flag, runs one at a time and keeps an answer for
+  30 seconds (`Estimates` in `arena/api/matches.py`), and is a guide: the caps
+  still stop a match that costs more.
 - The API key comes from `OPENROUTER_API_KEY`, or from the file that
   `OPENROUTER_API_KEY_FILE` names (the stack mounts it read-only, see
   `docker-compose.models.yml`). `load_keys` in `arena/config.py` reads the
