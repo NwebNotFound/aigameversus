@@ -148,6 +148,16 @@ class LiarsDeck(GamePlugin[LiarsState]):
     version = "1"
     min_players = 2
     max_players = 4
+    # Each round ends with a trigger pull and each revolver has `chambers` pulls,
+    # so there are at most players x chambers rounds. A round has at most one play
+    # per card dealt (min_cards each) plus the call, each with one table_talk (D-045).
+    max_turns = max(
+        v.players.max
+        * v.revolver.chambers
+        * (v.players.max * v.hand_size // v.play.min_cards + 1)
+        * 2
+        for v in load_variants().values()
+    )
     turn_mode = TurnMode.SEQUENTIAL
 
     def __init__(self) -> None:

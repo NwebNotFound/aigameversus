@@ -338,3 +338,65 @@ def test_map_tiles_must_be_whole_numbers(data_dir: Path, value: str):
     edit(data_dir / "balance.yaml", "tiles: {min: 60,", f"tiles: {{min: {value},")
 
     assert "map.tiles.min: Input should be a valid integer" in rejected(data_dir)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("    forest: 22", "    jungle: 22", "map.terrain_weights: unknown terrain 'jungle'"),
+        (
+            "    forest: 22",
+            "    gold_vein: 22",
+            "map.terrain_weights: 'gold_vein' is rare, set its number in map.rare_tiles",
+        ),
+        (
+            "rare_tiles: {iron_deposit: 2, gold_vein: 2}",
+            "rare_tiles: {iron_deposit: 2}",
+            "map.rare_tiles must name exactly the rare terrains (gold_vein, iron_deposit), "
+            "got iron_deposit",
+        ),
+        (
+            "capital_terrain: plains",
+            "capital_terrain: water",
+            "map.capital_terrain: 'water' is impassable",
+        ),
+        (
+            "    gold: [plains, plains, forest, forest, hills, hills]",
+            "    gold: [plains, plains, forest, forest, hills]",
+            "map.start_regions.gold: 5 tiles, but a capital works 6 (city.work_radius 1)",
+        ),
+        (
+            "  work_radius: 1",
+            "  work_radius: 2",
+            "map.start_regions.food: 6 tiles, but a capital works 18 (city.work_radius 2)",
+        ),
+        (
+            "    iron: [plains, plains, forest, forest, river, river]",
+            "    iron: [plains, plains, forest, forest, river, mountains]",
+            "map.start_regions.iron: 'mountains' is impassable",
+        ),
+        (
+            "    wood: [plains, plains, hills, hills, river, river]",
+            "    wood: [plains, plains, hills, hills, river, swamp]",
+            "map.start_regions.wood: unknown terrain 'swamp'",
+        ),
+        (
+            "    food: [forest, forest, hills, hills, river, river]\n",
+            "",
+            "map.start_regions.food: missing",
+        ),
+    ],
+)
+def test_map_numbers_the_generator_cannot_use_are_named(
+    data_dir: Path, old: str, new: str, expected: str
+):
+    edit(data_dir / "balance.yaml", old, new)
+
+    assert f"balance.yaml: {expected}" in rejected(data_dir)
+
+
+@pytest.mark.parametrize(("old", "new"), [("width: 10", "width: 0"), ("plains: 34", "plains: 0")])
+def test_map_width_and_terrain_weights_must_be_positive(data_dir: Path, old: str, new: str):
+    edit(data_dir / "balance.yaml", old, new)
+
+    assert "greater than or equal to 1" in rejected(data_dir)
