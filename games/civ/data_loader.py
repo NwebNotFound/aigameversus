@@ -28,6 +28,7 @@ Id = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$", description="snake_case 
 Ratio = Annotated[float, Field(ge=0, le=1)]
 Modifier = Annotated[float, Field(ge=-1, le=10, description="Relative change: 0.25 = +25 %")]
 Resource = Literal["food", "wood", "iron", "gold"]
+Focus = Literal["growth", "production", "military"]
 Amounts = dict[Resource, Annotated[int, Field(ge=0)]]
 
 
@@ -292,9 +293,17 @@ class CityBalance(_Model):
     growth_food: Annotated[int, Field(ge=1)]
     food_per_population: Annotated[int, Field(ge=0)]
     building_slots: BuildingSlots
-    focus_yields: dict[Literal["growth", "production", "military"], Resource] = Field(
+    focus_yields: dict[Focus, Resource] = Field(
         description="Which resource each population adds under a city focus"
     )
+
+    @model_validator(mode="after")
+    def _check(self) -> CityBalance:
+        if missing := [focus for focus in get_args(Focus) if focus not in self.focus_yields]:
+            raise ValueError(
+                f"focus_yields must name every city focus, missing: {', '.join(missing)}"
+            )
+        return self
 
 
 class ArmyBalance(_Model):

@@ -972,7 +972,157 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** a secret Raven mark; the infection kept for a later night
   when the victim is saved; the White Werewolf counted for the pack's win.
 
-## D-052 · Match controls: pause between turns, abort as its own status
+## D-052 · A finished API match rates its random bots
+
+- **Date:** 2026-11-11
+- **Decision:** When a match started through `POST /matches` finishes,
+  `LiveMatches` (`arena/api/live.py`) applies its placements to the ratings
+  (`RatingStore.apply_match_result`, keyed by the match id, so it counts once).
+  Every seat has a bot profile, "Random Bot p1", "Random Bot p2", ...
+  (`model_id` `random-bot`), created on first use with an id derived from the
+  seat name. Failed, interrupted and paused matches are not rated. A rating
+  error is logged and never fails the match. `demo_seed` ignores `random-bot`
+  profiles when it checks for real profiles. The `arena` command stores
+  nothing, so it rates nothing.
+- **Why:** A profile can be rated only once per match, so the bots need one
+  profile per seat, not one per kind. The leaderboard then fills from real
+  matches. Rating after the record is closed keeps the match status true even
+  if the rating fails.
+- **Alternatives:** one profile per bot kind (impossible: the same profile
+  twice in one match); rating only matches with real model players (the
+  leaderboard would stay empty until phase 2).
+
+## D-053 · Per-game statistics are pure functions over the event log
+
+- **Date:** 2026-11-11
+- **Decision:** Statistics live in `arena/stats/<game>.py` as pure functions
+  from the stored event log of one match to a Pydantic model per player
+  (`match_stats`), plus `aggregate` over many matches of one player. They read
+  only events the plugin already emits. The first one is Liar's Deck: lie rate
+  (lies / plays, a lie is a play with a card that is neither the table card nor a
+  joker), times caught lying, success rate of "Liar!" calls (only calls the
+  player chose to make; automatic calls are forced), rounds survived (rounds
+  played minus the round of the fall) and the boldest bluff (the highest
+  revolver risk, live chambers left / chambers left, faced while lying).
+- **Why:** Computing from the log keeps the numbers reproducible and needs no
+  change to a plugin. The helpers in `arena/ratings/stats.py` do the rates, so
+  "no data" is `None`, never 0.
+- **Alternatives:** counting in the plugin state (changes the plugins, and old
+  logs would have no numbers); storing the numbers per match in a table.
+## D-054 · Poker statistics: definitions
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/stats/poker.py` counts, over the hands a player was
+  dealt into: VPIP (a call, raise or all-in before the flop; blinds and a free
+  check do not count), aggression factor (aggressive actions / calls; an
+  all-in is aggressive only if it goes above the street's highest bet), bluff
+  rate (bluff hands / hands with a bet or raise; a bluff hand is a win without
+  showdown with less than a pair, or a showdown loss), chips per 100 hands
+  (pot shares won minus chips put in, blinds included) and worst decisions
+  (a fold whose cards plus the final board would have beaten every shown hand
+  at the showdown).
+- **Why:** The spec names the numbers but not the formulas. These use only
+  events the plugin already emits, including the spectator-only hole cards,
+  and chips balance exactly (the net chips of all players sum to 0, which the
+  tests check on real bot matches).
+- **Alternatives:** counting a showdown loss only when the hand was weak
+  (needs a notion of a "strong" hand); counting every all-in as aggressive.
+## D-055 · Werewolf statistics: definitions
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/stats/werewolf.py` counts per player and match: vote
+  accuracy (of the votes for a player cast while on the village side, the
+  share that hit a wolf; abstentions are counted separately and wolves' own
+  votes are left out), rounds alive (a round is a night and the day after it;
+  a player who dies in round `n` was alive for `n` rounds, a survivor for all
+  rounds), wins (from `game_over`), and for the seer the rounds she lived and
+  whether she died. The wolf side is the pack from `pack_revealed` plus
+  `joined_pack` and `infected` players, from the moment they join.
+- **Why:** The spec names "vote accuracy, survival, seer outing speed" without
+  formulas. Everything comes from events the plugin already emits (the
+  spectator log has all roles). "Outing speed" is measured as how long the seer
+  lives, since the log has no event for a claim.
+- **Alternatives:** counting wolves' votes too (a hit means the opposite for
+  them); measuring the outing by chat text (the log has no claim event).
+
+## D-056 · Throne of Tokens economy: one stock per nation, and what the spec leaves open about cities
+
+- **Date:** 2026-11-11
+- **Decision:** A nation has one stock of food, wood, iron and gold. Its
+  cities fill it and everything is paid from it. Where the spec is silent:
+  - **Tiles.** A city works the tiles around it, not the one it stands on;
+    the city's own yield (2 food, 1 wood, 1 gold) stands for that tile. A tile
+    feeds one city: the nearest that reaches it, the older of two equally
+    near. So a city's first ring can only be taken by building on it.
+  - **Growth.** The food a city makes beyond what its own population eats
+    goes to the stock and also counts towards that city's growth. At 10
+    collected the city gains a population and keeps the rest, at most one
+    population per round. A city that eats more than it makes takes the
+    difference from the stock and collects nothing; nobody starves in a city.
+  - **Buildings.** An order is paid at once and takes a slot at once; the
+    building works from the next round (`build_rounds` rounds later). Only a
+    finished building can be demolished; the refund is rounded down per
+    resource. A city that loses population keeps buildings beyond its slots.
+  - **Upkeep.** After the yields are in, the population eats, then the units
+    take their upkeep. What the stock cannot cover is not paid and the stock
+    ends at 0. A round with upkeep not paid in full, in food or gold, is a
+    hungry round and costs a random unit; a granary covers the first two
+    hungry rounds in a row. Only the nation's best granary counts.
+  - **Sight.** A finished watchtower adds its bonus to the sight of its city.
+  - Shares of an amount are computed in decimal and rounded down, so 29 % of
+    100 is 29 whatever binary fractions make of it.
+- **Why:** The spec prices units and trades in food and counts gold per
+  nation, so resources cannot belong to cities; but it lets a city grow on
+  its own surplus. Counting the surplus twice is the reading that needs no
+  rule for sharing food between growth, units and trade, and it is the one
+  sentence a model has to remember. Nearest-city tiles need no stored borders
+  and never surprise the owner of a ring. Gold upkeep counts like food so
+  that a siege engine is not free for a nation without gold. Granaries that
+  added up would let a large nation keep an unpaid army for many rounds.
+- **Known consequence, for balancing:** on the growth focus a population pays
+  for itself, so a capital gains a population almost every round (about 60
+  after 60 rounds on the shipped map, against 12 to 18 on the other two
+  focuses, where growth levels off). Population counts in the final score.
+  `city.growth_food` in `balance.yaml` is the number to raise if bot matches
+  show that this decides games.
+- **Alternatives:** Growth that uses up the food (units and settlers would
+  compete with automatic growth for the same stock, and the player could not
+  steer it); a stock per city (needs transport rules); tiles assigned to the
+  city founded first (an old city growing to radius 2 would take a
+  neighbour's first ring); the city tile also yielding (the map's start
+  regions are balanced for six worked tiles); losing population when a city
+  cannot be fed (a second starvation rule next to the one for units).
+
+## D-057 · Throne of Tokens state: one model, systems that emit, events that carry outcomes
+
+- **Date:** 2026-11-11
+- **Decision:** The game has one state model, `CivState` in
+  `games/civ/state.py`, and each system is a module of functions over it
+  (`games/civ/economy.py` is the first). A function that changes something
+  takes the engine's `TurnContext` and emits events; the module's
+  `apply_event` is the only code that writes to the state. An event carries
+  what happened in numbers (the cost paid, the refund, the nation's new
+  stock), never a reference to a rule, so applying it reads no game data.
+  The production of a nation in a round is one event. Every economy event
+  is private to its nation. Each order has a `*_problem` function that
+  returns a message for the player or `None`.
+- **Why:** This is D-009 one level down: the plugin of step 7.6 passes its
+  context through and routes events back, and the log rebuilds the state
+  with no rules and no data files. Private events keep the fog honest: a
+  public "city founded" would give its tile away. One event per nation and
+  round keeps a player's recent events, which the prompt shows 40 of, from
+  being pushed out by bookkeeping. The check is separate from the order
+  because the plugin needs it twice: when a model submits its orders, to
+  ask for a correction, and when the round is resolved.
+- **Alternatives:** Pure functions that return events for the plugin to
+  emit (every step would have to be re-applied by hand before the next one
+  can read its result); a state per system (cities are read by fog, combat
+  and victory alike); events that name the rule and let `apply_event` look
+  the numbers up (an old log would change its meaning when a number is
+  tuned); one event per city and round.
+
+
+## D-058 · Match controls: pause between turns, abort as its own status
 
 - **Date:** 2026-11-11
 - **Decision:**
@@ -987,7 +1137,11 @@ Each entry: date, decision, why, alternatives considered.
   - A speed change applies at once, also to a wait that has already begun.
   - Abort cancels the task. The record gets the new status `aborted`
     (migration `0006`), with no placements; the stored turns stay readable.
-    A match stopped by a server shutdown stays `interrupted`.
+    A match stopped by a server shutdown stays `interrupted`. Once the turn
+    with `match_finished` is stored, the match is over: abort answers 409, and
+    that last turn does not wait for a resume, so a match paused just before
+    its end still ends `finished`. A record that is no longer `running` is
+    never closed again.
   - `GET /matches/{id}/board` replays the stored log and returns the game's
     `render_spec`, or `null` for a game without one. `GET /matches/{id}/cost`
     sums the ledger per player.
@@ -999,7 +1153,50 @@ Each entry: date, decision, why, alternatives considered.
   `failed` (it hides that nobody did anything wrong); a speed change only from
   the next turn (a 30 s wait would ignore the click).
 
-## D-053 · Live view: SSE relay on the web server, a generic board, spoilers in the UI
+## D-061 · Werewolf "Düsterwald-Mix" scales its wolves; "Chaos" stays as it is
+
+- **Date:** 2026-11-11
+- **Decision:** Düsterwald-Mix has a per-size `by_players` table for its werewolf
+  count (as Klassisch, D-023): 2 wolves for 8 players, 3 for 9, 4 for 10-16.
+  With its six special roles (seer, witch, hunter, Cupid, Bear Tamer, Little
+  Girl) the total is `15 + players - 7 * wolves`: +9 at 8 players, then +3, -3,
+  -2, -1, 0, +1, +2, +3 for 9 to 16. The light is *even* at 9-16 and within
+  -1..1 for 12-14. At 8 players it stays *village* (+9): a third wolf does not
+  fit beside six special roles (nine roles for eight seats), so +9 is the
+  nearest reachable value. Chaos is unchanged: its 12 non-werewolf roles
+  (Prime Wolf and White Wolf among them) and 2 werewolves give `players - 7 *
+  wolves`, which is 0, +1 and +2 for its 14, 15 and 16 players. Tests pin the
+  totals of both templates at every size.
+- **Why:** Fixed 2 wolves left Düsterwald village-favoured everywhere (+9 to
+  +17). The table follows the same idea as D-023: wolves grow with the table
+  and the light is read from the weights.
+- **Alternatives:** dropping a special role from the 8-player mix to allow a
+  third wolf (changes the template's roles, not only its counts); a formula
+  field in the template format.
+
+## D-062 · The chronicler tells a finished match from templates, behind a Narrator
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/chronicle/` builds a chapter-by-chapter story from the
+  stored event log of a finished match of Liar's Deck, Poker or Werewolf:
+  chapters are rounds, hands and nights, made of beats (a caught lie, a shot,
+  an all-in, a death, a vote, the win). `tell(events, style=, lang=, names=)`
+  gives a `Chronicle`; `to_markdown` exports it; `GET /matches/{id}/chronicle?
+  style=&lang=&format=` serves it. The four styles (epic, news, sports, novel)
+  in English and German are fixed templates, so the same log gives the same
+  text and nothing is paid. `Narrator` is the interface a model can implement
+  later to retell a chapter from its beats; the default `TemplateNarrator`
+  needs no model. The story uses spectator information (hidden cards, roles),
+  so a log without `match_finished` is refused, and the endpoint answers 409
+  for a match that is still running.
+- **Why:** A story told during the match would reveal what players may not
+  know, and the templates keep tests exact and the cost at zero. Beats keep the
+  facts apart from the words, which is what a model narrator needs.
+- **Alternatives:** telling the story live from public events only (much
+  thinner, and the replay page can use the finished one); one free-text
+  generator without beats (not testable).
+
+## D-064 · Live view: SSE relay on the web server, a generic board, spoilers in the UI
 
 - **Date:** 2026-11-11
 - **Decision:**
