@@ -1,14 +1,15 @@
 """Cost caps: every model call of a match is counted, and none may pass a cap."""
 
 import json
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import ROUND_CEILING
+from decimal import ROUND_CEILING, Decimal
 from typing import Any
 from uuid import UUID
 
 from arena.agents.litellm_model import LiteLLMModel
-from arena.agents.model import Message, ModelCall, ModelError, ModelReply
+from arena.agents.model import RATE_LIMITED, Message, ModelCall, ModelError, ModelReply
 from arena.config import Config, Model, call_options
 from arena.db.ledger import Ledger
 from arena.engine.types import PlayerId
@@ -33,6 +34,7 @@ class Budget:
         config: Config,
         *,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        clock: Callable[[], float] = time.monotonic,
     ):
         self.match_cap = int(config.limits.match_eur * MICRO)
         self.month_cap = int(config.limits.month_eur * MICRO)
@@ -40,6 +42,7 @@ class Budget:
         self._match_id = match_id
         self._config = config
         self._now = now
+        self._clock = clock
 
     def model(self, player: PlayerId, model_id: str) -> ModelCall:
         """The metered call of a model from the config. Nothing else builds a real model."""
@@ -77,22 +80,41 @@ class Budget:
                 now=self._now(),
             )
             # If the call fails or is cancelled here, the booking stays as it is:
-            # the provider may have billed it anyway.
-            reply = await call(messages, tools)
-            if reply.usage is not None:
+            # the provider may have billed it anyway. Not so a rate limit: a 429 is
+            # refused before anything is generated, so it costs nothing.
+            sent = self._clock()
+            try:
+                reply = await call(messages, tools)
+            except ModelError as error:
+                if error.reason == RATE_LIMITED:
+                    latency_ms = round((self._clock() - sent) * 1000)
+                    await self._ledger.settle(call_id, 0, 0, 0, latency_ms=latency_ms)
+                raise
+            latency_ms = round((self._clock() - sent) * 1000)
+            if reply.usage is None:
+                await self._ledger.timed(call_id, latency_ms)
+            else:
                 await self._ledger.settle(
                     call_id,
                     reply.usage.input_tokens,
                     reply.usage.output_tokens,
                     self._cost(model, reply.usage.input_tokens, reply.usage.output_tokens),
+                    latency_ms=latency_ms,
+                    reasoning_tokens=reply.usage.reasoning_tokens,
                 )
             return reply
 
         return metered
 
     def _cost(self, model: Model, input_tokens: int, output_tokens: int) -> int:
-        micro_usd = (
-            input_tokens * model.input_usd_per_mtok + output_tokens * model.output_usd_per_mtok
-        )
-        micro_eur = micro_usd * self._config.limits.usd_to_eur
-        return int(micro_eur.to_integral_value(rounding=ROUND_CEILING))
+        return cost_micro_eur(self._config, model, input_tokens, output_tokens)
+
+
+def cost_micro_eur(config: Config, model: Model, input_tokens: float, output_tokens: float) -> int:
+    """What a call of `model` with these tokens costs, in millionths of a euro, rounded up."""
+    micro_usd = (
+        Decimal(input_tokens) * model.input_usd_per_mtok
+        + Decimal(output_tokens) * model.output_usd_per_mtok
+    )
+    micro_eur = micro_usd * config.limits.usd_to_eur
+    return int(micro_eur.to_integral_value(rounding=ROUND_CEILING))

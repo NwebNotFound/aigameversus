@@ -62,7 +62,9 @@ class LeaderboardRow(StandingOut):
 
 class Leaderboard(BaseModel):
     game: str | None = Field(description="The game shown, or null for the overall rating")
-    games: list[str] = Field(description="Every game with at least one rated match")
+    games: list[str] = Field(
+        description="Every game with at least one rated match of the kind shown (tabs)"
+    )
     kind: Literal["models", "bots", "all"] = Field(description="Who is shown")
     fallback: bool = Field(
         False, description="True when real models were asked for but none is rated yet: all shown"
@@ -81,6 +83,7 @@ class RecentMatch(BaseModel):
     match_id: UUID
     game_id: str
     rated_at: datetime
+    played_at: datetime = Field(description="When the match itself ended")
     rank: int
     players: int
     rating_change: float
@@ -206,7 +209,7 @@ async def leaderboard(
         )
     return Leaderboard(
         game=game,
-        games=await store.rated_games(),
+        games=await store.rated_games(shown, demo=demo),
         kind=shown,
         fallback=fallback,
         counts=counts,
@@ -237,6 +240,7 @@ async def profile(profile_id: UUID, store: Store) -> ProfileOut:
                 match_id=m.match_id,
                 game_id=m.game_id,
                 rated_at=m.rated_at,
+                played_at=m.played_at,
                 rank=m.rank,
                 players=m.players,
                 rating_change=round(m.rating_change, 1),

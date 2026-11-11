@@ -4,10 +4,10 @@ import pytest
 
 from arena.agents import runner
 from arena.agents.mock_llm import MockLLM, tool_call
-from arena.agents.model import ModelError, ModelReply, ToolCall
+from arena.agents.model import ModelError, ModelReply, ToolCall, Usage
 from arena.agents.prompt import build_messages, tool_schemas
 from arena.agents.runner import ModelAgent
-from arena.engine.types import Action, AgentError, Reply, TurnRequest
+from arena.engine.types import Action, AgentError, AnswerStats, Reply, TurnRequest
 from games.toy.plugin import PLAY_CARD, ToyGame
 from tests.engine.counter_game import SequentialCounter
 
@@ -25,9 +25,15 @@ def ask(*script):
 
     agent = ModelAgent(mock, ToyGame(), sleep=sleep, jitter=lambda: 0.0)
     try:
-        return asyncio.run(agent.act(REQUEST)), mock, pauses
+        reply = asyncio.run(agent.act(REQUEST))
     except AgentError as error:
         return error, mock, pauses
+    return reply.model_copy(update={"stats": None}), mock, pauses  # stats: tested on their own
+
+
+def stats_of(*script):
+    agent = ModelAgent(MockLLM(*script), ToyGame(), sleep=lambda seconds: asyncio.sleep(0))
+    return asyncio.run(agent.act(REQUEST)).stats
 
 
 def test_tool_call_is_the_action_and_text_is_the_thought():
@@ -233,3 +239,18 @@ def test_a_seat_waits_out_only_so_many_rate_limits_in_a_match():
 
     assert waited == runner.RATE_LIMIT_RETRIES_PER_MATCH
     assert len(pauses) == waited  # the last rate limit is not waited out
+
+
+def test_an_answer_reports_its_tokens_and_the_calls_tried_again():
+    stats = stats_of(
+        ModelError("RateLimitError"),
+        tool_call("play_card", {"card": 7}, usage=Usage(1200, 80, reasoning_tokens=30)),
+    )
+
+    assert stats == AnswerStats(tokens_in=1200, tokens_out=80, reasoning_tokens=30, retries=1)
+
+
+def test_an_answer_without_usage_has_unknown_tokens():
+    stats = stats_of(tool_call("play_card", {"card": 7}))
+
+    assert stats == AnswerStats(tokens_in=None, tokens_out=None, reasoning_tokens=None, retries=0)

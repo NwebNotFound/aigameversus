@@ -288,3 +288,16 @@ def test_a_model_may_be_sent_tool_choice_auto_and_no_reasoning_effort(answer_wit
 
     assert (sent["tool_choice"], sent["max_tokens"]) == ("auto", 4000)
     assert "reasoning_effort" not in sent
+
+
+def test_reasoning_tokens_are_read_when_the_provider_reports_them(litellm, answer_with):
+    response = answer(litellm, finish="stop", content="Fine.")
+    response.usage = litellm.Usage(
+        prompt_tokens=100,
+        completion_tokens=300,
+        total_tokens=400,
+        completion_tokens_details={"reasoning_tokens": 120},
+    )
+    answer_with(mock_response=response)
+
+    assert call().usage == Usage(100, 300, reasoning_tokens=120)

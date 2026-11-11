@@ -7,16 +7,15 @@ import random
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
-from arena.agents.model import Message, ModelCall, ModelError, ModelReply
+from arena.agents.model import RATE_LIMITED, Message, ModelCall, ModelError, ModelReply
 from arena.agents.prompt import THOUGHT, build_messages, tool_schemas
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Action, AgentError, Reply, TurnRequest
+from arena.engine.types import Action, AgentError, AnswerStats, Reply, TurnRequest
 
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3  # further tries after a failed model call
 BACKOFF_SECONDS = 1.0  # pause before the first retry; doubles with every retry
-RATE_LIMITED = "RateLimitError"  # the provider said "too many requests"
 RATE_LIMIT_BACKOFF_SECONDS = 3.0  # it needs longer: 3, 6, 12 s (and the jitter)
 RATE_LIMIT_RETRIES_PER_MATCH = 12  # after these, a rate limit is no longer waited out
 JITTER = 0.5  # each pause is up to this share longer, so seats do not retry in step
@@ -59,14 +58,25 @@ class ModelAgent:
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
         messages = build_messages(self._plugin.name, self._rules, request, summary, self._memory)
-        return _read(await self._call_model(messages, tool_schemas(request.tools)))
+        answer, tries = await self._call_model(messages, tool_schemas(request.tools))
+        usage = answer.usage
+        stats = AnswerStats(
+            tokens_in=usage.input_tokens if usage else None,
+            tokens_out=usage.output_tokens if usage else None,
+            reasoning_tokens=usage.reasoning_tokens if usage else None,
+            retries=tries - 1,
+        )
+        return _read(answer).model_copy(update={"stats": stats})
 
-    async def _call_model(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
+    async def _call_model(
+        self, messages: list[Message], tools: list[dict[str, Any]]
+    ) -> tuple[ModelReply, int]:
+        """The model's answer and how many calls it took."""
         tries = 0
         while True:
             tries += 1
             try:
-                return await self._call(messages, tools)
+                return await self._call(messages, tools), tries
             except ModelError as error:
                 rate_limited = error.reason == RATE_LIMITED
                 used_up = rate_limited and self._rate_limit_retries == 0

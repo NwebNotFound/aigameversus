@@ -142,7 +142,7 @@ def test_cost_is_rounded_up_to_a_millionth_of_a_euro(database_url, model, usd_to
     ("step", "outcome"),
     [
         (ModelReply(text="no usage in this answer"), ModelReply),
-        (ModelError("RateLimitError"), ModelError),
+        (ModelError("Timeout"), ModelError),  # a rate limit is the exception: booked at 0
         (HANGS, TimeoutError),
     ],
     ids=["answer without usage", "failed call", "call that never answers"],
@@ -479,3 +479,67 @@ def test_a_model_with_its_own_output_limit_is_booked_at_that_limit(database_url)
     costs = with_pool(database_url, scenario)
 
     assert costs == {"cheap": UPPER_BOUND, "long": UPPER_BOUND + 3 * MAX_OUTPUT * 2}
+
+
+def test_each_call_keeps_how_long_it_took_and_how_much_it_thought(database_url):
+    ticks = iter([10.0, 12.5, 20.0, 20.25])  # sent, answered; sent, answered
+
+    async def scenario(pool):
+        budget = Budget(
+            Ledger(pool), uuid4(), config(), now=lambda: NOVEMBER, clock=lambda: next(ticks)
+        )
+        call = budget.meter(
+            "p1",
+            "cheap",
+            MockLLM(
+                tool_call("play_card", {"card": 3}, usage=Usage(120, 30, reasoning_tokens=12)),
+                ModelReply(text="no usage reported"),
+            ),
+        )
+        await call(MESSAGES, TOOLS)
+        await call(MESSAGES, TOOLS)
+        rows = await pool.fetch(
+            "SELECT latency_ms, reasoning_tokens, cost_micro_eur FROM model_calls ORDER BY id"
+        )
+        return [tuple(row.values()) for row in rows]
+
+    rows = with_pool(database_url, scenario)
+
+    assert rows == [(2500, 12, 120 * 1 + 30 * 2), (250, None, UPPER_BOUND)]
+
+
+def test_a_ledger_without_the_time_columns_still_settles_the_cost(database_url):
+    async def scenario(pool):
+        await pool.execute("ALTER TABLE model_calls DROP COLUMN latency_ms")
+        await pool.execute("ALTER TABLE model_calls DROP COLUMN reasoning_tokens")
+        call = budget_of(pool).meter(
+            "p1",
+            "cheap",
+            MockLLM(
+                tool_call("play_card", {"card": 3}, usage=Usage(120, 30, reasoning_tokens=12)),
+                ModelReply(text="no usage reported"),
+            ),
+        )
+        first = await call(MESSAGES, TOOLS)
+        await call(MESSAGES, TOOLS)
+        return first, await booked(pool)
+
+    first, rows = with_pool(database_url, scenario)
+
+    assert first.tool_calls  # the answer came through: the turn is not lost
+    assert [row[-1] for row in rows] == [120 * 1 + 30 * 2, UPPER_BOUND]
+
+
+def test_a_rate_limited_call_costs_nothing_but_a_failed_one_keeps_its_bound(database_url):
+    async def scenario(pool):
+        call = budget_of(pool).meter(
+            "p1", "cheap", MockLLM(ModelError("RateLimitError"), ModelError("Timeout"))
+        )
+        for _ in range(2):
+            with pytest.raises(ModelError):
+                await call(MESSAGES, TOOLS)
+        rows = await pool.fetch("SELECT cost_micro_eur FROM model_calls ORDER BY id")
+        return [row["cost_micro_eur"] for row in rows]
+
+    # Refused before anything was generated: void. A timeout may have been billed: kept.
+    assert with_pool(database_url, scenario) == [0, UPPER_BOUND]

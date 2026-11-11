@@ -4,8 +4,10 @@ Everything here shows a match the way a spectator sees it: all events, also
 thoughts and hidden cards. The API listens on localhost only.
 """
 
+import asyncio
 import os
-from datetime import datetime
+import time
+from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -13,10 +15,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
 from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
+from arena.agents.budget import MICRO
+from arena.agents.estimate import Basis, estimate
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
-from arena.config import load_config, load_keys
+from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
-from arena.db.match_store import MatchRecord, Origin, Seat, Status
+from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 
@@ -61,6 +65,9 @@ class NewMatch(BaseModel):
         True,
         description="False: a fair benchmark. The match neither reads nor writes any memory "
         "(relationships, match summaries).",
+    )
+    batch: Batch | None = Field(
+        None, description="The batch this match belongs to, e.g. an experiment stage or a league"
     )
 
 
@@ -107,6 +114,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
             turn_delay=new.turn_delay,
             models=models,
             memory=new.memory,
+            batch=new.batch,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
@@ -132,13 +140,7 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
             422, f"players is {new.players}, but {len(new.models)} models are named: one per seat"
         )
     config = load_config()
-    unknown = [model_id for model_id in new.models if model_id not in config.models]
-    if unknown:
-        raise HTTPException(
-            422,
-            f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
-            f"{', '.join(config.models)}",
-        )
+    _refuse_unknown_models(config, new.models)
     if missing := load_keys(config, new.models):
         raise HTTPException(
             503,
@@ -147,13 +149,128 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
     return {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
 
 
+def _refuse_unknown_models(config: Config, model_ids: list[str]) -> None:
+    unknown = [model_id for model_id in model_ids if model_id not in config.models]
+    if unknown:
+        raise HTTPException(
+            422,
+            f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
+            f"{', '.join(config.models)}",
+        )
+
+
+class EstimateRequest(BaseModel):
+    game: str = Field(description="Game id, see GET /games")
+    models: list[str] = Field(
+        min_length=1, description="Model ids from config/models.yaml, one per seat in order"
+    )
+    settings: dict[str, Any] = Field(default_factory=dict, description="Settings of the game")
+
+
+class SeatEstimateOut(BaseModel):
+    model_id: str
+    calls: int = Field(description="Prompts the seat got in the most expensive trial match")
+    estimate_micro_eur: int
+    basis: Basis = Field(
+        description="Answers counted at the model's mean output in the ledger, or at the "
+        "output limit while the ledger knows fewer than 10 of its answers (then several "
+        "times too high)"
+    )
+
+
+class EstimateOut(BaseModel):
+    estimate_micro_eur: int = Field(description="All seats together, in millionths of a euro")
+    cap_micro_eur: int = Field(description="The cap of one match")
+    month_spent_micro_eur: int = Field(description="What this calendar month has cost so far")
+    month_cap_micro_eur: int
+    seats: dict[str, SeatEstimateOut]
+    fits: bool = Field(description="Whether the estimate fits the match cap and the month left")
+
+
+class Estimates:
+    """One estimate at a time, and an answer kept for ESTIMATE_TTL seconds.
+
+    The trial matches take the server's CPU, and the API has no login: without this,
+    a client that asks again and again would slow every live match down.
+    """
+
+    def __init__(self):
+        self.lock = asyncio.Lock()
+        self.answers: dict[str, tuple[float, EstimateOut]] = {}
+
+
+ESTIMATE_TTL = 30.0
+_clock = time.monotonic  # seconds; a test moves it on
+
+
+@router.post("/matches/estimate")
+async def estimate_match(new: EstimateRequest, request: Request, live: Live) -> EstimateOut:
+    """What a match of these models would cost, estimated without calling any model.
+
+    Random bots play the match three times and every prompt a seat's model would get is
+    measured; answers are counted at the model's mean output in the ledger, or at the output
+    limit for a model with little history. A guide, not a promise: the caps still stop a
+    match that costs more. Spends nothing and needs no flag. 503 while the ledger is down.
+    One estimate runs at a time; the same request within 30 seconds gets the same answer.
+    """
+    estimates: Estimates = request.app.state.estimates
+    key = new.model_dump_json()
+    async with estimates.lock:
+        kept = estimates.answers.get(key)
+        if kept is not None and _clock() - kept[0] < ESTIMATE_TTL:
+            return kept[1]
+        answer = await _estimate(new, live)
+        estimates.answers = {
+            k: v for k, v in estimates.answers.items() if _clock() - v[0] < ESTIMATE_TTL
+        }
+        estimates.answers[key] = (_clock(), answer)
+        return answer
+
+
+async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
+    plugin = live.games.get(new.game)
+    if plugin is None:
+        raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
+    config = load_config()
+    _refuse_unknown_models(config, new.models)
+    seats = {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
+    history = await live.ledger.output_tokens(sorted(set(new.models)))
+    spent = await live.ledger.month_spent(datetime.now(UTC))
+    try:  # bot matches take a moment of CPU: off the server's event loop
+        per_seat = await asyncio.to_thread(
+            lambda: asyncio.run(estimate(plugin, seats, new.settings, config, history))
+        )
+    except ValueError as refused:
+        raise HTTPException(422, str(refused)) from refused
+    total = sum(seat.estimate_micro_eur for seat in per_seat.values())
+    cap = int(config.limits.match_eur * MICRO)
+    month_cap = int(config.limits.month_eur * MICRO)
+    return EstimateOut(
+        estimate_micro_eur=total,
+        cap_micro_eur=cap,
+        month_spent_micro_eur=spent,
+        month_cap_micro_eur=month_cap,
+        seats={
+            seat: SeatEstimateOut(
+                model_id=e.model_id,
+                calls=e.calls,
+                estimate_micro_eur=e.estimate_micro_eur,
+                basis=e.basis,
+            )
+            for seat, e in per_seat.items()
+        },
+        fits=total <= cap and spent + total <= month_cap,
+    )
+
+
 @router.get("/matches")
 async def list_matches(
     live: Live,
     status: Annotated[list[Status] | None, Query(description="Only these statuses")] = None,
+    batch: Annotated[str | None, Query(description="Only the matches of this batch id")] = None,
 ) -> list[MatchRecord]:
-    """The newest 100 matches, newest first."""
-    return await live.matches.recent(status)
+    """The newest 100 matches, newest first; with `batch`, every match of that batch."""
+    return await live.matches.recent(status, batch)
 
 
 @router.get("/matches/{match_id}")
