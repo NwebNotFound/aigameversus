@@ -1,6 +1,6 @@
 """Player profiles and ratings in Postgres."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
@@ -113,16 +113,24 @@ class RatingStore:
         return overall_rating({g: (r.rating, r.games_played) for g, r in per_game.items()})
 
     async def apply_match_result(
-        self, match_id: UUID, game_id: str, placements: Sequence[Placement]
+        self,
+        match_id: UUID,
+        game_id: str,
+        placements: Sequence[Placement],
+        seats: Mapping[str, UUID] | None = None,
     ) -> dict[str, RatingChange] | None:
         """Update the ratings of a finished match; `Placement.player` is a profile id.
 
-        Idempotent: a match already applied changes nothing and returns None.
-        All updates of one match happen in one transaction.
+        `seats` maps the player ids of the match log to these profiles; it is
+        stored with the result, so the profile's statistics can be read from
+        the log later. Idempotent: a match already applied changes nothing and
+        returns None. All updates of one match happen in one transaction.
         """
         # Canonical id text, so "ABC..." and "abc..." are the same player.
         placements = [Placement(player=str(UUID(p.player)), rank=p.rank) for p in placements]
         profile_ids = sorted(UUID(placement.player) for placement in placements)
+        if seats is not None and sorted(seats.values()) != profile_ids:
+            raise ValueError("seats must name each placed profile once")
         async with self._pool.acquire() as connection, connection.transaction():
             claimed = await connection.fetchval(
                 "INSERT INTO rated_matches (match_id, game_id) VALUES ($1, $2) "
@@ -152,6 +160,11 @@ class RatingStore:
                 "updated_at = now() WHERE profile_id = $1 AND game_id = $2",
                 [(UUID(player), game_id, change.after) for player, change in changes.items()],
             )
+            if seats is not None:
+                await connection.executemany(
+                    "INSERT INTO match_seats (match_id, seat, profile_id) VALUES ($1, $2, $3)",
+                    [(match_id, seat, profile_id) for seat, profile_id in seats.items()],
+                )
             rank = {placement.player: placement.rank for placement in placements}
             await connection.executemany(
                 "INSERT INTO match_placements "
@@ -163,6 +176,19 @@ class RatingStore:
                 ],
             )
             return changes
+
+    async def seats(self, profile_id: UUID) -> dict[str, list[tuple[UUID, str]]]:
+        """The rated matches a profile played, by game id: (match id, seat), oldest first."""
+        rows = await self._pool.fetch(
+            "SELECT rm.game_id, s.match_id, s.seat FROM match_seats s "
+            "JOIN rated_matches rm ON rm.match_id = s.match_id "
+            "WHERE s.profile_id = $1 ORDER BY rm.rated_at, s.match_id",
+            profile_id,
+        )
+        played: dict[str, list[tuple[UUID, str]]] = {}
+        for row in rows:
+            played.setdefault(row["game_id"], []).append((row["match_id"], row["seat"]))
+        return played
 
     async def rated_games(self) -> list[str]:
         """Ids of the games that have at least one rated match, sorted."""
