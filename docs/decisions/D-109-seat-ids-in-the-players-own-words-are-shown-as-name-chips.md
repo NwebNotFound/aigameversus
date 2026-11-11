@@ -22,3 +22,6 @@
 - **Alternatives:** Model names in the prompts (bias); replacing the ids with
   plain names in the bubbles (it hides that the model wrote an id, and the
   chip shows whom it meant at a glance).
+  The players' little markup (**bold**, *italic*, "- " lists, paragraphs, a bold-only line
+  as a reasoning-step label) is drawn from a parsed tree element by element, never as HTML;
+  chips work inside it, and the raw switch shows the text with its markup.
