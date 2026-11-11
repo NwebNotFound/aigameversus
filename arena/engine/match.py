@@ -51,6 +51,9 @@ class Match[StateT: BaseModel]:
 
     `turn_timeout` is the time in seconds a player has for one turn, with all
     corrections. When it runs out, a random legal action is played instead.
+
+    `max_turns` is the number of turns after which a match that is still not
+    over is stopped as a plugin bug. The default is the game's own `max_turns`.
     """
 
     def __init__(
@@ -62,6 +65,7 @@ class Match[StateT: BaseModel]:
         settings: Mapping[str, Any] | None = None,
         sink: EventSink | None = None,
         turn_timeout: float = DEFAULT_TURN_TIMEOUT,
+        max_turns: int | None = None,
     ):
         players = list(agents)
         if not plugin.min_players <= len(players) <= plugin.max_players:
@@ -77,6 +81,8 @@ class Match[StateT: BaseModel]:
         self._agents = dict(agents)
         self._sink = sink
         self._turn_timeout = turn_timeout
+        self._max_turns = plugin.max_turns if max_turns is None else max_turns
+        self._turns = 0  # completed turns
         self._failed: set[PlayerId] = set()  # seats whose agent gave up for good
         self._paused = False
         self._flushed = 0
@@ -114,7 +120,17 @@ class Match[StateT: BaseModel]:
             await self._flush()
         try:
             while not plugin.is_over(self.state):
+                if self._turns >= self._max_turns:
+                    # A game that never ends would play, store and bill forever.
+                    self._record_engine_event(
+                        "turn_limit_reached", {"max_turns": self._max_turns}, visible_to=()
+                    )
+                    await self._flush()
+                    raise PluginError(
+                        f"{plugin.id} is not over after {self._max_turns} turns (max_turns)"
+                    )
                 await self._advance()
+                self._turns += 1
                 await self._flush()
         except MatchPaused as pause:
             self._paused = True
