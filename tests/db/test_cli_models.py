@@ -266,6 +266,41 @@ def test_a_model_has_one_profile_that_every_match_rates_again(database, answer_w
     ]
 
 
+def test_a_stored_model_match_is_told_with_the_names_of_its_models(database, answer_with, capsys):
+    answer_with(**PLAY_3)
+    arena(capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash", "--seed", "7")
+    (match,), _, _ = stored(database)
+
+    code = cli.main(["transcript", str(match.id)])
+
+    out = capsys.readouterr().out
+    assert code == 0 and "glm-flash" in out and "deepseek-flash" in out
+    assert "glm-flash (glm-flash)" not in out and "Random Bot" not in out
+
+
+def test_a_profile_named_unlike_its_model_is_told_as_name_and_model(database, answer_with, capsys):
+    answer_with(**PLAY_3)
+    arena(capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash", "--seed", "7")
+    (match,), _, _ = stored(database)
+
+    async def rename():
+        pool = await connect(database)
+        try:
+            await pool.execute(
+                "UPDATE player_profiles SET name = 'Knight' WHERE model_id = 'glm-flash'"
+            )
+        finally:
+            await pool.close()
+
+    asyncio.run(rename())
+    code = cli.main(["transcript", str(match.id)])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "Knight (glm-flash)" in out
+    assert "deepseek-flash (deepseek-flash)" not in out and "deepseek-flash" in out
+
+
 def test_the_same_model_in_the_other_seat_is_still_the_same_profile(database, answer_with, capsys):
     answer_with(**PLAY_3)
 

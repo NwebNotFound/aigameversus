@@ -5,9 +5,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from arena.api.app import app
+from arena.api.ratings import group_seat_bots
 from arena.db.database import connect, migrate
 from arena.engine.types import Placement
-from arena.ratings.store import RatingStore
+from arena.ratings.store import BOT_MODEL_ID, RatingStore, Standing, Usage
 
 
 def seed(database_url, matches):
@@ -108,7 +109,7 @@ def test_profile(database_url, client):
     assert [m["game_id"] for m in body["recent_matches"]] == ["werewolf", "poker"]
     assert body["recent_matches"][1]["rating_change"] == 16.0
     assert "relations" not in body  # GET /profiles/{id}/relations
-    assert body["memory"] == {"available": False, "note": "not available yet"}
+    assert "memory" not in body  # GET /profiles/{id}/memories
 
 
 def test_unknown_profile_is_404(client):
@@ -237,3 +238,15 @@ def test_without_any_rated_model_the_default_falls_back_to_everyone(database_url
     assert (body["kind"], body["fallback"]) == ("all", True)
     assert [r["name"] for r in body["rows"]] == ["Random Bot"]
     assert (models["kind"], models["fallback"], models["rows"]) == ("models", False, [])
+
+
+def test_grouped_bots_cost_is_unknown_when_a_seat_cost_is_unknown():
+    seats = [
+        Standing(uuid4(), f"Random Bot p{n}", BOT_MODEL_ID, 1000.0, 1, None, None) for n in (1, 2)
+    ]
+    usage = {seats[0].profile_id: Usage(None, 3, 1), seats[1].profile_id: Usage(None, 1, 0)}
+
+    (grouped, members), rest = group_seat_bots(seats, usage)
+
+    assert (members, rest) == (2, [])
+    assert usage[grouped.profile_id] == Usage(None, 4, 1)
