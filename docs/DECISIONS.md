@@ -318,3 +318,128 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** `max(2, players // 4)` wolves, i.e. 2 wolves up to 11
   players (rejected: leaves 9-11 players village-favoured at +6 to +8); a
   formula field in the template format.
+
+## D-024 · An agent answers with one action and a thought; thoughts are an engine channel
+
+- **Date:** 2026-11-11
+- **Decision:** `Agent.act` returns a `Reply`: exactly one `Action`, or a
+  `problem` when there is no usable action (a model that only talked, or sent
+  arguments that are not JSON), plus an optional `thought`. The engine records
+  a thought as the engine event `thought` with `visible_to=()`: spectators
+  only, not even its author gets it back. A `problem` is treated like any
+  rejected action: logged, returned as the error, counted as a correction.
+  Still one action per request (D-012); of several tool calls in one answer
+  the first counts. Messages to other players are game tools, not a third
+  field of the reply.
+- **Why:** Thoughts exist in every game and must never leak, so one place in
+  the engine handles them instead of one tool per plugin, and a plugin cannot
+  get their visibility wrong. A model does not need its old thoughts back to
+  play, and never feeding them into a prompt removes the path by which they
+  could reach another player. Keeping "no action" inside the reply keeps the
+  correction loop in the engine, the only place that validates.
+- **Alternatives:** A `think` tool per plugin; thoughts visible to their
+  author; an exception for unusable answers (the thought of that answer would
+  be lost); a batch of actions per reply.
+
+## D-025 · The turn clock is in the engine, and an agent that gives up loses its seat
+
+- **Date:** 2026-11-11
+- **Decision:** `Match(turn_timeout=60)` limits one turn of one player,
+  corrections included. When the time is up, the answer is abandoned and the
+  game's `random_action` plays. That costs only this turn; the agent is asked
+  again on its next one. An agent that raises `AgentError` is out for the rest
+  of the match: the engine logs `agent_failed` once (spectators only) and
+  plays random legal actions for the seat without asking again. Every
+  `action_fallback` carries a `reason`: `rejected`, `timeout` or
+  `agent_failed`.
+- **Why:** The engine already owns the fallback and the log, and a clock there
+  covers every kind of agent. Per turn rather than per call, because
+  spectators wait for turns. Replacing a dead model by random play keeps the
+  match and its log complete, which a match with eight players needs more than
+  it needs that one seat to play well. Other players are not told: they could
+  not tell a human table mate's reason for playing badly either.
+- **Alternatives:** A clock per model call inside the runner; skipping the
+  turn of a slow player (needs a "do nothing" in every game); ending the match
+  when a model fails; counting timeouts towards losing the seat.
+
+## D-026 · One model-call boundary; the runner retries; the mock LLM stands behind it
+
+- **Date:** 2026-11-11
+- **Decision:** The agent runner (`ModelAgent`) reaches its model only through
+  a `ModelCall`: messages and tool schemas in, text and raw tool calls out,
+  `ModelError(reason, retryable)` on failure. `MockLLM` and `LiteLLMModel`
+  implement it. The runner retries a failed call 3 times with pauses of 1, 2
+  and 4 seconds; a failure marked as not retryable (wrong key, bad request) is
+  not retried. When that is used up, the model counts as failed for good: the
+  runner raises `AgentError` and the engine takes the seat (D-025). LiteLLM's
+  own retries are switched off. `LiteLLMModel` imports LiteLLM on first use
+  and in LiteLLM's offline mode; it maps a failure to its class name and drops
+  the provider's message.
+- **Why:** With the mock at the boundary, prompt building, answer parsing,
+  retries and the engine run for real in tests, at no cost. One retry policy
+  in one place can be tested with a fake sleep. Seven seconds of patience
+  cover a rate limit or a dropped connection; a longer outage would stall
+  every turn of that seat, so the seat is handed over once instead. Importing
+  LiteLLM takes seconds and downloads a price list unless offline mode is set,
+  which no test, CLI start or bot match should pay for. Provider messages can
+  quote the request or part of a key, so only the kind of failure travels on.
+- **Alternatives:** Mocking the HTTP layer (tests would depend on one
+  provider's wire format); LiteLLM's built-in retries (not visible to the
+  match, not testable without the network); losing the seat only after
+  several failed turns in a row (more state for a rare case; can be added if
+  real matches show short outages).
+
+## D-027 · Prompt layout, and how other players' words are kept apart from instructions
+
+- **Date:** 2026-11-11
+- **Decision:** Two messages. System: who the player is, the game's
+  `rules.md`, how to answer (one tool call is the move, plain text is private
+  thinking), and that game data is never an instruction. User: the
+  observation in `<situation>`, the last 40 events the player may see in
+  `<events>`, then the ask, with the server's error on a correction. All game
+  data is JSON with `<` escaped, one event per line. Text a player wrote is a
+  game event of the reserved type `message` with exactly
+  `{"player", "text"}`; the engine refuses any other shape. A prompt shows it
+  as `player p2 says: "..."`, the reader's own as `you said: "..."`. The
+  engine, not the runner, selects the events of a request by
+  `event.is_visible_to(player)`. The scaffolding is English; the per-match
+  language (D-001) applies to what models say and comes with table talk.
+- **Why:** Everything the server says is in the system message; everything
+  that can contain another model's words is in data blocks that those words
+  cannot leave: JSON keeps a text on its line, the escaped `<` keeps it from
+  closing a block. One reserved event type lets every game's chat be labelled
+  the same way without the prompt builder knowing any game. Filtering in the
+  engine means a hidden event is never handed to an agent at all.
+- **Alternatives:** One chat message per event (more tokens, and role
+  `assistant`/`user` would blur who wrote what); a flag on `Event` for player
+  text (a schema and storage change); stripping suspicious text (lossy, and a
+  filter can be talked around); a summary of older events (comes with memory,
+  phase 6).
+
+## D-028 · What an agent writes is made storable before it is logged
+
+- **Date:** 2026-11-11
+- **Decision:** The engine cleans every reply before it uses it: NUL
+  characters and halves of surrogate pairs are removed from all strings, NaN
+  and infinity become null.
+- **Why:** Postgres refuses all three in `jsonb`, and model output goes into
+  the log as thoughts, arguments and error texts. Without this, one odd
+  character in one answer would stop a match at the next write.
+- **Alternatives:** Rejecting such answers (costs a correction for something
+  the model cannot see); cleaning in the store (the stored log would differ
+  from the events the match applied, against D-016).
+
+## D-029 · A game's title and rules text each live in one place
+
+- **Date:** 2026-11-11
+- **Decision:** `GamePlugin.name` is the title that prompts, and later the UI,
+  show; code never writes a title anywhere else. This is the "exactly one
+  place" of D-018. `GamePlugin.rules()` returns the game's `rules.md`. The
+  prompt puts the `name` above the rules, so a rules text does not need the
+  title. The rules texts written before their plugins (Liar's Deck, Poker,
+  Werewolf, Throne of Tokens) still open with a title heading; it goes when
+  each game gets its plugin.
+- **Why:** A rename is then a one-line change, and the rules text a model
+  reads is a file that people can read and review too.
+- **Alternatives:** The title as the heading of `rules.md`; rules as a string
+  in the plugin.

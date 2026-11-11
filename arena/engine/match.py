@@ -2,7 +2,9 @@
 
 import asyncio
 import json
+import math
 import random
+import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
@@ -12,18 +14,25 @@ from pydantic import BaseModel
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.rng import derive_rng
 from arena.engine.types import (
+    MESSAGE,
     Action,
     Agent,
+    AgentError,
     Event,
     EventSource,
     Placement,
     PlayerId,
+    Reply,
     ToolSpec,
     TurnMode,
     TurnRequest,
 )
 
 MAX_CORRECTIONS = 2  # retries after a rejected action, before the random fallback plays
+DEFAULT_TURN_TIMEOUT = 60.0  # seconds a player has for one turn, corrections included
+
+# Postgres cannot store these in JSON text: NUL and halves of a surrogate pair.
+_UNSTORABLE_CHARACTERS = re.compile(r"[\x00\ud800-\udfff]")
 
 # Receives new events with the log position of the first one. Called once per turn.
 EventSink = Callable[[int, Sequence[Event]], Awaitable[None]]
@@ -38,6 +47,9 @@ class Match[StateT: BaseModel]:
 
     With a `sink`, the events of each turn are handed over together when the
     turn is complete, so a stored log never ends in the middle of a turn.
+
+    `turn_timeout` is the time in seconds a player has for one turn, with all
+    corrections. When it runs out, a random legal action is played instead.
     """
 
     def __init__(
@@ -48,6 +60,7 @@ class Match[StateT: BaseModel]:
         seed: int,
         settings: Mapping[str, Any] | None = None,
         sink: EventSink | None = None,
+        turn_timeout: float = DEFAULT_TURN_TIMEOUT,
     ):
         players = list(agents)
         if not plugin.min_players <= len(players) <= plugin.max_players:
@@ -62,6 +75,8 @@ class Match[StateT: BaseModel]:
         self.events: list[Event] = []
         self._agents = dict(agents)
         self._sink = sink
+        self._turn_timeout = turn_timeout
+        self._failed: set[PlayerId] = set()  # seats whose agent gave up for good
         self._flushed = 0
         self._game_events = 0
         self._used_streams: set[tuple[str | int, ...]] = set()
@@ -119,23 +134,32 @@ class Match[StateT: BaseModel]:
             raise PluginError(f"{plugin.id} made no progress: a turn passed without a game event")
 
     async def _decide(self, player: PlayerId) -> tuple[Action, list[Event]]:
-        """Get a legal action from a player, with the events that led to it."""
+        """Get a legal action for a player, with the events that led to it.
+
+        The agent's own action if it gives a legal one in time. Otherwise a
+        random legal action, and the log says why.
+        """
         plugin = self.plugin
         observation = plugin.get_observation(self.state, player)
         tools = plugin.get_tools(self.state, player)
         trail: list[Event] = []
-        error = None
-        for _ in range(1 + MAX_CORRECTIONS):
-            request = TurnRequest(player=player, observation=observation, tools=tools, error=error)
-            action = await self._agents[player].act(request)
-            error = self._check(player, action, tools)
-            attempt = {"player": player, "tool": action.tool, "arguments": action.arguments}
-            if error is None:
-                trail.append(_engine_event("action_accepted", attempt, visible_to=(player,)))
-                return action, trail
-            trail.append(
-                _engine_event("action_rejected", attempt | {"error": error}, visible_to=(player,))
-            )
+        reason = "agent_failed"
+        if player not in self._failed:
+            try:
+                async with asyncio.timeout(self._turn_timeout):
+                    action = await self._ask(player, observation, tools, trail)
+                if action is not None:
+                    return action, trail
+                reason = "rejected"
+            except TimeoutError:
+                reason = "timeout"
+            except AgentError as error:
+                self._failed.add(player)
+                trail.append(
+                    _engine_event(
+                        "agent_failed", {"player": player, "error": str(error)}, visible_to=()
+                    )
+                )
 
         action = plugin.random_action(
             observation, tools, derive_rng(self.seed, "fallback", player, self._game_events)
@@ -146,11 +170,57 @@ class Match[StateT: BaseModel]:
         trail.append(
             _engine_event(
                 "action_fallback",
-                {"player": player, "tool": action.tool, "arguments": action.arguments},
+                {
+                    "player": player,
+                    "tool": action.tool,
+                    "arguments": action.arguments,
+                    "reason": reason,
+                },
                 visible_to=(player,),
             )
         )
         return action, trail
+
+    async def _ask(
+        self,
+        player: PlayerId,
+        observation: dict[str, Any],
+        tools: list[ToolSpec],
+        trail: list[Event],
+    ) -> Action | None:
+        """Ask the agent until an answer passes every check. None if the last correction failed."""
+        error = None
+        for _ in range(1 + MAX_CORRECTIONS):
+            request = TurnRequest(
+                player=player,
+                observation=observation,
+                tools=tools,
+                events=[e for e in (*self.events, *trail) if e.is_visible_to(player)],
+                error=error,
+            )
+            reply = await self._agents[player].act(request)
+            reply = Reply.model_validate(_storable(reply.model_dump()))
+            if reply.thought:
+                # Spectators only: no player gets a thought, not even its author.
+                trail.append(
+                    _engine_event(
+                        "thought", {"player": player, "text": reply.thought}, visible_to=()
+                    )
+                )
+            action = reply.action
+            error = reply.problem if action is None else self._check(player, action, tools)
+            attempt = {
+                "player": player,
+                "tool": action.tool if action else None,
+                "arguments": action.arguments if action else None,
+            }
+            if error is None:
+                trail.append(_engine_event("action_accepted", attempt, visible_to=(player,)))
+                return action
+            trail.append(
+                _engine_event("action_rejected", attempt | {"error": error}, visible_to=(player,))
+            )
+        return None
 
     def _check(self, player: PlayerId, action: Action, tools: list[ToolSpec]) -> str | None:
         spec = next((tool for tool in tools if tool.name == action.tool), None)
@@ -176,6 +246,14 @@ class Match[StateT: BaseModel]:
                 f"{self.plugin.id} event {event.type!r} has data that JSON would change "
                 "(use lists, not tuples, and string keys)"
             )
+        if event.type == MESSAGE and not (
+            set(event.data) == {"player", "text"}
+            and all(isinstance(value, str) for value in event.data.values())
+        ):
+            raise PluginError(
+                f"{self.plugin.id} emitted a message event whose data is not "
+                "{'player': <id>, 'text': <string>}"
+            )
         self.plugin.apply_event(self.state, event)
         self.events.append(event)
         self._game_events += 1
@@ -184,6 +262,24 @@ class Match[StateT: BaseModel]:
         self, type: str, data: dict[str, Any], *, visible_to: tuple[PlayerId, ...] | None = None
     ) -> None:
         self.events.append(_engine_event(type, data, visible_to=visible_to))
+
+
+def _storable(value: Any) -> Any:
+    """`value` without anything the event store would refuse.
+
+    Whatever a model writes ends up in the log, and one odd character must not
+    stop a match: unstorable characters are dropped, NaN and infinity become
+    null, tuples become lists.
+    """
+    if isinstance(value, str):
+        return _UNSTORABLE_CHARACTERS.sub("", value)
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {_storable(key): _storable(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_storable(item) for item in value]
+    return value
 
 
 def _engine_event(

@@ -11,13 +11,16 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.3. The engine runs complete matches of
-any plugin with random bots, stores their event logs in Postgres and rebuilds
-the state from a log. There is one reference game, High Card (`games/toy`). The
-arena API still exposes only `GET /health` (it migrates the database at
-startup), the worker is a heartbeat placeholder, the web UI is a static page. Sections below marked *not
-built yet* describe the target from the spec and get filled in as their phase
-lands.
+**State of the build:** roadmap step 1.4. The engine runs complete matches of
+any plugin, stores their event logs in Postgres and rebuilds the state from a
+log. A seat is played by a random bot or by the agent runner, which prompts a
+model and reads its answer; in tests and CI that model is the mock LLM. The
+LiteLLM wrapper for real models exists, but nothing starts a match with it yet:
+`config/models.yaml` is empty until the cost caps land (step 1.5). There is one
+playable game, High Card (`games/toy`). The arena API still exposes only
+`GET /health` (it migrates the database at startup), the worker is a heartbeat
+placeholder, the web UI is a static page. Sections below marked *not built yet*
+describe the target from the spec and get filled in as their phase lands.
 
 ## Architecture
 
@@ -36,30 +39,104 @@ lands.
 `arena/engine/match.py` runs this loop until the plugin says the game is over:
 
 1. Ask the plugin who is active. Each active player gets a `TurnRequest`: their
-   observation and the tools allowed now. In a simultaneous game all active
-   players decide on the same state.
-2. The agent answers with one `Action`. The engine checks the tool name, then
-   the arguments against the tool's JSON Schema, then the plugin's `validate`.
-   A rejected action goes back with a clear error, up to 2 corrections. After
-   that the game's `random_action` plays and the turn is marked
-   (`action_fallback`).
-3. `apply_actions`, then `step`, let the plugin emit game events.
-4. A turn without a game event is a plugin bug and stops the match.
+   observation, the tools allowed now, and every event they were allowed to
+   see so far. In a simultaneous game all active players decide on the same
+   state.
+2. The agent answers with a `Reply`: one `Action`, or a `problem` when its
+   model gave no usable tool call, and optionally a `thought`. The engine logs
+   the thought for spectators only.
+3. The engine checks the action: the tool name, then the arguments against the
+   tool's JSON Schema, then the plugin's `validate`. A rejected answer goes
+   back with a clear error, up to 2 corrections.
+4. If there is still no legal action, the game's `random_action` plays and the
+   log says why (`action_fallback` with a `reason`): `rejected` after the last
+   correction, `timeout` when the turn took longer than `turn_timeout` (60 s by
+   default, corrections included), `agent_failed` for a seat whose agent gave
+   up (see below).
+5. `apply_actions`, then `step`, let the plugin emit game events.
+6. A turn without a game event is a plugin bug and stops the match.
 
-*Not built yet:* prompts and model calls (step 1.4), streaming to the UI (1.6).
+Validation lives in the engine only. Agents never judge an action.
+
+*Not built yet:* streaming to the UI (step 1.6).
+
+### Agents
+
+Anything with `async act(request) -> Reply` can take a seat (`Agent` in
+`arena/engine/types.py`). There are two:
+
+- `RandomBot` (`arena/agents/random_bot.py`) plays the game's `random_action`.
+- `ModelAgent` (`arena/agents/runner.py`) is the agent runner. Per request it
+  builds the prompt (`prompt.py`), calls its model, and reads the answer: plain
+  text is the private thought, the first tool call is the action.
+
+`ModelAgent` talks to its model through one function, the `ModelCall`
+(`arena/agents/model.py`): messages and tool schemas in, text and raw tool
+calls out, `ModelError` on failure. Two things implement it:
+
+- `MockLLM` (`mock_llm.py`) plays a script: fixed answers, functions that
+  answer from the prompt, `ModelError`s, or `HANGS`. Everything on the arena
+  side of the boundary, prompt building, parsing, retries and the engine, runs
+  for real against it. Use it for every test and every local match:
+
+  ```python
+  plugin = ToyGame()
+  mock = MockLLM(ModelError("RateLimitError"), tool_call("play_card", {"card": 3}))
+  match = Match(plugin, {"p1": ModelAgent(mock, plugin), ...}, seed=1)
+  ```
+
+  `mock.calls` holds every prompt it was sent. `tests/agents/` shows the
+  patterns, including a mock that reads its hand from the prompt.
+- `LiteLLMModel` (`litellm_model.py`) calls a real model. It is the only code
+  that can spend money. Never use it in tests or CI. It imports LiteLLM on
+  first use, in LiteLLM's offline mode, because the import is slow and would
+  otherwise download a price list.
+
+Failures:
+
+- A failed model call is retried 3 times, after 1, 2 and 4 seconds. Errors
+  that a retry cannot fix (bad key, bad request) are not retried.
+- When the retries are used up, `ModelAgent` raises `AgentError`. The engine
+  logs `agent_failed` (spectators only) and plays random legal actions for
+  that seat until the match ends; the agent is not asked again.
+- A turn that runs out of time costs only that turn. The model is asked again
+  on its next turn.
+- Logs and events carry only the kind of failure (the error class name), never
+  a prompt, a key or a provider message.
+
+### Prompts
+
+The system message is what the server says: who the player is, the game's
+`rules.md`, how to answer. The user message is game data: the observation in
+`<situation>`, the last 40 visible events in `<events>`, then the ask (with
+the server's error on a correction).
+
+- A prompt is built only from the `TurnRequest`, and the engine fills that
+  with events the player may see. Thoughts and other players' private events
+  never get there.
+- Game data is JSON, one event per line, with `<` escaped. Text from another
+  model can therefore not start a line, close a block or pose as the server.
+- Text a player wrote is a game event of type `message` with exactly
+  `{"player", "text"}` (`MESSAGE` in `arena/engine/types.py`; the engine
+  rejects any other shape). The prompt shows it as `player p2 says: "..."`,
+  the reader's own as `you said: "..."`.
 
 ### Events and state
 
-A match is a list of `Event`s. Engine events (`match_started`,
-`action_accepted`, `action_rejected`, `action_fallback`, `match_finished`) are
-bookkeeping. Game events come from the plugin through `ctx.emit` and are the
-only thing that changes the game state: `emit` records the event and passes it
-to the plugin's `apply_event` at once. Replaying the game events over
-`initial_state` therefore rebuilds the exact state.
+A match is a list of `Event`s. Engine events (`match_started`, `thought`,
+`action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
+`match_finished`) are bookkeeping. Game events come from the plugin through
+`ctx.emit` and are the only thing that changes the game state: `emit` records
+the event and passes it to the plugin's `apply_event` at once. Replaying the
+game events over `initial_state` therefore rebuilds the exact state.
 
 Every event says who may see it: `visible_to=None` is public, a list of
-players is private to them, an empty list is spectators only. The seed is
-spectators only.
+players is private to them, an empty list is spectators only. The seed,
+thoughts and `agent_failed` are spectators only; a player's attempts are
+visible to that player.
+
+Whatever an agent writes is made storable before it is logged: NUL characters
+and broken Unicode are dropped, NaN and infinity become null.
 
 Event data must be plain JSON (lists, not tuples; string keys), because a
 stored event has to come back exactly as it was applied. The engine stops a
@@ -183,10 +260,14 @@ commit `pyproject.toml` together with `uv.lock`.
 
 Copy the shape of `games/toy/`, the smallest complete game.
 
-1. Create `games/<id>/` with `__init__.py`, `plugin.py` and `tests/`.
+1. Create `games/<id>/` with `__init__.py`, `plugin.py`, `rules.md` and
+   `tests/`. `rules.md` is the English rule summary models get in their
+   prompt: short and complete. The prompt puts the game's `name` above it, so
+   the text does not need the title.
 2. Define the state as a Pydantic model and subclass `GamePlugin`
-   (`arena/engine/plugin.py`). Set `id`, `version`, `min_players`,
-   `max_players` and `turn_mode`.
+   (`arena/engine/plugin.py`). Set `id`, `name`, `version`, `min_players`,
+   `max_players` and `turn_mode`. `name` is the title people and models read,
+   and the only place where it is written.
 3. `initial_state` builds the state before anything happened, without
    randomness, and raises `ValueError` for bad settings. `setup` emits the
    opening events (deal, assign roles).
@@ -198,15 +279,17 @@ Copy the shape of `games/toy/`, the smallest complete game.
    action.
 6. `random_action` picks a random legal action from an observation. It is the
    game's random bot and the engine's fallback.
-7. Tests, as in `games/toy/tests/`: full bot matches for every player count,
+7. If players can talk, emit their words as
+   `ctx.emit(MESSAGE, {"player": author, "text": words}, visible_to=...)` and
+   put player-written text in no other event.
+8. Tests, as in `games/toy/tests/`: full bot matches for every player count,
    same seed gives the same events and state, observations do not depend on
    other players' hidden information, private events are private, rejected
-   actions carry a useful message.
+   actions carry a useful message. Add a match with mock-LLM players, as in
+   `tests/agents/test_model_match.py`.
 
-Every game also ships a `rules.md`: an English summary for the players'
-prompts (see `games/werewolf/rules.md`). *Not built yet:* the code that puts it
-into prompts (step 1.4), the registry that
-finds games by id (1.6), and what the UI needs to draw a game (phase 5).
+*Not built yet:* the registry that finds games by id (step 1.6), and what the
+UI needs to draw a game (phase 5).
 
 ### A Werewolf role
 

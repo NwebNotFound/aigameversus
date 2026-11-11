@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 from arena.engine.plugin import GamePlugin
 from arena.engine.rng import derive_rng
-from arena.engine.types import Action, PlayerId, TurnRequest
+from arena.engine.types import PlayerId, Reply, TurnRequest
 
 
 class RandomBot:
@@ -15,8 +15,9 @@ class RandomBot:
         self._plugin = plugin
         self._rng = rng
 
-    async def act(self, request: TurnRequest) -> Action:
-        return self._plugin.random_action(request.observation, request.tools, self._rng)
+    async def act(self, request: TurnRequest) -> Reply:
+        action = self._plugin.random_action(request.observation, request.tools, self._rng)
+        return Reply(action=action)
 
 
 def random_bots(

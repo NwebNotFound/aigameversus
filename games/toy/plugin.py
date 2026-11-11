@@ -44,6 +44,7 @@ class ToyState(BaseModel):
 
 class ToyGame(GamePlugin[ToyState]):
     id = "toy"
+    name = "High Card"
     version = "1"
     min_players = 2
     max_players = 4

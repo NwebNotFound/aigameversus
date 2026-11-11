@@ -1,12 +1,14 @@
 import asyncio
+import json
 
 import pytest
 
 from arena.agents.random_bot import random_bots
 from arena.engine.match import Match, PluginError
-from arena.engine.types import Action, EventSource
+from arena.engine.types import MESSAGE, Action, AgentError, EventSource, Reply
 
 from .counter_game import (
+    HANGS,
     Scripted,
     SequentialCounter,
     SimultaneousCounter,
@@ -18,8 +20,8 @@ PLAYERS = ["ada", "bo"]
 ALL_MODES = [SequentialCounter, SimultaneousCounter, TickCounter]
 
 
-def play(plugin, agents, *, seed=1, settings=None):
-    match = Match(plugin, agents, seed=seed, settings=settings)
+def play(plugin, agents, *, seed=1, settings=None, turn_timeout=60):
+    match = Match(plugin, agents, seed=seed, settings=settings, turn_timeout=turn_timeout)
     placements = asyncio.run(match.run())
     return match, placements
 
@@ -150,7 +152,7 @@ def test_random_fallback_plays_after_two_failed_corrections():
         "added",
     ]
     fallback = match.events[4].data
-    assert fallback["player"] == "ada"
+    assert (fallback["player"], fallback["reason"]) == ("ada", "rejected")
     assert match.state.amounts["ada"][0] == fallback["arguments"]["amount"]
 
 
@@ -173,6 +175,151 @@ def test_players_cannot_see_the_seed_or_each_others_attempts():
     assert {
         event.data["player"] for event in visible_to_bo if event.type.startswith("action_")
     } == {"bo"}
+
+
+def test_thought_is_logged_before_the_action_for_spectators_only():
+    ada = Scripted(Reply(action=add(1), thought="bo looks weak"), add(2))
+
+    match, _ = play(SequentialCounter(), {"ada": ada, "bo": Scripted(add(1), add(2))})
+
+    assert types(match)[1:4] == ["thought", "action_accepted", "added"]
+    thought = match.events[1]
+    assert thought.source is EventSource.ENGINE
+    assert thought.data == {"player": "ada", "text": "bo looks weak"}
+    assert thought.visible_to == ()
+
+
+def test_request_holds_exactly_the_events_the_player_may_see():
+    ada = Scripted(Reply(action=add(0), thought="oops"), add(1), add(2))
+    bo = Scripted(add(3), add(1))
+
+    match, _ = play(SequentialCounter(), {"ada": ada, "bo": bo})
+
+    def seen(request):
+        return [event.type for event in request.events]
+
+    # A correction shows the own rejected attempt, but never the own thought.
+    assert [seen(request) for request in ada.requests] == [
+        [],
+        ["action_rejected"],
+        ["action_rejected", "action_accepted", "added", "added", "round_closed"],
+    ]
+    assert ada.requests[1].events == (match.events[2],)
+    # Bo sees the public moves and his own: not the seed, ada's attempts or her thought.
+    assert [seen(request) for request in bo.requests] == [
+        ["added"],
+        ["added", "action_accepted", "added", "round_closed", "added"],
+    ]
+
+
+def test_reply_without_an_action_is_rejected_with_its_problem():
+    ada = Scripted(Reply(problem="No tool call.", thought="hm"), add(1), add(2))
+
+    match, _ = play(SequentialCounter(), {"ada": ada, "bo": Scripted(add(1), add(2))})
+
+    assert ada.requests[1].error == "No tool call."
+    assert types(match)[1:4] == ["thought", "action_rejected", "action_accepted"]
+    assert match.events[2].data == {
+        "player": "ada",
+        "tool": None,
+        "arguments": None,
+        "error": "No tool call.",
+    }
+
+
+@pytest.mark.parametrize("fields", [{}, {"action": add(1), "problem": "No tool call."}])
+def test_reply_needs_either_an_action_or_a_problem(fields):
+    with pytest.raises(ValueError, match="either an action or a problem"):
+        Reply(**fields)
+
+
+def test_player_who_runs_out_of_time_gets_a_random_action_for_that_turn():
+    ada = Scripted(add(0), HANGS, add(2))
+    agents = {"ada": ada, "bo": Scripted(add(1), add(2))}
+
+    match, _ = play(SequentialCounter(), agents, turn_timeout=0.2)
+
+    # The time covers the whole turn: the attempt before the timeout stays in the log.
+    assert types(match)[1:4] == ["action_rejected", "action_fallback", "added"]
+    fallback = match.events[2]
+    assert (fallback.data["player"], fallback.data["reason"]) == ("ada", "timeout")
+    assert fallback.visible_to == ("ada",)
+    # On her next turn ada is asked again and plays herself.
+    assert match.state.amounts["ada"] == [fallback.data["arguments"]["amount"], 2]
+
+
+def test_slow_player_does_not_change_the_order_of_the_log():
+    ada, bo = Scripted(HANGS, add(1)), Scripted(add(3), add(2))
+
+    match, _ = play(SimultaneousCounter(), {"ada": ada, "bo": bo}, turn_timeout=0.2)
+
+    # Bo answered long before ada's time ran out, yet the log keeps the seat order.
+    assert types(match)[1:6] == [
+        "action_fallback",
+        "action_accepted",
+        "added",
+        "added",
+        "round_closed",
+    ]
+    assert match.state.amounts["bo"] == [3, 2]
+
+
+def test_agent_that_gives_up_loses_its_seat_to_random_actions():
+    ada = Scripted(AgentError("model call failed after 4 tries (Timeout)"))
+
+    match, _ = play(SequentialCounter(), {"ada": ada, "bo": Scripted(add(1), add(2))})
+
+    assert types(match)[1:4] == ["agent_failed", "action_fallback", "added"]
+    failed = match.events[1]
+    assert failed.data == {"player": "ada", "error": "model call failed after 4 tries (Timeout)"}
+    assert failed.visible_to == ()
+    fallbacks = [event.data for event in match.events if event.type == "action_fallback"]
+    assert [(data["player"], data["reason"]) for data in fallbacks] == [("ada", "agent_failed")] * 2
+    # It is asked once and never again, and the log marks the failure once.
+    assert len(ada.requests) == 1
+    assert types(match).count("agent_failed") == 1
+    assert match.state.amounts["ada"] == [data["arguments"]["amount"] for data in fallbacks]
+
+
+def test_what_an_agent_writes_is_made_storable():
+    odd = Reply(
+        action=Action(
+            tool="add\x00", arguments={"amount": float("nan"), "no\ud800te": ("x\x00", 1e999)}
+        ),
+        thought="a\x00b\udfff",
+    )
+    agents = {"ada": Scripted(odd, add(1), add(2)), "bo": Scripted(add(1), add(2))}
+
+    match, _ = play(SequentialCounter(), agents)
+
+    assert match.events[1].data == {"player": "ada", "text": "ab"}
+    rejected = match.events[2].data
+    assert rejected["tool"] == "add"
+    assert rejected["arguments"] == {"amount": None, "note": ["x", None]}
+    for event in match.events:
+        stored = json.dumps(event.data, allow_nan=False, ensure_ascii=False)  # raises on NaN
+        stored.encode()  # raises on half a surrogate pair
+        assert "\\u0000" not in stored
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"player": "ada"},
+        {"player": "ada", "text": 3},
+        {"player": "ada", "text": "hi", "to": "bo"},
+    ],
+    ids=["no text", "text is no string", "extra field"],
+)
+def test_message_event_of_another_shape_stops_the_match(data):
+    class Mumbles(SequentialCounter):
+        def setup(self, state, ctx):
+            ctx.emit(MESSAGE, data)
+
+    plugin = Mumbles()
+
+    with pytest.raises(PluginError, match="emitted a message event whose data is not"):
+        play(plugin, random_bots(plugin, PLAYERS, 1))
 
 
 @pytest.mark.parametrize("players", [["solo"], ["a", "b", "c", "d"]])

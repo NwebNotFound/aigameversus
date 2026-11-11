@@ -5,6 +5,7 @@ they added last time. The highest total after the last round wins. In the tick
 variant players act only on even ticks; odd ticks pass without a decision.
 """
 
+import asyncio
 import random
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -12,7 +13,16 @@ from typing import Any
 from pydantic import BaseModel
 
 from arena.engine.plugin import GamePlugin, TurnContext
-from arena.engine.types import Action, Event, Placement, PlayerId, ToolSpec, TurnMode, TurnRequest
+from arena.engine.types import (
+    Action,
+    Event,
+    Placement,
+    PlayerId,
+    Reply,
+    ToolSpec,
+    TurnMode,
+    TurnRequest,
+)
 
 AMOUNTS = (1, 2, 3)
 
@@ -38,6 +48,7 @@ class CounterState(BaseModel):
 
 class CounterGame(GamePlugin[CounterState]):
     id = "counter"
+    name = "Counter"
     version = "1"
     min_players = 2
     max_players = 3
@@ -124,16 +135,27 @@ class TickCounter(CounterGame):
     turn_mode = TurnMode.TICK
 
 
-class Scripted:
-    """An agent that plays a fixed list of actions and remembers what it was asked."""
+HANGS = object()  # script step of `Scripted`: the agent never answers
 
-    def __init__(self, *actions: Action):
-        self._actions = list(actions)
+
+class Scripted:
+    """An agent that follows a script and remembers what it was asked.
+
+    A step is an Action or a Reply to answer with, an exception to raise, or HANGS.
+    """
+
+    def __init__(self, *steps: Action | Reply | Exception | object):
+        self._steps = list(steps)
         self.requests: list[TurnRequest] = []
 
-    async def act(self, request: TurnRequest) -> Action:
+    async def act(self, request: TurnRequest) -> Reply:
         self.requests.append(request)
-        return self._actions.pop(0)
+        step = self._steps.pop(0)
+        if step is HANGS:
+            await asyncio.Event().wait()
+        if isinstance(step, Exception):
+            raise step
+        return Reply(action=step) if isinstance(step, Action) else step
 
 
 def add(amount: Any) -> Action:
