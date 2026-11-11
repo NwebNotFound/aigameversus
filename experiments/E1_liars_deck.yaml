@@ -47,7 +47,13 @@ conditions:
   memory: "off (at this commit no memory reaches a prompt)"
   personalities: none
   language: "English rules text; the game has no language setting"
-  prompt_version: "the commit of main the stage runs on, stored with every match; a stage is never split across commits"
+  prompt_version: >
+    One prompt version for all three stages, passed explicitly as the setting
+    prompt_version (e.g. liars_deck-p2) once the arena has it, so a change of
+    the default can never fall inside a stage. Which version is fixed in an
+    amendment before the pilot and read back from match_started in every log.
+    The commit of main is stored with every match; a stage is never split
+    across commits.
   history_shown: "last 40 visible events (HISTORY_LIMIT)"
   sampling: "provider defaults; the arena sets no temperature"
   tool_choice: required
