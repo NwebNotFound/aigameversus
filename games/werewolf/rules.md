@@ -13,6 +13,13 @@
 4. **Vote.** Everyone votes publicly for a player or abstains, with a short reason. The majority is executed; on a tie nobody dies. If the captain is active, the captain's vote counts double.
 5. **Check for a winner,** otherwise the next night starts.
 
+## Role details
+- The Raven's mark is announced in the morning (the Raven stays secret) and counts as 2 votes against that player in the day's vote.
+- The Prime Wolf decides after the pack's vote whether to infect the victim (once per match); an infected player keeps their role and joins the wolves.
+- The Wild Child becomes a wolf when the chosen role model dies.
+- The White Werewolf kills a wolf only on even nights, if he wants to.
+- The bear growls when a living wolf is the nearest living player on either side of the Bear Tamer.
+
 ## Captain
 If enabled, the village elects a captain at the start of day 1 (most votes; a tie is settled at random). The captain's vote counts double, and a dying captain names a living successor.
 

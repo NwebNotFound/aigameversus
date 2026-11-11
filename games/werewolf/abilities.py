@@ -219,6 +219,111 @@ class LittleGirlSpy(NightAbility):
             ctx.emit("girl_caught", {"player": player}, visible_to=[])
 
 
+class RavenMark(NightAbility):
+    """Marks one player, who starts the next day's vote with 2 votes against them."""
+
+    handler = "raven_mark"
+
+    def tools(self, state, player):
+        return [
+            tool(
+                "mark",
+                "Mark a living player: tomorrow they start the vote with 2 extra votes "
+                "against them. The village hears who is marked, not who marked. Or null.",
+                {"target": target_schema([None, *state.alive], "The player to mark, or null.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        target = action.arguments["target"]
+        if target is not None:
+            ctx.emit("raven_chose", {"player": player, "target": target}, visible_to=[player])
+
+
+class WildChildPickModel(NightAbility):
+    """Night 1 only (role file): picks a role model; if the model dies, the child joins the pack."""
+
+    handler = "wild_child_pick_model"
+
+    def tools(self, state, player):
+        others = [p for p in state.alive if p != player]
+        return [
+            tool(
+                "choose_model",
+                "Pick your role model. While they live you play for the village; if they "
+                "die, you become a werewolf.",
+                {"target": target_schema(others, "Your role model.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        ctx.emit(
+            "model_chosen",
+            {"player": player, "model": action.arguments["target"]},
+            visible_to=[player],
+        )
+
+
+class PrimeWolfInfect(NightAbility):
+    """Once per match, after the pack's vote: turn the victim into a werewolf instead."""
+
+    handler = "prime_wolf_infect"
+    sub_order = 1  # after the wolves' votes in the same night slot
+
+    def acts_tonight(self, state, player):
+        return not state.infection_used
+
+    def tools(self, state, player):
+        victim = state.wolf_victim()
+        tools = [tool("let_them_die", "Do not infect; the victim dies as usual.", {})]
+        if victim is not None and victim not in state.pack:
+            tools.insert(
+                0,
+                tool(
+                    "infect",
+                    f"Once per match: turn tonight's victim, {victim}, into a werewolf instead "
+                    "of killing them. If they are saved tonight, nothing happens.",
+                    {},
+                ),
+            )
+        return tools
+
+    def apply(self, state, player, action, ctx):
+        if action.tool == "infect":
+            ctx.emit(
+                "infection_chosen",
+                {"player": player, "target": state.wolf_victim()},
+                visible_to=list(state.pack),
+            )
+
+
+class WhiteWolfKillWolf(NightAbility):
+    """Every second night: may kill one other wolf. Wins only as the last player alive."""
+
+    handler = "white_wolf_kill_wolf"
+
+    def acts_tonight(self, state, player):
+        return state.night % 2 == 0
+
+    def tools(self, state, player):
+        wolves = [p for p in state.alive if p in state.pack and p != player]
+        return [
+            tool(
+                "white_wolf_kill",
+                "Kill one of the other wolves tonight, or null to spare them.",
+                {"target": target_schema([None, *wolves], "The wolf to kill, or null.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        target = action.arguments["target"]
+        if target is not None:
+            ctx.emit("white_wolf_chose", {"player": player, "target": target}, visible_to=[player])
+
+
 NIGHT: dict[str, NightAbility] = {
     ability.handler: ability
     for ability in (
@@ -228,6 +333,10 @@ NIGHT: dict[str, NightAbility] = {
         CupidLinkLovers(),
         ProtectorGuard(),
         LittleGirlSpy(),
+        RavenMark(),
+        WildChildPickModel(),
+        PrimeWolfInfect(),
+        WhiteWolfKillWolf(),
     )
 }
 
@@ -239,6 +348,8 @@ PASSIVE = {
     "elder_strips_powers",
     "idiot_survives",
     "scapegoat_dies",
+    "wild_child_turns_wolf",
+    "bear_growl",
 }
 
 

@@ -28,7 +28,7 @@ class Table:
         self.speaking_start = speaking_start
         for player, role in roles.items():
             self.apply("role_assigned", player=player, role=role)
-        pack = [p for p, r in roles.items() if r == "werewolf"]
+        pack = [p for p, r in roles.items() if r in ("werewolf", "prime_wolf", "white_wolf")]
         self.apply("pack_revealed", wolves=pack)
         self.apply("night_started", night=1)
 
@@ -126,7 +126,7 @@ def bot_match(count, *, seed=1, settings=None, agents=None):
         ({"moon": "full"}, "Unknown settings"),
         ({"template": "classic", "roles": {"werewolf": 1}}, "either a template or roles"),
         ({"roles": {"seer": 2, "werewolf": 1}}, "Seherin may appear only once"),
-        ({"roles": {"werewolf": 2, "bear_tamer": 1}}, "Roles not playable yet: bear_tamer"),
+        ({"roles": {"werewolf": 2, "vampire": 1}}, "'vampire' is not a role"),
     ],
 )
 def test_bad_settings_are_rejected(settings, message):
@@ -485,7 +485,7 @@ def test_200_random_bot_matches_end_with_a_winner():
         match, placements = bot_match(count, seed=number, settings={"template": template})
 
         assert match.state.phase == "over", number
-        assert match.state.winner in ("village", "wolves", "lovers", "nobody")
+        assert match.state.winner in ("village", "wolves", "lovers", "white_wolf", "nobody")
         assert sorted(p.player for p in placements) == sorted(match.state.players)
         winners.add(match.state.winner)
     assert {"village", "wolves"} <= winners
