@@ -40,9 +40,7 @@ class LiteLLMModel:
                     for call in message.tool_calls or ()
                 ),
                 usage=(
-                    None
-                    if usage is None
-                    else Usage(usage.prompt_tokens, usage.completion_tokens)
+                    None if usage is None else Usage(usage.prompt_tokens, usage.completion_tokens)
                 ),
             )
         except Exception as error:

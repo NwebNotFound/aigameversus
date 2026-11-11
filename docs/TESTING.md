@@ -14,6 +14,21 @@ Without a reachable Postgres, the tests under `tests/db/` are skipped locally.
 With `CI` set they fail instead. Use another server with
 `ARENA_TEST_DATABASE_URL`. Each database test runs in its own schema.
 
+### Sharing the stack on one machine
+
+Several agents work on this project on the same machine, and they share one
+Compose project (`aigameversus`) and its fixed ports. Before any
+`docker compose up`, `down` or `build`:
+
+1. Create the lock file `AIGameVersus/.compose.lock` in the team's shared
+   folder, containing your name and the time.
+2. If it already exists and is younger than 30 minutes, do not touch the
+   stack; try again in 2 minutes. An older lock is stale and may be taken.
+3. Delete the lock when you are done, also after a failed run.
+
+Tests that need only Postgres or Redis use the stack under the same lock. Pure
+unit tests need no lock. Working alone on your own machine, skip this.
+
 ## Commands
 
 ```bash
@@ -41,9 +56,32 @@ match = Match(plugin, {"p1": agent, ...}, seed=1, turn_timeout=0.2)
 `mock.calls` holds every prompt the model would have seen. Patterns for whole
 matches, timeouts and API errors are in `tests/agents/test_model_match.py`.
 
-`tests/agents/test_litellm_model.py` is the only test that loads LiteLLM (about
-4 seconds). It uses LiteLLM's own mock responses and refuses every name lookup,
-so it fails if anything tries to reach the network.
+## Cost caps in tests
+
+The caps are tested against the real ledger table, so these tests are database
+tests (`tests/db/test_budget.py`). A mock model reports its tokens with
+`tool_call(..., usage=Usage(1000, 100))`; without `usage` a call keeps its
+upper bound. The test config has a model that costs one and two millionths of
+a euro per token, and the clock is a parameter:
+
+```python
+budget = Budget(Ledger(pool), match_id, config(), now=lambda: NOVEMBER)
+agent = ModelAgent(budget.meter("p1", "cheap", mock), plugin, sleep=no_pause)
+budget.match_cap = 6000  # millionths of a euro
+with pytest.raises(MatchPaused):
+    await match.run()
+budget.match_cap = 1_000_000  # the user allows more
+await match.run()  # continues with the dropped turn
+```
+
+The engine side of a pause needs no database: `tests/engine/test_pause.py`
+uses agents that raise `MatchPaused` themselves.
+
+Two test modules load LiteLLM (about 4 seconds): `tests/agents/test_litellm_model.py`
+and `tests/db/test_budget.py`. They use the `litellm` and `answer_with`
+fixtures from `tests/conftest.py`, which answer with LiteLLM's own mock
+responses and refuse every name lookup, so a test fails if anything tries to
+reach the network.
 
 ## Secret scan
 

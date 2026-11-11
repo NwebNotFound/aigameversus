@@ -46,7 +46,8 @@ class PausesOnce:
 
 
 def test_match_pauses_when_an_agent_cannot_go_on_without_the_user():
-    match = Match(SequentialCounter(), {"ada": Scripted(add(1)), "bo": Scripted(CAP_REACHED)}, seed=1)
+    agents = {"ada": Scripted(add(1)), "bo": Scripted(CAP_REACHED)}
+    match = Match(SequentialCounter(), agents, seed=1)
 
     pause = run_until_pause(match)
 

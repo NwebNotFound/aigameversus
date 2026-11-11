@@ -156,6 +156,27 @@ def test_call_that_reports_no_tokens_stays_booked_at_its_upper_bound(database_ur
     assert [row[1:] for row in rows] == [("p2", "cheap", None, None, UPPER_BOUND)]
 
 
+def test_call_billed_above_its_upper_bound_is_booked_as_billed(database_url):
+    # More input tokens than the request has bytes: no tokenizer does that, but
+    # if a provider ever bills it, the ledger must not pretend otherwise.
+    greedy = ModelReply(text="hm", usage=Usage(INPUT_BOUND + 1000, MAX_OUTPUT))
+
+    async def scenario(pool):
+        budget = budget_of(pool)
+        budget.match_cap = UPPER_BOUND + 500
+        call = budget.meter("p1", "cheap", MockLLM(greedy))
+        await call(MESSAGES, TOOLS)
+        with pytest.raises(MatchPaused) as pause:
+            await call(MESSAGES, TOOLS)
+        return pause.value, await booked(pool)
+
+    pause, rows = with_pool(database_url, scenario)
+
+    # The cap is passed by what the bound was wrong by, once: the next call pauses.
+    assert [row[-1] for row in rows] == [UPPER_BOUND + 1000]
+    assert pause.data["spent_micro_eur"] == UPPER_BOUND + 1000
+
+
 def test_call_that_could_pass_the_match_cap_is_not_sent(database_url):
     async def scenario(pool):
         mock = MockLLM(PLAY_3)
