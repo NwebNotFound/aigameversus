@@ -7,7 +7,16 @@
 	 * position), the five community cards, the pot and any side pots. With spoilers on, hole
 	 * cards are face up and each player shows a chance to win; with spoilers off, only backs.
 	 */
-	let { spec, spoilers }: { spec: Record<string, unknown>; spoilers: boolean } = $props();
+	let {
+		spec,
+		spoilers,
+		names = {}
+	}: {
+		spec: Record<string, unknown>;
+		spoilers: boolean;
+		names?: Record<string, string>;
+	} = $props();
+	const label = (seat: string) => names[seat] ?? seat;
 
 	interface Seat {
 		player: string;
@@ -68,7 +77,7 @@
 			class:broke={seat.stack === 0}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
-			aria-label={seat.player}
+			aria-label={label(seat.player)}
 		>
 			<header>
 				<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
@@ -84,7 +93,7 @@
 						{seat.player.slice(-1).toUpperCase()}
 					</text>
 				</svg>
-				<strong>{seat.player}</strong>
+				<strong>{label(seat.player)}</strong>
 				{#if tag}<span class="tag" class:dealer={tag === 'D'} data-testid="position">{tag}</span
 					>{/if}
 				{#if seat.folded}<span class="tag">folded</span>{/if}
