@@ -9,46 +9,52 @@ The first build targets four games: *Liar's Deck* (a bluffing card game with a
 revolver), No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens* (a Civ-like
 strategy game).
 
-> **Status: early.** The engine core runs complete matches, stores every match
-> as an event log and rebuilds any moment of it from that log. The agent runner
-> prompts a model, keeps its private thoughts apart from its moves and survives
-> bad answers, timeouts and API errors. Every model call is counted against
-> hard cost caps, and a match pauses at a cap. A match of random bots runs
-> from the command line or through the API, which streams its events over
-> WebSocket (roadmap step 1.6, the end of phase 1). So far the players are
-> random bots and a scripted mock model. Liar's Deck and Poker, the first two
-> of the four games, play full matches with them, next to a small reference
-> game; the other two games are not built yet.
+> **Status: early.** Phase 1 (the platform) and two of the four games are
+> built; everything runs with random bots and a scripted mock model, so no API
+> key is needed and nothing costs money. No real model plays yet.
+
+| Game | Status | What exists |
+| --- | --- | --- |
+| *Liar's Deck* (2-4 players) | built, bots only | rules engine, both variants (base, devil card), random bot, rules text |
+| Poker, No-Limit Hold'em (2-6) | built, bots only | betting rounds, side pots, tournament with duplicate mode, random bot, rules text |
+| Werewolf (6-16) | in progress | roles as data, templates, role selection checks and balance light, seeded deal; no game rules yet |
+| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text; no game rules yet |
+
+Also built: the agent runner with the mock LLM, cost caps with a spend ledger,
+the `arena` command, the match API with a WebSocket event stream, multiplayer
+Elo with a leaderboard, and the SvelteKit spectator shell. Live match views,
+replays, memory and real models are planned (see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for what is built and what is not).
 
 ![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
 
 ![Leaderboard with DEMO random-bot players: rating, games, win rate and average placement](docs/images/web-leaderboard-1280.png)
 
-*The home page of the spectator UI (roadmap step 5.1). Live match views and match GIFs follow in phase 5.*
+*Home page and leaderboard of the spectator UI. The leaderboard shows DEMO random-bot players from `demo_seed` (below). Live match views and match GIFs are planned.*
 
 ## Quick start
 
 Requires Docker with Compose. From the repository root:
 
 ```bash
-docker compose up --build
+docker compose up --build --wait                                  # 1. start the stack
+docker compose exec arena python -m arena.ratings.demo_seed       # 2. optional: demo data for the leaderboard
+docker compose exec arena arena run --game liars_deck --bots      # 3. play a bot match
 ```
 
-That builds and starts five services, each with a healthcheck:
+The stack has five services, each with a healthcheck:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Web UI | <http://localhost:3100> | SvelteKit spectator UI: home page, leaderboard and player profiles; match pages follow in phase 5 |
-| Arena API | <http://localhost:8100> | health, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
-| PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
-| Redis | `localhost:6380` | match queue; today only the worker pings it |
+| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, leaderboard and player profiles; New match and Replays are "soon" placeholders |
+| Arena API | <http://127.0.0.1:8100> | health, matches, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
+| PostgreSQL | `127.0.0.1:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
+| Redis | `127.0.0.1:6380` | match queue; today only the worker pings it |
 
-To see a filled leaderboard without any model calls, add demo data (six
-"DEMO …" random-bot players; refused once real profiles exist):
-
-```bash
-docker compose exec arena python -m arena.ratings.demo_seed
-```
+**What you see at <http://127.0.0.1:3100>:** the home page with the four game
+cards and the list of running matches (or "No matches running"), and the
+Leaderboard page with Elo ratings per game and overall. Step 2 fills it with
+six "DEMO ..." random-bot players; it is refused once real profiles exist.
 
 All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
 `--volumes` to also delete the database).
@@ -70,6 +76,44 @@ High Card (toy), players p1 p2, seed 7
 Result: 1. p2  2. p1
 ```
 
+Liar's Deck and Poker work the same way (output shortened; the full logs are
+120 and 641 lines). Hidden cards are marked `[only p1]` or `[spectators only]`,
+as a spectator sees them:
+
+```bash
+docker compose exec arena arena run --game liars_deck --players 3 --bots --seed 7
+```
+
+```
+Liar's Deck (liars_deck), players p1 p2 p3, seed 7
+   0  match_started    {"game": "liars_deck", "version": "1", "players": ["p1", "p2", "p3"], "settings": {}, "seed": 7}  [spectators only]
+   4  round_started    {"round": 1, "table_card": "queen", "starter": "p1", "hand_size": 5, "players": ["p1", "p2", "p3"]}
+   8  action_accepted  {"player": "p1", "tool": "play_cards", "arguments": {"card_ids": ["Q6"]}}  [only p1]
+   9  cards_played     {"player": "p1", "count": 1}
+  ...
+  24  trigger_pulled   {"player": "p3", "pull": 1, "live": true}
+  ...
+ 116  match_over       {"winner": "p2"}
+ 117  match_finished   {"placements": [{"player": "p2", "rank": 1}, {"player": "p1", "rank": 2}, {"player": "p3", "rank": 3}]}
+Result: 1. p2  2. p1  3. p3
+```
+
+```bash
+docker compose exec arena arena run --game poker --players 3 --bots --seed 7
+```
+
+```
+Poker (poker), players p1 p2 p3, seed 7
+   0  match_started    {"game": "poker", "version": "1", "players": ["p1", "p2", "p3"], "settings": {}, "seed": 7}  [spectators only]
+   1  hand_started     {"hand": 1, "button": "p1", "small_blind_player": "p2", "big_blind_player": "p3", "small_blind": 10, "big_blind": 20, "players": ["p1", "p2", "p3"]}
+   ...
+  10  bet_action       {"player": "p1", "kind": "raise", "street": "preflop", "to": 40, "added": 40}
+   ...
+ 637  match_over       {"reason": "last_player", "winner": "p1"}
+ 638  match_finished   {"placements": [{"player": "p1", "rank": 1}, {"player": "p3", "rank": 2}, {"player": "p2", "rank": 3}]}
+Result: 1. p1  2. p3  3. p2
+```
+
 Or through the API, with a second between turns so that it can be watched:
 
 ```bash
@@ -84,7 +128,7 @@ matches. Without Docker, `uv run arena run --game toy --bots` does the same as
 the first command. `arena games` lists what can be played: `toy` is High Card,
 the small reference game, `liars_deck` is Liar's Deck and `poker` is Poker.
 
-Configuration is optional for now. To change the database password or add a
+Configuration is optional. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
 and Compose passes the key on to the arena. Nothing uses the key yet.
 
@@ -137,17 +181,19 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 ## Layout
 
 ```
-arena/      core: API, engine, agent runner, memory, game master
-games/      one plugin package per game
+arena/      core: API, engine, agent runner, cost caps, ratings, `arena` command
+games/      one package per game: toy, liars_deck, poker, werewolf (data), civ (data)
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
-web/        spectator UI
-docs/       design spec, decisions, credits
+web/        spectator UI (SvelteKit)
+docs/       design spec, architecture, testing, decisions, credits
 tests/      tests for the arena core
 ```
 
 ## Documentation
 
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the building blocks and one turn, with diagrams.
+- [docs/TESTING.md](docs/TESTING.md): tests, lint, secret scan and the compose smoke test.
 - [docs/DESIGN.md](docs/DESIGN.md): the full design spec (German).
 - [docs/DECISIONS.md](docs/DECISIONS.md): decisions taken where the spec is open or overridden.
 - [docs/CREDITS.md](docs/CREDITS.md): origin of every asset.
