@@ -213,6 +213,33 @@ export interface Profile {
 	memory: { available: boolean; note: string };
 }
 
+/** What a model cost and how often the server refused its answers. */
+export interface Usage {
+	cost_total_micro_eur: number;
+	cost_per_game_micro_eur: number | null;
+	answers: number;
+	tool_error_rate: number | null;
+}
+
+/** `GET /models/{id}`: one model across all its matches and seats. */
+export interface ModelPage {
+	/** null for a model that is not in config/models.yaml. */
+	model: {
+		id: string;
+		vendor: string | null;
+		provider_model: string;
+		input_usd_per_mtok: number;
+		output_usd_per_mtok: number;
+	} | null;
+	/** The profile without a personality; null until the model has played. */
+	profile_id: string | null;
+	overall: Standing | null;
+	usage: Usage;
+	games: (Standing & { game_id: string; usage: Usage })[];
+	recent_matches: RecentMatch[];
+	personalities: { profile_id: string; personality_id: string }[];
+}
+
 /** `GET /profiles/{id}/stats`: totals per game, from the logs of the rated matches. */
 export interface ProfileStats {
 	profile_id: string;
@@ -241,6 +268,7 @@ export interface ArenaClient {
 	listMatches(): Promise<MatchesResult>;
 	leaderboard(game?: string, kind?: LeaderboardKind): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
+	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
@@ -330,6 +358,14 @@ export function createArenaClient(
 			return getJson<Leaderboard>(
 				`/leaderboard${query}`,
 				(body) => isObject(body) && Array.isArray(body.rows) && Array.isArray(body.games)
+			);
+		},
+
+		model(id) {
+			return getJson<ModelPage>(
+				`/models/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && Array.isArray(body.games) && isObject(body.usage),
+				[404]
 			);
 		},
 
