@@ -1,4 +1,58 @@
-# Models that can take a seat in a match. Format: docs/DESIGN.md, "Modell-Konfiguration".
-# Empty on purpose: until the default roster lands (roadmap step 1.5), every seat
-# is a random bot or the mock LLM, so nothing here can cost money.
-models: {}
+# Spending limits and the models that can take a seat in a match.
+# Checked by arena/config.py; `uv run pytest tests/test_config.py` validates this file.
+
+limits:
+  # A match pauses and asks before a model call that could take it past a cap.
+  match_eur: 0.50   # per match
+  month_eur: 5.00   # all matches of one calendar month (UTC) together
+  # Prices below are in US dollars, the caps in euros. 1.0 counts every dollar
+  # as a full euro; set the real rate if a dollar is worth more than a euro.
+  usd_to_eur: 1.0
+  # Per model call. A prompt that could be longer is not sent; an answer is cut
+  # off by the provider at the output limit.
+  max_input_tokens: 50000
+  max_output_tokens: 1500
+
+# Prices in USD per million tokens, as listed by openrouter.ai on 2026-11-11.
+# The caps count with these numbers: check them when you add or keep a model.
+models:
+  deepseek-flash:
+    provider: openrouter
+    model: deepseek/deepseek-v4.1-flash
+    input_usd_per_mtok: 0.051
+    output_usd_per_mtok: 0.567
+  qwen-flash:
+    provider: openrouter
+    model: qwen/qwen3.8-flash
+    input_usd_per_mtok: 0.15
+    output_usd_per_mtok: 0.47
+  glm-flash:
+    provider: openrouter
+    model: z-ai/glm-5.3-flash
+    input_usd_per_mtok: 0.0399
+    output_usd_per_mtok: 0.0784
+  gpt-luna:
+    provider: openrouter
+    model: openai/gpt-6-luna
+    input_usd_per_mtok: 0.10
+    output_usd_per_mtok: 0.50
+  claude-haiku:
+    provider: openrouter
+    model: anthropic/claude-haiku-5.5
+    input_usd_per_mtok: 0.10
+    output_usd_per_mtok: 0.50
+  mistral-small:
+    provider: openrouter
+    model: mistralai/mistral-small-2603
+    input_usd_per_mtok: 0.15
+    output_usd_per_mtok: 0.60
+  llama-scout:
+    provider: openrouter
+    model: meta-llama/llama-4-scout
+    input_usd_per_mtok: 0.10
+    output_usd_per_mtok: 0.30
+  gemini-flash-lite:
+    provider: openrouter
+    model: google/gemini-2.5-flash-lite
+    input_usd_per_mtok: 0.10
+    output_usd_per_mtok: 0.40
