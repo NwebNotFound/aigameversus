@@ -8,14 +8,68 @@
 export const DEFAULT_API_URL = 'http://127.0.0.1:8100';
 const TIMEOUT_MS = 3000;
 
+export type MatchStatus = 'running' | 'finished' | 'failed' | 'interrupted' | 'aborted';
+
 /** A match as `GET /matches` lists it. */
 export interface MatchSummary {
 	id: string;
 	game: string;
-	status: 'running' | 'finished' | 'failed' | 'interrupted';
+	status: MatchStatus;
 	players: string[];
 	started_at: string;
 }
+
+/** A match as `GET /matches/{id}` returns it. */
+export interface MatchRecord extends MatchSummary {
+	seed: number;
+	settings: Record<string, unknown>;
+	finished_at: string | null;
+	placements: { player: string; rank: number }[] | null;
+}
+
+/** One event of a match log, as the event stream sends it. */
+export interface MatchEvent {
+	seq: number;
+	source: 'engine' | 'game';
+	type: string;
+	data: Record<string, unknown>;
+	/** null: public; a list: only these players; empty: spectators only. */
+	visible_to: string[] | null;
+}
+
+/** `GET /matches/{id}/control`: how a running match is played right now. */
+export interface Control {
+	paused: boolean;
+	turn_delay: number;
+}
+
+/** `GET /matches/{id}/board`: the game's render_spec after the stored turns. */
+export interface Board {
+	game: string;
+	events: number;
+	spec: Record<string, unknown> | null;
+}
+
+/** `GET /matches/{id}/cost`, in millionths of a euro. */
+export interface Cost {
+	total_micro_eur: number;
+	players: Record<string, number>;
+}
+
+/** Everything the live view shows next to the event log. */
+export interface LiveState {
+	match: MatchRecord;
+	board: Board;
+	cost: Cost;
+	/** null when the match is not running (any more). */
+	control: Control | null;
+}
+
+export type ControlAction =
+	| { action: 'pause' }
+	| { action: 'resume' }
+	| { action: 'abort' }
+	| { action: 'speed'; turn_delay: number };
 
 /** One player's standing, as in `GET /leaderboard` and `GET /profiles/{id}`. */
 export interface Standing {
@@ -70,6 +124,11 @@ export interface ArenaClient {
 	listMatches(): Promise<MatchesResult>;
 	leaderboard(game?: string): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
+	liveState(id: string): Promise<ApiResult<LiveState>>;
+	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
+	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
+	/** The WebSocket URL of a match's event stream. */
+	eventsUrl(id: string): string;
 }
 
 export function createArenaClient(
@@ -78,9 +137,10 @@ export function createArenaClient(
 ): ArenaClient {
 	const root = baseUrl.replace(/\/+$/, '');
 
-	function get(path: string): Promise<Response> {
+	function get(path: string, init: RequestInit = {}): Promise<Response> {
 		return fetchFn(`${root}${path}`, {
-			headers: { accept: 'application/json' },
+			...init,
+			headers: { accept: 'application/json', ...init.headers },
 			signal: AbortSignal.timeout(TIMEOUT_MS)
 		});
 	}
@@ -89,11 +149,12 @@ export function createArenaClient(
 	async function getJson<T>(
 		path: string,
 		valid: (body: unknown) => boolean,
-		notFound: number[] = [404]
+		notFound: number[] = [404],
+		init: RequestInit = {}
 	): Promise<ApiResult<T>> {
 		let response: Response;
 		try {
-			response = await get(path);
+			response = await get(path, init);
 		} catch (error) {
 			return { state: 'unreachable', reason: describe(error) };
 		}
@@ -143,6 +204,52 @@ export function createArenaClient(
 				// 422: the id is not a valid profile id, so no such player exists either.
 				[404, 422]
 			);
+		},
+
+		async liveState(id) {
+			const match = encodeURIComponent(id);
+			// 422: not a valid match id, so no such match either.
+			const record = await getJson<MatchRecord>(`/matches/${match}`, isObject, [404, 422]);
+			if (record.state !== 'ok') return record;
+			const [board, cost, control] = await Promise.all([
+				getJson<Board>(`/matches/${match}/board`, (body) => isObject(body) && 'spec' in body),
+				getJson<Cost>(`/matches/${match}/cost`, (body) => isObject(body) && isObject(body.players)),
+				// 409: the match is not running, so there is nothing to control.
+				getJson<Control>(`/matches/${match}/control`, isObject, [409])
+			]);
+			if (board.state !== 'ok') return board;
+			if (cost.state !== 'ok') return cost;
+			if (control.state === 'unreachable') return control;
+			return {
+				state: 'ok',
+				data: {
+					match: record.data,
+					board: board.data,
+					cost: cost.data,
+					control: control.state === 'ok' ? control.data : null
+				}
+			};
+		},
+
+		control(id, command) {
+			const match = encodeURIComponent(id);
+			const speed = command.action === 'speed';
+			return getJson<Control | MatchRecord>(
+				`/matches/${match}/${command.action}`,
+				isObject,
+				[404, 409, 422],
+				speed
+					? {
+							method: 'PUT',
+							headers: { 'content-type': 'application/json' },
+							body: JSON.stringify({ turn_delay: command.turn_delay })
+						}
+					: { method: 'POST' }
+			);
+		},
+
+		eventsUrl(id) {
+			return `${root.replace(/^http/, 'ws')}/matches/${encodeURIComponent(id)}/events`;
 		}
 	};
 }

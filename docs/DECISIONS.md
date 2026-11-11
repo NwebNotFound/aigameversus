@@ -1196,7 +1196,94 @@ Each entry: date, decision, why, alternatives considered.
   thinner, and the replay page can use the finished one); one free-text
   generator without beats (not testable).
 
-## D-063 · Real models take their seats from the command line first
+## D-064 · Live view: SSE relay on the web server, a generic board, spoilers in the UI
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The browser follows a match through `GET /matches/<id>/stream` on the web
+    server, as server-sent events. The web server reads the arena's WebSocket
+    and sends each event with its `seq` as the SSE id. Close 1000 becomes an
+    `end` event, 4404 `missing`; any other close just ends the response, and
+    the browser's EventSource reconnects. The relay skips the positions up to
+    `Last-Event-ID`; the page also keeps each position once, so a reconnect
+    from the start shows nothing twice.
+  - Board, cost and controls come from `GET /matches/<id>/state` (web server),
+    reloaded after new events, at most about three times a second. Controls go
+    to the same URL as `POST {action}`.
+  - Columns: an event with `visible_to = null` is public (middle); every other
+    event, thoughts included, is behind the scenes (right). The player filter
+    keeps the events whose `player`, `caller` or `target` is that player, or
+    that the player may see. Newest events come first.
+  - One generic board draws every `render_spec` with `seats` as cards with
+    their fields as text; a spec without seats is shown as JSON. The game
+    tables of steps 5.4 and 5.5 replace it per `layout`.
+  - Spoilers are a UI setting, on by default (spectators see everything,
+    DESIGN). Off hides the board fields `hand`, `cards` and `role` and the
+    whole right column. The list of secret fields lives in the UI
+    (`web/src/lib/live.ts`), not in the plugins.
+  - Cost shows four decimals of a euro, rounded up like the ledger.
+- **Why:** SSE keeps the rule of D-030 (no browser call to the arena, no CORS)
+  and brings reconnects with a resume position for free. Reloading the board
+  from the API keeps the board logic in the plugin; the UI never rebuilds
+  state. A fixed list of secret fields covers the three games with a board
+  today without changing their plugins.
+- **Alternatives:** a WebSocket proxy in the Node server (it would need a
+  custom server around the adapter's handler); browser calls to the arena with CORS; spoiler marks in each
+  `render_spec`; boards built from the events in the browser.
+
+## D-067 · Game tables are components chosen by the render_spec layout
+
+- **Date:** 2026-11-11
+- **Decision:** The live view's `Board` picks a table component by the `layout`
+  of the plugin's `render_spec` (`card_table` is the Liar's Deck bar table in
+  `web/src/lib/components/LiarsDeckTable.svelte`) and falls back to the generic
+  board when the spec does not have the fields the table needs. `Board` also
+  gets the match log (`events`), so a table can react to what just happened.
+  The Liar's Deck table shows a banner for each call ("Liar!") and each shot
+  ("click" or "BANG") for 1.3 seconds, in order, at most six at a time, and
+  never for the backlog it finds when it appears: replays and reloads do not
+  replay the drama. The art is inline SVG and CSS, no files.
+- **Why:** The spec is a plain dict, so the UI decides the drawing; falling back
+  keeps the live view working for a game without a table. Reading the log
+  keeps the plugin free of animation state.
+- **Alternatives:** an animation field in `render_spec` (puts UI state in the
+  plugin); one component per game chosen by game id (breaks for variants that
+  share a layout).
+
+## D-068 · The Poker spectator spec carries side pots and win chances
+
+- **Date:** 2026-11-11
+- **Decision:** `Poker.render_spec` adds `side_pots` (the main pot and side pots as
+  `{amount, eligible}`, empty when fewer than two players are live) and, per
+  seat, `win_probability`: the player's chance to win if the hand ran to the
+  river now (`win_probabilities` of `games/poker/evaluator.py`, 400 sampled
+  runouts, `None` for folded players). The random stream is fixed by hand number
+  and board size, so a state always gives the same numbers. The Poker table
+  shows the chances only with spoilers on, and `win_probability` joins the
+  fields the UI hides with spoilers off.
+- **Why:** The table must show pot and side pots and, optionally, the chances;
+  the UI cannot evaluate hands. The chances follow from every hole card, so they
+  are spectator information like the hole cards themselves.
+- **Alternatives:** a hand evaluator in TypeScript (a second implementation to
+  keep in step); a separate API endpoint for the chances (a second request per
+  turn); exact enumeration (too slow before the flop).
+
+## D-069 · The Werewolf circle draws votes from the log and shows no model names
+
+- **Date:** 2026-11-11
+- **Decision:** The Werewolf circle (`layout: player_circle`) gets its vote arrows
+  from the match log, not from the plugin: the votes cast since the day began
+  (the last one per voter, an abstention takes a vote back) stay drawn after the
+  result until the next night starts, with the count against each player on
+  their seat. The backdrop follows the plugin phase: night, dusk or day. Roles
+  show only with spoilers on, as a `?` otherwise. Seats show the player id, not
+  a model name, because the spectator spec has none.
+- **Why:** The votes are public events, so the log is the source and the plugin
+  needs no UI state. The spec carries seats and phase only.
+- **Alternatives:** adding the votes to `render_spec`; passing the model names to
+  the board (needs the match record in the board props, a later step).
+
+## D-070 · Real models take their seats from the command line first
 
 - **Date:** 2026-11-11
 - **Decision:** `arena run --game <id> --models <id>,<id>,...` is the first

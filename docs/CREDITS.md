@@ -6,5 +6,6 @@ from existing games.
 
 | Asset | Path | Origin | Author / tool |
 | --- | --- | --- | --- |
-
-No assets yet.
+| Liar's Deck table: avatars, card faces and backs, revolver cylinder | `web/src/lib/components/LiarsDeckTable.svelte` | original, inline SVG and CSS | made for this project |
+| Poker table: avatars, card faces and backs, chip stacks, dealer button | `web/src/lib/components/PokerTable.svelte` | original, inline SVG and CSS | made for this project |
+| Werewolf circle: avatars, night and day backdrop, moon and sun, vote arrows | `web/src/lib/components/WerewolfCircle.svelte` | original, inline SVG and CSS | made for this project |

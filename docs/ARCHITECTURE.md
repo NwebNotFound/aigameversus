@@ -7,7 +7,7 @@ What is built on `main` today, and what is planned. Spec: [DESIGN.md](DESIGN.md)
 
 ```mermaid
 flowchart LR
-    UI["6. Spectator UI<br/>(web/, SvelteKit: home page)"]
+    UI["6. Spectator UI<br/>(web/, SvelteKit: home, live view)"]
     SRV["1. Arena server<br/>arena/api, arena/engine<br/>(engine built, API: /health, Werewolf setup)"]
     PLG["2. Game plugins<br/>games/*<br/>(High Card, Liar's Deck, Poker, Werewolf built)"]
     AGT["3. Agent runner<br/>arena/agents<br/>(random bot, model agent, mock LLM built)"]
@@ -31,7 +31,7 @@ flowchart LR
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
-| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, leaderboard with game tabs, player profiles; New match and Replays are placeholders |
+| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, live view of a match, leaderboard with game tabs, player profiles; New match and Replays are placeholders |
 
 ## Engine
 
@@ -186,6 +186,15 @@ sequenceDiagram
 - `GET /matches/{id}/board` is the game's `render_spec` of the state after the
   stored log (`null` for a game without one), `GET /matches/{id}/cost` the
   ledger of the match per player.
+- The live view (`web/src/routes/matches/[id]`) never talks to the arena from
+  the browser. `stream/+server.ts` follows the WebSocket on the web server and
+  sends the events on as server-sent events with `seq` as the event id; a
+  reconnect with `Last-Event-ID` gets only what follows
+  (`web/src/lib/stream.ts`), one without it the log from the start; the page
+  keeps each position once either way.
+  `state/+server.ts` returns record, board, cost and controls, and runs a
+  control; the page reloads it after new events, at most about three times a
+  second.
 - `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
   its own process and prints the events. With `--models` it seats real models
   behind a `Budget` and writes the match, its events and the ledger to the
