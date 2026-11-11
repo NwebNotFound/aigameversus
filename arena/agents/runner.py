@@ -34,9 +34,12 @@ class ModelAgent:
         plugin: GamePlugin,
         *,
         settings: Mapping[str, Any] | None = None,
+        memory: str | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ):
+        """`memory`: what this player remembers of the opponents (`arena/memory/block.py`)."""
         self._call = call
+        self._memory = memory
         self._plugin = plugin
         self._settings = settings
         self._rules = plugin.rules(settings)
@@ -44,7 +47,7 @@ class ModelAgent:
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
-        messages = build_messages(self._plugin.name, self._rules, request, summary)
+        messages = build_messages(self._plugin.name, self._rules, request, summary, self._memory)
         return _read(await self._call_model(messages, tool_schemas(request.tools)))
 
     async def _call_model(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:

@@ -84,11 +84,6 @@ class RecentMatch(BaseModel):
     rating_change: float
 
 
-class NotAvailable(BaseModel):
-    available: Literal[False] = False
-    note: str = "not available yet"
-
-
 class ProfileOut(BaseModel):
     id: UUID
     name: str
@@ -97,7 +92,6 @@ class ProfileOut(BaseModel):
     overall: StandingOut | None = Field(description="null until the first rated match")
     ratings: list[GameStanding]
     recent_matches: list[RecentMatch]
-    memory: NotAvailable = Field(default_factory=NotAvailable)
 
 
 def vendor_of(model_id: str) -> str | None:
