@@ -6,8 +6,10 @@ import {
 	loadFavourites,
 	NO_FILTER,
 	priceLabel,
-	saveFavourites
+	saveFavourites,
+	seatChoice
 } from './catalog.js';
+import { BOT } from './new-match.js';
 
 function model(id: string, changes: Partial<CatalogModel> = {}): CatalogModel {
 	return {
@@ -116,6 +118,22 @@ describe('cheapSeats', () => {
 				2
 			)
 		).toEqual([]);
+	});
+});
+
+describe('seatChoice', () => {
+	it('names the bot for the bot and for an empty seat', () => {
+		expect(seatChoice(BOT, CATALOG)).toEqual({ kind: 'bot' });
+		expect(seatChoice(undefined, CATALOG)).toEqual({ kind: 'bot' });
+	});
+
+	it('finds a model of the catalog by its id', () => {
+		expect(seatChoice('glm-flash', CATALOG)).toEqual({ kind: 'model', model: CATALOG[0] });
+	});
+
+	it('keeps an id the catalog does not list as an unknown model, never as the bot', () => {
+		expect(seatChoice('gone/model', CATALOG)).toEqual({ kind: 'unknown', id: 'gone/model' });
+		expect(seatChoice('glm-flash', [])).toEqual({ kind: 'unknown', id: 'glm-flash' });
 	});
 });
 

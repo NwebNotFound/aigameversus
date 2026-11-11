@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CatalogModel } from '#lib/api.js';
-	import { filterCatalog, NO_FILTER, PRICE_STEPS, priceLabel } from '#lib/catalog.js';
+	import { filterCatalog, NO_FILTER, PRICE_STEPS, priceLabel, seatChoice } from '#lib/catalog.js';
 	import { BOT } from '#lib/new-match.js';
 
 	/**
@@ -32,7 +32,8 @@
 	let verifiedOnly = $state(false);
 	let onlyFavourites = $state(false);
 
-	const chosen = $derived(models.find((m) => m.id === value) ?? null);
+	const choice = $derived(seatChoice(value, models));
+	const chosen = $derived(choice.kind === 'model' ? choice.model : null);
 	const matching = $derived(
 		filterCatalog(models, {
 			...NO_FILTER,
@@ -58,7 +59,7 @@
 	<button
 		type="button"
 		class="current"
-		class:model={chosen !== null}
+		class:model={choice.kind !== 'bot'}
 		aria-expanded={open}
 		aria-label="Player of {seat}"
 		data-value={value}
@@ -69,6 +70,10 @@
 			<small>{chosen.openrouter_id} · {priceLabel(chosen)} per 1M</small>
 			{#if !chosen.verified}<span class="tag warn">price not checked, budgeted +25%</span>{/if}
 			{#if chosen.high_price}<span class="tag danger">high price</span>{/if}
+		{:else if choice.kind === 'unknown'}
+			<strong>{choice.id}</strong>
+			<small>not in the model list: no price known</small>
+			<span class="tag danger" data-testid="unknown-model">unknown model</span>
 		{:else}
 			<strong>Random bot</strong>
 			<small>free</small>

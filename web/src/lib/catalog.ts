@@ -1,5 +1,6 @@
 /** The model picker of the launch form: search, filters and shortcuts over GET /models/catalog. */
 import type { CatalogModel } from './api.js';
+import { BOT } from './new-match.js';
 
 export interface CatalogFilter {
 	/** Words that must all appear in the name, id or vendor (case-insensitive). */
@@ -63,6 +64,20 @@ export function cheapSeats(models: CatalogModel[], seats: number): string[] {
 		);
 	if (!cheap.length) return [];
 	return Array.from({ length: seats }, (_, i) => cheap[i % cheap.length].id);
+}
+
+/** Who a seat's value names: the bot, a model of the catalog, or an id the catalog does not know. */
+export type SeatChoice =
+	{ kind: 'bot' } | { kind: 'model'; model: CatalogModel } | { kind: 'unknown'; id: string };
+
+/**
+ * What the seat picker shows for `value`. An id the catalog does not list is still
+ * submitted as a model, so it is shown as such, never as the free bot.
+ */
+export function seatChoice(value: string | undefined, models: CatalogModel[]): SeatChoice {
+	if (!value || value === BOT) return { kind: 'bot' };
+	const model = models.find((m) => m.id === value);
+	return model ? { kind: 'model', model } : { kind: 'unknown', id: value };
 }
 
 /** "$0.040 / $0.078": a price per million tokens in and out, short. */
