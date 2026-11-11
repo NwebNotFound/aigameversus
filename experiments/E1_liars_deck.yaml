@@ -360,4 +360,5 @@ limitations:
   - "Stage B compares a model with itself; it does not say whether effort helps against other models."
   - "Stage C has 24 matches per guest: only large advantages can be shown."
   - "Prices and the dollar rate in the ledger are upper bounds, not invoices."
+  - "Cost: before arena commit 6b40d46 (#106) a call the provider refused with 429 was booked at its upper bound and never corrected. In the ledger 45 calls stayed unsettled: 29 in the pilot (qwen-flash 22, gemini-flash-lite 7; 0.0603 EUR of the pilot's 0.2314), 1 in league A2 (glm-flash, 0.0006 EUR), the rest outside E1. The ledger keeps them as its audit trail; cost per match in the analysis leaves them out (research/E1/unsettled_calls.csv), so pilot cost figures read about 26 % high and league figures are unaffected."
   - "The plan and the analysis are written by an AI model whose vendor has models in the field; tests and scripts are fixed here before any result exists."
