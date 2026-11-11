@@ -56,6 +56,16 @@ MSYS_NO_PATHCONV=1 docker run --rm --volume "$(pwd -W):/repo" \
 
 On Linux or macOS use `--volume "$PWD:/repo"` and drop `MSYS_NO_PATHCONV`.
 
+## Sharing the stack with other agents
+
+Several agents share this machine, one Compose project and its fixed ports.
+Before `docker compose up`, `down` or `build` on the `aigameversus` stack (also
+for tests that need only Postgres or Redis), take the lock: create
+`C:\Users\nilsw\OpenBot\Shared\AIGameVersus\.compose.lock` with your name and
+the time. If it exists and is younger than 30 minutes, wait and retry in
+2 minutes; an older lock is stale and may be taken. Delete it when you are done.
+Pure unit tests need no lock.
+
 ## Compose smoke test
 
 ```bash
@@ -80,13 +90,19 @@ npm run test:unit      # Vitest
 npm run build          # production build
 ```
 
-The Playwright smoke tests open the running UI on port 3100, so start the stack
-first and then run them:
+The Playwright smoke tests open the running UI on port 3100. Start the stack,
+fill it with demo ratings for the leaderboard tests, then run them:
 
 ```bash
 docker compose up --build --detach --wait --wait-timeout 180   # from the repo root
+docker compose exec -T arena python -m arena.ratings.demo_seed --matches 30
 cd web && npx playwright test
 ```
+
+`demo_seed` creates six "DEMO …" profiles and rates random-bot High Card
+matches between them: no model is called. The same seed gives the same matches,
+and running it again adds nothing. It refuses to run when the database holds any
+profile that is not a demo profile, so it never mixes with real results.
 
 - `WEB_URL` overrides the address, for example `WEB_URL=http://127.0.0.1:5173`
   against `npm run dev`.

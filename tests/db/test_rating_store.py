@@ -1,6 +1,6 @@
 import asyncio
 import random
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
@@ -132,6 +132,86 @@ def test_parallel_matches_both_count(database_url):
     ann_ratings = run(database_url, scenario)
 
     assert ann_ratings["poker"].games_played == 2
+
+
+def test_leaderboard_per_game_is_sorted_with_win_rate_and_placement(database_url):
+    async def scenario(store, pool):
+        ann, bob, cid = await profiles(store, 3)
+        await store.apply_match_result(uuid4(), "poker", placed([ann, bob, cid], [1, 2, 3]))
+        await store.apply_match_result(uuid4(), "poker", placed([ann, bob, cid], [1, 3, 2]))
+        await store.apply_match_result(uuid4(), "werewolf", placed([cid, bob], [1, 2]))
+        return ann, cid, await store.leaderboard("poker"), await store.rated_games()
+
+    ann, cid, board, games = run(database_url, scenario)
+
+    assert games == ["poker", "werewolf"]
+    assert [s.name for s in board] == ["p0", "p2", "p1"]
+    top = board[0]
+    assert str(top.profile_id) == ann
+    assert (top.games_played, top.win_rate, top.average_placement) == (2, 1.0, 1.0)
+    assert board[1].average_placement == 2.5
+    assert [s.rating for s in board] == sorted((s.rating for s in board), reverse=True)
+
+
+def test_overall_leaderboard_combines_games(database_url):
+    async def scenario(store, pool):
+        ann, bob = await profiles(store, 2)
+        await store.apply_match_result(uuid4(), "poker", placed([ann, bob], [1, 2]))
+        await store.apply_match_result(uuid4(), "werewolf", placed([ann, bob], [2, 1]))
+        return await store.leaderboard()
+
+    board = run(database_url, scenario)
+
+    assert [s.games_played for s in board] == [2, 2]
+    assert all(s.win_rate == 0.5 and s.average_placement == 1.5 for s in board)
+    # 1016 and 984 in poker, then the reverse in werewolf: both end at 1000 overall.
+    assert [s.rating for s in board] == [pytest.approx(1000.0), pytest.approx(1000.0)]
+
+
+def test_profiles_without_rated_matches_are_not_on_the_board(database_url):
+    async def scenario(store, pool):
+        await profiles(store, 2)
+        return (
+            await store.leaderboard(),
+            await store.leaderboard("poker"),
+            await store.rated_games(),
+        )
+
+    assert run(database_url, scenario) == ([], [], [])
+
+
+def test_profile_has_per_game_ratings_and_recent_matches(database_url):
+    async def scenario(store, pool):
+        ann, bob = await profiles(store, 2)
+        first, second = uuid4(), uuid4()
+        await store.apply_match_result(first, "poker", placed([ann, bob], [1, 2]))
+        await store.apply_match_result(second, "poker", placed([ann, bob], [2, 1]))
+        return first, second, await store.profile(UUID(ann), recent=5)
+
+    first, second, profile = run(database_url, scenario)
+
+    assert profile.name == "p0" and profile.model_id == "mock-llm"
+    assert profile.per_game["poker"].games_played == 2
+    assert profile.overall.win_rate == 0.5
+    assert [m.match_id for m in profile.recent_matches] == [second, first]
+    assert profile.recent_matches[1].rating_change == pytest.approx(16.0)
+    assert profile.recent_matches[0].rank == 2 and profile.recent_matches[0].players == 2
+
+
+def test_unknown_profile_is_none(database_url):
+    assert run(database_url, lambda store, pool: store.profile(uuid4())) is None
+
+
+def test_new_profile_has_no_games_yet(database_url):
+    async def scenario(store, pool):
+        (ann,) = await profiles(store, 1)
+        return await store.profile(UUID(ann))
+
+    profile = run(database_url, scenario)
+
+    assert profile.overall is None
+    assert profile.per_game == {}
+    assert profile.recent_matches == []
 
 
 def test_concurrent_and_repeated_matches_neither_deadlock_nor_lose_updates(database_url):
