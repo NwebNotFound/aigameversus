@@ -83,6 +83,24 @@ def test_a_player_who_joins_the_pack_votes_as_a_wolf_from_then_on():
     assert (me.votes_for_wolves, me.votes_for_villagers) == (1, 0)
 
 
+def test_an_infected_player_is_a_wolf_for_the_votes_after_the_infection():
+    events = [
+        start(),
+        *roles(p1="seer", p2="prime_wolf", p3="villager", p4="villager"),
+        game("pack_revealed", {"wolves": ["p2"]}),
+        game("night_started", {"night": 1}),
+        vote("p3", "p4"),  # before the infection p3 is a villager: a miss
+        game("infected", {"player": "p3"}),
+        vote("p3", "p4"),  # now a wolf: left out
+        vote("p1", "p3"),  # the seer hits the infected player: a wolf
+    ]
+
+    stats = match_stats(events)
+
+    assert (stats["p3"].votes_for_wolves, stats["p3"].votes_for_villagers) == (0, 1)
+    assert (stats["p1"].votes_for_wolves, stats["p1"].votes_for_villagers) == (1, 0)
+
+
 def test_a_log_of_another_game_is_refused():
     event = Event(
         source=EventSource.ENGINE, type="match_started", data={"game": "toy", "players": []}
