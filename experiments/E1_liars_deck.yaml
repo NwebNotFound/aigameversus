@@ -1,0 +1,267 @@
+# Experiment 1: who plays Liar's Deck well, does thinking longer help, and do
+# stronger models beat cheap ones?
+#
+# This file is the pre-registration. It is written before the first paid match.
+# Once `status` is `approved` it changes only through an entry under
+# `amendments`, with a higher `version`, a date and a reason.
+# Checked by arena/research/experiment.py; the matches it fixes are in
+# E1_liars_deck_schedule.csv (tests/research/test_experiment.py keeps both in step).
+
+id: E1
+title: "Liar's Deck: a league of cheap models, reasoning effort, and stronger guests"
+version: 1
+status: proposed          # proposed -> approved (Arena Lead) -> running -> closed
+registered: "2026-11-11"
+author: Arena Researcher
+amendments: []
+
+question: >
+  Three questions, one game. A: do the eight cheap roster models differ in
+  playing strength and in bluffing skill? B: does the same model play better
+  when it is allowed to think longer? C: do four stronger models beat cheap
+  ones under equal conditions?
+
+game: liars_deck
+settings: {variant: base}
+
+conditions:
+  seats: 4
+  seat_names: "p1 to p4; no prompt names a model, so players do not know who sits where"
+  memory: "off (at this commit no memory reaches a prompt)"
+  personalities: none
+  language: "English rules text; the game has no language setting"
+  prompt_version: "the commit of main the stage runs on, stored with every match; a stage is never split across commits"
+  history_shown: "last 40 visible events (HISTORY_LIMIT)"
+  sampling: "provider defaults; the arena sets no temperature"
+  tool_choice: required
+  provider_routing: "OpenRouter's default; the serving provider is stored per call if the export has it"
+  usd_to_eur: "1.0 as in config/models.yaml (overstates cost)"
+  needs_before_start:
+    stage_A: "month cap 25 EUR and a per-run budget in the arena"
+    stage_B: "reasoning effort and output limit per seat; one model in several seats"
+    stage_C: "the four strong models in config/models.yaml"
+    all: "per call in the export: tokens in and out, duration, outcome"
+
+# Ids and prices as listed by openrouter.ai/api/v1/models on 2026-11-11 (USD per
+# million tokens). All twelve support tools and tool_choice there.
+models:
+  deepseek-flash:    {openrouter: deepseek/deepseek-v4.1-flash,    input_usd_per_mtok: 0.051,  output_usd_per_mtok: 0.567,  tier: cheap}
+  qwen-flash:        {openrouter: qwen/qwen3.8-flash,              input_usd_per_mtok: 0.15,   output_usd_per_mtok: 0.47,   tier: cheap}
+  glm-flash:         {openrouter: z-ai/glm-5.3-flash,              input_usd_per_mtok: 0.0399, output_usd_per_mtok: 0.0784, tier: cheap}
+  gpt-luna:          {openrouter: openai/gpt-6-luna,               input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.50,   tier: cheap}
+  claude-haiku:      {openrouter: anthropic/claude-haiku-5.5,      input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.50,   tier: cheap}
+  mistral-small:     {openrouter: mistralai/mistral-small-2603,    input_usd_per_mtok: 0.15,   output_usd_per_mtok: 0.60,   tier: cheap}
+  llama-scout:       {openrouter: meta-llama/llama-4-scout,        input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.30,   tier: cheap}
+  gemini-flash-lite: {openrouter: google/gemini-2.5-flash-lite,    input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.40,   tier: cheap}
+  gpt-terra:         {openrouter: openai/gpt-6.1-terra,            input_usd_per_mtok: 1.00,   output_usd_per_mtok: 5.00,   tier: strong}
+  claude-sonnet:     {openrouter: anthropic/claude-sonnet-5.5,     input_usd_per_mtok: 2.00,   output_usd_per_mtok: 10.00,  tier: strong}
+  gemini-flash:      {openrouter: google/gemini-3.8-flash,         input_usd_per_mtok: 0.825,  output_usd_per_mtok: 4.125,  tier: strong}
+  deepseek-pro:      {openrouter: deepseek/deepseek-v4-pro-0813,   input_usd_per_mtok: 0.111,  output_usd_per_mtok: 4.44,   tier: strong}
+
+# Looked at and left out of this plan; same source and date.
+not_chosen:
+  later_candidates:
+    x-ai/grok-4.7:               "2.00 / 6.00"
+    qwen/qwen3.8-max-0902:       "2.00 / 6.00"
+    mistralai/mistral-large-4-0: "0.70 / 2.10"
+    z-ai/glm-5.3:                "0.07 / 1.40"
+    moonshotai/kimi-k3.1-pro:    "2.00 / 10.00"
+    google/gemini-4-carbon:      "2.00 / 10.00"
+  too_expensive_for_this_cap:
+    anthropic/claude-opus-5.5:   "4.00 / 20.00"
+    anthropic/claude-fable-5.2:  "8.00 / 40.00"
+    openai/gpt-6-astra:          "10.00 / 50.00"
+
+stages:
+  - id: A
+    kind: league
+    title: League of the eight cheap models
+    models: [deepseek-flash, qwen-flash, glm-flash, gpt-luna, claude-haiku, mistral-small, llama-scout, gemini-flash-lite]
+    effort: low
+    seeds: 2               # per table
+    seed_base: 1101000     # seed = seed_base + 10 * table + replicate
+    pilot_tables: 2        # tables 1 and 2 hold all eight models: 8 pilot matches
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 3.00
+    estimate_eur: 2.20
+    notes: >
+      14 tables of four in which every pair of models meets 3 times; each table
+      plays 2 seeds; each seed is played with 4 seatings that put every model in
+      every seat once. 112 matches, 56 per model, 14 per model and seat.
+
+  - id: B
+    kind: mirror
+    title: The same model at high and at low reasoning effort
+    models: [gpt-luna, claude-haiku, deepseek-flash, glm-flash]
+    substitutes: [mistral-small, qwen-flash, gemini-flash-lite]
+    efforts: [high, low]
+    seeds: 4               # per model; seed = seed_base + replicate, the same for every model
+    seed_base: 1102000
+    turn_timeout_s: 180
+    max_output_tokens: 8000
+    budget_eur: 5.00
+    estimate_eur: 4.20
+    notes: >
+      All four seats hold one model: two seats at high effort, two at low. The
+      6 ways to choose the high seats, times 4 seeds: 24 matches per model, 96
+      in all. Timeout and output limit are the same for both efforts. Models
+      were picked for four different vendors, reasoning support and few
+      rejected answers in the example matches. A model that fails the pilot
+      rule or the effort check is replaced by the next substitute, in order.
+
+  - id: C
+    kind: guests
+    title: Four stronger models as guests among three cheap hosts
+    guests: [gpt-terra, claude-sonnet, gemini-flash, deepseek-pro]
+    hosts: [gpt-luna, deepseek-flash, glm-flash]
+    substitutes: [claude-haiku, mistral-small]   # for a host that fails the pilot rule
+    effort: low
+    seeds: 2               # per guest; seed = seed_base + replicate, the same for every guest
+    seed_base: 1103000
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 8.00
+    estimate_eur: 7.20
+    notes: >
+      Same conditions as stage A, so guests and league models can be rated on
+      one scale. The guest sits in every seat 3 times per seed, the hosts keep
+      their order: 12 seatings times 2 seeds, 24 matches per guest, 96 in all.
+      Replicate 1 of all guests is played before replicate 2.
+
+hypotheses:
+  - id: H1
+    stage: A
+    kind: confirmatory
+    claim: The eight models are not equally strong.
+    test: >
+      Permutation test. Statistic: sum over models of (mean finishing rank -
+      2.5) squared. Null distribution: finishing ranks shuffled among the four
+      seats inside each match, 100 000 times.
+  - id: H2
+    stage: A
+    kind: secondary to H1
+    claim: A model's share of wins differs from 0.25.
+    test: Exact two-sided binomial test per model, Holm over 8; Wilson 95 % intervals.
+  - id: H3
+    stage: A
+    kind: confirmatory
+    claim: Models call "Liar!" on lies more often than on honest plays.
+    test: >
+      Per model a 2x2 table over the plays it could have called (the play
+      directly before its turn): called or not, lie or honest. Pooled:
+      Mantel-Haenszel odds ratio over models, two-sided. Per model: Fisher's
+      exact test, Holm over 8.
+  - id: H4
+    stage: A
+    kind: design check, a null result is expected
+    claim: The seat does not change the chance to win.
+    test: >
+      Exact multinomial test of the 112 winners' seats against 1/4 each.
+      Reference: random bots won 24.1, 24.2, 26.0 and 25.7 % from seats p1 to
+      p4 in 4 000 matches (seeds 1 to 4 000).
+  - id: H5
+    stage: B
+    kind: confirmatory
+    claim: Seats at high effort finish better than seats at low effort.
+    test: >
+      Statistic: mean over matches of (mean rank of the low seats - mean rank
+      of the high seats). Null distribution: all 6 choices of the two "high"
+      seats inside each match. Two-sided, pooled over the models that pass the
+      effort check; per model as exploratory.
+  - id: H6
+    stage: C
+    kind: confirmatory
+    claim: A stronger model wins more than a quarter of its matches against the hosts.
+    test: >
+      Exact two-sided binomial test of the pooled guest wins against 0.25; per
+      guest the same test, Holm over 4. Guests and league models on one scale:
+      Plackett-Luce strengths from stages A and C with bootstrap intervals.
+  - id: D1
+    stage: all
+    kind: descriptive, no test
+    claim: What a model costs and how reliably it answers.
+    test: >
+      Per model: cost per match and per win, tokens in and out per move,
+      seconds per move, share of answers rejected, share of turns played by
+      the fallback, matches lost to a failed agent.
+
+metrics:
+  outcome: [win, finishing rank, rounds survived]
+  rating: "Plackett-Luce strength and multiplayer Elo (K 32, start 1000), both with 2 000 bootstrap resamples of whole seeds"
+  skill: [lie rate, share of lies caught, call rate, call accuracy, boldest bluff risk, cards per play]
+  reliability: [rejected answers per turn, fallback turns per turn, failed agents, timeouts]
+  cost: [EUR per match, EUR per win, tokens per move, seconds per move]
+  exploratory:
+    - "lie rate against revolver risk (does a model bluff less when a shot is more likely to kill)"
+    - "thought against play: a thought that announces a bluff, by word list, against the cards played"
+    - "length of thoughts and of table talk"
+
+analysis:
+  error_rate: >
+    The four confirmatory tests (H1, H3 pooled, H5, H6 pooled) share a
+    family-wise level of 0.05 by Holm. Tests marked secondary are Holm-corrected
+    inside their own family. Everything else is reported as exploratory, with
+    effect sizes and intervals and without a claim.
+  effect_sizes: "win share with Wilson interval, mean rank difference, odds ratio, strength difference"
+  nulls: "every registered test is reported, whatever its result"
+  unit: >
+    Matches on one seed share cards and revolvers. Bootstrap and permutation
+    work on whole seeds or inside single matches, never on single moves.
+  power: >
+    Exact binomial, 80 % power (arena/research/power.py). Stage A, 56 matches
+    per model: a win share of 0.48 against 0.25 with Holm's strictest level,
+    0.44 uncorrected; smaller gaps will be reported as not resolved. The rank
+    test of H1 uses all four places and is expected to see less. Stage B, 96
+    matches: a high seat winning 0.66 of matches against 0.50. Stage C: 0.61
+    per guest (24 matches), 0.40 pooled (96 matches); with replicate 1 only,
+    0.45 pooled. These are guides: matches on one seed are not independent.
+  scripts: "arena/research/, written and tested on bot and mock-LLM matches before stage results are read"
+
+rules:
+  valid_match: "status finished and the stored log rebuilds the final state"
+  failed_match: >
+    A match that crashed or stopped at a cap is played once more with the same
+    seed and seating. Both attempts stay in the data set, marked. A second
+    failure is reported as missing.
+  fallback: >
+    A turn played by the fallback counts as the model's play (intention to
+    treat). Sensitivity analysis: the same tests without matches in which an
+    agent failed.
+  pilot: >
+    After the 8 pilot matches of stage A, nothing but reliability and cost is
+    looked at. A model with more than 10 % of its turns played by the fallback,
+    or with a failed agent in 2 of its 4 matches, stops the stage: Arena Lead
+    decides. If nothing changes, the pilot matches count. If the prompt, the
+    arena or the roster changes, they are discarded and played again.
+  effort_check: >
+    Stage B, after replicate 1: a model whose high seats did not use at least
+    twice the output tokens per move of its low seats did not get the
+    treatment. It is replaced by the next substitute and reported.
+  no_peeking: >
+    While a stage runs, only cost, failures and fallback rates are watched.
+    Outcome tests run once, when the stage is complete or its budget has
+    stopped it.
+  budget_stop: >
+    Before each match: if the stage's cost so far plus twice its mean match
+    cost would pass the stage budget, the stage stops. A stop depends on cost
+    only, never on results. No stage starts without Arena Lead's approval of
+    this file.
+  time: "a stage is played within 48 hours; start and end times are reported"
+
+budget:
+  month_cap_eur: 25.00
+  spent_before_eur: 0.18
+  reserve_eur: 5.00          # 20 % of the cap, not planned
+  other_plans_eur:
+    E2_poker_duplicate: 2.80 # own file, written after stage A's pilot
+
+limitations:
+  - "One game, one variant, one prompt: results say nothing about other games or prompts."
+  - "Reasoning effort low and a 1 500 token limit in stages A and C favour models that answer briefly."
+  - "A model id can be served by different providers and can change over time; results belong to the dates of the run."
+  - "No temperature is set and no call is repeated, so sampling noise is part of every result."
+  - "Stage B compares a model with itself; it does not say whether effort helps against other models."
+  - "Stage C has 24 matches per guest: only large advantages can be shown."
+  - "Prices and the dollar rate in the ledger are upper bounds, not invoices."
+  - "The plan and the analysis are written by an AI model whose vendor has models in the field; tests and scripts are fixed here before any result exists."
