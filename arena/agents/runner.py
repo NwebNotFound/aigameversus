@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
 from arena.agents.model import Message, ModelCall, ModelError, ModelReply
@@ -33,15 +33,18 @@ class ModelAgent:
         call: ModelCall,
         plugin: GamePlugin,
         *,
+        settings: Mapping[str, Any] | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ):
         self._call = call
-        self._game = plugin.name
-        self._rules = plugin.rules()
+        self._plugin = plugin
+        self._settings = settings
+        self._rules = plugin.rules(settings)
         self._sleep = sleep
 
     async def act(self, request: TurnRequest) -> Reply:
-        messages = build_messages(self._game, self._rules, request)
+        summary = self._plugin.situation_summary(request.observation, self._settings)
+        messages = build_messages(self._plugin.name, self._rules, request, summary)
         return _read(await self._call_model(messages, tool_schemas(request.tools)))
 
     async def _call_model(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:

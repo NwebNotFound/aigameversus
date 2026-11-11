@@ -163,3 +163,22 @@ def test_bot_match_names_its_seats_as_random_bots(client):
     match = finish(client, response.json()["id"])
     assert match["seats"]["p3"] == {"name": "Random Bot p3", "model_id": None, "kind": "bot"}
     assert KEY not in response.text
+
+
+def test_model_seats_get_the_prompt_version_of_the_settings(client, answer_with):
+    sent = answer_with(
+        mock_response="Check.",
+        mock_tool_calls=[{**CALL, "function": {"name": "check", "arguments": "{}"}}],
+    )
+    settings = {"prompt_version": "poker-p2", "hand_limit": 1}
+
+    response = client.post(
+        "/matches",
+        json={"game": "poker", "models": MODELS, "confirm_spend": True, "settings": settings},
+    )
+
+    match = finish(client, response.json()["id"])
+    assert match["status"] == "finished"
+    started = client.get(f"/matches/{match['id']}/events").json()[0]
+    assert started["data"]["prompt_version"] == "poker-p2"
+    assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")

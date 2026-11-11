@@ -111,6 +111,7 @@ class Match[StateT: BaseModel]:
                     "version": plugin.version,
                     "players": list(self._agents),
                     "settings": dict(self.settings),
+                    "prompt_version": plugin.prompt_version(self.settings),
                     "seed": self.seed,
                 },
                 # Spectators only: a player who knows the seed knows every hidden draw.
