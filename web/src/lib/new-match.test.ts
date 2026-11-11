@@ -156,7 +156,7 @@ describe('parseForm', () => {
 		it.each([
 			[
 				[BOT, 'qwen-flash', BOT],
-				'Choose a model for every seat, or a bot for every seat: no mixed tables yet.'
+				'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.'
 			],
 			[['qwen-flash', 'gpt-x', 'qwen-flash'], 'Choose a model from the list for every seat.']
 		])('refuses the seats %o', (seat, message) => {

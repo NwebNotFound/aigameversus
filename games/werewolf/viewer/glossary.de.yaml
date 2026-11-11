@@ -1,0 +1,25 @@
+terms:
+  - term: Werwolf
+    meaning: "Ein Spieler im Wolfsteam. Nachts wählen die Wölfe gemeinsam ein Opfer, am Tag verstecken sie sich unter den Dörflern."
+  - term: Dorfbewohner
+    meaning: "Ein Spieler ohne Sonderkraft. Dorfbewohner gewinnen, indem sie die Wölfe finden."
+  - term: Seherin
+    meaning: "Erfährt jede Nacht die Rolle eines Spielers. Ihr Wissen ist stark, deshalb wollen die Wölfe sie tot sehen."
+  - term: Hexe
+    meaning: "Hat zwei Tränke für das ganze Spiel: einer heilt das Opfer der Nacht, einer tötet einen Spieler. Jeder wird einmal benutzt."
+  - term: Beschützer
+    meaning: "Schützt jede Nacht einen Spieler vor den Wölfen. Derselbe Spieler darf nicht zweimal hintereinander geschützt werden."
+  - term: Jäger
+    meaning: "Stirbt der Jäger, erschießt er einen anderen Spieler."
+  - term: Amor
+    meaning: "Macht in der ersten Nacht zwei Spieler zu Verliebten. Stirbt einer von beiden, stirbt auch der andere."
+  - term: Hauptmann
+    meaning: "Ein gewählter Spieler, dessen Stimme doppelt zählt. Ein sterbender Hauptmann bestimmt einen Nachfolger."
+  - term: Rollenbehauptung
+    meaning: "Ein Spieler sagt laut, welche Rolle er hat. Das kann wahr sein oder gelogen."
+  - term: Abstimmung
+    meaning: "Die öffentliche Wahl am Tag. Wer die meisten Stimmen hat, wird hingerichtet."
+  - term: Nacht
+    meaning: "Die Phase, in der die Wölfe töten und Sonderrollen handeln. Öffentlich spricht niemand."
+  - term: Erzähler
+    meaning: "Die Stimme, die die Nacht, die Toten und die Ergebnisse ansagt. Sie ist kein Spieler."

@@ -206,8 +206,11 @@ in the first, 83 of 130 answers were rejected):
 
 Failures:
 
-- A failed model call is retried 3 times, after 1, 2 and 4 seconds. Errors
-  that a retry cannot fix (bad key, bad request) are not retried.
+- A failed model call is retried 3 times, after 1, 2 and 4 seconds; a rate
+  limit after 3, 6 and 12 seconds, and a seat waits out at most 12 rate
+  limits in a match. Every pause is up to half longer at random, so seats do
+  not retry in step. Errors that a retry cannot fix (bad key, bad request)
+  are not retried.
 - When the retries are used up, `ModelAgent` raises `AgentError`. The engine
   logs `agent_failed` (spectators only) and plays random legal actions for
   that seat until the match ends; the agent is not asked again.
@@ -236,7 +239,9 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   table `model_calls`) at the most it can cost: request size in bytes as input
   tokens, the output limit as output tokens. When the answer reports its
   tokens, the booking is corrected. A call that reports nothing (error,
-  timeout, crash) keeps the upper bound, so the ledger is never too low.
+  timeout, crash) keeps the upper bound, so the ledger is never too low;
+  only a call refused with a rate limit (429, refused before anything is
+  generated) is booked at 0.
   The caps hold as long as a provider bills no more than that bound; if one
   does, the real cost is booked and the next call pauses.
 - If the booking would take the match or the month past its cap, the call is
@@ -563,7 +568,12 @@ Copy the shape of `games/toy/`, the smallest complete game.
    bookkeeping, 2 normal, 3 highlight) and a kind; a test fails when a plugin
    emits an event type that has no method. The CLI, the API, the live view,
    replays and exports all show these lines; do not write a second formatter.
-9. Tests, as in `games/toy/tests/`: full bot matches for every player count,
+9. Viewer help for people who have never played it: `games/<id>/viewer/` with
+   `rules_30s.<lang>.yaml` (a title and 6-10 short lines) and `glossary.<lang>.yaml`
+   (8-12 terms), for `en` and `de`; plain words. `GET /games/<id>/viewer-help?lang=`
+   serves them (`arena/viewer_help.py`) and `tests/test_viewer_help.py` fails for a
+   game without them (the reference game `toy` is exempt).
+10. Tests, as in `games/toy/tests/`: full bot matches for every player count,
    same seed gives the same events and state, observations do not depend on
    other players' hidden information, private events are private, rejected
    actions carry a useful message. Add a match with mock-LLM players, as in
@@ -599,7 +609,10 @@ A model you checked yourself is *verified*: an entry under `models` in
 `config/models.yaml`, under an id of your choice that the catalog then uses,
 `provider` (only `openrouter` today), `model` (the provider's name for it) and
 the prices `input_usd_per_mtok` and `output_usd_per_mtok` in US dollars per
-million tokens, as the provider lists them. The cost caps count with these
+million tokens, as the provider lists them. A model that needs it may also set
+`max_output_tokens`, `reasoning_effort` (`off`: not sent) and `tool_choice`
+(`auto` instead of `required`); the rest comes from `limits` (`call_options`),
+and the budget books its calls at its own output limit. The cost caps count with these
 numbers, so check them against the provider's price page, and pick models that
 support tool calls. No code.
 

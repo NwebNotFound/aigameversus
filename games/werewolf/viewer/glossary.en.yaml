@@ -1,0 +1,25 @@
+terms:
+  - term: Werewolf
+    meaning: "A player on the wolf team. At night the wolves choose a victim together; by day they hide among the villagers."
+  - term: Villager
+    meaning: "A player with no special power. Villagers win by finding the wolves."
+  - term: Seer
+    meaning: "Learns one player's role each night. Their knowledge is strong, so the wolves want them dead."
+  - term: Witch
+    meaning: "Has two potions for the whole game: one heals the night's victim, one kills a player. Each is used once."
+  - term: Protector
+    meaning: "Guards one player each night against the wolves. The same player cannot be guarded twice in a row."
+  - term: Hunter
+    meaning: "When the hunter dies, they shoot one other player."
+  - term: Cupid
+    meaning: "Makes two players lovers on the first night. If one lover dies, the other dies too."
+  - term: Captain
+    meaning: "An elected player whose vote counts double. A dying captain names a successor."
+  - term: Role claim
+    meaning: "A player saying out loud which role they hold. It can be true or a lie."
+  - term: Vote
+    meaning: "The public vote by day. The player with the most votes is executed."
+  - term: Night
+    meaning: "The phase in which the wolves kill and special roles act. Nobody speaks in public."
+  - term: Narrator
+    meaning: "The voice that announces the night, the deaths and the results. It is not a player."

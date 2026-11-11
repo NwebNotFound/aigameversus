@@ -86,6 +86,26 @@ export interface LiarsAnalytics {
 	meta?: Record<string, unknown>;
 }
 
+/**
+ * Whether an analytics body has the numbers the tab draws. A game may answer with its
+ * situation only (`numbers: false`, Poker and Werewolf for now); an arena without that
+ * marker is read by its keys. Anything else is "no numbers for this game", never a crash.
+ */
+export function hasNumbers(body: unknown): body is LiarsAnalytics {
+	if (!body || typeof body !== 'object') return false;
+	const b = body as Record<string, unknown>;
+	if (b.numbers === false || b.game !== 'liars_deck') return false;
+	// `sections` lists the parts present: other games have numbers, but not these tables.
+	const sections = b.sections;
+	if (Array.isArray(sections) && !['moves', 'totals'].every((k) => sections.includes(k)))
+		return false;
+	return (
+		['players', 'moves', 'pulls', 'rounds', 'by_round'].every((key) => Array.isArray(b[key])) &&
+		!!b.totals &&
+		typeof b.totals === 'object'
+	);
+}
+
 /** The analytics as they stood after the event at `lastSeq` (all of them when null). */
 export function upTo(data: LiarsAnalytics, lastSeq: number | null): LiarsAnalytics {
 	if (lastSeq === null) return data;

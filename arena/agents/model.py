@@ -33,6 +33,9 @@ class ModelReply:
     cut_off: bool = False  # the answer ran into the output limit before it was finished
 
 
+RATE_LIMITED = "RateLimitError"  # the reason of a call the provider refused: too many requests
+
+
 class ModelError(Exception):
     """A model call failed. `retryable` says whether trying again can help.
 

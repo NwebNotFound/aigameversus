@@ -4,7 +4,15 @@ from decimal import Decimal
 import pytest
 import yaml
 
-from arena.config import CONFIG_PATH, Config, ConfigError, load_config, load_keys
+from arena.config import (
+    CONFIG_PATH,
+    CallOptions,
+    Config,
+    ConfigError,
+    call_options,
+    load_config,
+    load_keys,
+)
 
 VALID = {
     "limits": {
@@ -137,3 +145,26 @@ def test_key_variable_alone_still_works(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY_FILE", raising=False)
 
     assert load_keys(Config.model_validate(VALID), ["some-model"]) == []
+
+
+def with_model(**options):
+    data = {**VALID, "limits": {**VALID["limits"], "reasoning_effort": "low"}}
+    data["models"] = {"some-model": {**VALID["models"]["some-model"], **options}}
+    return Config.model_validate(data)
+
+
+def test_a_model_takes_the_limits_unless_it_sets_its_own_options():
+    assert call_options(with_model(), "some-model") == CallOptions(1500, "low", "required")
+    own = with_model(max_output_tokens=4000, reasoning_effort="off", tool_choice="auto")
+    assert call_options(own, "some-model") == CallOptions(4000, None, "auto")
+    assert (
+        call_options(with_model(reasoning_effort="high"), "some-model").reasoning_effort == "high"
+    )
+
+
+@pytest.mark.parametrize(
+    "options", [{"max_output_tokens": 0}, {"reasoning_effort": "max"}, {"tool_choice": "none"}]
+)
+def test_an_option_out_of_range_is_refused(options):
+    with pytest.raises(ValueError):
+        with_model(**options)
