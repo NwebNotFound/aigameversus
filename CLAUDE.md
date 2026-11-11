@@ -20,8 +20,8 @@ agent runner, which prompts a model and reads its answer; in tests and CI that
 model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models. The `arena`
-command can seat them (`--models`, paid calls inside the caps); `POST /matches`
-seats random bots only. Four games can
+command (`--models`) and `POST /matches` (`models`, on a server started with
+`ARENA_ALLOW_MODEL_SEATS=1`) can seat them, paid calls inside the caps. Four games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`), Poker (`games/poker`) and Werewolf (`games/werewolf`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
@@ -84,14 +84,14 @@ have without the pause.
 
 ### Running matches
 
-Three ways. The first and the last seat random bots only:
+Three ways:
 
 - `arena run --game toy --bots` (`arena/cli.py`) plays a match in its own
   process and prints every event. It needs no server and no database, and
   stores nothing. `arena games` lists the games.
 - `arena run --game liars_deck --models glm-flash,deepseek-flash,...` seats
   models from `config/models.yaml`, one per seat in that order. **This makes
-  paid model calls**, and it is the only thing in the repository that does.
+  paid model calls**, like model seats in `POST /matches` (below).
   Every call goes through one `Budget` (see Cost caps), so the command needs
   `DATABASE_URL` for the ledger; it applies the migrations, records the match
   in `matches` and stores its events like the API does. The provider's key
@@ -115,6 +115,14 @@ Three ways. The first and the last seat random bots only:
   The server plays at most 10 matches at a time (`MAX_RUNNING`) and answers
   429 to a start beyond that; a match that never ends stops at its turn limit
   and is marked `failed`.
+  With `"models": ["glm-flash", ...]` (one per seat) and `"confirm_spend":
+  true` the seats are models behind one `Budget`, as with the command. Model
+  seats are refused (403) unless the server runs with
+  `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key; a cap
+  ends the match as `interrupted`. Every match record has `seats` (seat ->
+  `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
+  the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
+  `GET /replays` adds `real`.
 - A running match can be paused, resumed, sped up or slowed down and aborted:
   `POST /matches/{id}/pause`, `/resume`, `/abort`, `PUT /matches/{id}/speed`,
   state in `GET /matches/{id}/control`. A pause takes effect between turns,
