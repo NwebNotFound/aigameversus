@@ -61,6 +61,12 @@ export interface Profile {
 	memory: { available: boolean; note: string };
 }
 
+/** `GET /profiles/{id}/stats`: totals per game, from the logs of the rated matches. */
+export interface ProfileStats {
+	profile_id: string;
+	games: { game_id: string; matches: number; stats: Record<string, unknown> | null }[];
+}
+
 export type Unreachable = { state: 'unreachable'; reason: string };
 export type ApiResult<T> = { state: 'ok'; data: T } | { state: 'not_found' } | Unreachable;
 export type MatchesResult = { state: 'ok'; matches: MatchSummary[] } | Unreachable;
@@ -70,6 +76,7 @@ export interface ArenaClient {
 	listMatches(): Promise<MatchesResult>;
 	leaderboard(game?: string): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
+	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 }
 
 export function createArenaClient(
@@ -141,6 +148,14 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}`,
 				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
 				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
+			);
+		},
+
+		profileStats(id) {
+			return getJson<ProfileStats>(
+				`/profiles/${encodeURIComponent(id)}/stats`,
+				(body) => isObject(body) && Array.isArray(body.games),
 				[404, 422]
 			);
 		}

@@ -122,6 +122,7 @@ class LiveMatches:
                 match_id,
                 game_id,
                 [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+                seats=profiles,
             )
         except Exception:
             log.exception("Rating of match %s failed", match_id)

@@ -245,3 +245,41 @@ def test_concurrent_and_repeated_matches_neither_deadlock_nor_lose_updates(datab
     # Zero-sum: every point won was lost by someone, so the ratings still average 1000.
     assert sum(row["rating"] - 1000 for row in rows) == pytest.approx(0, abs=1e-6)
     assert sum(row["games_played"] for row in rows) == placements_total
+
+
+def test_seats_are_stored_with_the_result_and_listed_per_game(database_url):
+    async def scenario(store, pool):
+        ann, bob = await profiles(store, 2)
+        first, second = uuid4(), uuid4()
+        seats = {"p1": UUID(ann), "p2": UUID(bob)}
+        await store.apply_match_result(first, "poker", placed([ann, bob], [1, 2]), seats)
+        await store.apply_match_result(first, "poker", placed([ann, bob], [1, 2]), seats)
+        swapped = {"p1": UUID(bob), "p2": UUID(ann)}
+        await store.apply_match_result(second, "liars_deck", placed([ann, bob], [2, 1]), swapped)
+        return first, second, await store.seats(UUID(ann)), await store.seats(UUID(bob))
+
+    first, second, of_ann, of_bob = run(database_url, scenario)
+
+    assert of_ann == {"poker": [(first, "p1")], "liars_deck": [(second, "p2")]}
+    assert of_bob == {"poker": [(first, "p2")], "liars_deck": [(second, "p1")]}
+
+
+def test_seats_must_match_the_placed_profiles(database_url):
+    async def scenario(store, pool):
+        ann, bob = await profiles(store, 2)
+        with pytest.raises(ValueError, match="seats must name each placed profile once"):
+            await store.apply_match_result(
+                uuid4(), "poker", placed([ann, bob], [1, 2]), {"p1": UUID(ann), "p2": UUID(ann)}
+            )
+        return await pool.fetchval("SELECT count(*) FROM rated_matches")
+
+    assert run(database_url, scenario) == 0
+
+
+def test_a_result_without_seats_stores_none(database_url):
+    async def scenario(store, pool):
+        ann, bob = await profiles(store, 2)
+        await store.apply_match_result(uuid4(), "toy", placed([ann, bob], [1, 2]))
+        return await store.seats(UUID(ann))
+
+    assert run(database_url, scenario) == {}

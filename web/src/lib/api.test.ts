@@ -171,3 +171,23 @@ describe('profile', () => {
 		expect(result).toEqual({ state: 'unreachable', reason: 'no connection' });
 	});
 });
+
+describe('profileStats', () => {
+	it('asks for the statistics of one profile', async () => {
+		const body = { profile_id: 'a1', games: [] };
+		const { calls, fetchFn } = fakeFetch(() => Response.json(body));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).profileStats('a1');
+
+		expect(result).toEqual({ state: 'ok', data: body });
+		expect(calls).toEqual(['http://arena:8000/profiles/a1/stats']);
+	});
+
+	it('reports an unknown profile as not found', async () => {
+		const { fetchFn } = fakeFetch(() => new Response('', { status: 404 }));
+
+		expect(await createArenaClient('http://arena:8000', fetchFn).profileStats('x')).toEqual({
+			state: 'not_found'
+		});
+	});
+});
