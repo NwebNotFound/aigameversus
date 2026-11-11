@@ -37,7 +37,7 @@ class Table:
         self.plugin = Poker()
         players = list(stacks)
         self.state = self.plugin.initial_state(
-            players, {"small_blind": small_blind, **(settings or {})}
+            players, {"small_blind": small_blind, "hand_limit": 10, **(settings or {})}
         )
         self.state.stacks = dict(stacks)
         self.total = sum(stacks.values())
@@ -156,7 +156,7 @@ class Passive:
 
 def test_blinds_double_every_ten_hands():
     passive = {p: Passive() for p in SEATS[:2]}
-    settings = {"starting_stack": 100000, "hand_limit": 12}
+    settings = {"hand_limit": 12}  # passive players cannot bust in 12 hands
     match, _ = bot_match(SEATS[:2], seed=2, settings=settings, agents=passive)
 
     blinds = {
@@ -522,7 +522,7 @@ def test_200_random_bot_matches_finish():
 
 
 def test_opponent_stats_count_hands_and_raises():
-    match, _ = bot_match(SEATS[:3], seed=21, settings={"hand_limit": 15, "starting_stack": 20000})
+    match, _ = bot_match(SEATS[:3], seed=21, settings={"hand_limit": 15, "starting_stack": 5000})
     raises = {
         p: sum(
             1
@@ -546,3 +546,35 @@ def test_render_spec_shows_every_hole_card_to_spectators():
 
     assert spec["layout"] == "poker_table"
     assert [s["cards"] for s in spec["seats"]] == [["2c", "3d"], ["4c", "5d"]]
+
+
+# --- turn limit -------------------------------------------------------------------
+
+
+def test_max_turns_is_the_bound_of_the_largest_default_tournament():
+    from games.poker.plugin import DEFAULTS, turn_bound
+
+    assert Poker.max_turns == turn_bound(6, **DEFAULTS) == 70_400
+
+
+def test_the_bound_counts_every_raise_a_hand_can_hold():
+    from games.poker.plugin import turn_bound
+
+    # 2 players, 100 chips, big blind 20: 10 full raises + 2 short all-ins per hand,
+    # 4 streets x 2 actions, each reopening raise lets 1 other act, each with talk.
+    assert turn_bound(2, 100, 10, 10, 1) == 2 * (4 * 2 + (200 // 20 + 2) * 1)
+
+
+def test_settings_beyond_the_turn_limit_are_refused():
+    with pytest.raises(ValueError, match="more than Poker's limit of 70400"):
+        Poker().initial_state(SEATS, {"starting_stack": 100_000})
+
+
+def test_random_matches_stay_well_below_the_turn_limit():
+    longest = 0
+    for seed in range(20):
+        match, _ = bot_match(SEATS, seed=seed)
+        turns = sum(e.type in ("action_accepted", "action_fallback") for e in match.events)
+        longest = max(longest, turns)
+
+    assert 0 < longest < Poker.max_turns // 10
