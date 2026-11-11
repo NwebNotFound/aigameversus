@@ -86,7 +86,8 @@
 				/>
 				<span class="who">
 					<strong>{seatName(seat, players)}</strong>
-					<small>{model ?? (players?.[seat] ? 'random bot' : seat)}</small>
+					<!-- The model; "bot" for a bot seat; nothing when the name is the seat id already. -->
+					{#if model}<small>{model}</small>{:else if players?.[seat]?.name}<small>bot</small>{/if}
 				</span>
 				{#if costs && model}
 					<span class="cost" title="Model cost so far">{euros(costs[seat] ?? 0)}</span>
