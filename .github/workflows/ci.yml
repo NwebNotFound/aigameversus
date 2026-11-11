@@ -64,6 +64,7 @@ jobs:
   web:
     name: Web UI lint, build and Playwright
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: web
@@ -93,18 +94,26 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      # apt mirrors fail now and then ("Some index files failed to download"): retry, 3 attempts.
-      # The browser download is skipped on a cache hit; the system libraries are still installed.
-      - name: Install Chromium and its system libraries
-        env:
-          CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
+      # The runner image already has most system libraries, so first fetch only the browser
+      # (a no-op on a cache hit) and check that it launches. apt is used only if that fails, and
+      # then every try is bounded: the apt mirror is down now and then, and a hung step runs for hours.
+      - name: Install Chromium (browser only, then system libraries if it does not launch)
+        timeout-minutes: 20
         run: |
-          if [ "$CACHE_HIT" = "true" ]; then install="install-deps"; else install="install --with-deps"; fi
+          launch() { timeout 60 node -e "require('@playwright/test').chromium.launch().then(b => b.close())"; }
+          if timeout 300 npx playwright install chromium && launch; then
+            echo "PATH TAKEN: browser only (cache hit: ${{ steps.playwright-cache.outputs.cache-hit }})"
+            exit 0
+          fi
+          echo "Chromium does not launch without more libraries: falling back to apt"
           for attempt in 1 2 3; do
-            sudo apt-get update -o Acquire::Retries=3 || true
-            if npx playwright $install chromium; then exit 0; fi
+            timeout 180 sudo apt-get update -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=2 || true
+            if timeout 300 npx playwright install --with-deps chromium && launch; then
+              echo "PATH TAKEN: --with-deps, attempt $attempt"
+              exit 0
+            fi
             echo "Attempt $attempt failed"
-            sleep $((attempt * 15))
+            sleep $((attempt * 10))
           done
           exit 1
       - name: Playwright smoke tests on port 3100 (375 and 1280 px)
