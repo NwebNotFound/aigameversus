@@ -3,3 +3,4 @@
 *.gif binary
 *.jpg binary
 *.webp binary
+docs/DECISIONS.md merge=union

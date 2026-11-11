@@ -5,6 +5,7 @@ import {
 	chapterLabel,
 	commentary,
 	langOf,
+	mentionParts,
 	mergeSeats,
 	namedText,
 	withDisplayNames,
@@ -286,7 +287,7 @@ describe('mergeSeats', () => {
 });
 
 describe('display names', () => {
-	it('names models by short name, a repeat with #2, bots Bot 1, Bot 2', () => {
+	it('names like the arena: every repeat numbered, bots by seat number', () => {
 		const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
 			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
 			p2: { name: 'Random Bot p2', model: null, kind: 'bot' },
@@ -294,10 +295,10 @@ describe('display names', () => {
 			p4: { name: 'Random Bot p4', model: null, kind: 'bot' }
 		});
 		expect(['p1', 'p2', 'p3', 'p4'].map((s) => seatName(s, seats))).toEqual([
-			'gpt-luna',
-			'Bot 1',
+			'gpt-luna #1',
+			'Bot 2',
 			'gpt-luna #2',
-			'Bot 2'
+			'Bot 4'
 		]);
 	});
 
@@ -316,9 +317,76 @@ describe('display names', () => {
 			p2: { name: 'Random Bot p2', model: null, kind: 'bot' }
 		});
 		expect(namedText('p1 calls LIAR on Random Bot p2 (random-bot)', seats)).toBe(
-			'gpt-luna calls LIAR on Bot 1'
+			'gpt-luna calls LIAR on Bot 2'
 		);
-		expect(namedText('Ergebnis: 1. p2  2. p1', seats)).toBe('Ergebnis: 1. Bot 1  2. gpt-luna');
+		expect(namedText('Ergebnis: 1. p2  2. p1', seats)).toBe('Ergebnis: 1. Bot 2  2. gpt-luna');
 		expect(namedText('top10 and p9 stay', seats)).toBe('top10 and p9 stay');
+	});
+});
+
+describe('mentionParts', () => {
+	const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+		p1: { name: 'mistral-small', model: 'mistral-small', kind: 'model' },
+		p2: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+		p3: { name: 'qwen-flash', model: 'qwen-flash', kind: 'model' },
+		p4: { name: 'gemini-flash-lite', model: 'gemini-flash-lite', kind: 'model' }
+	});
+
+	it("turns the seat a model named into a mention (Nils' sentence)", () => {
+		expect(mentionParts('p2, two kings with your history? I doubt it!', seats)).toEqual([
+			{ seat: 'p2', text: 'p2' },
+			{ text: ', two kings with your history? I doubt it!' }
+		]);
+	});
+
+	it('leaves a seat that is not in the match, and words that only contain p2, as text', () => {
+		expect(mentionParts('p9 and top2 and mp3', seats)).toEqual([{ text: 'p9 and top2 and mp3' }]);
+	});
+
+	it('finds several mentions, in any case', () => {
+		const parts = mentionParts('P3 bluffs; p4 called p3.', seats);
+		expect(parts.filter((p) => 'seat' in p).map((p) => (p as { seat: string }).seat)).toEqual([
+			'p3',
+			'p4',
+			'p3'
+		]);
+		expect(parts.map((p) => p.text).join('')).toBe('P3 bluffs; p4 called p3.');
+	});
+});
+
+describe('mentions with what a language glues to them', () => {
+	const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+		p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+		p2: { name: 'mistral-small', model: 'mistral-small', kind: 'model' },
+		p3: { name: 'deepseek-flash', model: 'deepseek-flash', kind: 'model' },
+		p4: { name: 'gemini-flash-lite', model: 'gemini-flash-lite', kind: 'model' }
+	});
+	const seatsOf = (text: string) =>
+		mentionParts(text, seats).flatMap((p) => ('seat' in p ? [p.seat] : []));
+
+	it('takes "Auf p4s Frage" as p4, with the "s" left as text', () => {
+		expect(mentionParts('Auf p4s Frage: …', seats)).toEqual([
+			{ text: 'Auf ' },
+			{ seat: 'p4', text: 'p4' },
+			{ text: 's Frage: …' }
+		]);
+	});
+
+	it("takes p3's vote, p4’s, p4-Antwort and p4: as mentions", () => {
+		expect(seatsOf("p3's vote")).toEqual(['p3']);
+		expect(seatsOf('p4’s turn, p4-Antwort, p4: yes')).toEqual(['p4', 'p4', 'p4']);
+	});
+
+	it('reads upper case and lists', () => {
+		expect(seatsOf('P4 lügt; p1/p2/p3 stimmen')).toEqual(['p4', 'p1', 'p2', 'p3']);
+	});
+
+	it('leaves seats not in the match, ids inside words and longer numbers alone', () => {
+		expect(seatsOf('p9, mp3, top2, p41')).toEqual([]);
+	});
+
+	it('names plain text by the same rule', () => {
+		expect(namedText('Auf p4s Frage', seats)).toBe('Auf gemini-flash-lites Frage');
+		expect(namedText('P2 calls p9', seats)).toBe('mistral-small calls p9');
 	});
 });

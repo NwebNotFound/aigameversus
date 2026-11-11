@@ -1,6 +1,7 @@
 """The spend ledger: what model calls have cost, per match and per month."""
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -10,6 +11,8 @@ import asyncpg
 
 from arena.db.database import migrate
 from arena.engine.types import MatchPaused, PlayerId
+
+log = logging.getLogger(__name__)
 
 _LEDGER_LOCK = 7_240_002  # advisory lock id: one booking at a time, across processes
 _READ_TIMEOUT = 10  # seconds; a ledger that does not answer by then counts as unreachable
@@ -127,6 +130,16 @@ class Ledger:
                 month,
             )
 
+    async def output_tokens(self, model_ids: Sequence[str]) -> dict[str, tuple[int, float]]:
+        """For each of these models with reported answers: (answers, output tokens per answer)."""
+        async with _reading():
+            rows = await self._pool.fetch(
+                "SELECT model, count(*) AS answers, avg(output_tokens) AS mean FROM model_calls "
+                "WHERE model = ANY($1::text[]) AND output_tokens IS NOT NULL GROUP BY model",
+                list(model_ids),
+            )
+        return {row["model"]: (int(row["answers"]), float(row["mean"])) for row in rows}
+
     async def match_costs(self, match_id: UUID) -> dict[PlayerId, int]:
         """What each player of a match has cost so far, in millionths of a euro."""
         async with _reading():
@@ -159,13 +172,48 @@ class Ledger:
             )
         return {(row["match_id"], row["player"]): int(row["cost"]) for row in rows}
 
-    async def settle(self, call_id: int, input_tokens: int, output_tokens: int, cost: int) -> None:
-        """Replace the upper bound of a booked call by what it was billed for."""
-        await self._pool.execute(
-            "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, cost_micro_eur = $4 "
-            "WHERE id = $1",
-            call_id,
-            input_tokens,
-            output_tokens,
-            cost,
-        )
+    async def settle(
+        self,
+        call_id: int,
+        input_tokens: int,
+        output_tokens: int,
+        cost: int,
+        *,
+        latency_ms: int | None = None,
+        reasoning_tokens: int | None = None,
+    ) -> None:
+        """Replace the upper bound of a booked call by what it was billed for.
+
+        A ledger without the columns of migration 0013 still gets the cost: the call was
+        sent and paid, and its turn must not be lost over a statistic.
+        """
+        try:
+            await self._pool.execute(
+                "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, "
+                "cost_micro_eur = $4, latency_ms = $5, reasoning_tokens = $6 WHERE id = $1",
+                call_id,
+                input_tokens,
+                output_tokens,
+                cost,
+                latency_ms,
+                reasoning_tokens,
+            )
+        except asyncpg.UndefinedColumnError:
+            log.warning("The ledger lacks migration 0013: the call's time is not kept")
+            await self._pool.execute(
+                "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, "
+                "cost_micro_eur = $4 WHERE id = $1",
+                call_id,
+                input_tokens,
+                output_tokens,
+                cost,
+            )
+
+    async def timed(self, call_id: int, latency_ms: int) -> None:
+        """How long a call took that reported no tokens; its booking stays the upper bound."""
+        try:
+            await self._pool.execute(
+                "UPDATE model_calls SET latency_ms = $2 WHERE id = $1", call_id, latency_ms
+            )
+        except asyncpg.UndefinedColumnError:
+            log.warning("The ledger lacks migration 0013: the call's time is not kept")
