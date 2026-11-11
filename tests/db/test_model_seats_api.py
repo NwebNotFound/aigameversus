@@ -103,6 +103,8 @@ def test_the_transcript_names_the_models_of_a_running_match_and_after_it(client,
 
     expected = {
         f"p{n}": {
+            "seat": f"p{n}",
+            "display": model,
             "name": config.models[model].name or model,
             "model": model,
             "kind": "model",
@@ -118,7 +120,8 @@ def test_the_transcript_names_the_models_of_a_running_match_and_after_it(client,
     assert running == expected
     assert players() == expected
     text = client.get(f"/matches/{match_id}/transcript", params={"format": "text"}).text
-    assert expected["p1"]["name"] in text and "Random Bot" not in text
+    assert "glm-flash" in text and "deepseek-flash" in text
+    assert "Bot " not in text and "p1" not in text
 
 
 def test_cap_ends_a_model_match_as_interrupted_before_any_call(

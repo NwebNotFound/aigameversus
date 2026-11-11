@@ -14,7 +14,8 @@
 		spoilers,
 		events = [],
 		names = {},
-		colours = {}
+		colours = {},
+		subs = {}
 	}: {
 		spec: Record<string, unknown> | null;
 		spoilers: boolean;
@@ -23,6 +24,8 @@
 		names?: Record<string, string>;
 		/** Seat id to the key its avatar colour comes from (the model, else the seat). */
 		colours?: Record<string, string>;
+		/** Seat id to the small line under its name on the board (model, vendor). */
+		subs?: Record<string, string | null>;
 	} = $props();
 
 	type Seat = Record<string, unknown> & { player: string };
@@ -91,11 +94,11 @@
 		<span>The events in the other columns show the whole match.</span>
 	</div>
 {:else if spec.layout === 'card_table' && isCardTable(spec)}
-	<LiarsDeckTable {spec} {spoilers} {names} {colours} />
+	<LiarsDeckTable {spec} {spoilers} {names} {colours} {subs} />
 {:else if spec.layout === 'poker_table' && isPokerTable(spec)}
-	<PokerTable {spec} {spoilers} {events} {names} {colours} />
+	<PokerTable {spec} {spoilers} {events} {names} {colours} {subs} />
 {:else if spec.layout === 'player_circle' && isPlayerCircle(spec)}
-	<WerewolfCircle {spec} {spoilers} {events} {names} {colours} />
+	<WerewolfCircle {spec} {spoilers} {events} {names} {colours} {subs} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}
@@ -114,6 +117,7 @@
 				{#each seats as seat (seat.player)}
 					<li
 						data-testid="seat"
+						data-seat={seat.player}
 						class:out={seat.alive === false || seat.folded === true}
 						class:turn={seat.player === spec.turn}
 					>

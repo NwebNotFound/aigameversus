@@ -9,7 +9,15 @@
 	import { gameName } from '#lib/games.js';
 	import { euros } from '#lib/live.js';
 	import { PLAY_SPEEDS, clampStep, shareLink, stepFromQuery } from '#lib/replay.js';
-	import { linesUpTo, marks, nextStop, previousStop, stops } from '#lib/viewer.js';
+	import {
+		linesUpTo,
+		marks,
+		nextStop,
+		previousStop,
+		stops,
+		mergeSeats,
+		namedLines
+	} from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -18,8 +26,12 @@
 	const match = $derived(data.match.state === 'ok' ? data.match.data : null);
 	const log = $derived(data.events.state === 'ok' ? data.events.data : []);
 	const transcript = $derived(data.transcript.state === 'ok' ? data.transcript.data : null);
-	const lines = $derived(transcript?.lines ?? []);
-	const players = $derived(transcript?.players);
+	const players = $derived(
+		match
+			? mergeSeats(match.match.players, match.match.seats, transcript?.players, data.roster)
+			: undefined
+	);
+	const lines = $derived(namedLines(transcript?.lines ?? [], players));
 
 	// svelte-ignore state_referenced_locally
 	let step = $state(stepFromQuery(page.url.searchParams.get('step'), log.length));
@@ -39,8 +51,11 @@
 	const timeline = $derived(marks(log, lines));
 	const moments = $derived(stops(log, lines, 2));
 	const highlights = $derived(stops(log, lines, 3));
+	// The caption tells the latest moment; the final ranking is the result card's.
 	const caption = $derived(
-		shownLines.findLast((line) => line.importance > 1 && line.kind !== 'info')
+		shownLines.findLast(
+			(line) => line.importance > 1 && line.kind !== 'info' && line.raw?.type !== 'match_finished'
+		)
 	);
 	const link = $derived(shareLink(page.url.origin, params.id, step, view));
 
@@ -238,6 +253,8 @@
 			{players}
 			costs={match.cost.players}
 			active={typeof spec?.turn === 'string' ? spec.turn : null}
+			placements={match.match.placements}
+			ended={match.match.status === 'finished' && step === log.length}
 		>
 			{#snippet controls()}
 				<div class="player" role="group" aria-label="Replay controls">
@@ -423,13 +440,13 @@
 		border: 1px solid var(--border);
 	}
 
+	/* Room for two lines; a longer moment wraps and is never cut off. */
 	.caption {
 		margin: 0;
-		min-height: 1.5em;
+		min-height: 3em;
 		font-size: 0.95rem;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		line-height: 1.5;
+		overflow-wrap: anywhere;
 	}
 
 	.buttons {

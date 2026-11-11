@@ -63,7 +63,7 @@ test('after the match each revolver shows the shots of its player', async ({ pag
 	await expect(page.getByTestId('seat')).toHaveCount(3);
 	for (const player of ['p1', 'p2', 'p3']) {
 		await expect(
-			page.getByTestId('seat').filter({ hasText: player }).getByTestId('revolver')
+			page.locator(`[data-testid="seat"][data-seat="${player}"]`).getByTestId('revolver')
 		).toContainText(`${shots[player] ?? 0}/6`);
 	}
 });
