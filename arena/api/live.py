@@ -11,13 +11,16 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
+from arena.agents.budget import Budget
 from arena.agents.random_bot import random_bots
+from arena.agents.runner import ModelAgent
+from arena.config import load_config
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
 from arena.db.match_store import MatchRecord, MatchStore
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Event, Placement
+from arena.engine.types import Event, MatchPaused, Placement
 from arena.memory.store import MemoryStore
 from arena.ratings.store import RatingStore
 
@@ -105,8 +108,14 @@ class LiveMatches:
         seed: int | None,
         settings: Mapping[str, Any],
         turn_delay: float,
+        models: Mapping[str, str] | None = None,
     ) -> MatchRecord:
-        """Start a match of random bots and return its record. It plays on in the background.
+        """Start a match and return its record. It plays on in the background.
+
+        Every seat is a random bot, or with `models` (seat -> model id from
+        config/models.yaml) the model of that seat, behind one Budget for the
+        match: every call is booked before it is sent, and a call that would
+        pass a cap is not sent and ends the match as `interrupted`.
 
         Between two turns the match waits `turn_delay` seconds, so that
         people can follow it. Raises ValueError for a player count or settings
@@ -126,9 +135,14 @@ class LiveMatches:
             if not running.finished:
                 await running.resumed.wait()  # a paused match stops here, between two turns
 
-        match = Match(
-            plugin, random_bots(plugin, players, seed), seed=seed, settings=settings, sink=sink
-        )
+        if models is None:
+            agents = random_bots(plugin, players, seed)
+        else:
+            budget = Budget(self.ledger, match_id, load_config())
+            agents = {
+                seat: ModelAgent(budget.model(seat, models[seat]), plugin) for seat in players
+            }
+        match = Match(plugin, agents, seed=seed, settings=settings, sink=sink)
         if len(self._running) >= MAX_RUNNING:
             raise ArenaBusy(
                 f"{MAX_RUNNING} matches are running, the most this server plays at a time. "
@@ -138,21 +152,33 @@ class LiveMatches:
         # The place is taken before the first await, so two requests cannot share the last one.
         self._running[match_id] = running
         try:
-            record = await self.matches.create(match_id, plugin.id, players, seed, match.settings)
+            record = await self.matches.create(
+                match_id,
+                plugin.id,
+                players,
+                seed,
+                match.settings,
+                models=None if models is None else dict(models),
+            )
         except BaseException:
             del self._running[match_id]
             raise
-        task = asyncio.create_task(self._play(match_id, running))
+        task = asyncio.create_task(self._play(match_id, running, rated=models is None))
         running.task = task
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return record
 
-    async def _play(self, match_id: UUID, running: _Running) -> None:
+    async def _play(self, match_id: UUID, running: _Running, *, rated: bool) -> None:
         try:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
-            await self._rate(match_id, running.match, placements)
+            if rated:  # bots only: profiles for model seats are not built yet
+                await self._rate(match_id, running.match, placements)
+        except MatchPaused as pause:
+            # Nobody here can allow more money: a cap ends the match. Its log says why.
+            log.warning("Match %s stopped at a cost cap (%s)", match_id, pause.reason)
+            await self.matches.close(match_id, "interrupted")
         except asyncio.CancelledError:
             if not running.aborted:
                 raise  # the server shuts down: the next start marks the match interrupted

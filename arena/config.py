@@ -1,6 +1,8 @@
 """`config/models.yaml`: the spending limits and the models that can take a seat."""
 
 from decimal import Decimal
+import os
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -58,3 +60,13 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
             for problem in invalid.errors()
         )
         raise ConfigError(f"{path.name}: {problems}") from invalid
+
+
+def missing_keys(config: Config, model_ids: Iterable[str]) -> list[str]:
+    """The key variables that the providers of these models need and the environment lacks.
+
+    Without its key every seat would fail at its first call, after that call
+    was booked, and random bots would play on under the models' names.
+    """
+    needed = {KEY_VARIABLES[config.models[model_id].provider] for model_id in model_ids}
+    return sorted(name for name in needed if not os.environ.get(name))
