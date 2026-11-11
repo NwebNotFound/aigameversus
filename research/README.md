@@ -210,6 +210,61 @@ before that, so the numbers below are rough and the first step is a free check.
 - **Budget:** about 1.50 EUR for the 4 pilot matches, to be set from step 0
   and approved by the owner.
 
+## Plan: stronger models in every game (the owner's wish, 2026-11-12; not approved yet)
+
+After each game's pilot with cheap models, the stronger models get their turn in
+every game: Liar's Deck (E1 stage C, approved), Werewolf (a W1 stage) and Throne of
+Tokens (a C1 stage). Candidates, with OpenRouter's prices on 2026-11-11 (USD per
+million tokens, input / output; all take tools and a forced tool call):
+
+| Model | OpenRouter id | Price |
+| --- | --- | --- |
+| GPT terra | openai/gpt-6.1-terra | 1.00 / 5.00 |
+| Claude Sonnet | anthropic/claude-sonnet-5.5 | 2.00 / 10.00 |
+| Kimi | moonshotai/kimi-k3.1-pro | 2.00 / 10.00 |
+| Gemini carbon | google/gemini-4-carbon | 2.00 / 10.00 |
+| Grok | x-ai/grok-4.7 | 2.00 / 6.00 |
+| Qwen max | qwen/qwen3.8-max-0902 | 2.00 / 6.00 |
+| DeepSeek pro | deepseek/deepseek-v4-pro-0813 | 0.111 / 4.44 |
+| Gemini flash | google/gemini-3.8-flash | 0.825 / 4.125 |
+
+Builder checks ids and prices before any run (the catalog books unchecked
+prices 25 % higher).
+
+- **Design:** the guest design of E1 stage C in every game. One strong model
+  joins a table of cheap hosts and sits in every seat (in Werewolf, so in every
+  role). The hosts are the same for every guest, so the guests can be compared
+  with each other and with the cheap models on one scale (Plackett-Luce).
+- **Rough cost per match with one strong guest:**
+  - Liar's Deck: about 0.08 EUR (E1 stage C's estimate).
+  - Werewolf, 8 seats: 0.10 to 0.20 EUR. One seat makes about 8 to 10 calls of
+    3 000 input and 700 output tokens, so the guest costs 0.05 (terra) to 0.10
+    EUR (Sonnet, Kimi), plus about 0.04 for seven cheap hosts.
+  - Throne of Tokens: not known before the plugin plays. A strong nation over
+    20 rounds may cost 0.50 EUR or more on its own, above today's cap per match.
+    The free estimate (step 0 of C1) comes first; a higher cap per match is the
+    owner's decision.
+- **Thinking:** strong models are run at low effort first, like the cheap ones,
+  so the comparison is fair. A higher effort is its own factor, as in E1 stage B.
+- **Order:** Werewolf P1 and P2 with cheap models, then a Werewolf guest stage
+  (about 4 guests x 8 rotations = 32 matches, about 4 to 6 EUR), E1 stage C,
+  then Civ once its cheap pilot has run.
+
+**Context for Throne of Tokens.** A strategy game needs more than the rules
+in the prompt. Every turn the model should see, from its own view only:
+- the moves it can actually make now (affordable buildings and units, armies
+  that can still move, treaties on offer);
+- the win conditions with where it stands on each (cities held against the 50
+  % needed, gold against 500 and for how many rounds, score and rank at the
+  round limit, rounds left);
+- what changed since its last turn.
+
+The model also keeps a short plan of its own ("goal: economic win; next:
+market in the capital, a trade for iron"), carried to its next turn, so it
+plays towards a goal instead of move by move. Asked of Arena Coder (Civ
+rules.md and the civ-p1 prompt); whether a plan carried between turns
+changes play is a factor worth a paired test later, like prompt_version.
+
 ## Build steps
 
 One step is one branch and one draft pull request, tested on bot and mock-LLM
