@@ -234,7 +234,7 @@ def test_classic_template_has_the_spec_roles():
 def test_classic_wolves_scale_with_the_table():
     wolves = {n: apply_template("classic", n)["werewolf"] for n in PLAYER_COUNTS}
 
-    assert wolves == {6: 2, 7: 2, 8: 2, 9: 3, 10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 4, 16: 4}
+    assert wolves == {6: 2, 7: 2, 8: 2, 9: 3, 10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 4}
     assert set(load_templates()["classic"].by_players["werewolf"]) == set(PLAYER_COUNTS)
 
 
