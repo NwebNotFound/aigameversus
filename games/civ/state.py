@@ -86,7 +86,7 @@ class Offer(BaseModel):
     id: str  # "o1", "o2", ... in the order offers were made
     sender: str
     to: str
-    round: int  # offered in this round; it lapses when the next one starts
+    round: int  # offered in this round; answered in the next, then it lapses
     treaty: str | None = None  # a treaty offer: the treaty id; None: a trade offer
     rounds: int | None = None  # how long the treaty or trade runs; None: until broken
     payer: str | None = None

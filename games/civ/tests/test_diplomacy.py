@@ -123,7 +123,9 @@ def test_a_declined_or_unanswered_offer_goes_away():
     assert last(world).type == "treaty_declined"
     assert [o.id for o in world.state.offers] == ["o2"]
 
-    world.round()  # the next round starts: an offer from the last one lapses
+    world.round()  # the next round: the offer can still be answered
+    assert [o.id for o in world.state.offers] == ["o2"]
+    world.round()  # the round after: it lapses
     assert world.state.offers == []
     assert world.of_type("offer_lapsed") == [{"offer": "o2"}]
     assert d.answer_problem(world.state, DATA, "cy", "o2", True, "treaty") == (
