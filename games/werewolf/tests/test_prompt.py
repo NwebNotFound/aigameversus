@@ -164,8 +164,7 @@ def test_golden_prompt_of_version_p2_has_the_new_rules_and_the_summary():
     request = a_request()
     plugin = Werewolf()
     settings = {"prompt_version": "werewolf-p2"}
-    messages = build_messages("Werewolf", plugin.rules(settings), request)
     summary = plugin.situation_summary(request.observation, settings)
+    messages = build_messages("Werewolf", plugin.rules(settings), request, summary)
 
-    text = "\n=====\n".join(m["content"] for m in messages)
-    check_golden("werewolf-p2.txt", f"{text}\n=====\n<summary>\n{summary}\n</summary>\n")
+    check_golden("werewolf-p2.txt", "\n=====\n".join(m["content"] for m in messages) + "\n")

@@ -155,11 +155,10 @@ def test_golden_prompt_of_version_p2_has_the_new_rules_and_the_summary():
     request = a_request()
     plugin = LiarsDeck()
     settings = {"prompt_version": "liars_deck-p2"}
-    messages = build_messages("Liar's Deck", plugin.rules(settings), request)
     summary = plugin.situation_summary(request.observation, settings)
+    messages = build_messages("Liar's Deck", plugin.rules(settings), request, summary)
 
-    text = "\n=====\n".join(m["content"] for m in messages)
-    check_golden("liars_deck-p2.txt", f"{text}\n=====\n<summary>\n{summary}\n</summary>\n")
+    check_golden("liars_deck-p2.txt", "\n=====\n".join(m["content"] for m in messages) + "\n")
 
 
 def test_golden_requests_are_stable_for_a_seed():
