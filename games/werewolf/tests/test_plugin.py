@@ -536,3 +536,42 @@ def test_render_spec_shows_every_role_to_spectators():
 
     assert spec["layout"] == "player_circle"
     assert [s["role"] for s in spec["seats"]] == list(CLASSIC.values())
+
+
+# --- night and turn limits -------------------------------------------------------
+
+
+def test_a_match_undecided_after_the_last_night_ends_without_a_winner():
+    from games.werewolf.plugin import MAX_NIGHTS
+
+    table = Table(CLASSIC)
+    table.state.night = MAX_NIGHTS
+    table.state.phase = "dusk"
+    table.state.queue = []
+
+    table.plugin.step(table.state, table.ctx())
+
+    assert table.of_type("game_over")[0].data == {
+        "winner": "nobody",
+        "winners": [],
+        "reason": "night_limit",
+    }
+    assert table.state.phase == "over"
+
+
+def test_max_turns_follows_from_the_night_limit_and_16_players():
+    from games.werewolf.plugin import MAX_NIGHTS, cycle_turns
+
+    # per night and day with 16 players: (16 + 16 + 1 + 32) + (16 + 32 + 16 + 32) = 161, x2 talk
+    assert cycle_turns(16) == 322
+    assert Werewolf.max_turns == MAX_NIGHTS * 322 == 9660
+
+
+def test_random_matches_stay_well_below_the_turn_limit():
+    longest = 0
+    for seed in range(20):
+        match, _ = bot_match(16, seed=seed, settings={"template": "random_balanced"})
+        turns = sum(e.type in ("action_accepted", "action_fallback") for e in match.events)
+        longest = max(longest, turns)
+
+    assert 0 < longest < Werewolf.max_turns // 10

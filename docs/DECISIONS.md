@@ -806,6 +806,12 @@ Each entry: date, decision, why, alternatives considered.
     death effects: village when no pack member lives, wolves when the living
     pack is at least as big as everyone else, nobody when all are dead. The
     winning side shares rank 1, the rest the next rank.
+  - A match still undecided after the 30th day ends without a winner
+    (`game_over` with `reason: night_limit`). With that, `max_turns` (D-040)
+    is a true bound: 30 × `cycle_turns(16)` = 9,660, where one night and day
+    holds at most one role step, one wolf step and two wolf chats per player,
+    the Prime Wolf's choice, one captain vote, two speeches, one vote and two
+    death effects per player, each of them possibly with a lover chat.
   - Targets are JSON-schema enums of the legal players, so the engine rejects
     illegal targets and the random bot picks from them. No `think` tool, as
     in D-033; `render_spec` is a plain method.
