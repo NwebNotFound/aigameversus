@@ -226,7 +226,7 @@ class Runner:
             for match in schedule(experiment)
             if match.stage == stage_id and (match.pilot if pilot else True)
         ]
-        self.settings = {**experiment.settings, **(settings or {})}
+        self.settings = {**experiment.settings, **stage.settings, **(settings or {})}
         self.game = experiment.game
         self.out = out
         self.request = request

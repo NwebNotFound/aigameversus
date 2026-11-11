@@ -145,39 +145,41 @@ the tools `stay_in_bed` and `let_them_die`. That is a likely cause of tool
 errors in Werewolf and a confound for any Werewolf comparison across the two
 versions.
 
-## Proposal: a short headline next to the thought (p3, not approved, no spend)
+## Proposal: a short headline next to the thought (`thought_headline`, not approved, no spend)
 
-Viewers read long thoughts badly. Prompt version `<game>-p3` would ask for a
-required `headline` (at most 15 words) next to the private `thought` in every
-tool call; the UI shows the headline and keeps the full thought one click away.
-Until p3 exists the UI takes the first sentence of the thought.
+Viewers read long thoughts badly. A match setting `thought_headline: true`
+(default `false`, recorded in `match_started`, independent of `prompt_version`)
+would ask for a required `headline` (at most 15 words) next to the private
+`thought` in every tool call; the UI shows the headline and keeps the full
+thought one click away. Until the flag exists the UI takes the first sentence
+of the thought.
 
 What could go wrong, and so what the pilot measures: one more required
 argument may make weak models fail tool calls more often, cost more output
 tokens, or change how they play.
 
-- **Design:** the prompt version is set per match, so p3 is compared with p1 on
-  the same seeds and seatings: the first 24 matches of league A2 (the 6 clean
-  models, Liar's Deck) are played again with p3. Each p3 match has a p1 twin
-  with the same cards and seats.
+- **Design:** paired replays. Matches already played with the flag off are
+  played again on the same seeds and seatings with the flag on, everything
+  else equal (prompt version, arena commit as far as possible). For Werewolf,
+  where headlines matter most: the 8 matches of W1 P1 (or P3, if that becomes
+  the default prompt); for Liar's Deck, if wanted, the first 24 of league A2.
 - **Outcomes, per model and pooled:** rejected answers per move, share of
   moves played by the fallback, output tokens and response time per move, cost
-  per match. As a check on play: lie rate and call rate. Win shares cannot
-  move, because every seat reads the same prompt.
+  per match; as a check on play, vote accuracy (Werewolf) or lie and call rate
+  (Liar's Deck). Win shares of models cannot move, because every seat has the
+  same setting.
 - **Test:** Wilcoxon signed rank on the paired per-match rejected answers per
   move, two-sided, alpha 0.05; the rest as paired differences with bootstrap
-  intervals over matches. The pilot is a safety check: with 24 pairs it finds
-  only large changes, and "no change found" is not "no change".
-- **Stop rule:** p3 does not become the default if the fallback share of any
-  model rises above 10 % or the pooled rejected answers per move rise by more
-  than 0.1.
-- **Cost:** about 0.50 EUR (24 matches at league A2's 0.02 EUR each, plus a
-  margin for the extra tokens); budget 0.60 EUR from the unassigned 1.72 EUR.
-  Needs the owner's yes. Werewolf, where headlines matter most, follows only
-  after the two weak models are fixed, because a full table needs 8 clean
-  models.
-- **Needs from the arena:** `headline` as a required argument in the tool
-  schema for p3 (Builder), recorded in the `thought` event next to the text.
+  intervals over pairs. A safety check: with 8 to 24 pairs it finds only large
+  changes, and "no change found" is not "no change".
+- **Stop rule:** the flag does not become the default if the fallback share
+  of any model rises above 10 % or the pooled rejected answers per move rise
+  by more than 0.1.
+- **Cost:** about 0.40 EUR for the 8 Werewolf pairs' second half (0.036 EUR a
+  match plus the headline tokens), about 0.50 EUR for 24 Liar's Deck matches.
+  Needs the owner's yes.
+- **Needs from the arena:** the setting, `headline` as a required argument
+  only when it is on, stored as `data.headline` in the `thought` event (Builder).
 
 ## Proposal: Throne of Tokens pilot (C1, not approved, waits for the plugin)
 

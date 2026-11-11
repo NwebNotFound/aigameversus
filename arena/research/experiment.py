@@ -56,6 +56,7 @@ class _Stage(_Strict):
     seeds: int = Field(gt=0)  # per table (league) or per model (mirror, guests)
     turn_timeout_s: int = Field(gt=0)
     max_output_tokens: int = Field(gt=0)
+    settings: dict[str, Any] = {}  # merged over the plan's settings for this stage only
     notes: str = ""
 
 

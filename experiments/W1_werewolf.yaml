@@ -7,11 +7,20 @@
 
 id: W1
 title: "Werewolf pilot: eight seats of cheap models, every seat in every role"
-version: 1
-status: approved          # by the owner, passed on by Arena Lead: up to 1.50 EUR for the first series
+version: 2
+status: approved          # P1 and P2 by the owner (1.50 EUR); P3 proposed, not approved
 registered: "2026-11-12"
 author: Arena Researcher
-amendments: []
+amendments:
+  - version: 2
+    date: "2026-11-12"
+    what: >
+      New stage P3: P1's seed and seatings again, with prompt_version
+      werewolf-p3 instead of werewolf-p2. Stages may set settings of their own.
+      P3 is a proposal and spends nothing until the owner says yes.
+    why: >
+      Arena Lead asked for a p2-against-p3 comparison for Werewolf (#118). It
+      is written before any W1 match was played.
 approvals:
   - stages: [P1, P2]
     date: "2026-11-11"
@@ -43,6 +52,7 @@ conditions:
   how_matches_run: "through POST /matches on the shared stack, one match at a time (two at most), with the batch field W1-P1 or W1-P2"
   needs_before_start:
     P1: "the arena rebuild after league E1-A2"
+    P3: "#118 (werewolf-p3) on the running stack, P1 played, and the owner's yes"
     P2: "#106 on the running stack (qwen-flash: 4 000 output tokens, no reasoning effort, tool_choice auto; longer waits after a rate limit)"
 
 # Ids and prices as listed by openrouter.ai/api/v1/models on 2026-11-11 (USD per million tokens).
@@ -80,6 +90,26 @@ stages:
       E1-A2. Estimate: about 0.06 EUR a match (the example match of 8 models
       cost 0.041 EUR with qwen-flash in it; p2 prompts are longer).
 
+  - id: P3
+    kind: cyclic
+    title: "The same matches as P1 with the Werewolf prompt p3 (proposed, not approved)"
+    seats: [gpt-luna, claude-haiku, glm-flash, deepseek-flash, gpt-luna, mistral-small, llama-scout, claude-haiku]
+    effort: low
+    seeds: 1
+    seed_base: 2101000     # the seed of P1: the same roles in the same seats
+    settings: {prompt_version: werewolf-p3}
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 0.50
+    estimate_eur: 0.36
+    notes: >
+      Each P3 match has a P1 twin: the same seed deals the same roles to the
+      same seats with the same models; only the prompt differs (p3: claim the
+      seer's result early, vote the player you named, silence is no evidence,
+      role guidance, brief thoughts, advice per move in the summary). Played
+      after P1, on the same arena commit. Estimate: the arena's free estimate
+      for P1 (0.036 EUR a match) plus a margin for the longer summary.
+
   - id: P2
     kind: cyclic
     title: "The two pilot failures of E1 get a second chance in Werewolf"
@@ -106,6 +136,19 @@ hypotheses:
     test: >
       Per model and per role: moves, rejected answers per move, fallback share,
       night actions refused or skipped; per match: cost, duration, days played.
+  - id: D3
+    stage: P3
+    kind: descriptive, paired, no confirmatory test
+    claim: Does p3 change how the village plays and how reliably the models answer?
+    test: >
+      Paired by twin (P1 match, P3 match with the same seed and seating), 8
+      pairs: village win (McNemar's exact test, reported, too few pairs to
+      decide), village vote accuracy, the day the seer first states a result,
+      share of votes that match the voter's own last accusation, words per
+      speech, rejected answers per move and fallback share, cost per match.
+      Each as a paired difference with a bootstrap interval over pairs. 8 pairs
+      show large effects only; a W1 league would carry the p2/p3 factor with
+      more seeds if the pilot points one way.
   - id: D2
     stage: all
     kind: descriptive, no test

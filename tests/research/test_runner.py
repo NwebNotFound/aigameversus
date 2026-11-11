@@ -412,3 +412,27 @@ def test_without_a_batch_no_batch_field_is_sent(tmp_path):
     runner(tmp_path, arena, pilot=True).run()
 
     assert all("batch" not in body for body in arena.started)
+
+
+def test_a_stage_with_its_own_settings_sends_them_over_the_plans(tmp_path):
+    from tests.research.test_experiment import W1
+
+    arena = FakeArena(cost=1_000)
+    Runner(
+        load_experiment(W1), "P1", tmp_path, arena, sleep=lambda _: None, say=lambda _: None
+    ).run()
+    assert {b["settings"]["prompt_version"] for b in arena.started} == {"werewolf-p2"}
+    with pytest.raises(PlanError, match="approvals"):
+        Runner(load_experiment(W1), "P3", tmp_path, FakeArena())  # proposed: may not spend
+    bots = FakeArena(cost=0)
+    Runner(
+        load_experiment(W1),
+        "P3",
+        tmp_path / "p3",
+        bots,
+        bots=True,
+        sleep=lambda _: None,
+        say=lambda _: None,
+    ).run()
+    assert {b["settings"]["prompt_version"] for b in bots.started} == {"werewolf-p3"}
+    assert all(b["settings"]["template"] == "classic" for b in bots.started)
