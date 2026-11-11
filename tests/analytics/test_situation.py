@@ -133,3 +133,17 @@ def test_a_spoiler_free_situation_is_the_same_whatever_the_hidden_events_say(see
 
 def test_a_game_without_a_situation_has_none_and_toy_still_has_no_analytics():
     assert now("liars_deck", [])["lines"]["en"] == ["The match is about to start."]
+
+
+def test_an_abstention_is_no_vote_for_anyone():
+    events = [
+        Event(source="engine", type="match_started", data={"players": ["p1", "p2"]}),
+        Event(source="game", type="day_started", data={"day": 1, "order": ["p1", "p2"]}),
+        Event(source="game", type="vote_cast", data={"player": "p1", "target": None}),
+        Event(source="game", type="vote_cast", data={"player": "p2", "target": "p1"}),
+    ]
+
+    situation = now("werewolf", events)
+
+    assert situation["facts"]["votes"] == {"p1": 1}
+    assert "None" not in " ".join(situation["lines"]["en"])
