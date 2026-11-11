@@ -290,6 +290,9 @@ class CityBalance(_Model):
     work_radius: Annotated[int, Field(ge=1)]
     expanded_work_radius: Annotated[int, Field(ge=1)]
     expanded_at_population: Annotated[int, Field(ge=1)]
+    min_distance: Annotated[int, Field(ge=1)] = Field(
+        description="A new city must be at least this many steps from every other city"
+    )
     growth_food: Annotated[int, Field(ge=1)]
     food_per_population: Annotated[int, Field(ge=0)]
     building_slots: BuildingSlots

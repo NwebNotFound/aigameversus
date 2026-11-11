@@ -22,9 +22,7 @@ async def _execute(url: str, statement: str) -> None:
         await connection.close()
 
 
-@pytest.fixture
-def database_url():
-    """URL of an empty schema that is dropped after the test."""
+def _empty_schema():
     url = os.environ.get("ARENA_TEST_DATABASE_URL", DEFAULT_URL)
     schema = f"test_{uuid4().hex}"
     try:
@@ -35,3 +33,15 @@ def database_url():
         pytest.skip(f"Postgres is not reachable ({type(error).__name__})")
     yield f"{url}?search_path={schema}"
     asyncio.run(_execute(url, f'DROP SCHEMA "{schema}" CASCADE'))
+
+
+@pytest.fixture
+def database_url():
+    """URL of an empty schema that is dropped after the test."""
+    yield from _empty_schema()
+
+
+@pytest.fixture
+def other_database_url():
+    """A second empty schema, for a database of its own such as the spend ledger."""
+    yield from _empty_schema()

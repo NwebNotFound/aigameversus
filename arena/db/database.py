@@ -1,6 +1,7 @@
 """Connection pool and schema migrations for Postgres."""
 
 import json
+import os
 from importlib import resources
 
 import asyncpg
@@ -15,9 +16,20 @@ async def _use_json_for_jsonb(connection: asyncpg.Connection) -> None:
     )
 
 
-async def connect(url: str) -> asyncpg.Pool:
-    """Open a pool. Close it with `await pool.close()`."""
-    return await asyncpg.create_pool(url, init=_use_json_for_jsonb, min_size=1, max_size=10)
+async def connect(url: str, *, min_size: int = 1) -> asyncpg.Pool:
+    """Open a pool. Close it with `await pool.close()`.
+
+    With `min_size=0` it opens no connection yet, so a server that is down
+    fails the first query instead of this call.
+    """
+    return await asyncpg.create_pool(
+        url, init=_use_json_for_jsonb, min_size=min_size, max_size=10, timeout=5
+    )
+
+
+def ledger_url(database_url: str) -> str:
+    """Where the spend ledger is kept: LEDGER_DATABASE_URL, else the match database."""
+    return os.environ.get("LEDGER_DATABASE_URL") or database_url
 
 
 async def migrate(pool: asyncpg.Pool) -> list[str]:

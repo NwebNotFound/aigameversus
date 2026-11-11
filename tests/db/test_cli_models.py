@@ -377,6 +377,7 @@ def test_model_seats_get_the_prompt_version_of_the_settings(
     assert (code, complaints) == (0, "")
     (match,), events, _ = stored(database)
     assert events[match.id][0].data["prompt_version"] == "poker-p2"
+    assert match.prompt_version == "poker-p2"
     saved = json.loads((tmp_path / "match.json").read_text(encoding="utf-8"))
     assert saved["prompt_version"] == "poker-p2"
     assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")

@@ -28,7 +28,8 @@ def bot_seats(players: Sequence[PlayerId]) -> dict[PlayerId, Seat]:
 
 
 _COLUMNS = (
-    "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, origin"
+    "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, "
+    "origin, prompt_version"
 )
 
 
@@ -44,6 +45,7 @@ class MatchRecord(BaseModel):
     placements: list[Placement] | None
     seats: dict[PlayerId, Seat] | None = None  # None for matches recorded before seats were
     origin: Origin = "played"
+    prompt_version: str | None = None  # None for matches recorded before it was
 
     @property
     def real(self) -> bool:
@@ -64,11 +66,13 @@ class MatchStore:
         settings: dict[str, Any],
         seats: dict[PlayerId, Seat] | None = None,
         origin: Origin = "played",
+        prompt_version: str | None = None,
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
-            "INSERT INTO matches (id, game, status, players, seed, settings, seats, origin) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7) RETURNING {_COLUMNS}",
+            "INSERT INTO matches "
+            "(id, game, status, players, seed, settings, seats, origin, prompt_version) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7, $8) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
@@ -76,6 +80,7 @@ class MatchStore:
             settings,
             None if seats is None else {p: s.model_dump() for p, s in seats.items()},
             origin,
+            prompt_version,
         )
         return MatchRecord(**row)
 
@@ -125,19 +130,25 @@ class MatchStore:
             for seat, (name, model) in profiles.items()
         }
 
-    async def finished_with_cost(self, limit: int = 100) -> list[tuple[MatchRecord, int]]:
-        """The newest finished matches, newest first, each with its model cost in micro-euros."""
+    async def finished(self, limit: int = 100) -> list[MatchRecord]:
+        """The newest finished matches, newest first."""
         rows = await self._pool.fetch(
-            f"SELECT {_COLUMNS}, coalesce(c.cost, 0) AS cost FROM matches "
-            "LEFT JOIN (SELECT match_id, sum(cost_micro_eur) AS cost FROM model_calls "
-            "GROUP BY match_id) c ON c.match_id = matches.id "
-            "WHERE status = 'finished' ORDER BY finished_at DESC, id LIMIT $1",
+            f"SELECT {_COLUMNS} FROM matches WHERE status = 'finished' "
+            "ORDER BY finished_at DESC, id LIMIT $1",
             limit,
         )
-        return [
-            (MatchRecord(**{k: v for k, v in row.items() if k != "cost"}), int(row["cost"]))
-            for row in rows
-        ]
+        return [MatchRecord(**row) for row in rows]
+
+    async def model_matches(self) -> int:
+        """How many finished matches played here had a model in a seat.
+
+        Imported matches booked their calls in another ledger, if anywhere.
+        """
+        return await self._pool.fetchval(
+            "SELECT count(*) FROM matches WHERE status = 'finished' AND origin = 'played' "
+            "AND EXISTS "
+            "(SELECT 1 FROM jsonb_each(seats) seat WHERE seat.value->>'kind' = 'model')"
+        )
 
     async def recent(self, statuses: Sequence[Status] | None = None) -> list[MatchRecord]:
         """The newest 100 matches, newest first; only those in `statuses` if given."""

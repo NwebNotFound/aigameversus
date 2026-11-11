@@ -1,118 +1,35 @@
 """The economy: what cities yield, building and demolishing, upkeep, hunger and growth."""
 
-import json
 import random
-from itertools import combinations
 
 import pytest
 
-from arena.engine.plugin import TurnContext
-from arena.engine.types import Event
-from games.civ.data_loader import CivData, load_civ_data
 from games.civ.economy import (
-    apply_event,
     build,
     build_problem,
     building_slots,
     city_viewpoints,
-    city_yields,
     demolish,
     demolish_problem,
-    finish_construction,
     focus_problem,
-    found_city,
-    grow,
-    produce,
     set_focus,
     units_lost_to_hunger,
     upkeep,
-    worked_tiles,
 )
 from games.civ.fog import visible_tiles
-from games.civ.state import CivState, new_game
-from games.civ.world import Hex, WorldMap, distance, generate_map
-
-DATA = load_civ_data()
-PLAYERS = ["ada", "bo", "cy", "di", "ed", "flo"]
-CENTER = (3, 2)
-RING = [(2, 1), (3, 1), (2, 2), (4, 2), (2, 3), (3, 3)]  # the six tiles around CENTER
-RICH = {"food": 99, "wood": 99, "iron": 99, "gold": 99}
-
-
-def flat_map(kind: str, tiles: dict[Hex, str] | None = None) -> WorldMap:
-    """Seven by five tiles of one terrain, with the given tiles changed."""
-    rows = [[kind] * 7 for _ in range(5)]
-    for (col, row), other in (tiles or {}).items():
-        rows[row][col] = other
-    return WorldMap(rows=rows, starts=[])
-
-
-def bare_map(tiles: dict[Hex, str] | None = None) -> WorldMap:
-    """Mountains, which yield nothing, around a plain for a city at CENTER."""
-    return flat_map("mountains", {CENTER: "plains", **(tiles or {})})
-
-
-def with_building_rules(**changes) -> CivData:
-    return DATA.model_copy(
-        update={"building_rules": DATA.building_rules.model_copy(update=changes)}
-    )
-
-
-def reordered(value):
-    """The same JSON data with the keys of every object in the opposite order."""
-    if isinstance(value, dict):
-        return {key: reordered(item) for key, item in reversed(value.items())}
-    if isinstance(value, list):
-        return [reordered(item) for item in value]
-    return value
-
-
-class Realm:
-    """A state and the log of what happened to it, driven the way the turn flow drives it."""
-
-    def __init__(self, world: WorldMap, players=("ada", "bo"), data: CivData = DATA):
-        self.data = data
-        self.state = new_game(players, data)
-        self.state.world = world
-        self.events: list[Event] = []
-        self.ctx = TurnContext(lambda *key: random.Random(repr(key)), self._record)
-
-    def _record(self, event: Event) -> None:
-        self.events.append(event)
-        apply_event(self.state, event)
-
-    def found(self, owner: str, tile: Hex, *buildings: str, population: int = 1) -> str:
-        """A city of that nation, for a test that needs it grown or built up already."""
-        city_id = found_city(self.state, self.ctx, owner, tile)
-        self.state.city(city_id).population = population
-        self.state.city(city_id).buildings.extend(buildings)
-        return city_id
-
-    def build(self, player: str, city_id: str, building: str) -> None:
-        build(self.state, self.data, self.ctx, player, city_id, building)
-
-    def start_round(self) -> None:
-        finish_construction(self.state, self.ctx)
-
-    def end_round(self, units: dict[str, list[str]] | None = None) -> None:
-        produce(self.state, self.data, self.ctx, units or {})
-        grow(self.state, self.data, self.ctx)
-
-    def round(self, units: dict[str, list[str]] | None = None) -> None:
-        self.start_round()
-        self.end_round(units)
-
-    def stock(self, player: str = "ada") -> dict[str, int]:
-        return self.state.nations[player].stock
-
-    def yields(self, city_id: str) -> dict[str, int]:
-        return city_yields(self.state, self.data, city_id)
-
-    def worked(self, city_id: str) -> list[Hex]:
-        return worked_tiles(self.state, self.data, city_id)
-
-    def of_type(self, type: str) -> list[dict]:
-        return [event.data for event in self.events if event.type == type]
+from games.civ.state import new_game
+from games.civ.tests.realm import (
+    CENTER,
+    DATA,
+    PLAYERS,
+    RICH,
+    RING,
+    Realm,
+    bare_map,
+    flat_map,
+    with_building_rules,
+)
+from games.civ.world import distance, generate_map
 
 
 @pytest.fixture
@@ -594,9 +511,10 @@ def test_nation_without_cities_still_pays_for_its_units_and_one_with_nothing_is_
     realm.round({"bo": ["spearman"] * 6})
     assert [event["player"] for event in realm.of_type("production")] == ["ada", "bo"]
     assert (realm.stock("bo")["food"], realm.state.nations["bo"].hungry_rounds) == (0, 1)
+    assert len(realm.state.units_of("bo")) == 5  # and one of the six starved
 
     # Its units are gone: one more event clears the count, then none.
-    realm.round()
+    realm.round({})
     realm.round()
     assert [event["player"] for event in realm.of_type("production")] == [
         "ada",
@@ -687,124 +605,3 @@ def test_city_sees_two_tiles_and_a_finished_watchtower_adds_two():
     seen = visible_tiles(realm.state.world, city_viewpoints(realm.state, DATA, "ada"))
     assert (6, 4) in seen
     assert len(seen) == 35
-
-
-# --- whole sessions -----------------------------------------------------------
-
-
-def play(seed: int, count: int = 4, rounds: int = 40, data: CivData = DATA):
-    """Nations that give random legal orders, round after round. Yields the realm after each."""
-    rng = random.Random(seed)
-    players = PLAYERS[:count]
-    realm = Realm(generate_map(players, data, rng), players, data)
-    state = realm.state
-    for start in state.world.starts:
-        found_city(state, realm.ctx, start.player, start.tile)
-    units = {player: ["spearman", "settler"] for player in players}
-    land = [t for t in state.world.tiles() if data.terrain[state.world.terrain(t)].movement_cost]
-
-    for _ in range(rounds):
-        realm.start_round()
-        for player in players:
-            own = [city.id for city in state.cities if city.owner == player]
-            for _ in range(rng.randrange(4)):
-                city_id = rng.choice(own)
-                order = rng.choice(["build", "build", "demolish", "focus"])
-                if order == "build":
-                    building = rng.choice(sorted(data.buildings))
-                    if build_problem(state, data, player, city_id, building) is None:
-                        realm.build(player, city_id, building)
-                elif order == "demolish" and state.city(city_id).buildings:
-                    building = rng.choice(state.city(city_id).buildings)
-                    demolish(state, data, realm.ctx, player, city_id, building)
-                elif order == "focus":
-                    focus = rng.choice(["growth", "production", "military"])
-                    set_focus(state, data, realm.ctx, player, city_id, focus)
-            free = [t for t in land if all(distance(t, c.tile) >= 2 for c in state.cities)]
-            if "settler" in units[player] and free and rng.random() < 0.2:
-                units[player].remove("settler")
-                found_city(state, realm.ctx, player, rng.choice(free))
-            if rng.random() < 0.3:
-                units[player].append(rng.choice(sorted(data.units)))
-        realm.end_round(units)
-        for player in players:
-            for _ in range(min(units_lost_to_hunger(state, data, player), len(units[player]))):
-                units[player].pop(rng.randrange(len(units[player])))
-        yield realm
-
-
-def played(seed: int, **options) -> Realm:
-    *_, realm = play(seed, **options)
-    return realm
-
-
-SLOW = with_building_rules(build_rounds=2)
-
-
-@pytest.mark.parametrize("count", [4, 5, 6])
-@pytest.mark.parametrize("seed", range(5))
-def test_random_orders_never_break_the_books(count, seed):
-    for realm in play(seed, count):
-        state = realm.state
-        for nation in state.nations.values():
-            assert all(amount >= 0 for amount in nation.stock.values())
-            assert sorted(nation.stock) == ["food", "gold", "iron", "wood"]
-            assert nation.hungry_rounds >= 0
-        for city in state.cities:
-            planned = city.buildings + [site.building for site in city.sites]
-            assert len(planned) <= building_slots(DATA, city.population)
-            assert all(planned.count(b) <= DATA.buildings[b].max_per_city for b in planned)
-            assert city.population >= 1
-            assert city.food >= 0
-        worked = {city.id: set(realm.worked(city.id)) for city in state.cities}
-        for a, b in combinations(worked, 2):
-            assert not worked[a] & worked[b]
-        assert not set().union(*worked.values()) & {city.tile for city in state.cities}
-
-
-def test_sessions_use_every_kind_of_event():
-    seen = {event.type for seed in range(5) for event in played(seed, data=SLOW).events}
-
-    assert seen == {
-        "city_founded",
-        "city_focus_set",
-        "building_started",
-        "building_completed",
-        "construction_progressed",
-        "building_demolished",
-        "production",
-        "city_grew",
-    }
-
-
-@pytest.mark.parametrize("seed", range(5))
-def test_same_seed_and_orders_give_the_same_events_and_state(seed):
-    first, second = played(seed), played(seed)
-
-    assert first.events == second.events
-    assert first.state == second.state
-    assert first.events != played(seed + 1).events
-
-
-@pytest.mark.parametrize("data", [DATA, SLOW], ids=["shipped", "slow_building"])
-@pytest.mark.parametrize("seed", range(5))
-def test_log_rebuilds_the_state_whatever_the_order_of_keys(seed, data):
-    realm = played(seed, count=5, data=data)
-    rebuilt = CivState(world=realm.state.world, nations=new_game(PLAYERS[:5], data).nations)
-
-    # Applying events needs no game data: the log alone carries what happened.
-    for event in realm.events:
-        stored = reordered(json.loads(json.dumps(event.data)))
-        apply_event(rebuilt, Event(source=event.source, type=event.type, data=stored))
-
-    assert rebuilt == realm.state
-
-
-@pytest.mark.parametrize("data", [DATA, SLOW], ids=["shipped", "slow_building"])
-@pytest.mark.parametrize("seed", range(5))
-def test_every_event_is_private_to_the_nation_it_concerns(seed, data):
-    realm = played(seed, data=data)
-
-    for event in realm.events:
-        owner = event.data.get("player") or realm.state.city(event.data["city"]).owner
-        assert event.visible_to == (owner,)

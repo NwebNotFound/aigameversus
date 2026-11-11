@@ -118,8 +118,10 @@ Three ways:
   With `"models": ["glm-flash", ...]` (one per seat) and `"confirm_spend":
   true` the seats are models behind one `Budget`, as with the command. Model
   seats are refused (403) unless the server runs with
-  `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key; a cap
-  ends the match as `interrupted`. Every match record has `seats` (seat ->
+  `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
+  ledger (see Cost caps); a cap ends the match as `interrupted`. Model
+  matches are not rated yet: the API rates bot matches only, until the model
+  profiles (one per model and personality) reach it. Every match record has `seats` (seat ->
   `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
   the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
   `GET /replays` adds `real`.
@@ -241,10 +243,22 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   converts.
 - A request that could be longer than `max_input_tokens` is not sent; that
   seat fails (`PromptTooLong`) and the random bot takes it.
-- Without a database there is no ledger and therefore no model call.
-- The API key comes from the environment (`OPENROUTER_API_KEY` in `.env`,
-  passed on by Compose) and is read by LiteLLM only. It is in no config file,
-  log, event or database row.
+- The ledger is the table `model_calls` in `LEDGER_DATABASE_URL`, by default
+  the match database (`arena/db/database.py`, `ledger_url`). The stack keeps
+  it in a Postgres of its own that outlives `docker compose down -v`
+  ([docs/COSTS.md](docs/COSTS.md)); `scripts/backup-ledger.sh` dumps it.
+- Without a ledger there is no model call. Before a model match starts, the
+  API and the command call `Ledger.check`: a ledger that does not answer, or
+  is empty while the match database holds finished model matches played
+  here, not imported (the wrong one, or a lost one), refuses the match with `LedgerUnavailable` (503 in the
+  API), and nothing is recorded or booked. The server itself starts without
+  its ledger, so bot matches play on; `/matches/{id}/cost` answers 503 and
+  `/replays` shows the costs as null until the ledger answers.
+- The API key comes from `OPENROUTER_API_KEY`, or from the file that
+  `OPENROUTER_API_KEY_FILE` names (the stack mounts it read-only, see
+  `docker-compose.models.yml`). `load_keys` in `arena/config.py` reads the
+  file at every start of a model match and puts the key into the environment,
+  where LiteLLM reads it. It is in no config file, log, event or database row.
 
 ### Prompts
 
@@ -255,17 +269,17 @@ summary of the turn in `<summary>` if it has one, the observation in
 the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
-  (Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
+  (Liar's Deck, Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
   prompt as it was, or `<game>-p2`). `ModelAgent(call, plugin,
   settings=...)` asks the plugin for `rules(settings)` once and for
   `situation_summary(observation, settings)` on every turn; the API and the
   command pass the match settings. `prompt_version(settings)` is recorded in
-  `match_started` and in the `--save` export, so an analysis can tell the
+  `match_started`, in the match record (`prompt_version` in `GET /matches`
+  and `/replays`) and in the `--save` export, so an analysis can tell the
   versions apart. A game without versions inherits `"v1"`, `rules.md` and no
   summary, and its prompt is byte for byte what it was.
 - A summary is built from the player's observation only, so it can never
   hold what the player may not see; its `<` is escaped like all game data.
-
 - The player's seat is named three times: at the top of the system message
   ("wherever the game data names p8, that is you"), in the ask at the end
   ("You are p8."), and on every event the player did, which starts with
@@ -282,15 +296,13 @@ the server's error on a correction).
   rejects any other shape). The prompt shows it as `player p2 says: "..."`,
   the reader's own as `you said: "..."`.
 
-Prompt versions: a game may offer several prompts, `<game>-p1` (its
-`rules.md`, as it was) and `<game>-p2` (`rules_v2.md` plus a situation summary).
-The match setting `prompt_version` chooses one; the plugin answers
+Game side of a prompt version: a game offers `<game>-p1` (its `rules.md`, as it
+was) and `<game>-p2` (`rules_v2.md` plus a situation summary) by overriding
 `prompt_version(settings)`, `rules(settings)` and `situation_summary(observation,
-settings)` (None for p1). The runner passes the settings to `ModelAgent`, which
-puts the summary in a `<summary>` block above `<situation>`, and `match_started`
-records `prompt_version`. A summary is a pure function of the player's own
-observation, and `games/<game>/tests/golden/` holds the exact prompt text per
-version (`UPDATE_GOLDEN=1` rewrites it).
+settings)` (None for p1); `games/poker/prompt.py` is the pattern. Every tool a
+turn can offer must be named as `` `tool(` `` in the p2 rules (a test checks it),
+and `games/<game>/tests/golden/` holds the exact prompt text per version
+(`UPDATE_GOLDEN=1` rewrites it).
 
 ### Events and state
 
@@ -387,7 +399,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
   liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
   poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
   werewolf/     Werewolf: plugin, abilities, roles, templates, selection
-  civ/          Throne of Tokens, in parts: data, map, fog of war, economy
+  civ/          Throne of Tokens, in parts: data, map, fog of war, economy, armies
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -404,6 +416,8 @@ uv run pytest                 # all tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
 docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, Redis 6380
+# Real models in the stack: COSTS MONEY. Key file and ledger first: docs/COSTS.md
+docker compose -f docker-compose.yml -f docker-compose.models.yml up -d --build
 docker compose down           # stop it (--volumes also deletes the database)
 uv run arena games            # the games that can be played
 uv run arena run --game toy --bots --seed 7   # a bot match in the terminal
@@ -613,7 +627,7 @@ which effects still wait for their system.
 
 ### The Throne of Tokens map
 
-The game is built in parts (roadmap steps 7.1 and 7.2 so far; there is no
+The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
 - `games/civ/world.py`: `generate_map(players, data, rng)` returns a
@@ -628,35 +642,52 @@ The size of the map, the terrain mix, the rare tiles and the tiles around a
 capital are numbers under `map` in `games/civ/data/balance.yaml`; the README
 next to it says what each does and what the generator guarantees.
 
-### The Throne of Tokens economy
+### The Throne of Tokens economy and armies
 
-- `games/civ/state.py`: `CivState` holds the map, one `Nation` per player (its
-  stock of the four resources, its count of hungry rounds) and the cities in
-  founding order. `new_game(players, data)` is the state before the map is
-  drawn. Later steps add their part of the state here.
+- `games/civ/state.py`: `CivState` holds the round number, the map, one
+  `Nation` per player (its stock of the four resources, its count of hungry
+  rounds), the cities in founding order and the armies. `new_game(players,
+  data)` is the state before the map is drawn. Later steps add their part of
+  the state here.
 - `games/civ/economy.py`: the rules of cities. Questions about the state
   (`city_yields`, `worked_tiles`, `building_slots`, `city_viewpoints` for the
   fog, `upkeep`, `units_lost_to_hunger`), orders with a check each
   (`build_problem` and `build`, `demolish_problem` and `demolish`,
   `focus_problem` and `set_focus`; `found_city`) and the steps of a round
-  (`finish_construction`, `produce`, `grow`). The module docstring shows the
-  order of a round.
+  (`finish_construction`, `produce`, `grow`).
+- `games/civ/armies.py`: the rules of armies. Questions (`movement`,
+  `reachable`, `training_cost`, `army_viewpoints`), orders with a check each
+  (`train`, `move`, `split`, `merge`, `disband`, `settle`),
+  `deploy_start_units` for the setup and the round step `starve`.
+- `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
+  through which every event changes the state. Its docstring has the order
+  of the steps of a round.
 
-How it follows the engine's rules, and what the next systems should copy:
+How these follow the engine's rules, and what the next systems should copy:
 
 - A function that changes something takes the `TurnContext` and emits events;
-  only `apply_event` touches the state. The turn flow (step 7.6) passes the
-  plugin's context and routes events to `apply_event`.
-- An event carries the outcome (the cost paid, the new stock), so applying it
-  reads no game data, and every event is private to the nation it concerns:
-  what others learn about a city comes from their fog view.
+  only the functions in a module's `APPLIERS` touch the state, and
+  `turn.apply_event` routes each event to its applier. The plugin (step 7.6)
+  passes its context through and calls `turn.apply_event`.
+- An event carries the outcome (the cost paid, the new stock, the path
+  walked, which units were lost), so applying it reads no game data. Every
+  event except `round_started` is private to the nation it concerns: what
+  others learn about a city or an army comes from their fog view.
 - A `*_problem` function returns `None` or a message for the player. The
   order itself raises `ValueError` when it is not legal, so whoever resolves
   a round checks each order again at that moment: trades and other orders
   come first and may have used up what it needs.
-- Until armies are in the state (step 7.3), `produce` gets the units of each
-  nation as an argument, and removing the units `units_lost_to_hunger` counts
-  is left to that step.
+- Randomness: `ctx.rng("hunger", state.round, player)`. Every stream name
+  carries the round, because a stream can be asked for once per match.
+- "Once per round" is kept in the state, not left to the caller: an army
+  remembers the round of its last move, units split off from it and an army
+  it is merged into inherit that, and `move_problem` refuses a second move.
+  Do the same for any later rule of this kind.
+- A new system: a module with its functions and `APPLIERS`, its part of the
+  state in `state.py`, one line in `turn.py`. Tests drive it through `Realm`
+  in `games/civ/tests/realm.py`, which is as strict as the engine about
+  random streams and event data; `games/civ/tests/test_sessions.py` plays
+  random legal orders of all systems and should learn the new orders.
 
 ### A system
 
