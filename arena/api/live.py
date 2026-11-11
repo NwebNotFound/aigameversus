@@ -15,6 +15,7 @@ import asyncpg
 from arena.agents.budget import Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
+from arena.catalog import resolve
 from arena.config import display_name, load_config
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
@@ -146,7 +147,7 @@ class LiveMatches:
             seats = bot_seats(players)
         else:
             await self.ledger.check(await self.matches.model_matches())
-            config = load_config()
+            config = await resolve(load_config(), models.values())
             budget = Budget(self.ledger, match_id, config)
             agents = {
                 seat: ModelAgent(budget.model(seat, models[seat]), plugin, settings=settings)
