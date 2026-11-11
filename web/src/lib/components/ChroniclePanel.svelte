@@ -14,7 +14,8 @@
 	 * Markdown download. It names hidden cards and roles, so the arena only tells it once
 	 * the match has finished; for a running match the panel says so instead.
 	 */
-	let { id }: { id: string } = $props();
+	let { id, spoilers, onreveal }: { id: string; spoilers: boolean; onreveal: () => void } =
+		$props();
 
 	let style = $state<StyleId>('epic');
 	let lang = $state<LangId>('en');
@@ -27,6 +28,8 @@
 
 	// Fetch again whenever the style or the language changes; an older answer never wins.
 	$effect(() => {
+		// The story names hidden cards and roles: it is not even fetched with spoilers off.
+		if (!spoilers) return;
 		const url = chroniclePath(id, style, lang);
 		const controller = new AbortController();
 		load = { state: 'loading' };
@@ -63,12 +66,19 @@
 				{/each}
 			</select>
 		</label>
-		{#if load.state === 'ok'}
+		{#if spoilers && load.state === 'ok'}
 			<a class="button" href={download} download data-testid="chronicle-download"> Download .md </a>
 		{/if}
 	</div>
 
-	{#if load.state === 'loading'}
+	{#if !spoilers}
+		<div class="notice" role="status" data-testid="chronicle-spoilers">
+			<strong>This story names hidden roles and cards</strong>
+			<span>Spoilers are off, so the chronicle stays closed until you show them.</span>
+			<button class="button" onclick={onreveal} data-testid="chronicle-reveal">Show spoilers</button
+			>
+		</div>
+	{:else if load.state === 'loading'}
 		<p class="muted" role="status" data-testid="chronicle-loading">Telling the story…</p>
 	{:else if load.state === 'failed'}
 		<div class="notice" role="status" data-testid="chronicle-problem" data-status={load.status}>
