@@ -4,7 +4,7 @@ Nov 11, 2026 · NwebNotFound
 
 ## Überblick & Vision
 
-AIGameVersus ist eine Plattform, auf der KI-Modelle gegeneinander Spiele spielen – von Liar's Bar über Poker bis zu einem eigenen Civ-artigen Strategiespiel. Menschen schauen zu, vergleichen die Modelle und können optional eingreifen.
+AIGameVersus ist eine Plattform, auf der KI-Modelle gegeneinander Spiele spielen – von Liar's Deck über Poker bis zu einem eigenen Civ-artigen Strategiespiel. Menschen schauen zu, vergleichen die Modelle und können optional eingreifen.
 
 **Die Kernidee in einem Satz:** Wir bauen kein einzelnes Spiel, sondern eine Arena. Jedes Spiel ist ein austauschbares Modul, und alles Drumherum (KI-Anbindung, Gedächtnis, Zuschauer-Ansicht, Replays, Rangliste) funktioniert für jedes Spiel automatisch.
 
@@ -308,9 +308,9 @@ Poker testet Bluffen, Risiko und Wahrscheinlichkeitsrechnung. Zusätzlich zum no
 
 **Spezielle Statistiken:** Bluff-Quote, VPIP (wie oft freiwillig mitgespielt), Aggressivität, Chips gewonnen/verloren pro 100 Hände, „schlechteste Entscheidung“ (Fold mit der besten Hand).
 
-## Spiel 2: Liar's Bar (Liar's Deck)
+## Spiel 2: Liar's Deck
 
-Ein schnelles Bluff-Kartenspiel nach dem Vorbild von Liar's Bar: Wer beim Lügen erwischt wird oder jemanden zu Unrecht beschuldigt, muss am Revolver abdrücken. Kurz, dramatisch und perfekt zum Zuschauen. Auf der Plattform läuft es als eigenes Plugin (`games/liars_bar/`) mit eigenen Grafiken; Name, Figuren und Assets des Originalspiels werden nicht übernommen.
+Ein schnelles Bluff-Kartenspiel nach bekanntem Vorbild: Wer beim Lügen erwischt wird oder jemanden zu Unrecht beschuldigt, muss am Revolver abdrücken. Kurz, dramatisch und perfekt zum Zuschauen. Auf der Plattform läuft es als eigenes Plugin (`games/liars_deck/`) mit eigenen Grafiken; Name, Figuren und Assets des Originalspiels werden nicht übernommen.
 
 **Material**
 
@@ -345,7 +345,7 @@ Ein schnelles Bluff-Kartenspiel nach dem Vorbild von Liar's Bar: Wer beim Lügen
 | Teufelskarte | Eine Karte ist die Teufelskarte. Wird sie bei einem „Lügner!“-Ruf aufgedeckt, müssen alle anderen Spieler gleichzeitig abdrücken. |
 | Liar's Dice (später) | Würfel statt Karten: verdeckt würfeln, Gebote auf die Gesamtzahl einer Augenzahl, „Lügner!“ prüft das letzte Gebot. |
 
-Varianten und Kartenverteilung liegen als Daten vor (`games/liars_bar/variants/*.yaml`), damit neue Modi leicht dazukommen.
+Varianten und Kartenverteilung liegen als Daten vor (`games/liars_deck/variants/*.yaml`), damit neue Modi leicht dazukommen.
 
 **Tools**
 
@@ -487,7 +487,7 @@ Mehrere KIs pro Land: **König** (Strategie, Diplomatie, letzte Entscheidung), *
 
 ## Spiel 4: Werwolf
 
-Werwolf gehört zum ersten Build. Es ist reiner Text, nutzt die Bausteine von Poker und Liar's Bar (Tisch-Chat, Gedanken, Abstimmungen) und bringt einen Erzähler sowie eine frei wählbare Rollen-Zusammenstellung mit.
+Werwolf gehört zum ersten Build. Es ist reiner Text, nutzt die Bausteine von Poker und Liar's Deck (Tisch-Chat, Gedanken, Abstimmungen) und bringt einen Erzähler sowie eine frei wählbare Rollen-Zusammenstellung mit.
 
 **Ziel:** Die Dorfbewohner müssen alle Werwölfe finden und hinrichten. Die Werwölfe gewinnen, wenn sie gleich viele oder mehr sind als die übrigen Spieler.
 
@@ -592,11 +592,11 @@ Jede KI bekommt nur die Tools ihrer eigenen Rolle; die Liste entsteht automatisc
 
 ## Alle Spiele im Überblick
 
-Liar's Bar, Poker, Werwolf und Throne of Tokens kommen in den ersten Build; alle weiteren folgen danach. Jedes Spiel ist ein eigenes Plugin auf derselben Schnittstelle.
+Liar's Deck, Poker, Werwolf und Throne of Tokens kommen in den ersten Build; alle weiteren folgen danach. Jedes Spiel ist ein eigenes Plugin auf derselben Schnittstelle.
 
 | Spiel | Was es testet | Spieler | Aufwand | Status |
 | --- | --- | --- | --- | --- |
-| Liar's Bar | Bluffen, Risiko, Gegner lesen | 2–4 | gering | erster Build |
+| Liar's Deck | Bluffen, Risiko, Gegner lesen | 2–4 | gering | erster Build |
 | Poker (Texas Hold'em) | Bluffen, Wahrscheinlichkeiten, Risiko | 2–6 | gering–mittel | erster Build |
 | Throne of Tokens (Civ) | Wirtschaft, Krieg, Diplomatie | 4–6 | hoch | erster Build |
 | Werwolf | Lügen, Deduktion, Überzeugen | 7–10 | gering | erster Build |
@@ -701,12 +701,12 @@ Tests sind der Grund, warum eine KI das Projekt später sicher erweitern kann: S
 
 ## Roadmap in Phasen
 
-Jede Phase endet mit etwas Lauffähigem. Phasen 1–7 sind das Ziel für den ersten Build mit Fable: Liar's Bar, Poker, Werwolf und Throne of Tokens laufen komplett. Der Rest ist dokumentiert und vorbereitet.
+Jede Phase endet mit etwas Lauffähigem. Phasen 1–7 sind das Ziel für den ersten Build mit Fable: Liar's Deck, Poker, Werwolf und Throne of Tokens laufen komplett. Der Rest ist dokumentiert und vorbereitet.
 
 | Phase | Inhalt | Fertig, wenn … |
 | --- | --- | --- |
 | 1. Fundament | Docker-Setup, Arena-Server, Plugin-Schnittstelle, Event-Log, LiteLLM-Anbindung, Kostenlimits, Zufalls-Bot, Mock-LLM | eine Bot-Partie läuft per CLI durch |
-| 2. Liar's Bar | Plugin komplett (Basis + Teufelskarte), Tisch-Chat, Gedanken getrennt, Tests | 4 echte Modelle spielen eine Partie zu Ende |
+| 2. Liar's Deck | Plugin komplett (Basis + Teufelskarte), Tisch-Chat, Gedanken getrennt, Tests | 4 echte Modelle spielen eine Partie zu Ende |
 | 3. Poker | Texas Hold'em mit Side-Pots, Turnier-Blinds, Duplicate-Modus, Hand-Auswertung, Tests | 6 Modelle spielen ein Turnier bis zum Sieger |
 | 4. Werwolf | Alle Rollen aus der Rollen-Tabelle, Nacht-Reihenfolge, Erzähler, Hauptmann, Liebespaar, Rollen als YAML, Tests | 8 Modelle spielen mit frei gewählten Rollen zu Ende |
 | 5. Zuschauer-UI | Live-Ansicht (3 Spalten), Partie starten inkl. Werwolf-Rollen-Auswahl mit Vorlagen und Balance-Ampel, Bar-, Poker- und Werwolf-Tisch, Replays, Kostenanzeige, Steuerung | man kann jede Partie im Browser einrichten, starten und zuschauen |
@@ -733,7 +733,7 @@ Du baust "AIGameVersus", eine Plattform, auf der KI-Modelle gegeneinander Spiele
 Die vollständige Spezifikation steht in docs/DESIGN.md. Lies sie komplett, bevor du anfängst.
 
 Ziel dieses Builds: Phasen 1 bis 7 der Roadmap vollständig und lauffähig.
-Das heißt: die Plattform plus vier fertige Spiele – Liar's Bar (Liar's Deck, inkl. Teufelskarte),
+Das heißt: die Plattform plus vier fertige Spiele – Liar's Deck (inkl. Teufelskarte),
 Poker (No-Limit Texas Hold'em), Werwolf (alle Rollen aus DESIGN.md, inkl. Amor, Bärenführer,
 Hauptmann, und einer Rollen-Auswahl in der UI mit Vorlagen und Balance-Ampel) und
 Throne of Tokens (Civ-artig) – mit Zuschauer-UI, Replays, Profilen, Gedächtnis und Elo.
@@ -754,18 +754,18 @@ Anforderungen:
 - Werwolf-Rollen sind Daten (YAML) mit Hooks; neue Rollen erscheinen automatisch in der Auswahl.
 - Nachrichten anderer KIs im Prompt klar als Spielerinhalt markieren (Prompt-Injection-Schutz).
 - Zufalls-Bot und Mock-LLM für jedes Spiel, damit alles ohne API-Kosten testbar ist.
-- Eigene Grafiken für Liar's Bar; keine Namen, Figuren oder Assets aus dem Originalspiel.
+- Eigene Grafiken für Liar's Deck; keine Namen, Figuren oder Assets aus dem Originalspiel.
 
 Vorgehen:
 1. Lege zuerst Repo-Struktur, CLAUDE.md und README.md an (siehe DESIGN.md).
 2. Baue Phase für Phase in der Reihenfolge der Roadmap. Schreibe zu jedem System Tests und
    lass sie laufen, bevor du zur nächsten Phase gehst.
-   Pflicht-Tests u. a.: Poker-Handauswertung und Side-Pots, Liar's-Bar-Aufdecken und Revolver,
+   Pflicht-Tests u. a.: Poker-Handauswertung und Side-Pots, Liar's-Deck-Aufdecken und Revolver,
    Werwolf-Nacht-Reihenfolge, jede Rollenfähigkeit, Siegbedingungen inkl. Liebespaar,
    Rollen-Auswahl-Validierung, Civ-Kampfformel, Produktion, Unterhalt, Verträge.
 3. Am Ende muss gelten:
    - `docker compose up` startet alles
-   - je eine Partie Liar's Bar, Poker, Werwolf (mit allen Rollen) und Throne of Tokens mit
+   - je eine Partie Liar's Deck, Poker, Werwolf (mit allen Rollen) und Throne of Tokens mit
      Zufalls-Bots läuft komplett durch (Integrationstests)
    - jedes der vier Spiele lässt sich in der UI mit echten Modellen einrichten, starten und
      live verfolgen
