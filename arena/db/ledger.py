@@ -159,13 +159,30 @@ class Ledger:
             )
         return {(row["match_id"], row["player"]): int(row["cost"]) for row in rows}
 
-    async def settle(self, call_id: int, input_tokens: int, output_tokens: int, cost: int) -> None:
+    async def settle(
+        self,
+        call_id: int,
+        input_tokens: int,
+        output_tokens: int,
+        cost: int,
+        *,
+        latency_ms: int | None = None,
+        reasoning_tokens: int | None = None,
+    ) -> None:
         """Replace the upper bound of a booked call by what it was billed for."""
         await self._pool.execute(
-            "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, cost_micro_eur = $4 "
-            "WHERE id = $1",
+            "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, cost_micro_eur = $4, "
+            "latency_ms = $5, reasoning_tokens = $6 WHERE id = $1",
             call_id,
             input_tokens,
             output_tokens,
             cost,
+            latency_ms,
+            reasoning_tokens,
+        )
+
+    async def timed(self, call_id: int, latency_ms: int) -> None:
+        """How long a call took that reported no tokens; its booking stays the upper bound."""
+        await self._pool.execute(
+            "UPDATE model_calls SET latency_ms = $2 WHERE id = $1", call_id, latency_ms
         )

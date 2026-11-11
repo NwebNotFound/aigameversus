@@ -244,6 +244,29 @@ class Base:
             "info", text, actor=event.data["player"], detail=self.tool(event.data), importance=2
         )
 
+    def handle_decision(self, event: Event):
+        """What a move took: bookkeeping for statistics, shown only at the finest detail."""
+        data = event.data
+        parts = []
+        if data.get("latency_ms") is not None:
+            parts.append(f"{data['latency_ms'] / 1000:.1f} s")
+        if data.get("tokens_in") is not None or data.get("tokens_out") is not None:
+            parts.append(
+                self.w.pick(
+                    f"{data.get('tokens_in') or 0} tokens in, {data.get('tokens_out') or 0} out",
+                    f"{data.get('tokens_in') or 0} Tokens rein, {data.get('tokens_out') or 0} raus",
+                )
+            )
+        if data.get("retries"):
+            parts.append(
+                self.w.pick(f"{data['retries']} retries", f"{data['retries']} Wiederholungen")
+            )
+        who = self.w.who(data["player"])
+        text = self.w.pick(f"{who}'s move", f"Zug von {who}") + (
+            ": " + ", ".join(parts) if parts else ""
+        )
+        return self.out("info", text, actor=data["player"], importance=1)
+
     def handle_agent_failed(self, event: Event):
         who = self.w.who(event.data["player"])
         text = self.w.pick(

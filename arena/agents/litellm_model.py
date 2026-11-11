@@ -52,9 +52,7 @@ class LiteLLMModel:
                     ToolCall(call.function.name, call.function.arguments)
                     for call in message.tool_calls or ()
                 ),
-                usage=(
-                    None if usage is None else Usage(usage.prompt_tokens, usage.completion_tokens)
-                ),
+                usage=None if usage is None else _usage(usage),
                 cut_off=choice.finish_reason == "length",
             )
         except Exception as error:
@@ -92,3 +90,13 @@ def _litellm() -> Any:
     # failure it was.
     logging.getLogger("LiteLLM").disabled = True
     return litellm
+
+
+def _usage(usage: Any) -> Usage:
+    details = getattr(usage, "completion_tokens_details", None)
+    reasoning = getattr(details, "reasoning_tokens", None)
+    return Usage(
+        usage.prompt_tokens,
+        usage.completion_tokens,
+        reasoning if isinstance(reasoning, int) else None,
+    )

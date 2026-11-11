@@ -297,3 +297,17 @@ def test_a_model_match_with_memory_on_remembers_nothing_yet(client, database_url
             await pool.close()
 
     assert asyncio.run(remembered()) == {bots["id"]}
+
+
+def test_every_model_move_of_an_api_match_is_timed(client, database_url, answer_with):
+    answer_with(**PLAY_3)
+
+    response = client.post(
+        "/matches", json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": 4}
+    )
+
+    match = finish(client, response.json()["id"])
+    events = client.get(f"/matches/{match['id']}/events").json()
+    moves = [e for e in events if e["type"] == "decision"]
+    assert moves and all(isinstance(m["data"]["latency_ms"], int) for m in moves)
+    assert all(m["visible_to"] == [] for m in moves)
