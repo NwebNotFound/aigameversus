@@ -132,8 +132,11 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
 
 - `RandomBot` (`arena/agents/random_bot.py`) plays the game's `random_action`.
 - `ModelAgent` (`arena/agents/runner.py`) is the agent runner. Per request it
-  builds the prompt (`prompt.py`), calls its model, and reads the answer: plain
-  text is the private thought, the first tool call is the action.
+  builds the prompt (`prompt.py`), calls its model, and reads the answer: the
+  first tool call is the action, and its `thought` argument is the private
+  thought. `tool_schemas` adds that argument to every tool and the runner
+  takes it out again, so a game never sees it and no game tool may use the
+  name. Text beside the call counts as the thought when the argument is empty.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
@@ -159,20 +162,21 @@ calls out, `ModelError` on failure. Two things implement it:
   and would otherwise download a price list, and it switches LiteLLM's own
   logger off, because that logs whole requests and provider error texts.
 
-What the first matches with real models taught (a Liar's Deck match of four
-cheap models: 83 of 130 answers were rejected):
+What the first matches with real models taught (four and six cheap models;
+in the first, 83 of 130 answers were rejected):
 
 - Reasoning models think before they answer, the thinking is billed as output,
-  and it counts against `max_output_tokens`. Two of the four spent the whole
-  limit thinking and never reached their tool call. `limits.reasoning_effort`
-  in `config/models.yaml` (`low`) is sent with every call to keep it short.
+  and it counts against `max_output_tokens`. Two of four spent the whole limit
+  thinking and never reached their tool call. `limits.reasoning_effort` in
+  `config/models.yaml` (`low`) is sent with every call and keeps it short.
+- Left free, several models answer in prose or write the call as text
+  (`[raise(amount=40)]`, `default_api.call_liar(...)`). Every call is sent
+  with `tool_choice: required`, and the thought has its place inside the call,
+  because many models cannot write text and call a tool in one answer.
 - An answer that ran into the output limit is marked (`ModelReply.cut_off`).
-  If it has no tool call, the player is told that it was cut off and to think
-  in a sentence or two, not just that the tool call is missing.
-- A model that only reasoned has its reasoning as its thought, so spectators
-  still read what it was thinking.
-- The prompt says that a call written out as text is not a call: one model
-  kept printing `default_api.call_liar(...)` instead of calling the tool.
+  If it has no tool call, the player is told that it was cut off and to be
+  brief, not just that the tool call is missing.
+- A model that only reasoned has its reasoning as its text.
 
 Failures:
 

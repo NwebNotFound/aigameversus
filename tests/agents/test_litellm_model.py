@@ -50,12 +50,13 @@ def test_text_and_tool_calls_come_back_as_a_model_reply(answer_with):
         "The 3 is enough.",
         (ToolCall("play_card", '{"card": 3}'),),
     )
-    # The answer is limited in length, and LiteLLM's own retries are off: the
-    # agent runner is the only one that retries.
+    # The answer is limited in length and has to be a tool call, and LiteLLM's
+    # own retries are off: the agent runner is the only one that retries.
     assert sent == {
         "model": MODEL,
         "messages": MESSAGES,
         "tools": TOOLS,
+        "tool_choice": "required",
         "max_tokens": 300,
         "num_retries": 0,
     }
@@ -187,3 +188,11 @@ def test_reasoning_is_the_text_of_an_answer_that_has_no_other(litellm, answer_wi
 
     answer_with(mock_response=answer(litellm, finish="stop", content=None))
     assert call().text is None
+
+
+def test_tool_call_is_required_only_when_there_are_tools(answer_with):
+    sent = answer_with(mock_response="Short.")
+
+    asyncio.run(LiteLLMModel(MODEL, max_output_tokens=300)(MESSAGES, []))
+
+    assert "tool_choice" not in sent

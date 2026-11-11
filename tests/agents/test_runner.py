@@ -37,6 +37,27 @@ def test_tool_call_is_the_action_and_text_is_the_thought():
     )
 
 
+def test_thought_inside_the_call_is_the_thought_and_is_not_part_of_the_move():
+    reply, _, _ = ask(tool_call("play_card", {"thought": " The 7 should win. ", "card": 7}))
+
+    assert reply == Reply(
+        action=Action(tool="play_card", arguments={"card": 7}), thought="The 7 should win."
+    )
+
+
+def test_thought_inside_the_call_wins_over_text_beside_it():
+    said = tool_call("play_card", {"thought": "Short and to the point.", "card": 7}, text="Prose.")
+
+    assert ask(said)[0].thought == "Short and to the point."
+
+
+@pytest.mark.parametrize("inside", ["", "  ", None, 7, ["a"], {"a": 1}])
+def test_thought_that_is_empty_or_no_text_is_dropped_and_text_beside_the_call_counts(inside):
+    reply, _, _ = ask(tool_call("play_card", {"thought": inside, "card": 7}, text="Beside."))
+
+    assert reply == Reply(action=Action(tool="play_card", arguments={"card": 7}), thought="Beside.")
+
+
 @pytest.mark.parametrize("text", [None, "", " \n"])
 def test_answer_without_text_has_no_thought(text):
     reply, _, _ = ask(tool_call("play_card", {"card": 7}, text=text))

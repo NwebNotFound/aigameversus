@@ -32,6 +32,8 @@ class LiteLLMModel:
                 tools=tools,
                 max_tokens=self._max_output_tokens,
                 num_retries=0,  # the agent runner retries, with its own backoff
+                # A turn is one tool call: left free, some models answer in prose instead.
+                **({"tool_choice": "required"} if tools else {}),
                 **self._options,
             )
             choice = response.choices[0]
