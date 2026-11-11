@@ -1,0 +1,10 @@
+id: prime_wolf
+name: Urwolf
+team: wolves
+unique: true
+weight: -9
+night_order: 6
+hooks:
+  on_night: prime_wolf_infect
+description: >
+  Hunts with the wolves. Once per game may turn the victim into a werewolf instead of killing them.

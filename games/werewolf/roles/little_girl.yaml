@@ -1,0 +1,10 @@
+id: little_girl
+name: Kleines Mädchen
+team: village
+unique: true
+weight: 2
+night_order: 5
+hooks:
+  on_night: little_girl_spy
+description: >
+  May spy at night: 30% chance to learn a wolf, 15% chance to be caught and eaten instead of the victim.

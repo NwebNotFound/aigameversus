@@ -1,0 +1,9 @@
+id: villager
+name: Dorfbewohner
+team: village
+unique: false
+weight: 1
+night_order: null
+hooks: {}
+description: >
+  No ability. Discusses and votes.

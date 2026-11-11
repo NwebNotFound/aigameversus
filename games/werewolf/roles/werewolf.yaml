@@ -1,0 +1,10 @@
+id: werewolf
+name: Werwolf
+team: wolves
+unique: false
+weight: -6
+night_order: 6
+hooks:
+  on_night: wolves_choose_victim
+description: >
+  Chooses a victim each night together with the other wolves; has a private wolf chat.
