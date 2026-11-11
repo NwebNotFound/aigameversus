@@ -149,7 +149,8 @@ def test_illegal_move_is_explained_to_the_model_and_corrected():
     ]
     second_prompt = mocks["p1"].calls[1][0][1]["content"]
     assert second_prompt.endswith(
-        f"The server rejected your last answer: {error}\nAnswer again with one tool call."
+        f"The server rejected your last answer: {error}\n"
+        "You are p1. Answer again with one tool call."
     )
     assert "action_rejected (seen only by p1) " in second_prompt
     assert of_type(match, "card_played", "p1")[0].data["card"] == min(hand)
