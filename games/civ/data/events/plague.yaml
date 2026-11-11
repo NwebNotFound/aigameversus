@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=event.schema.json
+id: plague
+name: Plague
+name_de: Seuche
+probability_per_round: 0.04
+target: city
+effects:
+  population_change: -1

@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=balance.schema.json
+# Tuning numbers that are not tied to one unit, building or terrain.
+# Modifiers are relative: 0.25 = +25 %, -0.2 = -20 %.
+map:
+  tiles: {min: 60, max: 80}
+  nations: {min: 4, max: 6}
+  fog_vision_radius: 2 # around own cities and armies
+
+start: # each nation also starts with a capital
+  resources: {food: 5, wood: 5, iron: 0, gold: 5}
+  units:
+    - {unit: spearman, count: 1}
+    - {unit: settler, count: 1}
+
+city:
+  base_yields: {food: 2, wood: 1, gold: 1}
+  work_radius: 1
+  expanded_work_radius: 2
+  expanded_at_population: 5
+  growth_food: 10 # surplus food for +1 population
+  food_per_population: 1
+  building_slots: {base: 3, population_divisor: 2, max: 8} # 3 + population / 2, rounded down
+  focus_yields: # each population yields +1 of this resource
+    growth: food
+    production: wood
+    military: iron
+
+army:
+  max_units: 10
+  fortify_defense: 0.25 # after one round without moving
+  starving_units_lost_per_round: 1 # random unit lost while food is short
+
+combat:
+  random_factor: {min: 0.8, max: 1.2}
+  ranged_rounds: 1 # archers fire before melee
+  winner_loss_factor: 0.4 # winner loses (loser power / winner power) * this share of units
+
+conquest:
+  population_loss: 1
+  capital_lost_production_modifier: -0.2
+  capital_lost_rounds: 5
+  pillage_loot_share: 0.5 # share of the pillaged building's cost gained as loot
+
+war_weariness:
+  production_modifier_per_round: -0.02
+  max_production_modifier: -0.3
+
+trade:
+  base_fee: 0.1
+  low_reputation_below: 30
+  low_reputation_extra_fee: 0.1
+
+turn:
+  info_tool_calls: 8
+  diplomacy_passes: 2
+  resolution_order: [trade, build_and_train, movement, combat, production, growth, events]

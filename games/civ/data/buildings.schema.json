@@ -1,0 +1,180 @@
+{
+  "$defs": {
+    "Building": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "English display name",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "name_de": {
+          "description": "German display name",
+          "minLength": 1,
+          "title": "Name De",
+          "type": "string"
+        },
+        "cost": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Cost",
+          "type": "object"
+        },
+        "effects": {
+          "$ref": "#/$defs/BuildingEffects"
+        },
+        "requires_adjacent_terrain": {
+          "description": "City must border one of these terrains",
+          "items": {
+            "description": "snake_case English id",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Requires Adjacent Terrain",
+          "type": "array"
+        },
+        "max_per_city": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Max Per City",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "name_de",
+        "cost",
+        "effects"
+      ],
+      "title": "Building",
+      "type": "object"
+    },
+    "BuildingEffects": {
+      "additionalProperties": false,
+      "properties": {
+        "yields": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Extra yield per round",
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Yields",
+          "type": "object"
+        },
+        "trade_fee_modifier": {
+          "default": 0.0,
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Trade Fee Modifier",
+          "type": "number"
+        },
+        "training_cost_modifier": {
+          "default": 0.0,
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Training Cost Modifier",
+          "type": "number"
+        },
+        "city_defense": {
+          "default": 0.0,
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "City Defense",
+          "type": "number"
+        },
+        "trained_unit_strength_bonus": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Trained Unit Strength Bonus",
+          "type": "integer"
+        },
+        "famine_delay_rounds": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Famine Delay Rounds",
+          "type": "integer"
+        },
+        "vision_bonus": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Vision Bonus",
+          "type": "integer"
+        }
+      },
+      "title": "BuildingEffects",
+      "type": "object"
+    },
+    "BuildingRules": {
+      "additionalProperties": false,
+      "properties": {
+        "build_rounds": {
+          "minimum": 1,
+          "title": "Build Rounds",
+          "type": "integer"
+        },
+        "demolish_refund": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Demolish Refund",
+          "type": "number"
+        }
+      },
+      "required": [
+        "build_rounds",
+        "demolish_refund"
+      ],
+      "title": "BuildingRules",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "rules": {
+      "$ref": "#/$defs/BuildingRules"
+    },
+    "buildings": {
+      "items": {
+        "$ref": "#/$defs/Building"
+      },
+      "minItems": 1,
+      "title": "Buildings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "rules",
+    "buildings"
+  ],
+  "title": "BuildingsFile",
+  "type": "object"
+}

@@ -1,0 +1,115 @@
+{
+  "$defs": {
+    "Domination": {
+      "additionalProperties": false,
+      "properties": {
+        "city_share": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "City Share",
+          "type": "number"
+        }
+      },
+      "required": [
+        "city_share"
+      ],
+      "title": "Domination",
+      "type": "object"
+    },
+    "Economy": {
+      "additionalProperties": false,
+      "properties": {
+        "gold": {
+          "minimum": 1,
+          "title": "Gold",
+          "type": "integer"
+        },
+        "hold_rounds": {
+          "minimum": 1,
+          "title": "Hold Rounds",
+          "type": "integer"
+        },
+        "public_countdown": {
+          "title": "Public Countdown",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "gold",
+        "hold_rounds",
+        "public_countdown"
+      ],
+      "title": "Economy",
+      "type": "object"
+    },
+    "RoundLimit": {
+      "additionalProperties": false,
+      "properties": {
+        "rounds": {
+          "minimum": 1,
+          "title": "Rounds",
+          "type": "integer"
+        },
+        "score": {
+          "$ref": "#/$defs/Score"
+        }
+      },
+      "required": [
+        "rounds",
+        "score"
+      ],
+      "title": "RoundLimit",
+      "type": "object"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "properties": {
+        "per_city": {
+          "title": "Per City",
+          "type": "integer"
+        },
+        "per_population": {
+          "title": "Per Population",
+          "type": "integer"
+        },
+        "gold_divisor": {
+          "minimum": 1,
+          "title": "Gold Divisor",
+          "type": "integer"
+        },
+        "reputation_divisor": {
+          "minimum": 1,
+          "title": "Reputation Divisor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "per_city",
+        "per_population",
+        "gold_divisor",
+        "reputation_divisor"
+      ],
+      "title": "Score",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "domination": {
+      "$ref": "#/$defs/Domination"
+    },
+    "economy": {
+      "$ref": "#/$defs/Economy"
+    },
+    "round_limit": {
+      "$ref": "#/$defs/RoundLimit"
+    }
+  },
+  "required": [
+    "domination",
+    "economy",
+    "round_limit"
+  ],
+  "title": "VictoryFile",
+  "type": "object"
+}

@@ -1,0 +1,14 @@
+id: cupid
+name: Amor
+team: village
+unique: true
+weight: 2
+night_order: 1
+first_night_only: true
+hooks:
+  on_night: cupid_link_lovers
+  on_death_of_lover: lover_dies_of_grief
+description: >
+  On the first night, makes two players fall in love. If one dies, the other dies of grief. If the lovers are a wolf and a villager, they win only together as the last pair.
+rules_snippet: >
+  On night 1 you make two players fall in love. If one dies, the other dies of grief. Lovers win together, even as wolf and villager.

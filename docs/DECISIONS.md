@@ -1,8 +1,9 @@
 # Decisions
 
 Decisions taken where [DESIGN.md](DESIGN.md) is open, or where this project
-deliberately differs from it. `DESIGN.md` is kept verbatim as the original
-spec; where the two disagree, this file wins.
+deliberately differs from it. `DESIGN.md` is kept as the original spec, apart
+from the author line and the game title (D-018); where the two disagree, this
+file wins.
 
 Each entry: date, decision, why, alternatives considered.
 
@@ -214,7 +215,61 @@ Each entry: date, decision, why, alternatives considered.
   tests independent of each other and of development data.
 - **Alternatives:** Mocking the driver; an in-memory fake store; testcontainers.
 
-## D-018 · Liar's Deck devil card is one of the jokers
+## D-018 · The bluff card game is called Liar's Deck
+
+- **Date:** 2026-11-11
+- **Decision:** The game's public name is "Liar's Deck" everywhere: README, UI,
+  docs, and the game id (`liars_deck`, package `games/liars_deck/`). The spec
+  used the title of the commercial game that inspired it as a working title;
+  `docs/DESIGN.md` was edited to the new name. Code refers to the game by its
+  id, and the display name is defined in exactly one place, so a later rename
+  is a one-line change.
+- **Why:** Decided by the project owner. The project carries no title,
+  characters or assets of an existing game.
+- **Alternatives:** Keeping the working title; a different title, which
+  remains possible because of the single definition.
+
+## D-019 · Throne of Tokens data: layout and loader
+
+- **Date:** 2026-11-11
+- **Decision:** Content lives in `games/civ/data/` (events in
+  `games/civ/data/events/`, not `games/civ/events/` as one spec line says, to
+  match the repo layout in the same spec). Lists are YAML lists of entries with
+  an `id`, so duplicates are caught (YAML mappings silently drop duplicate
+  keys). One event per file, file name = id. Pydantic models in
+  `games/civ/data_loader.py` are the single source of the schema; the
+  `*.schema.json` files are generated from them and a test fails when they are
+  stale. Building-slot numbers sit in `balance.yaml` only, not also in
+  `buildings.yaml`.
+- **Why:** One place for each number; readable errors; editor validation for
+  free.
+- **Alternatives:** hand-written JSON schemas validated with `jsonschema`;
+  one file per unit and building; id-keyed mappings.
+
+## D-020 · Throne of Tokens values the spec leaves open
+
+- **Date:** 2026-11-11
+- **Decision:** Starting values, all in the data files and meant to be tuned:
+  - Event chance per round: plague 4 %, drought 3 % (food −50 %, radius 2,
+    3 rounds), rebellion 5 % (only cities conquered within 10 rounds), barbarians
+    5 % (2 spearmen, 1 swordsman), gold find 5 % (+25 gold), good harvest 6 %
+    (+5 food).
+  - Treaties: peace and alliance last until broken; non-aggression and open
+    borders 3–30 rounds (default 10); tribute 1–20 (default 5). An alliance
+    includes open borders.
+  - Reputation starts at 50. Trade fee 10 %, +10 % below reputation 30.
+  - Start stock 5 food, 5 wood, 0 iron, 5 gold, besides the capital and units.
+  - City focus: growth → food, production → wood, military → iron.
+  - Pillage yields 50 % of the building's cost. One of each building per city.
+  - Divisions in the score and in building slots round down.
+  - English ids: Reiter = `horseman`, Belagerung = `siege_engine`,
+    Schmiede = `forge`, Speicher = `granary`.
+- **Why:** The spec gives no number for these; these keep events rare enough
+  not to decide a 60-round match on their own.
+- **Alternatives:** leave them out until the systems need them (phase 7
+  engine work would then block on data).
+
+## D-021 · Liar's Deck devil card is one of the jokers
 
 - **Date:** 2026-11-11
 - **Decision:** In the devil-card variant the devil card is one of the two jokers
