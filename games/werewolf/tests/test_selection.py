@@ -243,6 +243,35 @@ def test_classic_is_even_at_every_table_size(players: int):
     assert balance(apply_template("classic", players)).verdict == "even"
 
 
+# The balance total of Duesterwald and Chaos at every size they allow (D-061). Duesterwald at 8
+# players cannot do better: a third wolf would not fit beside its six special roles.
+DUESTERWALD_TOTALS = {8: 9, 9: 3, 10: -3, 11: -2, 12: -1, 13: 0, 14: 1, 15: 2, 16: 3}
+CHAOS_TOTALS = {14: 0, 15: 1, 16: 2}
+
+
+def test_duesterwald_wolves_scale_with_the_table():
+    wolves = {n: apply_template("duesterwald", n)["werewolf"] for n in range(8, 17)}
+
+    assert wolves == {8: 2, 9: 3, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4}
+
+
+@pytest.mark.parametrize(("template_id", "expected"), [
+    ("duesterwald", DUESTERWALD_TOTALS),
+    ("chaos", CHAOS_TOTALS),
+])  # fmt: skip
+def test_duesterwald_and_chaos_balance_at_every_size(template_id: str, expected: dict[int, int]):
+    totals = {n: balance(apply_template(template_id, n)).total for n in expected}
+
+    assert totals == expected
+    # Even everywhere except the one documented size.
+    for n, total in totals.items():
+        verdict = balance(apply_template(template_id, n)).verdict
+        assert verdict == ("village" if (template_id, n) == ("duesterwald", 8) else "even"), (
+            n,
+            total,
+        )
+
+
 @pytest.mark.parametrize("players", PLAYER_COUNTS)
 def test_random_balanced_is_valid_and_near_zero(players: int):
     for seed in range(5):
