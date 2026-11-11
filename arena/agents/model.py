@@ -29,6 +29,7 @@ class ModelReply:
     text: str | None = None
     tool_calls: tuple[ToolCall, ...] = ()
     usage: Usage | None = None  # None: the provider did not say
+    cut_off: bool = False  # the answer ran into the output limit before it was finished
 
 
 class ModelError(Exception):

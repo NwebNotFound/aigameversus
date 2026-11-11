@@ -1,0 +1,3036 @@
+{
+ "match": "634ba3c1-08f1-4f41-804c-532d311ae43d",
+ "game": "liars_deck",
+ "version": "1",
+ "seed": 2027,
+ "settings": {},
+ "seats": {
+  "p1": "glm-flash",
+  "p2": "deepseek-flash",
+  "p3": "llama-scout",
+  "p4": "gemini-flash-lite"
+ },
+ "status": "finished",
+ "placements": [
+  {
+   "player": "p1",
+   "rank": 1
+  },
+  {
+   "player": "p4",
+   "rank": 2
+  },
+  {
+   "player": "p2",
+   "rank": 3
+  },
+  {
+   "player": "p3",
+   "rank": 4
+  }
+ ],
+ "cost_micro_eur": {
+  "p1": 1547,
+  "p2": 3115,
+  "p3": 1173,
+  "p4": 6442
+ },
+ "events": [
+  {
+   "source": "engine",
+   "type": "match_started",
+   "data": {
+    "game": "liars_deck",
+    "seed": 2027,
+    "players": [
+     "p1",
+     "p2",
+     "p3",
+     "p4"
+    ],
+    "version": "1",
+    "settings": {}
+   },
+   "visible_to": []
+  },
+  {
+   "source": "game",
+   "type": "revolver_loaded",
+   "data": {
+    "live": [
+     4
+    ],
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "game",
+   "type": "revolver_loaded",
+   "data": {
+    "live": [
+     0
+    ],
+    "player": "p2"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "game",
+   "type": "revolver_loaded",
+   "data": {
+    "live": [
+     0
+    ],
+    "player": "p3"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "game",
+   "type": "revolver_loaded",
+   "data": {
+    "live": [
+     5
+    ],
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 1,
+    "players": [
+     "p1",
+     "p2",
+     "p3",
+     "p4"
+    ],
+    "starter": "p1",
+    "hand_size": 5,
+    "table_card": "king"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q2",
+     "A3",
+     "Q6",
+     "K2",
+     "Q4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A1",
+     "K6",
+     "Q5",
+     "J1",
+     "A4"
+    ],
+    "player": "p2"
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q1",
+     "Q3",
+     "K5",
+     "A6",
+     "K1"
+    ],
+    "player": "p3"
+   },
+   "visible_to": [
+    "p3"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A5",
+     "K4",
+     "K3",
+     "A2",
+     "J2"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "K2"
+     ],
+     "claim_text": "One true king."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One true king.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K2"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p2",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Both K6 and J1 count as kings, so this play is safe even if called; it also empties two cards while keeping flexibility in reserve.",
+    "player": "p2"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p2",
+    "arguments": {
+     "card_ids": [
+      "K6",
+      "J1"
+     ],
+     "claim_text": "Two more kings for you."
+    }
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Two more kings for you.",
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K6",
+     "J1"
+    ],
+    "player": "p2"
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p3",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "agent_failed",
+   "data": {
+    "error": "model call failed after 1 tries (BadRequestError)",
+    "player": "p3"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_fallback",
+   "data": {
+    "tool": "play_cards",
+    "player": "p3",
+    "reason": "agent_failed",
+    "arguments": {
+     "card_ids": [
+      "K1",
+      "Q1",
+      "A6"
+     ]
+    }
+   },
+   "visible_to": [
+    "p3"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 3,
+    "player": "p3"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K1",
+     "Q1",
+     "A6"
+    ],
+    "player": "p3"
+   },
+   "visible_to": [
+    "p3"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "p3 played 3 cards and the table card is king. I have two kings and a joker, which can all be claimed as kings. I will play these three cards to match p3's play and assert kings.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "K4",
+      "K3",
+      "J2"
+     ],
+     "claim_text": "Three kings, for the crown!"
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Three kings, for the crown!",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 3,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K4",
+     "K3",
+     "J2"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Nine cards claimed as kings this round, but only 6 kings + 2 jokers exist. I hold K2 myself, so at most 7 kings/jokers exist among played cards. p4's three cannot all be kings — a call is nearly free.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p1",
+    "arguments": {
+     "text": "Nine kings claimed, but the deck holds only six. I don't buy your trio. Liar!"
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Nine kings claimed, but the deck holds only six. I don't buy your trio. Liar!",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p1",
+    "target": "p4",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "K4",
+     "K3",
+     "J2"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p1"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 1,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 1,
+    "next_starter": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 2,
+    "players": [
+     "p1",
+     "p2",
+     "p3",
+     "p4"
+    ],
+    "starter": "p1",
+    "hand_size": 5,
+    "table_card": "ace"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A1",
+     "J1",
+     "Q4",
+     "Q3",
+     "K3"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q2",
+     "A4",
+     "K2",
+     "K4",
+     "A3"
+    ],
+    "player": "p2"
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q6",
+     "K5",
+     "K6",
+     "Q5",
+     "A5"
+    ],
+    "player": "p3"
+   },
+   "visible_to": [
+    "p3"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q1",
+     "A6",
+     "J2",
+     "K1",
+     "A2"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Start the round truthfully with my single ace, keeping joker and others for later flexibility.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "A1"
+     ],
+     "claim_text": "One honest ace to start."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One honest ace to start.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "A1"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p2",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Table card is ace and I hold two genuine aces. Playing them honestly keeps me safe if called, and buries the round deeper.",
+    "player": "p2"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p2",
+    "arguments": {
+     "card_ids": [
+      "A4",
+      "A3"
+     ],
+     "claim_text": "Two real aces on top of yours."
+    }
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Two real aces on top of yours.",
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "A4",
+     "A3"
+    ],
+    "player": "p2"
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p3",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "action_fallback",
+   "data": {
+    "tool": "call_liar",
+    "player": "p3",
+    "reason": "agent_failed",
+    "arguments": {}
+   },
+   "visible_to": [
+    "p3"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p3",
+    "target": "p2",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "A4",
+     "A3"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p3"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": true,
+    "pull": 1,
+    "player": "p3"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "players_eliminated",
+   "data": {
+    "players": [
+     "p3"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 2,
+    "next_starter": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 3,
+    "players": [
+     "p1",
+     "p2",
+     "p4"
+    ],
+    "starter": "p2",
+    "hand_size": 5,
+    "table_card": "queen"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q2",
+     "Q4",
+     "A4",
+     "J2",
+     "K4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A2",
+     "A1",
+     "J1",
+     "K5",
+     "K2"
+    ],
+    "player": "p2"
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q1",
+     "A3",
+     "A6",
+     "Q3",
+     "K6"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I hold no real queens, only the joker. Playing the joker alone is honest and safe; I'll build credibility before bluffing with my kings and aces.",
+    "player": "p2"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p2",
+    "arguments": {
+     "card_ids": [
+      "J1"
+     ],
+     "claim_text": "One queen to open. A joker's as good as a queen, so this one's free."
+    }
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One queen to open. A joker's as good as a queen, so this one's free.",
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "J1"
+    ],
+    "player": "p2"
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I have queens in my hand and the table card is a queen. Player p2 played one card and implied it could be a queen or a joker. Playing a queen is a safe bet to match the table card.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "Q1"
+     ],
+     "claim_text": "One queen, right on cue."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One queen, right on cue.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q1"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I have Q2, Q4, J2 — three good queens. Play all three, safe.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "Q2",
+      "Q4",
+      "J2"
+     ],
+     "claim_text": "Three queens, all genuine. Come check me if you dare."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Three queens, all genuine. Come check me if you dare.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 3,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q2",
+     "Q4",
+     "J2"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p2",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Let me analyze the situation.\n\nRound 3, table card is queen. My hand: A2, A1, K5, K2. Wait, I have 4 cards but the deal was 5 including J1 which I played. So my hand now: A2, A1, K5, K2.\n\nPlayers alive: p1 (2 cards, 1 trigger pull), p2 (me, 4 cards, 0 pulls), p4 (4 cards, 0 pulls). p3 eliminated.\n\nLast play: p1 played 3 cards claiming queens. Plays this round: p2 played 1 (my J1), p4 played 1, p1 played 3.\n\nSo p1 claims three queens. Do I believe them? p1 has only 2 cards in hand now (after playing 3, they had... wait). Let me check card counts.\n\nInitially all had 5. I played 1 (J1), so I have 4. p4 played 1, so p4 has 4. p1 played 3, so p1 has 2. That matches the player data: p1 has 2 cards.\n\nTotal queens in deck: 6. So far this round, no queens revealed. My hand has no queens. p1 claims 3 queens. Possible.\n\nHmm, p1's claim of 3 queens. The deck has 6 queens. I have none. p4 might have some. p1 claims 3. It's possible but risky.\n\nActually, let me think about whether to call. If p1 is lying, p1 shoots (1/6 live, but p1 already pulled once with a blank, so the cylinder moved - p1's risk is 1/5 now). Wait, p1 pulled once (blank). The cylinder advanced. So p1's next pull is 1/5 live.\n\nIf I call and p1 is honest, I shoot. My risk is 1/6 (never pulled).\n\nLet me think about probability. p1 claims 3 queens out of 6 queens in deck. My hand has 4 cards, none queens. So there are 5 cards dealt to others... wait total. Let's think: 20 cards. Dealt 5 each to 3 players = 15, plus table card 1, plus 4 in draw pile.\n\nHmm actually let me reconsider. Each player got 5. I have 4 now. p1 has 2, p4 has 4. So total cards in hands = 4+2+4 = 10. Plus my played J1 (revealed, now discarded), p4's played 1, p1's played 3. Actually played cards are revealed.\n\nQueens: 6 total. I have 0. So the other 5 queens could be among p1, p4, played cards, draw pile.\n\np1 claims to have played 3 queens. That means p1 must have had at least 3 queens among their 5 cards. Possible.\n\nShould I call? Let's think about the dynamics. p1 played 1 card in round... wait p1 in round 2? Let me not overanalyze.\n\nThe question: is p1 bluffing? p1 said \"Come check me if you dare.\" That's a taunt suggesting confidence, could be a bluff.\n\nGiven I have 4 cards and want to survive, calling is risky. If I call and I'm wrong, I shoot at 1/6. That's not too bad actually. But if I'm right, p1 shoots at 1/5 and might die.\n\nActually, let me think more carefully about the probability p1 is lying.\n\np1 has 2 cards left. If p1 played 3 queens honestly, they used 3 queens (or jokers) and now hold 2 cards. \n\nCards I know: my hand A2,A1,K5,K2. My played J1 (honest). So queens: I've seen none. \n\nThe deck has 6 queens. Of the 15 cards dealt + 1 table... table card is queen. Wait! The table card is a queen and it's drawn from the deck separately? Let me re-read rules.\n\n\"All cards are shuffled and every living player gets 5 cards. One table card is drawn: king, queen or ace.\"\n\nSo the table card is drawn - it's an actual card from the deck? It says one table card is drawn. So one queen is the table card (revealed as the table card, not in anyone's hand). Hmm, actually the table card determines the target rank. It might be a separate card that's set aside.\n\nActually typically in Liar's Deck / Cheat, the table card is just a rank indicator. But here \"One table card is drawn\" suggests it's a physical card. Let me assume the table card is removed from the deck. So 20 cards: 5 per player for 3 players = 15, +1 table = 16, +4 draw pile = 20. Yes that works.\n\nSo if table card is one queen, then only 5 queens remain in play. Hmm, but actually the table card could be shown as \"queen\" meaning the rank. Let me not overthink; the dealt hands: each player got 5 from remaining 19? Hmm.\n\nActually \"every living player gets 5 cards\" and \"one table card is drawn\". With 3 players that's 15 cards + 1 = 16, 4 left over. The deck is 20. So table card is drawn from the deck. So there are 5 queens left in the 19 cards (excluding table card if it's a queen). Actually if table card is queen, then 5 queens distributed among players/draw.\n\nHmm this is getting complicated. Let me just estimate.\n\nMy hand: 4 cards, no queens. So of the 19 non-table cards, I hold 4, none queens. The remaining 15 cards (p1's 2, p4's 4, draw pile 4, and played cards: my J1, p4's 1, p1's 3) contain the queens.\n\nWait, played cards are on the table face down but revealed only on call. My J1 was revealed and is now... it's a joker played. p4's 1 card is face down (claimed queen). p1's 3 cards are face down (claimed queens).\n\nQueens available: 6 total minus 1 if table card is queen = 5, or 6 if table card isn't queen.\n\nThis is getting too deep. Let me just make a decision.\n\nKey strategic point: I have 4 cards, including K5, K2 (kings) and A2, A1 (aces). I have no queens, no jokers left (played J1). So I cannot honestly play queens. I'll have to bluff.\n\nI need to decide: call p1 or play.\n\nIf I call p1:\n- If p1 lied (any of 3 cards not queen/joker): p1 shoots at 1",
+    "player": "p2"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_rejected",
+   "data": {
+    "tool": null,
+    "error": "Your answer was cut off at the length limit before it called a tool. Think in one or two short sentences, then call exactly one tool.",
+    "player": "p2",
+    "arguments": null
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I hold zero queens, so five queen-claims among us is a stretch; p1's bold \"come check me\" reads like a bluff, and if I'm right p1 faces a 1/5 pull.",
+    "player": "p2"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p2",
+    "arguments": {
+     "text": "Three queens with none in my hand? That's too rich. Liar!"
+    }
+   },
+   "visible_to": [
+    "p2"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Three queens with none in my hand? That's too rich. Liar!",
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p2",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "Q2",
+     "Q4",
+     "J2"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p2"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": true,
+    "pull": 1,
+    "player": "p2"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "players_eliminated",
+   "data": {
+    "players": [
+     "p2"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 3,
+    "next_starter": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 4,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p1",
+    "hand_size": 5,
+    "table_card": "queen"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A5",
+     "K3",
+     "J2",
+     "Q2",
+     "K2"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q5",
+     "A4",
+     "K6",
+     "A3",
+     "Q1"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Heads-up vs p4, 5 queens among 10 cards plus jokers. I have Q2, J2. Opening turn — can't be called, so play my non-queens now to dump trash. Play A5, K3, K2 claimed as queens.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "A5",
+      "K3",
+      "K2"
+     ],
+     "claim_text": "Three queens to open, straight from the top of the deck."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Three queens to open, straight from the top of the deck.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 3,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "A5",
+     "K3",
+     "K2"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Player p1 claims to have played three queens, but only has two cards left. This is highly suspicious. I will call Liar to check their play.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "I don't believe you played three queens. Let's see them."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "I don't believe you played three queens. Let's see them.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "A5",
+     "K3",
+     "K2"
+    ],
+    "devil": false,
+    "honest": false,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "caught_lying",
+    "players": [
+     "p1"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 2,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 4,
+    "next_starter": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 5,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p1",
+    "hand_size": 5,
+    "table_card": "queen"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A5",
+     "K6",
+     "Q4",
+     "K5",
+     "K4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q5",
+     "K1",
+     "A6",
+     "A3",
+     "J2"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I only hold one true queen (Q4); playing more kings as queens risks a pull that would be 3/6 for me. p4 has never pulled and will likely call, so going honest shifts all risk to p4.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "Q4"
+     ],
+     "claim_text": "A single honest queen."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "A single honest queen.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "The previous player was caught lying in the last round, so I suspect they might be bluffing again. Calling liar on their single queen play is a good way to catch them if they are indeed lying.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "A single queen? Given your history, I doubt it. Let's see it."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "A single queen? Given your history, I doubt it. Let's see it.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "Q4"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 1,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 5,
+    "next_starter": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 6,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p4",
+    "hand_size": 5,
+    "table_card": "king"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A4",
+     "J2",
+     "Q4",
+     "K6",
+     "K4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A6",
+     "A2",
+     "A3",
+     "A1",
+     "Q5"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I have no kings and must play cards. I will play three Aces and claim they are kings, as lying is the only option. I'll try to bluff by playing three cards to seem confident.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "A6",
+      "A2",
+      "A3"
+     ],
+     "claim_text": "I've got three kings here, straight from the deck. Let's see if anyone wants to call it."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "I've got three kings here, straight from the deck. Let's see if anyone wants to call it.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 3,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "A6",
+     "A2",
+     "A3"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I hold two real kings, so a three-king claim from p4 is possible but tight (only 2 kings + jokers left for them). Instead of calling into a possibly true play, I play my real kings: if p4 calls me, they pull again and likely get shot; if they believe, they're stuck with 2 cards next round.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "K6",
+      "K4"
+     ],
+     "claim_text": "Two honest kings on top of your three. Your move."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Two honest kings on top of your three. Your move.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K6",
+     "K4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "p1 claims to have two kings, but given the game state and previous plays, it is highly likely they are lying. I will call their bluff.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "Two kings? I don't think so. Let's see what you've got."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Two kings? I don't think so. Let's see what you've got.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "K6",
+     "K4"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 2,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 6,
+    "next_starter": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 7,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p4",
+    "hand_size": 5,
+    "table_card": "queen"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "K4",
+     "J2",
+     "Q4",
+     "J1",
+     "Q5"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "K5",
+     "A1",
+     "K6",
+     "K3",
+     "Q1"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "The table card is a queen. I have a queen in my hand. Player p1 has 5 cards and seems to be playing honestly in the last few turns after being caught lying. Playing a queen is the safest move to not get called out and progress the round. I will play one queen and wait to see what p1 does.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "Q1"
+     ],
+     "claim_text": "I'll start us off with a queen."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "I'll start us off with a queen.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q1"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Single honest queen keeps the pattern that made p4 pull twice. Jokers stay for later cover.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "Q4"
+     ],
+     "claim_text": "One honest queen, again. Worked last time."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One honest queen, again. Worked last time.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "The table card is a queen and p1 claims to have played a queen. While it's possible they are telling the truth, given their past plays and the increasing risk of shooting, it's safer to call their bluff to potentially expose a lie or confirm honesty before playing more cards.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "One honest queen, huh? I've been fooled by your 'honesty' before. Let's see what's really under that card."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One honest queen, huh? I've been fooled by your 'honesty' before. Let's see what's really under that card.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "Q4"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 3,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 7,
+    "next_starter": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 8,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p4",
+    "hand_size": 5,
+    "table_card": "king"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q3",
+     "K4",
+     "A1",
+     "A2",
+     "Q6"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A3",
+     "K3",
+     "K5",
+     "Q1",
+     "Q4"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "The table card is king. I have two kings in my hand (K3, K5). P1 previously played queens and kings and was called out. I will play these two kings to try and build trust, and to see how p1 responds. It's early in the round, and playing claimed cards is a good start.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "K3",
+      "K5"
+     ],
+     "claim_text": "I have two kings to go with that table card. Let's see what you do, p1."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "I have two kings to go with that table card. Let's see what you do, p1.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K3",
+     "K5"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "P4 has called me three times, always wrong, pulling trigger each time. 6 chambers, 3 pulls. Their live chamber could be anywhere. My hand: one king K4. I could play K4 plus junk, but they'd likely call again. Better: play just K4 — forced call? If I play one card, p4 can call. If I play 2-3 cards (K4 + 2 junk), they call again, I lose? No — if any is not king/joker, I pull. That's risky. Play K4 alone: honest, they call again, pull 4/6. Their odds 1/3 each. Alternatively call liar on p4 now: they claim 2 kings. p4 started with 5 cards this round; p1 played 2 kings in round 6... wait round 8: p4 played 2 kings. Kings in deck: 6. K4 was played in round 6 and 7 by me (K4 in round 6 hand, K4 in round 7 hand). So p4 has 4 kings available? Unclear. p4's claim of 2 kings plausible. But p4 has 3 pulls and 6 chambers, 50% chance live per pull. If I call and they're honest, I pull (my 3rd pull). If I play K4 alone, they call, they pull (4th). That's better for me statistically. Play K4 alone, say something to provoke.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "K4"
+     ],
+     "claim_text": "One king, only one. I have no reason to lie this time. Call me again, p4 — that's your fourth pull."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "One king, only one. I have no reason to lie this time. Call me again, p4 — that's your fourth pull.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 1,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "K4"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "p1 claims to have played one king, which aligns with the table card. However, they might be bluffing. I have kings in my hand and have successfully called them out before. Given my current trigger pull count, I need to be careful, but calling a lie here could be beneficial if successful. Considering the risk, I will call liar to check their play. My hand has K3 and K5, and the table card is king. p1 claimed 1 king. If p1 is lying, they are playing a non-king card. I played two kings, so I am confident about that play.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "You claim one king? Given your history, I"
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "You claim one king? Given your history, I",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "K4"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 4,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 8,
+    "next_starter": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 9,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p4",
+    "hand_size": 5,
+    "table_card": "queen"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q6",
+     "K3",
+     "Q1",
+     "A2",
+     "K5"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q2",
+     "Q4",
+     "J2",
+     "K4",
+     "A1"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I have two queens and a joker. Playing two queens is a strong start, especially since the table card is a queen. This puts pressure on p1 and gives me good options if called.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "Q2",
+      "Q4"
+     ],
+     "claim_text": "I've got two queens for you, p1. Let's see if you can match this."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "I've got two queens for you, p1. Let's see if you can match this.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q2",
+     "Q4"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Play my two real queens; if p4 calls again they pull a fifth time at huge risk, and if they play I can call.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "Q6",
+      "Q1"
+     ],
+     "claim_text": "Two honest queens. You've been wrong four times, p4 — your next pull is near-certain death. Truth is your only friend now."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Two honest queens. You've been wrong four times, p4 — your next pull is near-certain death. Truth is your only friend now.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q6",
+     "Q1"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I have two queens in my hand, matching p1's claim of two queens. If p1 is telling the truth, I will shoot. However, given the game state, it's risky to trust p1's claim without verification, and a successful call could eliminate them, but a wrong call means I shoot. With 4 pulls already, this is a high-risk, high-reward decision.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "You say two queens, p1? That's convenient. Let's see if they're as honest as you claim."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "You say two queens, p1? That's convenient. Let's see if they're as honest as you claim.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "Q6",
+     "Q1"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": false,
+    "pull": 5,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 9,
+    "next_starter": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_started",
+   "data": {
+    "round": 10,
+    "players": [
+     "p1",
+     "p4"
+    ],
+    "starter": "p4",
+    "hand_size": 5,
+    "table_card": "queen"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "Q1",
+     "Q6",
+     "Q3",
+     "A2",
+     "J1"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "hand_dealt",
+   "data": {
+    "cards": [
+     "A5",
+     "Q5",
+     "A3",
+     "Q4",
+     "K5"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I have two queens in my hand, matching the table card. Playing them is a safe move to start the round and avoid an immediate call, especially given my history of false calls.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p4",
+    "arguments": {
+     "card_ids": [
+      "Q5",
+      "Q4"
+     ],
+     "claim_text": "I have two queens for you, p1. Let's see if you can do better."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "I have two queens for you, p1. Let's see if you can do better.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 2,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q5",
+     "Q4"
+    ],
+    "player": "p4"
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p1",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "P4 has pulled 5 times, only 1 safe chamber left — one more wrong call and p4 dies (pull 6, risk... actually pull 6 means cylinder has moved 5 chambers, remaining live chamber probability 1/1? Wait: each pull moves cylinder one chamber on. p4 has pulled 5 times, all safe. With 6 chambers and 1 live, 5 safe pulls means the live one is next — pull 6 is certain death!\n\nWait, actually the live chamber position is fixed; pulling moves cylinder. After 5 safe pulls, the live chamber is due on the 6th pull. So if p4 calls me wrong this round, p4 dies guaranteed. P4 has 3 cards left, I have 5.\n\nTable card queen. P4 claims two queens. I have three queens (Q1, Q6, Q3), A2, J1. Total queens in deck: 6, minus mine 3 = 3 remain, plus... P4 could have up to 3 queens (their 3 cards). P4's claim of 2 queens could be true.\n\nStrategy: If I play truthfully, p4 might call and die for sure (they've called me wrong 3 times in a row). But p4 knows that calling me wrong = death. P4 at 3 cards: if I play 3 queens, my hand is empty... actually I'd still have A2 and J1 left if I play 3. Let me think: I play honest queens; if p4 calls, p4 dies guaranteed. If p4 doesn't call, p4 plays remaining cards, then I must call or play.\n\nBetter: play 3 queens (Q1, Q6, Q3) — all honest, all table card. Then p4 has 3 cards. P4 must either call me (guaranteed death if I'm honest) or play. If p4 plays 1-3 cards, then next turn I play A2/J1 or call.\n\nActually I want p4 to be forced to call and die. If I play all my queens (3), then p4 has 3 cards left. P4 plays cards; I then can call. But p4 might play honest too. Hmm.\n\nAlternative: I play 3 honest queens, leaving A2 and J1. J1 is a joker — counts as queen. A2 is not. If p4 plays and I later call, risk on p4.\n\nActually the safest winning route: play honest cards each time, hoping p4 makes a wrong call. P4 has pulled 5 times — one more wrong call kills them. P4 will likely never call me again (it's certain death). So p4 will always play instead of call. Eventually p4 runs out of cards (3 left). When p4 has no cards, they're skipped, and I win by... Round continues: when p4 has no cards, skipped until next round. I then play, no one can call... Actually if only one player holds cards, they must call automatically on the last play — but p4 has no cards and can't be accused except last play.\n\nHmm, when p4 is out of cards: \"A player with no cards is skipped until the next round.\" So rounds continue until someone dies. If p4 never plays and never calls, how do rounds progress? Each round p4 starts (next_starter p4) and plays cards. When p4 has 0 cards, they must... a player with no cards cannot play. If p4 has no cards and it's p4's turn, they'd be skipped and then I must... hmm, tricky endgame.\n\nSimpler: I can force p4 into a trap. P4's two queens claim: if I call \"Liar!\" on p4 now — p4's cards revealed. If honest, I pull the trigger (my 3rd pull, risk 3/4? No wait — my live chamber: I've pulled twice, both safe. Pull 3 → risk 1/4). If p4 lied, p4 dies guaranteed.\n\nI hold 3 of 6 queens. P4 claims 2 queens. Remaining queens: 3 (in p4's 3 cards possibly, plus none in draw pile since 2 players — deck 20, 10 dealt, 10 in pile? \"With fewer than 4 players, some cards stay in the draw pile\" — so yes 10 in pile). So p4 could easily have 2 queens. Probability p4's 3 cards contain ≥2 queens: 3 queens among... from my view, remaining cards: 17 unknown, 3 queens, 1 joker (J2), 3 kings, 3 aces... wait I have J1 so J2 plus... jokers: J1 (mine), J2, and devil card not active (variant base). Unknown pool: 20 - 10 dealt - ... actually p4 has 3, pile has 10, so 13 unknown? No: 20 total, I have 5, p4 has 3, pile 10 = 18, plus 1 table card drawn, plus 1 discard? 20 cards: 10 dealt to 2 players × 5, 1 table card = 11, so 9 in pile. Unknown = 15 cards, containing 3 queens (of the remaining: total queens 6, I hold 3, so 3 remain), 2 kings... kings: 6, I hold 0 this round, so 6 kings? Wait my hand: Q1, Q6, Q3, A2, J1. So remaining: 3 queens, 6 kings, 5 aces, J2 = 15. Yes.\n\nP(≥2 queens among p4's 3 of 15): C(3,2)*C(12,1)/C(15,3) = 3*12/455 = 36/455; plus all three: 1/455. Total 37/455 ≈ 8.1%. Plus jokers count as table card: joker + 1 queen: C(1,1)*C(3,2)... joker among them adds: exactly 1 queen + joker: 3*C(11,1)=33; hmm recompute: cards that count as queen for p4: 3 queens + J2 = 4 \"good\" cards. Need 2 good in 3 cards: C(4,2)*C(11,1) + C(4,3) = 6*11 + 4 = 70. /C(15,3)=455 → 15.4%. But if p4 has 2 good, they'd likely claim them as queens.\n\nSo calling now: 85% chance I pull the trigger (risk 1/4 = 25% death → ~21% I die). Not great.\n\nBetter: play honestly. Play 3 queens. Then p4 must respond: p4 has 3 cards. If p4 calls me,",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_rejected",
+   "data": {
+    "tool": null,
+    "error": "Your answer was cut off at the length limit before it called a tool. Think in one or two short sentences, then call exactly one tool.",
+    "player": "p1",
+    "arguments": null
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "I hold three real queens, so any call by p4 fails and their sixth pull is guaranteed death (five empty chambers already revealed). Playing all three queens forces the win either way.",
+    "player": "p1"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "play_cards",
+    "player": "p1",
+    "arguments": {
+     "card_ids": [
+      "Q1",
+      "Q6",
+      "Q3"
+     ],
+     "claim_text": "Three honest queens, p4. Every one of your five pulls came up empty, so your last chamber is the live one — call me and you die for certain. Even if you don't, you can't survive the next call."
+    }
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Three honest queens, p4. Every one of your five pulls came up empty, so your last chamber is the live one — call me and you die for certain. Even if you don't, you can't survive the next call.",
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_played",
+   "data": {
+    "count": 3,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_hidden",
+   "data": {
+    "cards": [
+     "Q1",
+     "Q6",
+     "Q3"
+    ],
+    "player": "p1"
+   },
+   "visible_to": [
+    "p1"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "turn_passed",
+   "data": {
+    "player": "p4",
+    "auto_call": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "thought",
+   "data": {
+    "text": "Player p1 claimed to play three queens but only has two cards. This is a clear lie, so I will call them out. If they are honest, I will shoot, but this is a high-probability lie.",
+    "player": "p4"
+   },
+   "visible_to": []
+  },
+  {
+   "source": "engine",
+   "type": "action_accepted",
+   "data": {
+    "tool": "call_liar",
+    "player": "p4",
+    "arguments": {
+     "text": "Three queens? You only have two cards, p1. You're bluffing, and I will call you out."
+    }
+   },
+   "visible_to": [
+    "p4"
+   ]
+  },
+  {
+   "source": "game",
+   "type": "message",
+   "data": {
+    "text": "Three queens? You only have two cards, p1. You're bluffing, and I will call you out.",
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "liar_called",
+   "data": {
+    "caller": "p4",
+    "target": "p1",
+    "automatic": false
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "cards_revealed",
+   "data": {
+    "cards": [
+     "Q1",
+     "Q6",
+     "Q3"
+    ],
+    "devil": false,
+    "honest": true,
+    "player": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "shooters_chosen",
+   "data": {
+    "reason": "wrong_call",
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "trigger_pulled",
+   "data": {
+    "live": true,
+    "pull": 6,
+    "player": "p4"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "players_eliminated",
+   "data": {
+    "players": [
+     "p4"
+    ]
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "round_ended",
+   "data": {
+    "round": 10,
+    "next_starter": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "game",
+   "type": "match_over",
+   "data": {
+    "winner": "p1"
+   },
+   "visible_to": null
+  },
+  {
+   "source": "engine",
+   "type": "match_finished",
+   "data": {
+    "placements": [
+     {
+      "rank": 1,
+      "player": "p1"
+     },
+     {
+      "rank": 2,
+      "player": "p4"
+     },
+     {
+      "rank": 3,
+      "player": "p2"
+     },
+     {
+      "rank": 4,
+      "player": "p3"
+     }
+    ]
+   },
+   "visible_to": null
+  }
+ ]
+}
