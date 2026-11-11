@@ -67,3 +67,6 @@ def test_every_game_with_a_situation_says_how_it_is_going_by_display_name(client
         text = " ".join(lines["en"] + lines["de"])
         assert "p1" not in text and "p2" not in text, text
         assert answer.json()["meta"]["seats"]["p1"] is None
+        if game == "werewolf":
+            recap = answer.json()["recap"]
+            assert recap and all("p1" not in r["text"]["en"] for r in recap)

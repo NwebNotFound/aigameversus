@@ -203,10 +203,36 @@ tokens. The research export will write it as one row per move.
   the win-probability curve uses the same function. Showdowns alone do not
   define bluffs: most bluffs never reach one.
 
-## Werewolf (planned)
+## Werewolf
 
-- **Vote accuracy** = votes for wolves / votes cast, village side only;
-  abstentions counted apart. For wolves: the share of votes on fellow wolves
-  (bussing).
-- A suspicion or trust matrix from messages is **heuristic** (names or keywords
-  mentioned) and is labelled so, apart from the facts.
+`arena/analytics/werewolf.py`. Facts from the game's events, and readings of
+speech by simple rules, each marked `heuristic: true`.
+
+- **`votes.days`** (facts): per day `votes` (voter to target; `null` for an
+  abstention), `abstained`, `tally` (the game's own count, in which a captain's
+  vote may weigh double; abstentions are not in it) and `executed`.
+- **`votes.accuracy`** (spoilers only): per village-side voter, votes for a wolf
+  / votes cast, as `{value, n, of}`; abstentions are not votes. Planned: for
+  wolves, the share of votes on fellow wolves (bussing).
+- **`claims`** (heuristic): a sentence in the first person that names a role
+  ("I'm p3, a villager", "I am the seer", "Ich bin die Seherin"), not negated.
+  Each claim once per player and role, with `changed_from` (the same player
+  claimed another role before), `counterclaimed_by` (others who claimed the
+  same unique role), and `disproved` / `true_role` when the player's death
+  revealed another role.
+- **`accusations`**: a vote is an accusation of its target (`source: vote`,
+  a fact). A sentence that names a seat (its id or display name, as a whole
+  word) next to accusing words (suspect, wolf, lying, …; verdächtig, lügt, …)
+  accuses it (`source: speech`, heuristic). A negation in the sentence
+  ("not", "nicht") makes it neither; the speaker never accuses themselves.
+- **`stance`**, per event seq: `{player, votes_for, suspects, defends, claims,
+  heuristic}`; a vote's stance gets the `reason_seq` of the reason that follows
+  it, and that reason is not counted again as speech.
+- **`phases`** and **`recap`**: each night and day, with its deaths (the
+  morning's deaths belong to the night), the most accused player of the phase
+  (speech), the tally and the execution; `recap[].text.en/de` is one sentence
+  per phase from a template (`TemplateNarrator`). A `Narrator` with the same
+  method can replace it, such as a cheap model later; none is called by default.
+- Without spoilers only public events are read: no wolf chat, no lover chat,
+  no roles but those revealed at death (`meta.revealed`); `meta.roles` is
+  null.
