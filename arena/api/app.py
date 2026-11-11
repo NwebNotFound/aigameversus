@@ -8,7 +8,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from arena.api import chronicle, matches, memory, models, ratings, setup, transcript, werewolf
+from arena.api import (
+    analytics,
+    chronicle,
+    matches,
+    memory,
+    models,
+    ratings,
+    setup,
+    transcript,
+    werewolf,
+)
 from arena.api.live import LiveMatches
 from arena.db.database import connect, ledger_url, migrate
 from arena.db.ledger import Ledger, LedgerUnavailable
@@ -61,6 +71,7 @@ app.include_router(matches.router)
 app.include_router(chronicle.router)
 app.include_router(models.router)
 app.include_router(transcript.router)
+app.include_router(analytics.router)
 
 
 @app.exception_handler(LedgerUnavailable)

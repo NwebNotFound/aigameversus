@@ -153,6 +153,20 @@ class MatchStore:
         )
         return [MatchRecord(**row) for row in rows]
 
+    async def unrated_model_matches(self) -> list[MatchRecord]:
+        """Finished matches with a result and a model in a seat that no rating has counted.
+
+        Oldest first, the order ratings must be applied in.
+        """
+        rows = await self._pool.fetch(
+            f"SELECT {_COLUMNS} FROM matches m WHERE status = 'finished' "
+            "AND placements IS NOT NULL "
+            "AND NOT EXISTS (SELECT 1 FROM rated_matches r WHERE r.match_id = m.id) "
+            "AND EXISTS (SELECT 1 FROM jsonb_each(seats) seat WHERE seat.value->>'kind' = 'model') "
+            "ORDER BY started_at, id"
+        )
+        return [MatchRecord(**row) for row in rows]
+
     async def model_matches(self) -> int:
         """How many finished matches played here had a model in a seat.
 

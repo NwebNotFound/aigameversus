@@ -281,6 +281,10 @@ export interface Leaderboard {
 	fallback: boolean;
 	/** Rows per kind with the other filters applied. */
 	counts: { models: number; bots: number };
+	/** Whether the demo profiles are included (the default is no). */
+	show_demo: boolean;
+	/** Demo profiles left out. */
+	demo_hidden: number;
 	rows: LeaderboardRow[];
 }
 
@@ -356,7 +360,11 @@ export type MatchesResult = { state: 'ok'; matches: MatchSummary[] } | Unreachab
 export interface ArenaClient {
 	health(): Promise<boolean>;
 	listMatches(): Promise<MatchesResult>;
-	leaderboard(game?: string, kind?: LeaderboardKind): Promise<ApiResult<Leaderboard>>;
+	leaderboard(
+		game?: string,
+		kind?: LeaderboardKind,
+		demo?: boolean
+	): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
 	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
@@ -444,10 +452,11 @@ export function createArenaClient(
 			return { state: 'ok', matches: result.data };
 		},
 
-		leaderboard(game, kind) {
+		leaderboard(game, kind, demo) {
 			const params = new URLSearchParams();
 			if (game) params.set('game', game);
 			if (kind) params.set('kind', kind);
+			if (demo) params.set('demo', 'true');
 			const query = params.size ? `?${params}` : '';
 			return getJson<Leaderboard>(
 				`/leaderboard${query}`,
