@@ -37,6 +37,7 @@ export interface RecordSeat {
 	model_id: string | null;
 	kind: 'model' | 'bot';
 	personality?: string | null;
+	display?: string | null;
 }
 
 /** One event of a match log, as the event stream sends it. */
@@ -109,6 +110,8 @@ export interface TranscriptLine {
 export interface Seat {
 	name: string | null;
 	model: string | null;
+	/** The name people read: "gpt-luna", "gpt-luna #2", "Bot 1"; never the seat id. */
+	display?: string | null;
 	/** Filled in by the web from the match record and the model roster. */
 	kind?: 'model' | 'bot';
 	/** The provider's company, e.g. "google" from "google/gemini-2.5-flash-lite". */

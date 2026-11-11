@@ -12,6 +12,7 @@
 		resultOf,
 		seatModel,
 		seatName,
+		seatSub,
 		type Beat,
 		type Placement,
 		type View
@@ -77,6 +78,9 @@
 		Object.fromEntries(seats.map((seat) => [seat, colourKey(seat, players)]))
 	);
 
+	/** The small line under a seat's name on the board: model id (if not the name) and vendor. */
+	const subs = $derived(Object.fromEntries(seats.map((seat) => [seat, seatSub(seat, players)])));
+
 	const names = $derived(Object.fromEntries(seats.map((seat) => [seat, seatName(seat, players)])));
 
 	const out = $derived(
@@ -111,18 +115,9 @@
 				<span class="who">
 					<span class="line1">
 						<strong>{seatName(seat, players)}</strong>
-						{#if isModel}<span class="kind model">model</span>{:else if info?.kind === 'bot'}<span
-								class="kind bot">bot</span
-							>{/if}
+						{#if isModel}<span class="kind model">model</span>{/if}
 					</span>
-					{#if model}
-						<!-- The model id only when the name does not already say it; the vendor always. -->
-						<small data-testid="chip-model">
-							{[model !== seatName(seat, players) ? model : null, info?.vendor]
-								.filter(Boolean)
-								.join(' · ')}
-						</small>
-					{/if}
+					{#if subs[seat]}<small data-testid="chip-model">{subs[seat]}</small>{/if}
 					{#if info?.personality}<small class="persona">{info.personality}</small>{/if}
 				</span>
 				{#if costs && isModel}
@@ -135,7 +130,7 @@
 	<div class="stage-column">
 		<section class="stage" class:shake={beat === 'bang'} aria-label="Board" data-testid="stage">
 			<div class="fit">
-				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} />
+				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} {subs} />
 			</div>
 			<Beats {lines} bind:current={beat} />
 			{#if result && !dismissed}

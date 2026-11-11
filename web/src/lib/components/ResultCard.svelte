@@ -2,7 +2,7 @@
 	import type { Seat } from '#lib/api.js';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import { euros } from '#lib/live.js';
-	import { colourKey, ordinal, seatModel, seatName, type Result } from '#lib/viewer.js';
+	import { colourKey, ordinal, seatModel, seatName, seatSub, type Result } from '#lib/viewer.js';
 
 	/**
 	 * How the match ended, on the stage: a podium for a ranked game, the winning side for a
@@ -46,7 +46,7 @@
 						<li>
 							<Avatar name={name(seat)} colourKey={colour(seat)} size={44} active />
 							<strong>{name(seat)}</strong>
-							{#if model(seat)}<small>{model(seat)}</small>{/if}
+							{#if seatSub(seat, players)}<small>{seatSub(seat, players)}</small>{/if}
 						</li>
 					{/each}
 				</ul>
@@ -78,7 +78,7 @@
 										active={step.place === 0}
 									/>
 									<strong>{name(seat)}</strong>
-									{#if model(seat)}<small>{model(seat)}</small>{/if}
+									{#if seatSub(seat, players)}<small>{seatSub(seat, players)}</small>{/if}
 									{#if costs && model(seat) && (costs[seat] ?? 0) > 0}<small class="cost"
 											>{euros(costs[seat] ?? 0)}</small
 										>{/if}
@@ -97,7 +97,7 @@
 								<span class="rank">{ordinal(row.rank)}</span>
 								<Avatar name={name(seat)} colourKey={colour(seat)} size={24} />
 								<span>{name(seat)}</span>
-								{#if model(seat)}<small>{model(seat)}</small>{/if}
+								{#if seatSub(seat, players)}<small>{seatSub(seat, players)}</small>{/if}
 							</li>
 						{/each}
 					{/each}

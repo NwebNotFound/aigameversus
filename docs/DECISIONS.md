@@ -1930,6 +1930,18 @@ Each entry: date, decision, why, alternatives considered.
   every seat. The transcript's `players` was empty for a running match while
   the record already knew each seat. A seat's identity must not depend on one
   endpoint being complete.
+- **Display names:** every visible name is a display name, computed once per
+  match (`withDisplayNames`) unless the API sends `display`:
+  - a model is its short name (the profile name, else the model id), with
+    "#2" for its second seat;
+  - bots are "Bot 1", "Bot 2", in seat order, with "Random Bot" as the small
+    line under the name;
+  - the seat id appears only as a small number badge on the board
+    (`SeatTag`).
+  Until the transcript names players itself, the web swaps seat ids in its
+  sentences for display names (`namedText`, `namedLines`, applied once where
+  the page reads the transcript). This changes names only, never wording.
+  Player-written words (speech, thoughts) are shown as written.
 - **Alternatives:** Waiting for the transcript to fill `players` for every
   match (the fix belongs there too, and Arena Coder has it); a colour per
   model (the same company's models then look unrelated).

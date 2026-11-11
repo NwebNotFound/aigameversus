@@ -6,6 +6,8 @@ import {
 	commentary,
 	langOf,
 	mergeSeats,
+	namedText,
+	withDisplayNames,
 	linesUpTo,
 	marks,
 	newBeats,
@@ -250,6 +252,7 @@ describe('mergeSeats', () => {
 			roster
 		);
 		expect(seats.p1).toEqual({
+			display: 'gemini-flash-lite',
 			name: 'gemini-flash-lite',
 			model: 'gemini-flash-lite',
 			kind: 'model',
@@ -279,5 +282,43 @@ describe('mergeSeats', () => {
 			name: null,
 			kind: undefined
 		});
+	});
+});
+
+describe('display names', () => {
+	it('names models by short name, a repeat with #2, bots Bot 1, Bot 2', () => {
+		const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p2: { name: 'Random Bot p2', model: null, kind: 'bot' },
+			p3: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p4: { name: 'Random Bot p4', model: null, kind: 'bot' }
+		});
+		expect(['p1', 'p2', 'p3', 'p4'].map((s) => seatName(s, seats))).toEqual([
+			'gpt-luna',
+			'Bot 1',
+			'gpt-luna #2',
+			'Bot 2'
+		]);
+	});
+
+	it('keeps a display name the API gave, and a profile name over the model id', () => {
+		const seats = withDisplayNames(['p1', 'p2'], {
+			p1: { name: 'Juniper', model: 'glm-flash', kind: 'model' },
+			p2: { name: 'x', model: 'x', kind: 'model', display: 'Server name' }
+		});
+		expect(seatName('p1', seats)).toBe('Juniper');
+		expect(seatName('p2', seats)).toBe('Server name');
+	});
+
+	it('replaces seat ids in transcript text, also inside the old bot label', () => {
+		const seats = withDisplayNames(['p1', 'p2'], {
+			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p2: { name: 'Random Bot p2', model: null, kind: 'bot' }
+		});
+		expect(namedText('p1 calls LIAR on Random Bot p2 (random-bot)', seats)).toBe(
+			'gpt-luna calls LIAR on Bot 1'
+		);
+		expect(namedText('Ergebnis: 1. p2  2. p1', seats)).toBe('Ergebnis: 1. Bot 1  2. gpt-luna');
+		expect(namedText('top10 and p9 stay', seats)).toBe('top10 and p9 stay');
 	});
 });
