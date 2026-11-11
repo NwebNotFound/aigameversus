@@ -29,7 +29,8 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 		});
 		body.lines.push(
 			line(100000, SENTENCE, 'speech'),
-			line(100001, 'p9 is not here; p3 is.', 'thought')
+			line(100001, 'p9 is not here; p3 is.', 'thought'),
+			line(100002, "Auf p4s Frage: p3's vote zählt.", 'speech')
 		);
 		await route.fulfill({ response, json: body });
 	});
@@ -51,6 +52,15 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	const thought = page.getByTestId('commentary').locator('li[data-seq="100001"] .bubble');
 	await expect(thought).toContainText('p9 is not here');
 	await expect(thought.getByTestId('mention')).toHaveAttribute('data-seat', 'p3');
+
+	// What a language glues to an id stays after the chip: "p4s" is p4's chip and an "s".
+	const german = page.getByTestId('commentary').locator('li[data-seq="100002"] .bubble');
+	await expect(german.getByTestId('mention')).toHaveCount(2);
+	await expect(german.getByTestId('mention').first()).toHaveAttribute('data-seat', 'p4');
+	await expect(german.getByTestId('mention').last()).toHaveAttribute('data-seat', 'p3');
+	await expect(german).not.toContainText('p4s');
+	await expect(german).toContainText('s Frage: ');
+	await expect(german).toContainText("'s vote zählt.");
 
 	// The raw switch shows the words exactly as the model wrote them.
 	await page.getByTestId('raw-words').check();

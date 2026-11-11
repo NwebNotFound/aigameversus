@@ -5,6 +5,8 @@
   "p2, two kings with your history?". In speech, whisper and thought bubbles,
   the web draws each such id as that seat's name chip: its avatar, colour and
   display name (`mentionParts`, `Mention.svelte`).
+  - What a language glues to an id stays text after the chip ("p4s Frage",
+    "p3's vote", "p4-Antwort", "p4:"); upper case and lists ("P4", "p1/p2") count too.
   - Only seats of the match count: "p9" in a four-seat match, or "top2",
     stays text.
   - A "Show raw words" switch in the commentary shows the words exactly as
