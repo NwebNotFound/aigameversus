@@ -1489,6 +1489,42 @@ Each entry: date, decision, why, alternatives considered.
   every player); decay over time (not in the spec); notes for every match
   without a cap.
 
+## D-075 · Match memories, the memory block, memory off and reset
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - When a match is remembered, every seated profile gets one summary of it
+    from its own view (`match_memories`, migration `0009`, in the same
+    transaction as the trust). The default `TemplateSummarizer` names the game,
+    the opponents, the player's place and at most two notes per opponent, from
+    the facts that player saw. No model is called; a `Summarizer` can.
+  - `memory_block(store, me, opponents)` reads only the player's own rows and
+    only about the profiles at the table: relationship lines first (strongest
+    feeling first, three notes each), then up to five summaries of matches
+    against them, newest first. It stops at the first line that does not fit
+    1,200 characters and is None when the player knows nobody there.
+  - The prompt puts the block before the game data, inside `<memory>`, with
+    `<` escaped; the system message names it as data like the other blocks.
+    `ModelAgent(memory=...)` takes it; without one the prompt is unchanged.
+  - `memory: false` on a match (API, stored on the match record, a checkbox in
+    the new-match form) remembers nothing. The form's box says "without memory",
+    so a form that leaves it out keeps memory on.
+  - Reset forgets relationships and summaries of one profile or of everyone
+    (`POST /memory/reset`, `arena memory reset --yes`); ratings stay, and a match
+    already remembered is not remembered again. There are no seasons yet: a
+    season starts with a reset of everyone.
+  - `arena run --models` does not build a block yet; the next part wires it in.
+- **Why:** The spec's long-term layer and the "only the players at the table,
+  kept short" rule; the block is built from the player's own rows, so it
+  cannot carry another player's secrets. A profile's memories can name roles
+  ("turned out to be a wolf", "hunted with me in the pack"): they are the
+  same notes as on its relations page, written only for finished matches, so
+  they reveal nothing about a match still being played, and spectators see
+  every role anyway.
+- **Alternatives:** the block in the system message (it is data, not an
+  instruction); summaries written by a model now (costs money for every match);
+  a season column on every memory row (no seasons exist yet).
+
 ## D-076 · The monthly cap is 25 euros
 
 - **Date:** 2026-11-11
@@ -1717,6 +1753,60 @@ Each entry: date, decision, why, alternatives considered.
   mean different things over time); summaries written by a model (costs money,
   varies from run to run).
 
+## D-090 · Experiments are registered as files before their first paid match
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - An experiment is one YAML file in `experiments/` with its question, fixed
+    conditions, models (ids and prices of that day), stages, hypotheses with
+    their tests, stopping and exclusion rules and budgets. Every paid run
+    needs the project owner's own yes: the plan lists it per stage under
+    `approvals`. An approved stage changes only by a dated entry under
+    `amendments`.
+  - The schedule (every match: seed, seating, order) is generated from the
+    plan by `arena/research/experiment.py` and stored next to it; a test keeps
+    the two in step.
+  - Tables have four seats and are balanced by design, not by chance: eight
+    models at 14 tables where every pair meets 3 times; each seed played with
+    4 seatings that give every model every seat once; one model at two
+    reasoning efforts in all 6 arrangements; one guest in every seat among
+    three hosts.
+  - One seed is played with all seatings of its table. The luck of a seed
+    (cards, revolver) belongs to the seat, so every model at the table gets
+    the same luck once.
+  - A plan's budgets, the money spent before and a reserve must fit under the
+    monthly cap, or the plan does not load. Experiment 1 keeps 20 % of the
+    cap unplanned.
+- **Why:** Hypotheses and tests fixed before the data cannot be bent to fit
+  it. Balanced seatings take seat and card luck out of the comparison with far
+  fewer matches than random seating needs, and matches cost money.
+- **Alternatives:** random seatings and seeds (more matches for the same
+  precision); a full round robin of all 70 tables of four (5 times the cost);
+  plans as prose only (nothing to check a schedule against).
+## D-091 · The launch form seats models: all or none, a spend box, the month in view
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - `GET /setup` says `model_seats: true` only when the server allows model
+    seats (`ARENA_ALLOW_MODEL_SEATS=1`) and has the providers' keys, and lists
+    each model with its display name and its prices per million tokens.
+    `GET /ledger/month` returns what this calendar month (UTC) has cost, the
+    month cap and what is left.
+  - In `/matches/new` every seat is a random bot or a model from that list. A
+    match is all bots or all models, because `POST /matches` takes one model
+    per seat. With models the form shows that the match spends real money, its
+    cap (the per-match cap, 0.50 EUR), the month's spend and what is left, and
+    it needs a ticked box before it starts (`confirm_spend`). With nothing left
+    this month it cannot start; with less left than one match may cost it warns.
+  - Personalities, thinking effort and a per-run budget stay disabled: the API
+    does not take them per seat yet. The cost estimate comes with the arena's
+    estimate endpoint.
+- **Why:** Starting a paid match must be a deliberate act with the price in
+  view; the server stays the only place that refuses a spend.
+- **Alternatives:** mixed tables of bots and models (not in the API yet); an
+  estimate computed in the browser from token guesses (the arena's endpoint
+  will know the prompt sizes).
+
 ## D-093 · The runner takes the prompt version from the match settings
 
 - **Date:** 2026-11-11
@@ -1749,9 +1839,11 @@ Each entry: date, decision, why, alternatives considered.
   daily by `scripts/backup-ledger.sh`. The server starts without the ledger;
   a model match starts only when the ledger answers and is not empty beside
   finished model matches played here (503 otherwise; imported matches booked
-  elsewhere). While it is down `/matches/{id}/cost` answers 503 and
-  `/replays` shows every cost as null: the replay list stays usable, and an
-  unknown cost is not shown as 0. The stack gets the provider key as a read-only file
+  elsewhere). Every cost is read from the ledger, also the leaderboard's
+  cost per game and the model page (`RatingStore.usage` maps the ledger's
+  costs per seat to profiles). While it is down `/matches/{id}/cost`
+  answers 503, and `/replays`, the leaderboard and the model page show every
+  cost as null: the lists stay usable, and an unknown cost is not shown as 0. The stack gets the provider key as a read-only file
   (`OPENROUTER_API_KEY_FILE`), read at every start of a model match; model
   seats, ledger URL and key come in one override file,
   `docker-compose.models.yml`, and the plain stack has no key.
@@ -1851,4 +1943,3 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** A results page apart from the replay (the viewer leaves
   the board at the climax); asking the transcript for a result sentence per
   game (still a paragraph).
-

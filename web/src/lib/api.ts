@@ -136,7 +136,13 @@ export interface GameInfo {
 export interface SetupOptions {
 	/** Whether a seat can be a model yet; until then every seat is a random bot. */
 	model_seats: boolean;
-	models: { id: string; model: string }[];
+	models: {
+		id: string;
+		model: string;
+		name: string;
+		input_usd_per_mtok: number;
+		output_usd_per_mtok: number;
+	}[];
 	personalities: { id: string; name: string; description: string }[];
 	caps: { match_eur: number; month_eur: number };
 }
@@ -188,6 +194,28 @@ export interface NewMatch {
 	seed?: number;
 	settings: Record<string, unknown>;
 	turn_delay: number;
+	/** false: a fair benchmark, the match neither reads nor writes memory. */
+	memory: boolean;
+	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
+	models?: string[];
+	/** Must be true with `models`: the match spends money. */
+	confirm_spend?: boolean;
+}
+
+/** `GET /profiles/{id}/memories`: the player's own summaries of past matches. */
+export interface MatchMemory {
+	match_id: string;
+	game_id: string;
+	summary: string;
+	created_at: string;
+}
+
+/** `GET /ledger/month`: what model calls cost this month and what the cap still allows. */
+export interface MonthSpend {
+	month: string;
+	spent_micro_eur: number;
+	cap_micro_eur: number;
+	remaining_micro_eur: number;
 }
 
 /** A start the arena refused, with its reason (422: the game refused, 429: arena full). */
@@ -252,12 +280,11 @@ export interface Profile {
 	overall: Standing | null;
 	ratings: (Standing & { game_id: string })[];
 	recent_matches: RecentMatch[];
-	memory: { available: boolean; note: string };
 }
 
 /** What a model cost and how often the server refused its answers. */
 export interface Usage {
-	cost_total_micro_eur: number;
+	cost_total_micro_eur: number | null; // null while the ledger cannot be read
 	cost_per_game_micro_eur: number | null;
 	answers: number;
 	tool_error_rate: number | null;
@@ -313,6 +340,7 @@ export interface ArenaClient {
 	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
+	memories(id: string): Promise<ApiResult<MatchMemory[]>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
 	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
@@ -333,6 +361,7 @@ export interface ArenaClient {
 		players: number
 	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
+	monthSpend(): Promise<ApiResult<MonthSpend>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
@@ -418,6 +447,14 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}`,
 				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
 				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
+			);
+		},
+
+		memories(id) {
+			return getJson<MatchMemory[]>(
+				`/profiles/${encodeURIComponent(id)}/memories`,
+				Array.isArray,
 				[404, 422]
 			);
 		},
@@ -534,6 +571,13 @@ export function createArenaClient(
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ roles, player_count: players })
 				}
+			);
+		},
+
+		monthSpend() {
+			return getJson<MonthSpend>(
+				'/ledger/month',
+				(body) => isObject(body) && typeof body.remaining_micro_eur === 'number'
 			);
 		},
 
