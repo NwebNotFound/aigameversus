@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProvisionalBadge from '#lib/components/ProvisionalBadge.svelte';
 	import { gameName } from '#lib/games.js';
 	import { percent, placement, rating, signed, statLabel, statValue } from '#lib/format.js';
 	import { euros } from '#lib/live.js';
@@ -47,7 +48,9 @@
 		<section aria-label="Summary" class="stats" data-testid="summary">
 			<div>
 				<span class="value">{rating(page.overall.rating)}</span><span class="label"
-					>Overall rating</span
+					>Overall rating{#if page.overall.provisional}<ProvisionalBadge
+							limit={page.provisional_games}
+						/>{/if}</span
 				>
 			</div>
 			<div>
@@ -93,7 +96,11 @@
 						{#each page.games as game (game.game_id)}
 							<tr data-game={game.game_id}>
 								<td>{gameName(game.game_id)}</td>
-								<td class="num strong">{rating(game.rating)}</td>
+								<td class="num strong">
+									{rating(game.rating)}{#if game.provisional}<ProvisionalBadge
+											limit={page.provisional_games}
+										/>{/if}
+								</td>
 								<td class="num">{game.games_played}</td>
 								<td class="num">{percent(game.win_rate)}</td>
 								<td class="num">{placement(game.average_placement)}</td>
