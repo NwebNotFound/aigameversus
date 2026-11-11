@@ -20,11 +20,13 @@ MATCH_TIME_LIMIT = 10  # seconds; a rule that never ends a match fails fast
 class Table:
     """A match from hand-made role events: `roles` maps players (seat order) to role ids."""
 
-    def __init__(self, roles, *, speaking_start=0):
+    def __init__(self, roles, *, speaking_start=0, captain=False, language="en", seed=0):
         self.plugin = Werewolf()
-        self.state = self.plugin.initial_state(list(roles), {"roles": _counts(roles)})
+        settings = {"roles": _counts(roles), "captain": captain, "language": language}
+        self.state = self.plugin.initial_state(list(roles), settings)
         self.events: list[Event] = []
         self.speaking_start = speaking_start
+        self.seed = seed
         for player, role in roles.items():
             self.apply("role_assigned", player=player, role=role)
         pack = [p for p, r in roles.items() if r == "werewolf"]
@@ -45,7 +47,7 @@ class Table:
             self.plugin.apply_event(self.state, event)
             self.events.append(event)
 
-        return TurnContext(lambda *key: Fixed(), record)
+        return TurnContext(lambda *key: Fixed(f"{self.seed}{key!r}"), record)
 
     @property
     def turn(self):
@@ -442,6 +444,10 @@ PUBLIC_EVENTS = {
     "vote_cast",
     "vote_result",
     "game_over",
+    "narration",
+    "captain_vote",
+    "captain_elected",
+    "captain_passed",
 }
 # Game events that may reach a player privately (their audience is checked below).
 PRIVATE_EVENTS = {
