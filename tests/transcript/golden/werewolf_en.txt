@@ -1,0 +1,183 @@
+Match started: p1, p2, p3, p4, p5, p6, p7 and p8 (seed 7)
+Roles dealt: 2× werewolf, 1× seer, 1× witch, 1× hunter, 3× villager
+p1 is the werewolf
+p2 is the witch
+p3 is the villager
+p4 is the seer
+p5 is the hunter
+p6 is the villager
+p7 is the villager
+p8 is the werewolf
+The pack knows itself: p1 and p8
+
+Night 1
+p4 chooses seer check (target: p3)
+p4, the seer, looks at p3: villager
+p4 is done
+p1 chooses wolf kill (target: p7)
+Night 1: p1 wants to attack p7
+p1 is done
+p8 chooses wolf kill (target: p5)
+Night 1: p8 wants to attack p5
+p8 is done
+p2 chooses witch act (heal: False, poison target: p5)
+p2, the witch, poisons p5
+p2 is done
+Morning: found dead in the night: p7 and p5
+p7 dies (torn apart by the wolves); role: villager
+p5 dies (poisoned); role: hunter
+p5 chooses hunter shoot (target: p3)
+p5, the hunter, shoots p3
+p5 is done
+p3 dies (shot by the Hunter); role: villager
+
+Day 1
+    Speaking order: p8, p1, p2, p4 and p6
+p1 chooses elect captain (target: p2)
+p1 votes for p2 as captain
+p1 is done
+p2 chooses elect captain (target: p8)
+p2 votes for p8 as captain
+p2 is done
+p4 chooses elect captain (target: p6)
+p4 votes for p6 as captain
+p4 is done
+p6 chooses elect captain (target: p8)
+p6 votes for p8 as captain
+p6 is done
+p8 chooses elect captain (target: p4)
+p8 votes for p4 as captain
+p8 is done
+p8 is elected captain
+    p2 1, p8 2, p6 1, p4 1
+p8 chooses speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 is done
+p1 chooses speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 is done
+p2 chooses speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 is done
+p4 chooses speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 is done
+p6 chooses speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 is done
+p8 chooses speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 is done
+p1 chooses speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 is done
+p2 chooses speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 is done
+p4 chooses speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 is done
+p6 chooses speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 is done
+p1 chooses vote (target: None)
+p1 abstains
+p1 is done
+p2 chooses vote (target: p8)
+p2 votes for p8
+p2 is done
+p4 chooses vote (target: p1)
+p4 votes for p1
+p4 is done
+p6 chooses vote (target: None)
+p6 abstains
+p6 is done
+p8 chooses vote (target: None)
+p8 abstains
+p8 is done
+Day 1 vote: no majority, nobody is executed
+    p8 1, p1 1
+
+Night 2
+p4 chooses seer check (target: p1)
+p4, the seer, looks at p1: werewolf
+p4 is done
+p1 chooses wolf kill (target: p6)
+Night 2: p1 wants to attack p6
+p1 is done
+p8 chooses wolf kill (target: p6)
+Night 2: p8 wants to attack p6
+p8 is done
+p2 chooses witch act (heal: True, poison target: None)
+p2, the witch, heals p6
+p2 is done
+Morning: nobody died in the night
+
+Day 2
+    Speaking order: p8, p1, p2, p4 and p6
+p8 chooses speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 is done
+p1 chooses speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 is done
+p2 chooses speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 is done
+p4 chooses speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 is done
+p6 chooses speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 is done
+p8 chooses speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 is done
+p1 chooses speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 is done
+p2 chooses speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 is done
+p4 chooses speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 is done
+p6 chooses speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 is done
+p1 chooses vote (target: p2)
+p1 votes for p2
+p1 is done
+p2 chooses vote (target: None)
+p2 abstains
+p2 is done
+p4 chooses vote (target: p8)
+p4 votes for p8
+p4 is done
+p6 chooses vote (target: p4)
+p6 votes for p4
+p6 is done
+p8 chooses vote (target: None)
+p8 abstains
+p8 is done
+Day 2 vote: no majority, nobody is executed
+    p2 1, p8 1, p4 1
+
+Night 3
+p4 chooses seer check (target: p2)
+p4, the seer, looks at p2: witch
+p4 is done
+p1 chooses wolf kill (target: p2)
+Night 3: p1 wants to attack p2
+p1 is done
+p8 chooses wolf kill (target: p6)
+Night 3: p8 wants to attack p6
+p8 is done
+p2 chooses witch act (heal: False, poison target: None)
+p2, the witch, does nothing
+p2 is done
+Morning: found dead in the night: p2
+p2 dies (torn apart by the wolves); role: witch
+Game over: the werewolves win
+    p1 and p8
+Result: 1. p1  1. p8  3. p2  3. p3  3. p4  3. p5  3. p6  3. p7

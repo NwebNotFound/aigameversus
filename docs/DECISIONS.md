@@ -1501,7 +1501,51 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** No monthly cap (one runaway batch could spend without
   limit); a higher cap per match for everyone (a mistake would cost more).
 
-## D-079 · The prompt names the player's own seat where the model reads it
+## D-078 · One transcript renders every match for every reader
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/transcript/` turns the events of a match into readable
+  lines, one per event, in English and German (`TranscriptLine`: `kind`, `actor`,
+  `text`, `detail`, `importance`, `raw`). Each game has a renderer class with a
+  `handle_<type>` method per event type; the engine's own events are handled once
+  in the base class. A test reads the plugins' source and fails when one emits a
+  type without a method. Hidden information (hands, roles, private choices,
+  thoughts, whispers, the seed) is written only with `spoilers=True`; public talk
+  always. `importance` is 1 for bookkeeping, 2 normal, 3 highlight; `kind` is one of
+  heading, action, speech, whisper, thought, reveal, result, narration, info.
+  It is served by `GET /matches/{id}/transcript?lang=&spoilers=&format=json|text|markdown`
+  and printed by `arena run` (live, instead of raw events; `--raw` keeps them) and
+  `arena transcript <match-id|file>`. Players are "Name (model)" where the match
+  was rated or a file names its seats, else the seat id. The Werewolf narrator's own
+  lines are shown only in the language the match was played in, as bookkeeping.
+- **Why:** The live view, replays, exports and the terminal need the same words
+  or they drift apart; one renderer per game, tested against what the plugins emit,
+  keeps them equal. Keeping the raw event on each line lets a UI fold it away
+  without a second request.
+- **Alternatives:** a formatter in TypeScript for the web (a second copy to keep
+  in step, and no help for the CLI); text written by the plugins themselves (puts
+  words into rules code, and names are a presentation matter).
+
+## D-080 · The spectator UI: one watch screen, the transcript as its only text, two viewer modes
+
+- **Date:** 2026-11-11
+- **Decision:** `docs/UI-DESIGN.md` sets the look. Live view and replay become
+  one "watch" screen: the board as a large stage, one commentary column built
+  from `TranscriptLine` (`kind`, `importance`), and a timeline with chapters
+  and highlight markers. There are two named viewer modes: "Spectator view"
+  (the default: thoughts, hands and roles visible) and "Spoiler-free". In
+  spoiler-free mode the transcript is fetched with `spoilers=false`. The web
+  server strips spectator-only events and the secret board fields before they
+  reach the browser, and there is no seed and no export.
+- **Why:** The audit (screenshots of the bot demo at 375 and 1280) found raw
+  engine lines, three equal columns with a small board, pages 11–17k px tall on
+  mobile, and replays without rounds or highlights. One text source keeps the
+  CLI, the API and the UI from telling a match in different words.
+- **Alternatives:** Keep three equal columns and polish them (keeps the board
+  small); a formatter in the browser (a second wording to keep in sync); hide
+  thoughts by default (hides the project's main attraction).
+
+## D-083 · The prompt names the player's own seat where the model reads it
 
 - **Date:** 2026-11-11
 - **Decision:** Besides the first line of the system message, the prompt now

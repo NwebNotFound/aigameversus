@@ -1,0 +1,238 @@
+Das Spiel beginnt: p1, p2, p3 und p4 (Seed 7)
+Der Revolver von p1 ist in Kammer 1 scharf
+Der Revolver von p2 ist in Kammer 5 scharf
+Der Revolver von p3 ist in Kammer 1 scharf
+Der Revolver von p4 ist in Kammer 5 scharf
+
+Runde 1, Tischkarte: Dame
+    p1 beginnt; Spieler: p1, p2, p3 und p4
+p1 bekommt König 6, Dame 1, Dame 6, Ass 3, Joker 1
+p2 bekommt Ass 1, König 4, König 3, Ass 5, Dame 4
+p3 bekommt Joker 2, Ass 6, Dame 5, Ass 2, Dame 3
+p4 bekommt König 1, Ass 4, König 5, Dame 2, König 2
+p1 wählt play cards (card ids: Q6)
+p1 legt 1 Karte ab und behauptet: eine Dame
+p1 legt tatsächlich Dame 6 (wahr)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: K4, K3)
+p2 legt 2 Karten ab und behauptet: zwei Damen
+p2 legt tatsächlich König 4, König 3 (gelogen)
+p3 ist an der Reihe
+p3 wählt play cards (card ids: Q5, A2, A6)
+p3 legt 3 Karten ab und behauptet: drei Damen
+p3 legt tatsächlich Dame 5, Ass 2, Ass 6 (gelogen)
+p4 ist an der Reihe
+p4 wählt play cards (card ids: K5)
+p4 legt 1 Karte ab und behauptet: eine Dame
+p4 legt tatsächlich König 5 (gelogen)
+p1 ist an der Reihe
+p1 wählt call liar
+p1 ruft LÜGNER gegen p4
+Die Karten zeigen: einen König. p4 hat gelogen
+    König 5
+p4 muss abdrücken (beim Lügen erwischt)
+p4 drückt ab (Schuss 1): klick
+Runde 1 ist vorbei. p4 beginnt die nächste Runde
+
+Runde 2, Tischkarte: Dame
+    p4 beginnt; Spieler: p1, p2, p3 und p4
+p1 bekommt Joker 2, König 5, Ass 5, Dame 3, König 1
+p2 bekommt König 3, Dame 5, Dame 4, König 4, König 2
+p3 bekommt Ass 1, König 6, Ass 4, Ass 2, Joker 1
+p4 bekommt Ass 6, Dame 6, Ass 3, Dame 2, Dame 1
+p4 wählt play cards (card ids: A6, Q2, Q6)
+p4 legt 3 Karten ab und behauptet: drei Damen
+p4 legt tatsächlich Ass 6, Dame 2, Dame 6 (gelogen)
+p1 ist an der Reihe
+p1 wählt play cards (card ids: K5, K1)
+p1 legt 2 Karten ab und behauptet: zwei Damen
+p1 legt tatsächlich König 5, König 1 (gelogen)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: K2)
+p2 legt 1 Karte ab und behauptet: eine Dame
+p2 legt tatsächlich König 2 (gelogen)
+p3 ist an der Reihe
+p3 wählt play cards (card ids: K6)
+p3 legt 1 Karte ab und behauptet: eine Dame
+p3 legt tatsächlich König 6 (gelogen)
+p4 ist an der Reihe
+p4 wählt call liar
+p4 ruft LÜGNER gegen p3
+Die Karten zeigen: einen König. p3 hat gelogen
+    König 6
+p3 muss abdrücken (beim Lügen erwischt)
+p3 drückt ab (Schuss 1): PENG
+p3 scheidet aus
+Runde 2 ist vorbei. p4 beginnt die nächste Runde
+
+Runde 3, Tischkarte: Ass
+    p4 beginnt; Spieler: p1, p2 und p4
+p1 bekommt Ass 2, Ass 1, Dame 5, Dame 6, Dame 1
+p2 bekommt Dame 3, König 6, Ass 6, König 1, Dame 4
+p4 bekommt Joker 1, Ass 3, König 5, Dame 2, König 2
+p4 wählt play cards (card ids: J1, A3, K2)
+p4 legt 3 Karten ab und behauptet: drei Asse
+p4 legt tatsächlich Joker 1, Ass 3, König 2 (gelogen)
+p1 ist an der Reihe
+p1 wählt call liar
+p1 ruft LÜGNER gegen p4
+Die Karten zeigen: einen Joker, ein Ass, einen König. p4 hat gelogen
+    Joker 1, Ass 3, König 2
+p4 muss abdrücken (beim Lügen erwischt)
+p4 drückt ab (Schuss 2): klick
+Runde 3 ist vorbei. p4 beginnt die nächste Runde
+
+Runde 4, Tischkarte: Dame
+    p4 beginnt; Spieler: p1, p2 und p4
+p1 bekommt König 4, König 3, Ass 4, König 1, Ass 5
+p2 bekommt Ass 1, Joker 2, König 5, Ass 3, Ass 6
+p4 bekommt Dame 5, Dame 2, Dame 3, Dame 6, Ass 2
+p4 wählt play cards (card ids: Q5)
+p4 legt 1 Karte ab und behauptet: eine Dame
+p4 legt tatsächlich Dame 5 (wahr)
+p1 ist an der Reihe
+p1 wählt play cards (card ids: K1)
+p1 legt 1 Karte ab und behauptet: eine Dame
+p1 legt tatsächlich König 1 (gelogen)
+p2 ist an der Reihe
+p2 wählt call liar
+p2 ruft LÜGNER gegen p1
+Die Karten zeigen: einen König. p1 hat gelogen
+    König 1
+p1 muss abdrücken (beim Lügen erwischt)
+p1 drückt ab (Schuss 1): PENG
+p1 scheidet aus
+Runde 4 ist vorbei. p2 beginnt die nächste Runde
+
+Runde 5, Tischkarte: Ass
+    p2 beginnt; Spieler: p2 und p4
+p2 bekommt Ass 3, König 5, Dame 2, Ass 6, Joker 1
+p4 bekommt König 2, Ass 5, Dame 5, Ass 4, Ass 2
+p2 wählt play cards (card ids: K5, Q2, A3)
+p2 legt 3 Karten ab und behauptet: drei Asse
+p2 legt tatsächlich König 5, Dame 2, Ass 3 (gelogen)
+p4 ist an der Reihe
+p4 wählt play cards (card ids: Q5, K2, A5)
+p4 legt 3 Karten ab und behauptet: drei Asse
+p4 legt tatsächlich Dame 5, König 2, Ass 5 (gelogen)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: J1)
+p2 legt 1 Karte ab und behauptet: ein Ass
+p2 legt tatsächlich Joker 1 (wahr)
+p4 ist an der Reihe
+p4 wählt play cards (card ids: A4)
+p4 legt 1 Karte ab und behauptet: ein Ass
+p4 legt tatsächlich Ass 4 (wahr)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: A6)
+p2 legt 1 Karte ab und behauptet: ein Ass
+p2 legt tatsächlich Ass 6 (wahr)
+p4 muss die letzte Ablage prüfen
+p4 muss p2 LÜGNER nennen
+Die Karten zeigen: ein Ass. p2 sagte die Wahrheit
+    Ass 6
+p4 muss abdrücken (der Ruf war falsch)
+p4 drückt ab (Schuss 3): klick
+Runde 5 ist vorbei. p4 beginnt die nächste Runde
+
+Runde 6, Tischkarte: König
+    p4 beginnt; Spieler: p2 und p4
+p2 bekommt Ass 2, Ass 3, Dame 6, Ass 6, Ass 1
+p4 bekommt Dame 4, Dame 1, König 5, König 4, Dame 2
+p4 wählt play cards (card ids: K5, Q1, Q2)
+p4 legt 3 Karten ab und behauptet: drei Könige
+p4 legt tatsächlich König 5, Dame 1, Dame 2 (gelogen)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: A6)
+p2 legt 1 Karte ab und behauptet: einen König
+p2 legt tatsächlich Ass 6 (gelogen)
+p4 ist an der Reihe
+p4 wählt call liar
+p4 ruft LÜGNER gegen p2
+Die Karten zeigen: ein Ass. p2 hat gelogen
+    Ass 6
+p2 muss abdrücken (beim Lügen erwischt)
+p2 drückt ab (Schuss 1): klick
+Runde 6 ist vorbei. p2 beginnt die nächste Runde
+
+Runde 7, Tischkarte: Ass
+    p2 beginnt; Spieler: p2 und p4
+p2 bekommt Dame 3, König 5, Dame 5, Ass 3, König 6
+p4 bekommt Ass 4, Joker 2, König 2, Joker 1, Dame 4
+p2 wählt play cards (card ids: Q5, A3)
+p2 legt 2 Karten ab und behauptet: zwei Asse
+p2 legt tatsächlich Dame 5, Ass 3 (gelogen)
+p4 ist an der Reihe
+p4 wählt play cards (card ids: K2)
+p4 legt 1 Karte ab und behauptet: ein Ass
+p4 legt tatsächlich König 2 (gelogen)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: Q3, K5)
+p2 legt 2 Karten ab und behauptet: zwei Asse
+p2 legt tatsächlich Dame 3, König 5 (gelogen)
+p4 ist an der Reihe
+p4 wählt play cards (card ids: J1)
+p4 legt 1 Karte ab und behauptet: ein Ass
+p4 legt tatsächlich Joker 1 (wahr)
+p2 ist an der Reihe
+p2 wählt play cards (card ids: K6)
+p2 legt 1 Karte ab und behauptet: ein Ass
+p2 legt tatsächlich König 6 (gelogen)
+p4 muss die letzte Ablage prüfen
+p4 muss p2 LÜGNER nennen
+Die Karten zeigen: einen König. p2 hat gelogen
+    König 6
+p2 muss abdrücken (beim Lügen erwischt)
+p2 drückt ab (Schuss 2): klick
+Runde 7 ist vorbei. p2 beginnt die nächste Runde
+
+Runde 8, Tischkarte: König
+    p2 beginnt; Spieler: p2 und p4
+p2 bekommt Joker 2, Dame 2, Dame 3, König 4, Ass 5
+p4 bekommt Ass 2, König 5, Ass 6, König 2, König 3
+p2 wählt play cards (card ids: A5, J2)
+p2 legt 2 Karten ab und behauptet: zwei Könige
+p2 legt tatsächlich Ass 5, Joker 2 (gelogen)
+p4 ist an der Reihe
+p4 wählt call liar
+p4 ruft LÜGNER gegen p2
+Die Karten zeigen: ein Ass, einen Joker. p2 hat gelogen
+    Ass 5, Joker 2
+p2 muss abdrücken (beim Lügen erwischt)
+p2 drückt ab (Schuss 3): klick
+Runde 8 ist vorbei. p2 beginnt die nächste Runde
+
+Runde 9, Tischkarte: König
+    p2 beginnt; Spieler: p2 und p4
+p2 bekommt König 6, Ass 2, Ass 3, Dame 2, Dame 3
+p4 bekommt Ass 6, Dame 1, König 3, Ass 5, Dame 5
+p2 wählt play cards (card ids: Q2, A3)
+p2 legt 2 Karten ab und behauptet: zwei Könige
+p2 legt tatsächlich Dame 2, Ass 3 (gelogen)
+p4 ist an der Reihe
+p4 wählt call liar
+p4 ruft LÜGNER gegen p2
+Die Karten zeigen: eine Dame, ein Ass. p2 hat gelogen
+    Dame 2, Ass 3
+p2 muss abdrücken (beim Lügen erwischt)
+p2 drückt ab (Schuss 4): klick
+Runde 9 ist vorbei. p2 beginnt die nächste Runde
+
+Runde 10, Tischkarte: Ass
+    p2 beginnt; Spieler: p2 und p4
+p2 bekommt Dame 3, Dame 1, Ass 2, König 6, Joker 1
+p4 bekommt Ass 3, Dame 4, Ass 5, Dame 6, Joker 2
+p2 wählt play cards (card ids: Q3, J1, Q1)
+p2 legt 3 Karten ab und behauptet: drei Asse
+p2 legt tatsächlich Dame 3, Joker 1, Dame 1 (gelogen)
+p4 ist an der Reihe
+p4 wählt call liar
+p4 ruft LÜGNER gegen p2
+Die Karten zeigen: zwei Damen, einen Joker. p2 hat gelogen
+    Dame 3, Joker 1, Dame 1
+p2 muss abdrücken (beim Lügen erwischt)
+p2 drückt ab (Schuss 5): PENG
+p2 scheidet aus
+Runde 10 ist vorbei. p4 beginnt die nächste Runde
+Das Spiel ist aus: p4 bleibt als Letzte(r) übrig
+Ergebnis: 1. p4  2. p2  3. p1  4. p3
