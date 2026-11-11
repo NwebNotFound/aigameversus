@@ -38,6 +38,23 @@ MAX_SPEECH_WORDS = 120
 MAX_SHORT_WORDS = 40  # wolf chat and vote reasons
 MAX_WOLF_MESSAGES = 2
 DISCUSSION_ROUNDS = 2
+MAX_NIGHTS = 30  # a match still undecided after the 30th day ends without a winner
+
+
+def cycle_turns(players: int) -> int:
+    """The most turns one night and day can take with this many players (D-046).
+
+    Night: one role step and one wolf step per player, one extra for the Prime
+    Wolf's choice, two wolf chats per player. Day: one captain vote, two
+    speeches and one vote per player, and up to two death effects per player
+    (Hunter's shot, captain's handover). Each of these may come with one
+    lover_chat turn.
+    """
+    night = players + players + 1 + 2 * players
+    day = players + DISCUSSION_ROUNDS * players + players + 2 * players
+    return 2 * (night + day)
+
+
 WOLF_NIGHT_ORDER = 6
 OPTIONS = yaml.safe_load((ROOT / "options.yaml").read_text(encoding="utf-8"))
 
@@ -104,6 +121,7 @@ class Werewolf(GamePlugin[WerewolfState]):
     min_players = MIN_PLAYERS
     max_players = MAX_PLAYERS
     turn_mode = TurnMode.SEQUENTIAL
+    max_turns = MAX_NIGHTS * cycle_turns(MAX_PLAYERS)
 
     def __init__(self) -> None:
         self._roles = load_roles()
@@ -330,6 +348,11 @@ class Werewolf(GamePlugin[WerewolfState]):
                     ctx.emit(
                         "day_started", {"day": state.night, "order": order[start:] + order[:start]}
                     )
+                elif state.night >= MAX_NIGHTS:
+                    ctx.emit(
+                        "game_over", {"winner": "nobody", "winners": [], "reason": "night_limit"}
+                    )
+                    return
                 else:
                     self._start_night(state, ctx, state.night + 1)
             elif state.phase == "day":
@@ -554,7 +577,7 @@ class Werewolf(GamePlugin[WerewolfState]):
     def render_spec(self, state: WerewolfState) -> dict[str, Any]:
         """What a spectator view draws: the circle with every role (spectators may see all).
 
-        Not part of the plugin interface yet (D-040); the UI will define it in phase 5.
+        Not part of the plugin interface yet (D-046); the UI will define it in phase 5.
         """
         return {
             "layout": "player_circle",

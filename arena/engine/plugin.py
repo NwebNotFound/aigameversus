@@ -77,6 +77,9 @@ class GamePlugin[StateT: BaseModel](ABC):
     min_players: ClassVar[int]
     max_players: ClassVar[int]
     turn_mode: ClassVar[TurnMode]
+    # No match of the game takes more turns than this; the engine stops one that
+    # does. Set it to what the rules allow at most, with room to spare.
+    max_turns: ClassVar[int] = 10_000
 
     def rules(self) -> str:
         """The rule summary a model gets in its prompt: `rules.md` next to the plugin."""

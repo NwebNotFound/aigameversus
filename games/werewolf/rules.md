@@ -11,7 +11,7 @@
 2. **Morning.** The narrator announces who died; a dead player's role is shown to everyone. The bear growls if the Bear Tamer sits next to a living wolf (dead players are skipped). Hunter and lover effects follow.
 3. **Discussion.** Each living player speaks in a fixed order, 2 rounds, at most 120 words per speech.
 4. **Vote.** Everyone votes publicly for a player or abstains, with a short reason. The majority is executed; on a tie nobody dies. If the captain is active, the captain's vote counts double.
-5. **Check for a winner,** otherwise the next night starts.
+5. **Check for a winner,** otherwise the next night starts. A match still undecided after the 30th day ends without a winner.
 
 ## Captain
 If enabled, the village elects a captain at the start of day 1 (most votes; a tie is settled at random). The captain's vote counts double, and a dying captain names a living successor.

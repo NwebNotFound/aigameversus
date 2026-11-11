@@ -691,7 +691,97 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** dead-button rules; a random first button; dealing from the
   small blind; a fixed duplicate pairing inside one match.
 
-## D-040 · Werewolf engine: step queue, night order, deaths and wins
+## D-040 · A match has a turn limit
+
+- **Date:** 2026-11-11
+- **Decision:** `GamePlugin.max_turns` is the most turns a match of the game
+  can take; the default is 10 000 and a game sets its own (High Card: one
+  turn per card, 20). `Match(max_turns=...)` overrides it for one match. When
+  a match is still not over after that many completed turns, the engine logs
+  `turn_limit_reached` (spectators only), hands the log to the sink and raises
+  `PluginError`. A turn dropped by a pause does not count.
+- **Why:** The engine already stops a turn without progress, but a plugin bug
+  can also make progress forever: rounds that never end the game. Such a
+  match would fill the event store and, with models, spend up to the cost
+  cap. A limit on the plugin sits next to the rules that justify it.
+- **Alternatives:** A time limit for the whole match (depends on how fast the
+  models answer, and a pause would need an exception); a limit on events
+  (harder to derive from the rules of a game); only a per-match setting (every
+  caller would have to know every game).
+
+## D-041 · A game is found by its folder
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/games.py` lists the games: every package `games/<id>/`
+  with a `plugin.py` that defines exactly one `GamePlugin` class whose `id` is
+  the folder name. The class is created without arguments. A package without
+  `plugin.py` is skipped (data of a game that is not written yet); a
+  `plugin.py` that breaks the rule stops the start with an error that names
+  it.
+- **Why:** The spec promises that a new game is a new folder and nothing
+  else. One rule, checked at start, also keeps a game id, its folder and its
+  stored logs under one name.
+- **Alternatives:** A list of games in code or config (a second place to
+  edit); entry points (packaging for something that lives in this repo);
+  skipping broken folders (a game silently missing from the list).
+
+## D-042 · Matches from the API run inside the API process; spectators read the log over WebSocket
+
+- **Date:** 2026-11-11
+- **Decision:** `POST /matches` starts a match as an asyncio task of the API
+  process. Its events are stored turn by turn; `WS /matches/{id}/events`
+  sends the log from its first event, waits for new turns while the match
+  runs, and closes when it stops. A match that is over is sent from the event
+  store. Only completed turns are shown. A `matches` row holds what was asked
+  for and how it ended: `running`, `finished`, `failed`, `interrupted`. When
+  the server stops, its matches stop; the next start marks them
+  `interrupted`. `turn_delay` (0 to 60 s) paces a match for watching. Seats
+  are random bots only until model seats come with phase 2. The server plays
+  at most 10 matches at a time and answers 429 to a start beyond that; with
+  the turn limit (D-040) this bounds what requests can make it store. The server speaks
+  WebSocket through the `websockets` package, a dependency of its own because
+  plain `uvicorn` brings none.
+- **Why:** One process needs no queue and no message bus to get a live
+  stream, and a bot match lasts milliseconds. Sending the log from the start
+  gives a late spectator, a reconnect and a replay the same simple protocol,
+  and the stream can never show something that is not stored. A match cannot
+  be continued in another process yet, so saying `interrupted` is the honest
+  status.
+- **Alternatives:** Running matches in the worker with Redis for the stream
+  (the Compose services exist for it; worth it once matches are long or
+  many); server-sent events (the UI will also send controls); streaming only
+  new events and loading the past over HTTP (two code paths in every client);
+  continuing interrupted matches from the log (needs agents that can be
+  rebuilt; later).
+
+## D-043 · The `arena` command plays in its own process
+
+- **Date:** 2026-11-11
+- **Decision:** `arena run --game <id> --bots` runs the engine in the command's
+  own process and prints every event with its position and audience. It uses
+  no server and no database and stores nothing. `--bots` is required: it is
+  the only kind of player the command offers so far. A seed is chosen and
+  printed when none is given.
+- **Why:** The first thing anyone tries should work with `uv run` alone and
+  cost nothing. Printing the seed makes every run repeatable.
+- **Alternatives:** A command that calls the API (needs the stack; the API
+  can be called with curl); storing command-line matches when a database is
+  configured (behaviour that depends on the environment).
+
+## D-044 · A game reads nothing from the order of keys in event data
+
+- **Date:** 2026-11-11
+- **Decision:** Event data is JSON whose objects have no order: plugins use a
+  list wherever order matters. `tests/test_games.py` plays a bot match of
+  every game and replays its log with the keys of every object reversed.
+- **Why:** Postgres `jsonb` does not keep key order, and the engine's check
+  that event data survives JSON (D-016) compares with `==`, which ignores
+  order. A plugin that iterated over such an object would replay differently
+  from how it played.
+- **Alternatives:** Storing events as `json` instead of `jsonb` (keeps the
+  order in Postgres only, not in other stores or exports).
+
+## D-046 · Werewolf engine: step queue, night order, deaths and wins
 
 - **Date:** 2026-11-11
 - **Decision:**
@@ -716,6 +806,12 @@ Each entry: date, decision, why, alternatives considered.
     death effects: village when no pack member lives, wolves when the living
     pack is at least as big as everyone else, nobody when all are dead. The
     winning side shares rank 1, the rest the next rank.
+  - A match still undecided after the 30th day ends without a winner
+    (`game_over` with `reason: night_limit`). With that, `max_turns` (D-040)
+    is a true bound: 30 × `cycle_turns(16)` = 9,660, where one night and day
+    holds at most one role step, one wolf step and two wolf chats per player,
+    the Prime Wolf's choice, one captain vote, two speeches, one vote and two
+    death effects per player, each of them possibly with a lover chat.
   - Targets are JSON-schema enums of the legal players, so the engine rejects
     illegal targets and the random bot picks from them. No `think` tool, as
     in D-033; `render_spec` is a plain method.
