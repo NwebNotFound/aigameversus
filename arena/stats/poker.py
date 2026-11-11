@@ -1,6 +1,8 @@
 """Poker statistics: pure functions over the event log of one match.
 
 Input is the whole stored log as a spectator sees it (hole cards included).
+These numbers use hidden information: they must never reach a player's prompt or
+memory while a match is running (roadmap 6.3).
 Definitions, per player, counted over the hands the player was dealt into:
 
 - **VPIP**: hands in which the player voluntarily put chips in before the flop
