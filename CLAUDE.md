@@ -119,9 +119,9 @@ Three ways:
   true` the seats are models behind one `Budget`, as with the command. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
-  ledger (see Cost caps); a cap ends the match as `interrupted`. Model
-  matches are not rated yet: the API rates bot matches only, until the model
-  profiles (one per model and personality) reach it. Every match record has `seats` (seat ->
+  ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
+  model match is rated like a bot match: one profile per model (D-081), and
+  `arena ratings backfill` rates the earlier ones. Every match record has `seats` (seat ->
   `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
   the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
   `GET /replays` adds `real`.
@@ -438,6 +438,7 @@ docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, 
 docker compose -f docker-compose.yml -f docker-compose.models.yml up -d --build
 docker compose down           # stop it (--volumes also deletes the database)
 uv run arena games            # the games that can be played
+uv run arena ratings backfill  # rate finished model matches no rating has counted (idempotent)
 uv run arena run --game toy --bots --seed 7   # a bot match in the terminal
 # Real models: COSTS MONEY (inside the caps). Needs DATABASE_URL and OPENROUTER_API_KEY.
 uv run arena run --game liars_deck --models glm-flash,deepseek-flash --save match.json
