@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from arena.engine.types import Placement, PlayerId
 from arena.ratings.store import BOT_MODEL_ID
+from arena.transcript.common import display_names
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 Origin = Literal["played", "imported"]
@@ -132,6 +133,16 @@ class MatchStore:
             seat: name if model in (BOT_MODEL_ID, name) else f"{name} ({model})"
             for seat, (name, model) in profiles.items()
         }
+
+    async def display_names(self, record: MatchRecord) -> dict[str, str]:
+        """The name shown for each seat everywhere (see `arena.transcript.common.display_names`).
+
+        From the match record's seats; a match recorded before seats were kept falls back to
+        its profile labels, else the seat id.
+        """
+        if record.seats:
+            return display_names({p: (s.kind, s.name) for p, s in record.seats.items()})
+        return {**{p: p for p in record.players}, **await self.seat_names(record.id)}
 
     async def finished(self, limit: int = 100) -> list[MatchRecord]:
         """The newest finished matches, newest first."""

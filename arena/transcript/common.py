@@ -110,9 +110,34 @@ def names_from(players: Sequence[str] | Mapping[str, str]) -> dict[str, str]:
     return {p: p for p in players}
 
 
+def display_names(seats: Mapping[str, tuple[str, str]]) -> dict[str, str]:
+    """The name every reader sees for each seat, unique within the match.
+
+    `seats` maps a seat id to (kind, name): a model is shown by its short name ("gpt-luna"),
+    numbered "gpt-luna #1", "gpt-luna #2" when the same model sits more than once; a bot is
+    "Bot 3" with the number of its seat. The seat id itself is never the name.
+    """
+    count: dict[str, int] = {}
+    for kind, name in seats.values():
+        if kind != "bot":
+            count[name] = count.get(name, 0) + 1
+    seen: dict[str, int] = {}
+    shown = {}
+    for number, (seat, (kind, name)) in enumerate(seats.items(), start=1):
+        if kind == "bot":
+            digits = "".join(c for c in str(seat) if c.isdigit())
+            shown[seat] = f"Bot {digits or number}"
+        elif count[name] > 1:
+            seen[name] = seen.get(name, 0) + 1
+            shown[seat] = f"{name} #{seen[name]}"
+        else:
+            shown[seat] = name
+    return shown
+
+
 def labels(seats: Mapping[str, str]) -> dict[str, str]:
-    """Display names "p1 (glm-flash)" from a mapping seat to model (or profile) name."""
-    return {seat: f"{seat} ({model})" for seat, model in seats.items()}
+    """Display names from a mapping seat to model name (a saved `arena run --models` match)."""
+    return display_names({seat: ("model", model) for seat, model in seats.items()})
 
 
 class Base:

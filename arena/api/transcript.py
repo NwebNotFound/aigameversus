@@ -20,14 +20,17 @@ router = APIRouter(tags=["transcript"])
 
 
 class Player(BaseModel):
-    """Who sits in a seat: its label, and for a model its id, maker and kind.
+    """Who sits in a seat.
 
-    `name` is the label the lines use ("Random Bot p4" for a bot, the model's name for a
-    model). It comes from the match record, so a running match has it from its first turn; a
-    rated seat's profile name wins once there is one. All null for a match recorded before
-    seats were kept, which the lines call by seat id.
+    `display` is the one name to show for the seat, in every line and on every page: the
+    model's short name ("gpt-luna", "gpt-luna #2" when it sits twice) or "Bot 3". It is unique
+    within the match. `seat` is the id, to be shown as a small badge only. `name` is the
+    stored label ("Random Bot p3" for a bot). A match recorded before seats were kept has
+    only `seat` and `display` (its profile label, else the seat id).
     """
 
+    seat: str | None = None  # the seat id ("p3"): a small badge, never the name
+    display: str | None = None  # the name to show everywhere: "gpt-luna", "gpt-luna #2", "Bot 3"
     name: str | None = None
     model: str | None = None  # the model id from config/models.yaml; null for a bot
     kind: Literal["model", "bot"] | None = None
@@ -71,11 +74,7 @@ async def transcript(
     if record.game not in RENDERERS:
         raise HTTPException(404, f"No transcript for {record.game} (known: {', '.join(RENDERERS)})")
     seats = record.seats or {}
-    names = {
-        **{p: p for p in record.players},
-        **{p: seat.name for p, seat in seats.items()},
-        **await live.matches.seat_names(match_id),
-    }
+    names = await live.matches.display_names(record)
     lines = render_match(await live.log(match_id), names, lang, spoilers, game=record.game)
     lines = [line for line in lines if line.importance >= min_importance]
     if format == "json":
@@ -83,14 +82,20 @@ async def transcript(
         players = {}
         for seat in record.players:
             known = seats.get(seat)
-            player = Player()
+            player = Player(seat=seat, display=names[seat])
             if known is not None:
-                player = Player(name=known.name, model=known.model_id, kind=known.kind)
+                player = player.model_copy(
+                    update={"name": known.name, "model": known.model_id, "kind": known.kind}
+                )
             if seat in profiles:  # rated: the profile's name and model are the stored truth
                 name, model = profiles[seat]
                 is_bot = model == BOT_MODEL_ID
-                player = Player(
-                    name=name, model=None if is_bot else model, kind="bot" if is_bot else "model"
+                player = player.model_copy(
+                    update={
+                        "name": name,
+                        "model": None if is_bot else model,
+                        "kind": "bot" if is_bot else "model",
+                    }
                 )
             if player.model:
                 player.vendor = vendor_of(player.model)
