@@ -60,8 +60,8 @@ export function merge(log: MatchEvent[], incoming: MatchEvent[]): MatchEvent[] {
 	return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
 }
 
-/** Board fields that hide information from the players: hands, hole cards, roles. */
-export const SECRET_FIELDS = new Set(['hand', 'cards', 'role']);
+/** Board fields that hide information from the players: hands, hole cards, roles, win chances. */
+export const SECRET_FIELDS = new Set(['hand', 'cards', 'role', 'win_probability']);
 
 /** Whether a board field is shown as hidden, given the spoiler setting. */
 export function hidden(field: string, spoilers: boolean): boolean {
