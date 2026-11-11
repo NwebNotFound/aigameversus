@@ -9,10 +9,12 @@ The first build targets four games: *Liar's Deck* (a bluffing card game with a
 revolver), No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens* (a Civ-like
 strategy game).
 
-> **Status: early.** The engine core runs complete matches with random bots,
-> stores every match as an event log and rebuilds any moment of it from that
-> log (roadmap step 1.3), so far only for a small reference game. None of the
-> four games exists yet.
+> **Status: early.** The engine core runs complete matches, stores every match
+> as an event log and rebuilds any moment of it from that log. The agent runner
+> prompts a model, keeps its private thoughts apart from its moves and survives
+> bad answers, timeouts and API errors (roadmap step 1.4). So far the players
+> are random bots and a scripted mock model, and the only game is a small
+> reference game. None of the four games exists yet.
 
 <!-- Screenshot placeholder: live match view and match GIFs arrive with the spectator UI (phase 5). -->
 *Screenshots and match GIFs will appear here once the spectator UI exists.*
@@ -46,11 +48,13 @@ gitignored.
 Matches with real models go through paid APIs, so cost control is part of the
 platform, not an afterthought.
 
-- Today nothing in this repository can call a model. Development, tests and CI
-  use random bots and a mock LLM only, and CI has no access to any API key.
-- Model calls will ship together with hard caps: €0.50 per match and €5 per
-  month by default. At a cap the match pauses and asks; it never keeps billing
-  silently.
+- Today nothing in this repository starts a match with a real model. The
+  wrapper for real models exists, but no model is configured and no command
+  uses it. Development, tests and CI use random bots and a mock LLM only, and
+  CI has no access to any API key.
+- Matches with real models will ship together with hard caps: €0.50 per match
+  and €5 per month by default. At a cap the match pauses and asks; it never
+  keeps billing silently.
 - API keys live only in `.env`. They are never written to code, logs or the UI
   (the UI shows them masked).
 
