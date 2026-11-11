@@ -24,28 +24,16 @@ test('nav has the four sections and marks the current page', async ({ page }) =>
 });
 
 // The smoke test runs against the whole stack, so the arena must be reachable.
-// Nothing has started a match on a fresh stack, so the list is empty.
-test('the web reaches the arena and shows no running matches', async ({ page }) => {
+// Other tests start matches meanwhile, so the list may be empty or not.
+test('the web reaches the arena and lists its running matches', async ({ page }) => {
 	await page.goto('/');
 
 	const section = page.getByRole('region', { name: 'Running matches' });
-	await expect(section.getByTestId('no-matches')).toBeVisible();
+	await expect(
+		section.getByTestId('no-matches').or(section.getByTestId('match-list'))
+	).toBeVisible();
 	await expect(section.getByTestId('arena-unreachable')).toHaveCount(0);
 });
-
-for (const [label, title] of [
-	['New match', 'New match'],
-	['Replays', 'Replays']
-]) {
-	test(`${label} is a coming-soon page`, async ({ page }) => {
-		await page.goto('/');
-
-		await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: label }).click();
-
-		await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
-		await expect(page.getByText('Coming soon', { exact: true })).toBeVisible();
-	});
-}
 
 test('nothing overflows the viewport horizontally', async ({ page }) => {
 	await page.goto('/');

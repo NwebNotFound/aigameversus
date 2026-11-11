@@ -11,7 +11,8 @@ strategy game).
 
 > **Status: early.** Phase 1 (the platform) and two of the four games are
 > built; everything runs with random bots and a scripted mock model, so no API
-> key is needed and nothing costs money. No real model plays yet.
+> key is needed and nothing costs money. Real models can take seats from the
+> command line (`arena run --models`), inside the cost caps.
 
 | Game | Status | What exists |
 | --- | --- | --- |
@@ -46,7 +47,7 @@ The stack has five services, each with a healthcheck:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, leaderboard and player profiles; New match and Replays are "soon" placeholders |
+| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, new-match form, live view of a match, replays (list and step-by-step player with share links, and a JSON export of the whole spectator log, hidden cards, roles and thoughts included), leaderboard and player profiles. Open it as <http://127.0.0.1:3100> or <http://localhost:3100>; form posts from any other address are refused |
 | Arena API | <http://127.0.0.1:8100> | health, matches, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
 | PostgreSQL | `127.0.0.1:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
 | Redis | `127.0.0.1:6380` | match queue; today only the worker pings it |
@@ -131,7 +132,8 @@ the small reference game, `liars_deck` is Liar's Deck and `poker` is Poker.
 
 Configuration is optional. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
-and Compose passes the key on to the arena. Nothing uses the key yet.
+and Compose passes the key on to the arena. Only `arena run --models` uses
+the key (see Cost safety).
 
 ## Cost safety
 
@@ -149,11 +151,14 @@ platform, not an afterthought.
 - **Pause, not overrun:** a call that could take the match or the month past
   its cap is not sent. The engine pauses the match with the amounts in its log
   and can resume it later from the same turn, unchanged. Today nothing asks you
-  to raise a cap or resume: no command or API call does it yet, and no real
-  model can start a match.
-- **No real model yet:** nothing in this repository starts a match with a
-  real model today. Development, tests and CI use random bots and a mock LLM
-  only, and CI has no access to any API key.
+  to raise a cap or resume: a match started from the command line ends at a
+  cap.
+- **One door for real models:** `arena run --game <id> --models <id>,<id>,...`
+  seats models from `config/models.yaml` and is the only thing here that
+  spends money. It needs a database for the ledger and the key in the
+  environment, and prints what each seat cost. Matches started through the
+  API seat random bots. Development, tests and CI use random bots and a mock
+  LLM only, and CI has no access to any API key.
 - **Keys stay in `.env`:** never in code, config files, logs, the event log or
   the database. Provider error texts are dropped, because they can quote a
   key.

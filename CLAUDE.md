@@ -17,15 +17,19 @@ rebuilds the state from a log. A seat is played by a random bot or by the
 agent runner, which prompts a model and reads its answer; in tests and CI that
 model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
-`config/models.yaml` lists the caps and a roster of real models, but nothing
-starts a match with a real model yet: the `arena` command and `POST /matches`
-seat random bots only, and there is no API key before phase 2. Three games can
+`config/models.yaml` lists the caps and a roster of real models. The `arena`
+command can seat them (`--models`, paid calls inside the caps); `POST /matches`
+seats random bots only. Three games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
-matches, lists them and streams their events over WebSocket, next to
-`GET /health` (it migrates the database at startup), the leaderboard and the
-Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
-(`web/`, SvelteKit) has a home page and placeholders for the other pages.
+matches, lists, controls and streams them over WebSocket, next to
+`GET /health` (it migrates the database at startup), the leaderboard, player
+profiles with their game statistics (`GET /profiles/{id}/stats`), the
+Werewolf setup endpoints and `GET /setup` (models, personalities and cost
+caps for the form). The worker is a heartbeat placeholder, the web UI
+(`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
+new-match form (`/matches/new`), the live view of a match (`/matches/<id>`)
+and replays (`/replays`, `/replays/<id>`).
 Sections below marked *not built yet* describe the target from the spec and
 get filled in as their phase lands.
 
@@ -78,15 +82,29 @@ have without the pause.
 
 ### Running matches
 
-Two ways, both with random bots in every seat for now:
+Three ways. The first and the last seat random bots only:
 
 - `arena run --game toy --bots` (`arena/cli.py`) plays a match in its own
   process and prints every event. It needs no server and no database, and
   stores nothing. `arena games` lists the games.
+- `arena run --game liars_deck --models glm-flash,deepseek-flash,...` seats
+  models from `config/models.yaml`, one per seat in that order. **This makes
+  paid model calls**, and it is the only thing in the repository that does.
+  Every call goes through one `Budget` (see Cost caps), so the command needs
+  `DATABASE_URL` for the ledger; it applies the migrations, records the match
+  in `matches` and stores its events like the API does. The provider's key
+  comes from the environment (`KEY_VARIABLES` in `arena/config.py` names the
+  variable per provider); without it the command refuses to start, before
+  anything is booked. After the events it prints the result, what
+  each seat cost, and whether the stored log rebuilds the final state;
+  `--save FILE` writes seats, result, cost and all events as JSON. Nobody is
+  there to allow more money, so a cost cap ends the match: it is closed as
+  `interrupted` and the command exits with 3 (1 if the replay differs).
 - `POST /matches` (`arena/api/matches.py`) starts a match as a task inside the
   API process (`arena/api/live.py`). Its record is a row in `matches`
-  (`running`, `finished`, `failed`, or `interrupted` when the server stopped
-  under it), its events go to the event store turn by turn.
+  (`running`, `finished`, `failed`, `aborted` by a spectator, or
+  `interrupted` when the server stopped under it), its events go to the event
+  store turn by turn.
   `WS /matches/{id}/events` sends the log from its first event, one JSON object
   per event with its position `seq`, waits for further turns while the match
   runs and closes when it stops; a finished match is sent in one go.
@@ -95,6 +113,12 @@ Two ways, both with random bots in every seat for now:
   The server plays at most 10 matches at a time (`MAX_RUNNING`) and answers
   429 to a start beyond that; a match that never ends stops at its turn limit
   and is marked `failed`.
+- A running match can be paused, resumed, sped up or slowed down and aborted:
+  `POST /matches/{id}/pause`, `/resume`, `/abort`, `PUT /matches/{id}/speed`,
+  state in `GET /matches/{id}/control`. A pause takes effect between turns,
+  so no agent is asked while a match is paused. `GET /matches/{id}/board`
+  returns the game's `render_spec` after the stored turns and
+  `GET /matches/{id}/cost` what its model calls cost per player.
 
 The API shows a match as a spectator sees it, thoughts and hidden cards
 included. It has no authentication and listens on localhost only.
@@ -288,6 +312,7 @@ arena/
   gamemaster/   match setup, scheduling, narrator
   db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
+  chronicle/    the chronicler: a finished match as a story (templates, styles, languages)
   cli.py        the `arena` command
   config.py     loader of config/models.yaml (limits, models, prices)
   games.py      finds the games under games/
@@ -317,6 +342,8 @@ docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, 
 docker compose down           # stop it (--volumes also deletes the database)
 uv run arena games            # the games that can be played
 uv run arena run --game toy --bots --seed 7   # a bot match in the terminal
+# Real models: COSTS MONEY (inside the caps). Needs DATABASE_URL and OPENROUTER_API_KEY.
+uv run arena run --game liars_deck --models glm-flash,deepseek-flash --save match.json
 ```
 
 The same in the running stack, and a match through the API:
@@ -409,7 +436,12 @@ Copy the shape of `games/toy/`, the smallest complete game.
    actions carry a useful message. Add a match with mock-LLM players, as in
    `tests/agents/test_model_match.py`.
 
-*Not built yet:* what the UI needs to draw a game (phase 5).
+What the UI draws comes from the plugin's `render_spec(state)`, a plain JSON
+dict with a `layout` (`card_table`, `poker_table`, `player_circle`) and a list
+of `seats`, each with a `player`. Until a game has its own table in `web/`,
+the generic board shows the other fields as text; it hides the fields `hand`,
+`cards` and `role` when the spectator switches spoilers off. A game without
+`render_spec` shows its events only.
 
 ### A model
 
@@ -452,6 +484,21 @@ missing. A role without new abilities needs none.
 `games/werewolf/templates.yaml` (role counts per template, `fill` for villagers)
 and `games/werewolf/options.yaml` (captain, role visibility). Same test command.
 
+### A trust rule
+
+After every rated match the server turns what each player saw into facts
+(`arena/memory/facts.py`, one extractor per game) and the facts into trust
+between profiles (-100 to +100, clamped) with a short note each
+(`arena/memory/store.py`, once per match id). How much a fact is worth, and its
+note, is data: `config/memory/trust.yaml`. A fact is read only from the events
+its observer could see, so it never carries another player's secret. A new kind
+of fact needs its extractor case, its name in `KINDS` and a rule in the file;
+the loader refuses a fact without a rule and a rule without a fact.
+
+```bash
+uv run pytest tests/memory
+```
+
 ### A personality
 
 One YAML file in `config/personalities/<id>.yaml`, checked against
@@ -477,8 +524,9 @@ uv run pytest games/liars_deck
 ```
 
 A new Werewolf role already shows up in the role selection
-(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles` and
-`POST /games/werewolf/selection/validate`): give it a `team`, `unique` and a
+(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles`,
+`GET /games/werewolf/templates?players=N` and
+`POST /games/werewolf/selection/validate`, and shown in the new-match form): give it a `team`, `unique` and a
 balance `weight`.
 
 ### A unit, building or event

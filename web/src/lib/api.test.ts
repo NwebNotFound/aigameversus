@@ -171,3 +171,290 @@ describe('profile', () => {
 		expect(result).toEqual({ state: 'unreachable', reason: 'no connection' });
 	});
 });
+
+describe('profileStats', () => {
+	it('asks for the statistics of one profile', async () => {
+		const body = { profile_id: 'a1', games: [] };
+		const { calls, fetchFn } = fakeFetch(() => Response.json(body));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).profileStats('a1');
+
+		expect(result).toEqual({ state: 'ok', data: body });
+		expect(calls).toEqual(['http://arena:8000/profiles/a1/stats']);
+	});
+
+	it('reports an unknown profile as not found', async () => {
+		const { fetchFn } = fakeFetch(() => new Response('', { status: 404 }));
+
+		expect(await createArenaClient('http://arena:8000', fetchFn).profileStats('x')).toEqual({
+			state: 'not_found'
+		});
+	});
+});
+
+const RECORD = {
+	...MATCH,
+	seed: 7,
+	settings: {},
+	finished_at: null,
+	placements: null
+};
+
+/** Answers like the arena for match m1: record, board, cost and, if `running`, control. */
+function arena(running: boolean) {
+	return (url: string) => {
+		const path = new URL(url).pathname;
+		if (path === '/matches/m1') return Response.json(RECORD);
+		if (path === '/matches/m1/board')
+			return Response.json({ game: 'poker', events: 3, spec: null });
+		if (path === '/matches/m1/cost') return Response.json({ total_micro_eur: 0, players: {} });
+		if (path === '/matches/m1/control') {
+			return running
+				? Response.json({ paused: false, turn_delay: 1 })
+				: Response.json({ detail: 'not running' }, { status: 409 });
+		}
+		return new Response('', { status: 404 });
+	};
+}
+
+describe('liveState', () => {
+	it('gathers record, board, cost and control of a running match', async () => {
+		const { calls, fetchFn } = fakeFetch(arena(true));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m1');
+
+		expect(result).toEqual({
+			state: 'ok',
+			data: {
+				match: RECORD,
+				board: { game: 'poker', events: 3, spec: null },
+				cost: { total_micro_eur: 0, players: {} },
+				control: { paused: false, turn_delay: 1 }
+			}
+		});
+		expect(calls.sort()).toEqual([
+			'http://arena:8000/matches/m1',
+			'http://arena:8000/matches/m1/board',
+			'http://arena:8000/matches/m1/control',
+			'http://arena:8000/matches/m1/cost'
+		]);
+	});
+
+	it('has no control for a match that is not running', async () => {
+		const { fetchFn } = fakeFetch(arena(false));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m1');
+
+		expect(result).toMatchObject({ state: 'ok', data: { control: null } });
+	});
+
+	it('reports an unknown match as not found', async () => {
+		const { calls, fetchFn } = fakeFetch(arena(true));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m2');
+
+		expect(result).toEqual({ state: 'not_found' });
+		expect(calls).toEqual(['http://arena:8000/matches/m2']);
+	});
+
+	it('reports a failing part as unreachable', async () => {
+		const { fetchFn } = fakeFetch((url) =>
+			url.endsWith('/cost') ? new Response('boom', { status: 500 }) : arena(true)(url)
+		);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m1');
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena answered 500' });
+	});
+});
+
+describe('control', () => {
+	function recording() {
+		const requests: { url: string; method: string; body: unknown }[] = [];
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			requests.push({
+				url: String(input),
+				method: init?.method ?? 'GET',
+				body: init?.body ? JSON.parse(String(init.body)) : null
+			});
+			return Response.json({ paused: true, turn_delay: 1 });
+		}) as typeof fetch;
+		return { requests, fetchFn };
+	}
+
+	it('posts pause, resume and abort', async () => {
+		const { requests, fetchFn } = recording();
+		const client = createArenaClient('http://arena:8000', fetchFn);
+
+		for (const action of ['pause', 'resume', 'abort'] as const)
+			await client.control('m1', { action });
+
+		expect(requests).toEqual(
+			['pause', 'resume', 'abort'].map((action) => ({
+				url: `http://arena:8000/matches/m1/${action}`,
+				method: 'POST',
+				body: null
+			}))
+		);
+	});
+
+	it('puts a new speed', async () => {
+		const { requests, fetchFn } = recording();
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).control('m1', {
+			action: 'speed',
+			turn_delay: 0.25
+		});
+
+		expect(requests).toEqual([
+			{ url: 'http://arena:8000/matches/m1/speed', method: 'PUT', body: { turn_delay: 0.25 } }
+		]);
+		expect(result).toEqual({ state: 'ok', data: { paused: true, turn_delay: 1 } });
+	});
+
+	it('reports a match that is not running as not found', async () => {
+		const { fetchFn } = fakeFetch(() => Response.json({ detail: 'x' }, { status: 409 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).control('m1', {
+			action: 'pause'
+		});
+
+		expect(result).toEqual({ state: 'not_found' });
+	});
+});
+
+describe('eventsUrl', () => {
+	it('is the WebSocket of the match on the arena', () => {
+		expect(createArenaClient('http://arena:8000/').eventsUrl('m1')).toBe(
+			'ws://arena:8000/matches/m1/events'
+		);
+		expect(createArenaClient('https://arena.example').eventsUrl('a/b')).toBe(
+			'wss://arena.example/matches/a%2Fb/events'
+		);
+	});
+});
+
+describe('startMatch', () => {
+	const BODY = { game: 'toy', players: 2, settings: {}, turn_delay: 1 };
+
+	function answering(response: Response) {
+		const sent: { url: string; init?: RequestInit }[] = [];
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			sent.push({ url: String(input), init });
+			return response;
+		}) as typeof fetch;
+		return { sent, fetchFn };
+	}
+
+	it('posts the match and returns its record', async () => {
+		const { sent, fetchFn } = answering(Response.json(RECORD, { status: 201 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({ state: 'ok', data: RECORD });
+		expect(sent[0].url).toBe('http://arena:8000/matches');
+		expect(sent[0].init?.method).toBe('POST');
+		expect(JSON.parse(String(sent[0].init?.body))).toEqual(BODY);
+	});
+
+	it('passes on why the game refused', async () => {
+		const { fetchFn } = answering(
+			Response.json({ detail: 'High Card takes 2 to 4 players' }, { status: 422 })
+		);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({
+			state: 'refused',
+			status: 422,
+			detail: 'High Card takes 2 to 4 players'
+		});
+	});
+
+	it('joins the messages of a field error list', async () => {
+		const detail = [{ msg: 'Input should be >= 0' }, { msg: 'Field required' }];
+		const { fetchFn } = answering(Response.json({ detail }, { status: 422 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toMatchObject({ detail: 'Input should be >= 0; Field required' });
+	});
+
+	it('reports a full arena as refused', async () => {
+		const { fetchFn } = answering(
+			Response.json({ detail: '10 matches are running' }, { status: 429 })
+		);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({ state: 'refused', status: 429, detail: '10 matches are running' });
+	});
+
+	it('reports a server error as unreachable', async () => {
+		const { fetchFn } = answering(new Response('boom', { status: 500 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena answered 500' });
+	});
+});
+
+describe('setup', () => {
+	it('returns the options of the new-match form', async () => {
+		const options = {
+			model_seats: false,
+			models: [{ id: 'm', model: 'x/m' }],
+			personalities: [],
+			caps: { match_eur: 0.5, month_eur: 5 }
+		};
+		const { calls, fetchFn } = fakeFetch(() => Response.json(options));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).setup();
+
+		expect(result).toEqual({ state: 'ok', data: options });
+		expect(calls).toEqual(['http://arena:8000/setup']);
+	});
+});
+
+describe('werewolf setup', () => {
+	it('asks for the templates of one table size', async () => {
+		const { calls, fetchFn } = fakeFetch(() => Response.json([]));
+
+		await createArenaClient('http://arena:8000', fetchFn).werewolfTemplates(9);
+
+		expect(calls).toEqual(['http://arena:8000/games/werewolf/templates?players=9']);
+	});
+
+	it('posts a selection to check', async () => {
+		const report = { valid: true, problems: [], selection: { werewolf: 2 }, balance: null };
+		const sent: { url: string; init?: RequestInit }[] = [];
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			sent.push({ url: String(input), init });
+			return Response.json(report);
+		}) as typeof fetch;
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).checkSelection(
+			{ werewolf: 2 },
+			8
+		);
+
+		expect(result).toEqual({ state: 'ok', data: report });
+		expect(sent[0].url).toBe('http://arena:8000/games/werewolf/selection/validate');
+		expect(JSON.parse(String(sent[0].init?.body))).toEqual({
+			roles: { werewolf: 2 },
+			player_count: 8
+		});
+	});
+});
+
+describe('relations', () => {
+	it('asks for what a profile thinks of the others', async () => {
+		const body = { profile_id: 'a1', relations: [] };
+		const { calls, fetchFn } = fakeFetch(() => Response.json(body));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).relations('a1');
+
+		expect(result).toEqual({ state: 'ok', data: body });
+		expect(calls).toEqual(['http://arena:8000/profiles/a1/relations']);
+	});
+});

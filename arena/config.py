@@ -18,6 +18,10 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+# The environment variable that holds the API key of each provider.
+KEY_VARIABLES = {"openrouter": "OPENROUTER_API_KEY"}
+
+
 class Limits(_Strict):
     match_eur: Decimal = Field(gt=0)
     month_eur: Decimal = Field(gt=0)

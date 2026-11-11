@@ -8,14 +8,148 @@
 export const DEFAULT_API_URL = 'http://127.0.0.1:8100';
 const TIMEOUT_MS = 3000;
 
+export type MatchStatus = 'running' | 'finished' | 'failed' | 'interrupted' | 'aborted';
+
 /** A match as `GET /matches` lists it. */
 export interface MatchSummary {
 	id: string;
 	game: string;
-	status: 'running' | 'finished' | 'failed' | 'interrupted';
+	status: MatchStatus;
 	players: string[];
 	started_at: string;
 }
+
+/** A match as `GET /matches/{id}` returns it. */
+export interface MatchRecord extends MatchSummary {
+	seed: number;
+	settings: Record<string, unknown>;
+	finished_at: string | null;
+	placements: { player: string; rank: number }[] | null;
+}
+
+/** One event of a match log, as the event stream sends it. */
+export interface MatchEvent {
+	seq: number;
+	source: 'engine' | 'game';
+	type: string;
+	data: Record<string, unknown>;
+	/** null: public; a list: only these players; empty: spectators only. */
+	visible_to: string[] | null;
+}
+
+/** `GET /matches/{id}/control`: how a running match is played right now. */
+export interface Control {
+	paused: boolean;
+	turn_delay: number;
+}
+
+/** `GET /matches/{id}/board`: the game's render_spec after the stored turns. */
+export interface Board {
+	game: string;
+	events: number;
+	spec: Record<string, unknown> | null;
+}
+
+/** A finished match as `GET /replays` lists it. */
+export interface ReplaySummary {
+	id: string;
+	game: string;
+	players: string[];
+	winners: string[];
+	started_at: string;
+	finished_at: string;
+	cost_micro_eur: number;
+}
+
+/** `GET /matches/{id}/cost`, in millionths of a euro. */
+export interface Cost {
+	total_micro_eur: number;
+	players: Record<string, number>;
+}
+
+/** Everything the live view shows next to the event log. */
+export interface LiveState {
+	match: MatchRecord;
+	board: Board;
+	cost: Cost;
+	/** null when the match is not running (any more). */
+	control: Control | null;
+}
+
+export type ControlAction =
+	| { action: 'pause' }
+	| { action: 'resume' }
+	| { action: 'abort' }
+	| { action: 'speed'; turn_delay: number };
+
+/** A game as `GET /games` lists it. */
+export interface GameInfo {
+	id: string;
+	name: string;
+	min_players: number;
+	max_players: number;
+}
+
+/** `GET /setup`: what the new-match form offers. */
+export interface SetupOptions {
+	/** Whether a seat can be a model yet; until then every seat is a random bot. */
+	model_seats: boolean;
+	models: { id: string; model: string }[];
+	personalities: { id: string; name: string; description: string }[];
+	caps: { match_eur: number; month_eur: number };
+}
+
+/** A Werewolf role, as `GET /games/werewolf/roles` lists it. */
+export interface WerewolfRole {
+	id: string;
+	name: string;
+	team: 'village' | 'wolves' | 'solo';
+	unique: boolean;
+	weight: number;
+	description: string;
+}
+
+export interface Balance {
+	total: number;
+	verdict: 'village' | 'even' | 'wolves';
+}
+
+/** `GET /games/werewolf/templates?players=N`. */
+export interface WerewolfTemplate {
+	id: string;
+	name: string;
+	min_players: number;
+	random: boolean;
+	/** The roles at this table; null for a random template or one that does not fit. */
+	selection: Record<string, number> | null;
+	balance: Balance | null;
+}
+
+export interface SelectionProblem {
+	code: string;
+	message: string;
+	role: string | null;
+}
+
+/** `POST /games/werewolf/selection/validate`. */
+export interface SelectionReport {
+	valid: boolean;
+	problems: SelectionProblem[];
+	selection: Record<string, number>;
+	balance: Balance | null;
+}
+
+/** The body of `POST /matches`. */
+export interface NewMatch {
+	game: string;
+	players: number;
+	seed?: number;
+	settings: Record<string, unknown>;
+	turn_delay: number;
+}
+
+/** A start the arena refused, with its reason (422: the game refused, 429: arena full). */
+export type Refused = { state: 'refused'; status: number; detail: string };
 
 /** One player's standing, as in `GET /leaderboard` and `GET /profiles/{id}`. */
 export interface Standing {
@@ -57,8 +191,26 @@ export interface Profile {
 	overall: Standing | null;
 	ratings: (Standing & { game_id: string })[];
 	recent_matches: RecentMatch[];
-	relations: { available: boolean; note: string };
 	memory: { available: boolean; note: string };
+}
+
+/** `GET /profiles/{id}/stats`: totals per game, from the logs of the rated matches. */
+export interface ProfileStats {
+	profile_id: string;
+	games: { game_id: string; matches: number; stats: Record<string, unknown> | null }[];
+}
+
+/** `GET /profiles/{id}/relations`: what a player thinks of the others it has met. */
+export interface Relations {
+	profile_id: string;
+	relations: {
+		profile_id: string;
+		name: string;
+		model_id: string;
+		/** -100 distrust to +100 trust. */
+		trust: number;
+		notes: { match_id: string; game_id: string; text: string }[];
+	}[];
 }
 
 export type Unreachable = { state: 'unreachable'; reason: string };
@@ -70,6 +222,27 @@ export interface ArenaClient {
 	listMatches(): Promise<MatchesResult>;
 	leaderboard(game?: string): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
+	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
+	relations(id: string): Promise<ApiResult<Relations>>;
+	liveState(id: string): Promise<ApiResult<LiveState>>;
+	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
+	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
+	/** The WebSocket URL of a match's event stream. */
+	eventsUrl(id: string): string;
+	replays(): Promise<ApiResult<ReplaySummary[]>>;
+	/** The whole stored log of a match. */
+	events(id: string): Promise<ApiResult<MatchEvent[]>>;
+	/** The board after the first `events` events of the log. */
+	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
+	games(): Promise<ApiResult<GameInfo[]>>;
+	werewolfRoles(): Promise<ApiResult<WerewolfRole[]>>;
+	werewolfTemplates(players: number): Promise<ApiResult<WerewolfTemplate[]>>;
+	checkSelection(
+		roles: Record<string, number>,
+		players: number
+	): Promise<ApiResult<SelectionReport>>;
+	setup(): Promise<ApiResult<SetupOptions>>;
+	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
 export function createArenaClient(
@@ -78,9 +251,10 @@ export function createArenaClient(
 ): ArenaClient {
 	const root = baseUrl.replace(/\/+$/, '');
 
-	function get(path: string): Promise<Response> {
+	function get(path: string, init: RequestInit = {}): Promise<Response> {
 		return fetchFn(`${root}${path}`, {
-			headers: { accept: 'application/json' },
+			...init,
+			headers: { accept: 'application/json', ...init.headers },
 			signal: AbortSignal.timeout(TIMEOUT_MS)
 		});
 	}
@@ -89,11 +263,12 @@ export function createArenaClient(
 	async function getJson<T>(
 		path: string,
 		valid: (body: unknown) => boolean,
-		notFound: number[] = [404]
+		notFound: number[] = [404],
+		init: RequestInit = {}
 	): Promise<ApiResult<T>> {
 		let response: Response;
 		try {
-			response = await get(path);
+			response = await get(path, init);
 		} catch (error) {
 			return { state: 'unreachable', reason: describe(error) };
 		}
@@ -143,12 +318,163 @@ export function createArenaClient(
 				// 422: the id is not a valid profile id, so no such player exists either.
 				[404, 422]
 			);
+		},
+
+		relations(id) {
+			return getJson<Relations>(
+				`/profiles/${encodeURIComponent(id)}/relations`,
+				(body) => isObject(body) && Array.isArray(body.relations),
+				[404, 422]
+			);
+		},
+
+		profileStats(id) {
+			return getJson<ProfileStats>(
+				`/profiles/${encodeURIComponent(id)}/stats`,
+				(body) => isObject(body) && Array.isArray(body.games),
+				[404, 422]
+			);
+		},
+
+		async liveState(id) {
+			const match = encodeURIComponent(id);
+			// 422: not a valid match id, so no such match either.
+			const record = await getJson<MatchRecord>(`/matches/${match}`, isObject, [404, 422]);
+			if (record.state !== 'ok') return record;
+			const [board, cost, control] = await Promise.all([
+				getJson<Board>(`/matches/${match}/board`, (body) => isObject(body) && 'spec' in body),
+				getJson<Cost>(`/matches/${match}/cost`, (body) => isObject(body) && isObject(body.players)),
+				// 409: the match is not running, so there is nothing to control.
+				getJson<Control>(`/matches/${match}/control`, isObject, [409])
+			]);
+			if (board.state !== 'ok') return board;
+			if (cost.state !== 'ok') return cost;
+			if (control.state === 'unreachable') return control;
+			return {
+				state: 'ok',
+				data: {
+					match: record.data,
+					board: board.data,
+					cost: cost.data,
+					control: control.state === 'ok' ? control.data : null
+				}
+			};
+		},
+
+		control(id, command) {
+			const match = encodeURIComponent(id);
+			const speed = command.action === 'speed';
+			return getJson<Control | MatchRecord>(
+				`/matches/${match}/${command.action}`,
+				isObject,
+				[404, 409, 422],
+				speed
+					? {
+							method: 'PUT',
+							headers: { 'content-type': 'application/json' },
+							body: JSON.stringify({ turn_delay: command.turn_delay })
+						}
+					: { method: 'POST' }
+			);
+		},
+
+		replays() {
+			return getJson<ReplaySummary[]>('/replays', Array.isArray);
+		},
+
+		events(id) {
+			return getJson<MatchEvent[]>(
+				`/matches/${encodeURIComponent(id)}/events`,
+				Array.isArray,
+				[404, 422]
+			);
+		},
+
+		boardAt(id, events) {
+			return getJson<Board>(
+				`/matches/${encodeURIComponent(id)}/board?events=${encodeURIComponent(events)}`,
+				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
+			);
+		},
+
+		games() {
+			return getJson<GameInfo[]>('/games', Array.isArray);
+		},
+
+		werewolfRoles() {
+			return getJson<WerewolfRole[]>('/games/werewolf/roles', Array.isArray);
+		},
+
+		werewolfTemplates(players) {
+			return getJson<WerewolfTemplate[]>(
+				`/games/werewolf/templates?players=${encodeURIComponent(players)}`,
+				Array.isArray
+			);
+		},
+
+		checkSelection(roles, players) {
+			return getJson<SelectionReport>(
+				'/games/werewolf/selection/validate',
+				(body) => isObject(body) && Array.isArray(body.problems),
+				[],
+				{
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ roles, player_count: players })
+				}
+			);
+		},
+
+		setup() {
+			return getJson<SetupOptions>(
+				'/setup',
+				(body) => isObject(body) && Array.isArray(body.models) && isObject(body.caps)
+			);
+		},
+
+		async startMatch(match) {
+			let response: Response;
+			try {
+				response = await get('/matches', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify(match)
+				});
+			} catch (error) {
+				return { state: 'unreachable', reason: describe(error) };
+			}
+			const body: unknown = await response.json().catch(() => undefined);
+			if (response.status === 201 && isObject(body) && typeof body.id === 'string') {
+				return { state: 'ok', data: body as unknown as MatchRecord };
+			}
+			if ([404, 422, 429].includes(response.status)) {
+				return { state: 'refused', status: response.status, detail: detailOf(body) };
+			}
+			return { state: 'unreachable', reason: `the arena answered ${response.status}` };
+		},
+
+		eventsUrl(id) {
+			return `${root.replace(/^http/, 'ws')}/matches/${encodeURIComponent(id)}/events`;
 		}
 	};
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** FastAPI's `detail`: a message, or a list of field errors. */
+function detailOf(body: unknown): string {
+	if (!isObject(body)) return 'no reason given';
+	const { detail } = body;
+	if (typeof detail === 'string') return detail;
+	if (Array.isArray(detail)) {
+		return detail
+			.map((problem) => (isObject(problem) ? String(problem.msg) : String(problem)))
+			.join('; ');
+	}
+	return 'no reason given';
 }
 
 function describe(error: unknown): string {

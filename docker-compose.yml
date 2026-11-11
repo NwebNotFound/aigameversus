@@ -54,6 +54,9 @@ services:
     environment:
       # Pages call the API server-side, inside the Compose network.
       ARENA_API_URL: http://arena:8000
+      # The address people open. SvelteKit refuses a form POST from any other
+      # origin (CSRF check), and without ORIGIN it would expect https.
+      ORIGIN: http://127.0.0.1:3100
     healthcheck:
       <<: *healthcheck-timing
       test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:3000/"]

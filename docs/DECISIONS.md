@@ -1121,7 +1121,331 @@ Each entry: date, decision, why, alternatives considered.
   the numbers up (an old log would change its meaning when a number is
   tuned); one event per city and round.
 
-## D-058 · Throne of Tokens armies: movement, training, and what a settler may do
+## D-058 · Match controls: pause between turns, abort as its own status
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - Pause, resume, speed and abort act on the match task in the API process
+    (`LiveMatches`), not through the database. Only the process that plays a
+    match can control it; any other match answers 409.
+  - A pause takes effect after the current turn is stored and published, before
+    the engine asks for the next turn. No agent, and so no model, is called
+    while a match is paused. A pause is not logged as an event: it changes
+    nothing in the game, and the same seed gives the same log with or without
+    it.
+  - A speed change applies at once, also to a wait that has already begun.
+  - Abort cancels the task. The record gets the new status `aborted`
+    (migration `0006`), with no placements; the stored turns stay readable.
+    A match stopped by a server shutdown stays `interrupted`. Once the turn
+    with `match_finished` is stored, the match is over: abort answers 409, and
+    that last turn does not wait for a resume, so a match paused just before
+    its end still ends `finished`. A record that is no longer `running` is
+    never closed again.
+  - `GET /matches/{id}/board` replays the stored log and returns the game's
+    `render_spec`, or `null` for a game without one. `GET /matches/{id}/cost`
+    sums the ledger per player.
+- **Why:** The live view (roadmap 5.2) needs these controls; doing them in the
+  process that owns the task needs no queue or polling. Pausing between turns
+  keeps a pause free of cost and the log a clean list of turns.
+- **Alternatives:** a `match_paused` event for spectator pauses (they are not
+  game events, and a replay should not stop there); aborted matches as
+  `failed` (it hides that nobody did anything wrong); a speed change only from
+  the next turn (a 30 s wait would ignore the click).
+
+## D-061 · Werewolf "Düsterwald-Mix" scales its wolves; "Chaos" stays as it is
+
+- **Date:** 2026-11-11
+- **Decision:** Düsterwald-Mix has a per-size `by_players` table for its werewolf
+  count (as Klassisch, D-023): 2 wolves for 8 players, 3 for 9, 4 for 10-16.
+  With its six special roles (seer, witch, hunter, Cupid, Bear Tamer, Little
+  Girl) the total is `15 + players - 7 * wolves`: +9 at 8 players, then +3, -3,
+  -2, -1, 0, +1, +2, +3 for 9 to 16. The light is *even* at 9-16 and within
+  -1..1 for 12-14. At 8 players it stays *village* (+9): a third wolf does not
+  fit beside six special roles (nine roles for eight seats), so +9 is the
+  nearest reachable value. Chaos is unchanged: its 12 non-werewolf roles
+  (Prime Wolf and White Wolf among them) and 2 werewolves give `players - 7 *
+  wolves`, which is 0, +1 and +2 for its 14, 15 and 16 players. Tests pin the
+  totals of both templates at every size.
+- **Why:** Fixed 2 wolves left Düsterwald village-favoured everywhere (+9 to
+  +17). The table follows the same idea as D-023: wolves grow with the table
+  and the light is read from the weights.
+- **Alternatives:** dropping a special role from the 8-player mix to allow a
+  third wolf (changes the template's roles, not only its counts); a formula
+  field in the template format.
+
+## D-062 · The chronicler tells a finished match from templates, behind a Narrator
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/chronicle/` builds a chapter-by-chapter story from the
+  stored event log of a finished match of Liar's Deck, Poker or Werewolf:
+  chapters are rounds, hands and nights, made of beats (a caught lie, a shot,
+  an all-in, a death, a vote, the win). `tell(events, style=, lang=, names=)`
+  gives a `Chronicle`; `to_markdown` exports it; `GET /matches/{id}/chronicle?
+  style=&lang=&format=` serves it. The four styles (epic, news, sports, novel)
+  in English and German are fixed templates, so the same log gives the same
+  text and nothing is paid. `Narrator` is the interface a model can implement
+  later to retell a chapter from its beats; the default `TemplateNarrator`
+  needs no model. The story uses spectator information (hidden cards, roles),
+  so a log without `match_finished` is refused, and the endpoint answers 409
+  for a match that is still running.
+- **Why:** A story told during the match would reveal what players may not
+  know, and the templates keep tests exact and the cost at zero. Beats keep the
+  facts apart from the words, which is what a model narrator needs.
+- **Alternatives:** telling the story live from public events only (much
+  thinner, and the replay page can use the finished one); one free-text
+  generator without beats (not testable).
+
+## D-063 · Profile statistics: seats stored at rating time, totals read from the logs
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The rating of a match also stores which seat of its log each profile
+    played (`match_seats`, migration `0007`), in the same transaction as the
+    ratings. Matches rated without seats (the DEMO seed) have no statistics.
+  - `GET /profiles/{id}/stats?game=` loads the log of every rated match of the
+    profile in that game, runs the game's `match_stats` from `arena/stats` and
+    returns its `aggregate` per game. Nothing is cached: the logs are the truth
+    and the statistics follow any fix of a stats module at once. Without
+    `game`, every game with statistics the profile played; a game without
+    statistics answers 404.
+  - At most the newest 200 rated matches per game count (`MAX_STATS_MATCHES`);
+    `matches` says how many did.
+  - The profile page shows one table per game, the fields of the game's totals
+    in their order, shares as percent.
+- **Why:** The seat is the only link between a profile and its events; storing
+  it when the match is rated keeps one place that knows both. Computing on
+  request is fast enough for today's match counts, and the cap bounds a
+  random-bot profile, which sits in every bot match.
+- **Alternatives:** stored totals per profile and game (to be added when a
+  profile has thousands of matches); seats in `match_placements`.
+
+## D-064 · Live view: SSE relay on the web server, a generic board, spoilers in the UI
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The browser follows a match through `GET /matches/<id>/stream` on the web
+    server, as server-sent events. The web server reads the arena's WebSocket
+    and sends each event with its `seq` as the SSE id. Close 1000 becomes an
+    `end` event, 4404 `missing`; any other close just ends the response, and
+    the browser's EventSource reconnects. The relay skips the positions up to
+    `Last-Event-ID`; the page also keeps each position once, so a reconnect
+    from the start shows nothing twice.
+  - Board, cost and controls come from `GET /matches/<id>/state` (web server),
+    reloaded after new events, at most about three times a second. Controls go
+    to the same URL as `POST {action}`.
+  - Columns: an event with `visible_to = null` is public (middle); every other
+    event, thoughts included, is behind the scenes (right). The player filter
+    keeps the events whose `player`, `caller` or `target` is that player, or
+    that the player may see. Newest events come first.
+  - One generic board draws every `render_spec` with `seats` as cards with
+    their fields as text; a spec without seats is shown as JSON. The game
+    tables of steps 5.4 and 5.5 replace it per `layout`.
+  - Spoilers are a UI setting, on by default (spectators see everything,
+    DESIGN). Off hides the board fields `hand`, `cards` and `role` and the
+    whole right column. The list of secret fields lives in the UI
+    (`web/src/lib/live.ts`), not in the plugins.
+  - Cost shows four decimals of a euro, rounded up like the ledger.
+- **Why:** SSE keeps the rule of D-030 (no browser call to the arena, no CORS)
+  and brings reconnects with a resume position for free. Reloading the board
+  from the API keeps the board logic in the plugin; the UI never rebuilds
+  state. A fixed list of secret fields covers the three games with a board
+  today without changing their plugins.
+- **Alternatives:** a WebSocket proxy in the Node server (it would need a
+  custom server around the adapter's handler); browser calls to the arena with CORS; spoiler marks in each
+  `render_spec`; boards built from the events in the browser.
+
+## D-065 · New-match form: bot seats now, models and cost limit shown for later
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - `/matches/new` is a SvelteKit form action: it works without JavaScript,
+    checks every field on the web server (`web/src/lib/new-match.ts`), shows a
+    problem next to its field and keeps what was entered, then starts the match
+    with `POST /matches` and redirects to its live view. A refusal of the arena
+    (422 from the game, 429 when the arena is full) is shown above the form.
+  - `GET /setup` (`arena/api/setup.py`) lists the models of
+    `config/models.yaml`, the personalities of `config/personalities/`
+    (checked against their schema) and the cost caps, with
+    `model_seats: false`. As long as it is false, every seat is a random bot:
+    the models, the personality per seat and the cost limit (the match cap as
+    its default) are shown but disabled, and the web server refuses a model
+    seat. Phase 2 enables them; then `POST /matches` needs seats and a limit.
+  - Language (de/en, default de) goes into the settings only of games that
+    have game text in a language: today Werewolf (its narrator). The other
+    games refuse unknown settings.
+  - Speed is one of the live view's speeds (default Normal, 1 s per turn).
+  - The web container gets `ORIGIN: http://127.0.0.1:3100`. SvelteKit refuses a
+    form POST from another origin, and without `ORIGIN` adapter-node expects
+    https, which refused every submit of the local stack. `csrf.trustedOrigins`
+    in `web/vite.config.ts` also lets `http://localhost:3100` post; any other
+    origin is still refused.
+- **Why:** The form can be used today for bot matches and already has the
+  shape the spec asks for (game, players, models, personalities, cost limit,
+  seed), without an API for model seats before the runner can play them.
+- **Alternatives:** leaving models and cost limit out until phase 2; accepting
+  and ignoring them in `POST /matches`; a language setting for every game.
+
+## D-066 · Werewolf role selection in the new-match form
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The form shows the templates for the chosen table size
+    (`GET /games/werewolf/templates?players=N`, which gives each template's
+    roles at that size, or none when it does not fit). A template that needs
+    more players is listed but disabled. Choosing one fills the checklist; a
+    template in use follows the player count.
+  - Changing a count makes the mix "Custom". The checklist is grouped by team;
+    a unique role is a checkbox, any other role a count. Villagers are not
+    chosen: they fill the free seats and their number is shown.
+  - The web server checks a custom mix a quarter second after each change
+    (`/matches/new/werewolf`, which forwards to the arena's selection check)
+    and shows its balance light (green when even, amber when it favours one
+    side) and its problems: next to the role when the problem names one, above
+    the checklist otherwise. On submit the same check runs again before the
+    match starts, so a mix that cannot be played is refused at its fields with
+    the counts kept.
+  - A template goes to the match as `settings.template`, a custom mix as
+    `settings.roles` (counts above 0). The random template shows no checklist:
+    its roles come from the match seed.
+- **Why:** The selection rules and balance stay in `games/werewolf/selection.py`;
+  the form only shows what the arena says, so the two cannot disagree.
+- **Alternatives:** checking the rules in the browser; a villager count to set
+  by hand; a red light for imbalance (the arena has three verdicts, not a scale).
+
+## D-067 · Game tables are components chosen by the render_spec layout
+
+- **Date:** 2026-11-11
+- **Decision:** The live view's `Board` picks a table component by the `layout`
+  of the plugin's `render_spec` (`card_table` is the Liar's Deck bar table in
+  `web/src/lib/components/LiarsDeckTable.svelte`) and falls back to the generic
+  board when the spec does not have the fields the table needs. `Board` also
+  gets the match log (`events`), so a table can react to what just happened.
+  The Liar's Deck table shows a banner for each call ("Liar!") and each shot
+  ("click" or "BANG") for 1.3 seconds, in order, at most six at a time, and
+  never for the backlog it finds when it appears: replays and reloads do not
+  replay the drama. The art is inline SVG and CSS, no files.
+- **Why:** The spec is a plain dict, so the UI decides the drawing; falling back
+  keeps the live view working for a game without a table. Reading the log
+  keeps the plugin free of animation state.
+- **Alternatives:** an animation field in `render_spec` (puts UI state in the
+  plugin); one component per game chosen by game id (breaks for variants that
+  share a layout).
+
+## D-068 · The Poker spectator spec carries side pots and win chances
+
+- **Date:** 2026-11-11
+- **Decision:** `Poker.render_spec` adds `side_pots` (the main pot and side pots as
+  `{amount, eligible}`, empty when fewer than two players are live) and, per
+  seat, `win_probability`: the player's chance to win if the hand ran to the
+  river now (`win_probabilities` of `games/poker/evaluator.py`, 400 sampled
+  runouts, `None` for folded players). The random stream is fixed by hand number
+  and board size, so a state always gives the same numbers. The Poker table
+  shows the chances only with spoilers on, and `win_probability` joins the
+  fields the UI hides with spoilers off.
+- **Why:** The table must show pot and side pots and, optionally, the chances;
+  the UI cannot evaluate hands. The chances follow from every hole card, so they
+  are spectator information like the hole cards themselves.
+- **Alternatives:** a hand evaluator in TypeScript (a second implementation to
+  keep in step); a separate API endpoint for the chances (a second request per
+  turn); exact enumeration (too slow before the flop).
+
+## D-069 · The Werewolf circle draws votes from the log and shows no model names
+
+- **Date:** 2026-11-11
+- **Decision:** The Werewolf circle (`layout: player_circle`) gets its vote arrows
+  from the match log, not from the plugin: the votes cast since the day began
+  (the last one per voter, an abstention takes a vote back) stay drawn after the
+  result until the next night starts, with the count against each player on
+  their seat. The backdrop follows the plugin phase: night, dusk or day. Roles
+  show only with spoilers on, as a `?` otherwise. Seats show the player id, not
+  a model name, because the spectator spec has none.
+- **Why:** The votes are public events, so the log is the source and the plugin
+  needs no UI state. The spec carries seats and phase only.
+- **Alternatives:** adding the votes to `render_spec`; passing the model names to
+  the board (needs the match record in the board props, a later step).
+
+## D-070 · Real models take their seats from the command line first
+
+- **Date:** 2026-11-11
+- **Decision:** `arena run --game <id> --models <id>,<id>,...` is the first
+  and for now the only way to start a match with real models. Each named
+  model from `config/models.yaml` takes one seat, in order. The command
+  builds one `Budget` for the match, so it needs `DATABASE_URL`; it records
+  the match and its events in the same tables as the API. When a cost cap
+  is reached it does not ask: the match is closed as `interrupted` and the
+  command exits with 3. After the match it prints what each seat cost from
+  the ledger and checks that the stored log rebuilds the final state;
+  `--save FILE` writes seats, result, cost and all events as JSON. Which
+  model sat where is in the ledger rows and in the saved file, not in the
+  event log.
+- **Why:** The first real matches are run by hand, one at a time, by whoever
+  holds the key, and a command in a terminal is the smallest thing that
+  does that with the caps in force. A match that stops at a cap cannot
+  overrun while nobody watches. The API keeps seating bots only until the
+  UI can show a pause and ask.
+- **Alternatives:** Model seats in `POST /matches` first (needs the pause
+  question in the UI and a way to keep a key out of requests); a script
+  outside the package (would not be tested with the rest); raising the cap
+  from a prompt in the terminal (a second way to spend that tests cannot
+  cover).
+
+## D-072 · Replays: one event per step, the board from the API, the step in the address
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - A replay steps through the stored log one event at a time: step N shows the
+    first N events (0 is before the match, the log length its end). Opened
+    without a step, a replay shows the whole match.
+  - The board of a step comes from `GET /matches/{id}/board?events=N`, which
+    replays that prefix and returns the game's `render_spec`. The player loads
+    it through the web server, keeps every board it has seen and leaves the last
+    one up while the next loads. The columns are the live view's, through one
+    shared component (`MatchColumns`).
+  - Play advances one step per tick (0.5× to 4×, 1000 to 125 ms) and stops at
+    the end. The step is kept in the address (`?step=N`, without a new history
+    entry), so a copied address or the share link opens the same place.
+  - `GET /replays` lists the newest 100 finished matches with their winners
+    (rank 1) and the cost of their model calls, in one query. Failed, aborted
+    and interrupted matches are not replays.
+  - The JSON export (`/replays/<id>/export.json`, format
+    `aigameversus-replay/1`) is the match record, its cost and the whole log as
+    spectators see it, thoughts and hidden cards included; replaying the log
+    rebuilds the match.
+- **Why:** The event is the smallest unit the log has, so no step hides
+  anything; the board stays the plugin's drawing, never rebuilt in the browser.
+- **Alternatives:** steps per turn (the log has no turn marker every game
+  shares); boards for all steps at once (hundreds of replays per load);
+  exporting only public events.
+
+## D-073 · Relationships: trust from facts each player saw, rules as data
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - After a rated match the server adds its facts to the relationships of the
+    seated profiles (`relationships`, `remembered_matches`, migration `0008`),
+    once per match id, in one transaction. A memory problem never fails the
+    match or its rating.
+  - A fact is one player's view of another (`arena/memory/facts.py`) and is
+    read only from the game events that player could see: public ones and
+    those sent to them. Thoughts and spectator-only events are never read.
+  - Facts today: Liar's Deck: caught lying, accused me falsely, told the truth
+    when I called; Poker: bet or raised and lost every pot of the showdown (the
+    stats' bluff rule); Werewolf: packmate, turned out to be a wolf (the seer's
+    check, or the role shown at death; once per wolf), voted against me, voted
+    against me though we were lovers.
+  - What each fact is worth and its note are in `config/memory/trust.yaml`.
+    A match sums its facts per pair, then trust is clamped to -100..+100.
+    A pair keeps its 10 newest notes, newest first.
+  - `GET /profiles/{id}/relations` lists the others, strongest feeling
+    first; the profile page shows them as a trust list. `relations` left the
+    profile response.
+- **Why:** Facts from the observer's own view cannot leak hidden roles or
+  cards. Rules as data can be tuned without code, as rule 7 asks.
+- **Alternatives:** trust from the whole log (the seer's checks would reach
+  every player); decay over time (not in the spec); notes for every match
+  without a cap.
+
+## D-074 · Throne of Tokens armies: movement, training, and what a settler may do
 
 - **Date:** 2026-11-11
 - **Decision:** An army is a list of units on a tile, with an id that is
