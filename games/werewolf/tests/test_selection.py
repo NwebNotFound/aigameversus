@@ -231,6 +231,18 @@ def test_classic_template_has_the_spec_roles():
     }  # fmt: skip
 
 
+def test_classic_wolves_scale_with_the_table():
+    wolves = {n: apply_template("classic", n)["werewolf"] for n in PLAYER_COUNTS}
+
+    assert wolves == {6: 2, 7: 2, 8: 2, 9: 3, 10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 4}
+    assert set(load_templates()["classic"].by_players["werewolf"]) == set(PLAYER_COUNTS)
+
+
+@pytest.mark.parametrize("players", PLAYER_COUNTS)
+def test_classic_is_even_at_every_table_size(players: int):
+    assert balance(apply_template("classic", players)).verdict == "even"
+
+
 @pytest.mark.parametrize("players", PLAYER_COUNTS)
 def test_random_balanced_is_valid_and_near_zero(players: int):
     for seed in range(5):

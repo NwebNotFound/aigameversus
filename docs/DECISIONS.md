@@ -301,7 +301,25 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** a margin scaled by player count; counting only team
   `wolves`; picking the random mix by search instead of sampling.
 
-## D-023 · An agent answers with one action and a thought; thoughts are an engine channel
+## D-023 · Werewolf "Klassisch" scales its wolves with the table
+
+- **Date:** 2026-11-11
+- **Decision:** The Klassisch template has `by_players`, a per-size table in
+  `games/werewolf/templates.yaml` that overrides the werewolf count: 2 wolves
+  for 6-8 players, 3 for 9-15, 4 for 16. Seer, witch and hunter stay one each;
+  villagers fill the rest. `apply_template` reads the table; there is no wolf
+  formula in code.
+- **Why:** The balance light (D-022) must not favour the village. With the
+  fixed roles the total is `11 + players - 7 * wolves`: +3, +4, +5 for 6-8
+  players, -1, 0, +1 for 9-11, +2 to +5 for 12-15 and -1 for 16. The light is
+  *even* at every size from 6 to 16. 6-8 players cannot get closer to 0 (3 of
+  6 is not allowed, 3 of 7-8 is a large share of a small table). Wolves stay
+  under half the players everywhere. A test checks every size.
+- **Alternatives:** `max(2, players // 4)` wolves, i.e. 2 wolves up to 11
+  players (rejected: leaves 9-11 players village-favoured at +6 to +8); a
+  formula field in the template format.
+
+## D-024 · An agent answers with one action and a thought; thoughts are an engine channel
 
 - **Date:** 2026-11-11
 - **Decision:** `Agent.act` returns a `Reply`: exactly one `Action`, or a
@@ -323,7 +341,7 @@ Each entry: date, decision, why, alternatives considered.
   author; an exception for unusable answers (the thought of that answer would
   be lost); a batch of actions per reply.
 
-## D-024 · The turn clock is in the engine, and an agent that gives up loses its seat
+## D-025 · The turn clock is in the engine, and an agent that gives up loses its seat
 
 - **Date:** 2026-11-11
 - **Decision:** `Match(turn_timeout=60)` limits one turn of one player,
@@ -344,7 +362,7 @@ Each entry: date, decision, why, alternatives considered.
   turn of a slow player (needs a "do nothing" in every game); ending the match
   when a model fails; counting timeouts towards losing the seat.
 
-## D-025 · One model-call boundary; the runner retries; the mock LLM stands behind it
+## D-026 · One model-call boundary; the runner retries; the mock LLM stands behind it
 
 - **Date:** 2026-11-11
 - **Decision:** The agent runner (`ModelAgent`) reaches its model only through
@@ -353,7 +371,7 @@ Each entry: date, decision, why, alternatives considered.
   implement it. The runner retries a failed call 3 times with pauses of 1, 2
   and 4 seconds; a failure marked as not retryable (wrong key, bad request) is
   not retried. When that is used up, the model counts as failed for good: the
-  runner raises `AgentError` and the engine takes the seat (D-024). LiteLLM's
+  runner raises `AgentError` and the engine takes the seat (D-025). LiteLLM's
   own retries are switched off. `LiteLLMModel` imports LiteLLM on first use
   and in LiteLLM's offline mode; it maps a failure to its class name and drops
   the provider's message.
@@ -371,7 +389,7 @@ Each entry: date, decision, why, alternatives considered.
   several failed turns in a row (more state for a rare case; can be added if
   real matches show short outages).
 
-## D-026 · Prompt layout, and how other players' words are kept apart from instructions
+## D-027 · Prompt layout, and how other players' words are kept apart from instructions
 
 - **Date:** 2026-11-11
 - **Decision:** Two messages. System: who the player is, the game's
@@ -398,7 +416,7 @@ Each entry: date, decision, why, alternatives considered.
   filter can be talked around); a summary of older events (comes with memory,
   phase 6).
 
-## D-027 · What an agent writes is made storable before it is logged
+## D-028 · What an agent writes is made storable before it is logged
 
 - **Date:** 2026-11-11
 - **Decision:** The engine cleans every reply before it uses it: NUL
@@ -411,7 +429,7 @@ Each entry: date, decision, why, alternatives considered.
   the model cannot see); cleaning in the store (the stored log would differ
   from the events the match applied, against D-016).
 
-## D-028 · A game's title and rules text each live in one place
+## D-029 · A game's title and rules text each live in one place
 
 - **Date:** 2026-11-11
 - **Decision:** `GamePlugin.name` is the title that prompts, and later the UI,

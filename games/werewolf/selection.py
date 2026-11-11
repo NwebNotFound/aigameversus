@@ -85,6 +85,8 @@ class Template(_Model):
     name: str
     min_players: int
     roles: dict[str, int | Literal["fill"]] = {}
+    # Per-size counts that override `roles`: {role id: {player count: count}}.
+    by_players: dict[str, dict[int, int]] = {}
     random: bool = False
     target_balance: int = 0
 
@@ -216,6 +218,10 @@ def apply_template(
         )
     if not template.random:
         fixed = {role: n for role, n in template.roles.items() if isinstance(n, int)}
+        for role, table in template.by_players.items():
+            if player_count not in table:
+                raise ValueError(f"template '{template_id}' has no {role} count for {player_count}")
+            fixed[role] = table[player_count]
         return fill_selection(fixed, player_count)
     if rng is None:
         raise ValueError(f"template '{template_id}' is random and needs an rng")

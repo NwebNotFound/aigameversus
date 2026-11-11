@@ -4,6 +4,10 @@ templates:
     name: Klassisch
     min_players: 6
     roles: {werewolf: 2, seer: 1, witch: 1, hunter: 1, villager: fill}
+    # Wolves scale with the table so the balance light stays even (D-023): 2 wolves for
+    # 6-8 players, 3 for 9-15, 4 for 16. The per-size table overrides the count in `roles`.
+    by_players:
+      werewolf: {6: 2, 7: 2, 8: 2, 9: 3, 10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 4}
   - id: duesterwald
     name: Düsterwald-Mix
     min_players: 8
