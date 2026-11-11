@@ -1655,7 +1655,7 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** one stored profile per bot kind (impossible with several bot
   seats per match); hiding bots altogether (the demo needs them).
 
-## D-094 · A model page is the profile of a model without a personality
+## D-098 · A model page is the profile of a model without a personality
 
 - **Date:** 2026-11-11
 - **Decision:** `GET /models/{id}` (and `/models/[id]` in the UI) takes the id of a
