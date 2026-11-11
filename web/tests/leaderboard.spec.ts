@@ -33,14 +33,17 @@ test('a game tab shows that game', async ({ page }) => {
 		'aria-current',
 		'page'
 	);
-	await expect(page.getByTestId('leaderboard').locator('tbody tr')).toHaveCount(6);
+	await expect(
+		page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / })
+	).toHaveCount(6);
 });
 
+// Other tests play bot matches of every game with a plugin; Throne of Tokens has none yet.
 test('a game without matches shows the empty state', async ({ page }) => {
-	await page.goto('/leaderboard?game=poker');
+	await page.goto('/leaderboard?game=civ');
 
 	await expect(page.getByTestId('empty-leaderboard')).toContainText(
-		'Nobody has a rating in Poker yet.'
+		'Nobody has a rating in Throne of Tokens yet.'
 	);
 });
 
