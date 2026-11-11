@@ -147,3 +147,15 @@ def test_an_abstention_is_no_vote_for_anyone():
 
     assert situation["facts"]["votes"] == {"p1": 1}
     assert "None" not in " ".join(situation["lines"]["en"])
+
+
+def test_the_answer_lists_its_sections_so_a_client_need_not_probe_keys():
+    poker = match_analytics("poker", example("poker"), False, {})
+    liars = match_analytics("liars_deck", example("liars_deck"), False, {})
+
+    # With the report, Poker has numbers too, but still no per-move tables.
+    assert (poker["sections"], poker["numbers"]) == (["situation", "report"], True)
+    assert "totals" not in poker["sections"]
+    assert liars["numbers"] is True
+    assert {"situation", "moves", "totals", "players"} <= set(liars["sections"])
+    assert all(section in liars for section in liars["sections"])

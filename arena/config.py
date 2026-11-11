@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import Iterable
+from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal
@@ -34,12 +35,28 @@ class Limits(_Strict):
     reasoning_effort: Literal["minimal", "low", "medium", "high"] | None = None
 
 
+Effort = Literal["minimal", "low", "medium", "high"]
+
+
 class Model(_Strict):
     provider: Literal["openrouter"]
     model: str = Field(min_length=1)  # the provider's name for it
     name: str | None = Field(None, min_length=1)  # what people read; default: the id
     input_usd_per_mtok: Decimal = Field(ge=0)
     output_usd_per_mtok: Decimal = Field(ge=0)
+    # What this model needs to play, over `limits`; unset: the value in `limits`.
+    max_output_tokens: int | None = Field(None, gt=0)
+    reasoning_effort: Effort | Literal["off"] | None = None  # "off": the option is not sent
+    tool_choice: Literal["required", "auto"] = "required"  # auto: the model may also not call
+
+
+@dataclass(frozen=True)
+class CallOptions:
+    """What every call of one model is sent with."""
+
+    max_output_tokens: int
+    reasoning_effort: Effort | None  # None: not sent
+    tool_choice: Literal["required", "auto"]
 
 
 class Config(_Strict):
@@ -90,6 +107,17 @@ def _read_key_file(variable: str) -> None:
         os.environ[variable] = key
     else:  # a key file that is gone or empty means no key, not the one read before
         os.environ.pop(variable, None)
+
+
+def call_options(config: Config, model_id: str) -> CallOptions:
+    """The options of `model_id`: its own where it sets them, else those of `limits`."""
+    model, limits = config.models[model_id], config.limits
+    effort = limits.reasoning_effort if model.reasoning_effort is None else model.reasoning_effort
+    return CallOptions(
+        max_output_tokens=model.max_output_tokens or limits.max_output_tokens,
+        reasoning_effort=None if effort == "off" else effort,
+        tool_choice=model.tool_choice,
+    )
 
 
 def display_name(config: Config, model_id: str) -> str:

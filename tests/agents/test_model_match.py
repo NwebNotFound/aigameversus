@@ -194,7 +194,13 @@ def test_api_error_that_passes_leaves_no_trace_in_the_game():
     bumpy, mocks = model_match(p1=[ModelError("RateLimitError"), LOWEST])
 
     assert len(mocks["p1"].calls) == HAND_SIZE + 1
-    assert bumpy.events == clean.events
+    # Only the spectators' statistics of that move know: one call was tried again.
+    assert without_decisions(bumpy) == without_decisions(clean)
+    assert [e.data["retries"] for e in of_type(bumpy, "decision", "p1")] == [1, 0, 0]
+
+
+def without_decisions(match):
+    return [event for event in match.events if event.type != "decision"]
 
 
 def test_model_that_keeps_failing_loses_its_seat_to_random_moves():
