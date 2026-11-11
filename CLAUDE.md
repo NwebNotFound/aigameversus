@@ -593,6 +593,16 @@ the loader refuses a fact without a rule and a rule without a fact.
 uv run pytest tests/memory
 ```
 
+Each remembered match also leaves every seated profile a one-line summary from
+its own view (`arena/memory/summary.py`, a template; a `Summarizer` can replace
+it). Before a match, `memory_block(store, profile, opponents)`
+(`arena/memory/block.py`) builds what a model remembers of the opponents at
+the table, at most `MEMORY_CHARS` long, and `ModelAgent(..., memory=block)` puts
+it in the prompt inside `<memory>`, marked as data. `"memory": false` in
+`POST /matches` plays a fair benchmark that reads and writes nothing;
+`arena memory reset [--profile ID] --yes` and `POST /memory/reset` forget
+(ratings stay).
+
 ### A personality
 
 One YAML file in `config/personalities/<id>.yaml`, checked against

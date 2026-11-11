@@ -1,6 +1,16 @@
 <script lang="ts">
-	import { card, coins, percent, positionTag, seatPoint } from '#lib/boards/pokerTable.js';
+	import type { MatchEvent } from '#lib/api.js';
+	import {
+		actionChips,
+		card,
+		coins,
+		percent,
+		positionTag,
+		seatPoint
+	} from '#lib/boards/pokerTable.js';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import { hidden } from '#lib/live.js';
+	import { seatHue } from '#lib/viewer.js';
 
 	/**
 	 * The Poker table: an oval with a seat per player (avatar, chip stack, hole cards,
@@ -10,11 +20,15 @@
 	let {
 		spec,
 		spoilers,
-		names = {}
+		events = [],
+		names = {},
+		colours = {}
 	}: {
 		spec: Record<string, unknown>;
 		spoilers: boolean;
+		events?: MatchEvent[];
 		names?: Record<string, string>;
+		colours?: Record<string, string>;
 	} = $props();
 	const label = (seat: string) => names[seat] ?? seat;
 
@@ -37,15 +51,23 @@
 	const hideCards = $derived(hidden('cards', spoilers));
 	const slots = $derived(Array.from({ length: 5 }, (_, i) => board[i] ?? null));
 
-	const palette = ['#f0b35a', '#7fb8ff', '#7ad69a', '#ff7a7a', '#c9a0ff', '#ffd27f'];
-	const colour = (index: number) => palette[index % palette.length];
+	const chips = $derived(actionChips(events));
+	/** Chips in the middle: a hand is being played. Between hands and after the last one, no pot or odds. */
+	const inPlay = $derived(Number(spec.pot) > 0);
+	/** No chips left and no hand running for them: out of the tournament. */
+	const busted = (seat: Seat) => seat.stack === 0 && (seat.cards.length === 0 || !inPlay);
+	/** The seat's colour, from its model: the same model has the same chips everywhere. */
+	const colour = (seat: string) => `oklch(0.75 0.12 ${seatHue(colours[seat] ?? seat)})`;
 </script>
 
 <div class="table" data-testid="board" data-layout="poker_table">
 	<div class="felt" aria-hidden="true"></div>
 
 	<div class="middle">
-		<div class="street" data-testid="street">{spec.street} · hand {spec.hand}</div>
+		<div class="street" data-testid="street">
+			{#if spec.street}{spec.street} ·
+			{/if}hand {spec.hand}
+		</div>
 		<div class="community" data-testid="community" aria-label="Community cards">
 			{#each slots as slot, i (i)}
 				{@const c = slot ? card(slot) : null}
@@ -58,11 +80,13 @@
 				{/if}
 			{/each}
 		</div>
-		<div class="pot" data-testid="pot">Pot {spec.pot}</div>
+		{#if inPlay}<div class="pot" data-testid="pot">Pot {spec.pot}</div>{/if}
 		{#if pots.length > 1}
 			<ul class="pots" data-testid="side-pots">
 				{#each pots as pot, i (i)}
-					<li>{i === 0 ? 'Main' : `Side ${i}`}: {pot.amount} ({pot.eligible.join(', ')})</li>
+					<li>
+						{i === 0 ? 'Main' : `Side ${i}`}: {pot.amount} ({pot.eligible.map(label).join(', ')})
+					</li>
 				{/each}
 			</ul>
 		{/if}
@@ -74,25 +98,19 @@
 		<section
 			class="seat"
 			class:folded={seat.folded}
-			class:broke={seat.stack === 0}
+			class:broke={busted(seat)}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
 			aria-label={label(seat.player)}
 		>
 			<header>
-				<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
-					<circle
-						cx="20"
-						cy="20"
-						r="19"
-						fill="var(--surface-raised)"
-						stroke={colour(index)}
-						stroke-width="2"
-					/>
-					<text x="20" y="26" text-anchor="middle" font-size="18" fill={colour(index)}>
-						{seat.player.slice(-1).toUpperCase()}
-					</text>
-				</svg>
+				<Avatar
+					name={label(seat.player)}
+					colourKey={colours[seat.player] ?? seat.player}
+					size={26}
+					active={seat.player === spec.turn}
+					out={busted(seat)}
+				/>
 				<strong>{label(seat.player)}</strong>
 				{#if tag}<span class="tag" class:dealer={tag === 'D'} data-testid="position">{tag}</span
 					>{/if}
@@ -120,24 +138,36 @@
 				{/if}
 			</div>
 
-			<div class="chips" data-testid="stack">
-				<svg viewBox="0 0 24 24" aria-hidden="true">
-					{#each Array.from({ length: coins(seat.stack) }, (_, k) => k) as k (k)}
-						<ellipse
-							cx="12"
-							cy={19 - k * 3}
-							rx="9"
-							ry="3"
-							fill={colour(index)}
-							stroke="#0006"
-							stroke-width="0.7"
-						/>
-					{/each}
-				</svg>
-				<span class="amount">{seat.stack}</span>
-			</div>
+			{#if busted(seat)}
+				<span class="tag out" data-testid="out">out</span>
+			{:else}
+				<div class="chips" data-testid="stack">
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						{#each Array.from({ length: coins(seat.stack) }, (_, k) => k) as k (k)}
+							<ellipse
+								cx="12"
+								cy={19 - k * 3}
+								rx="9"
+								ry="3"
+								fill={colour(seat.player)}
+								stroke="#0006"
+								stroke-width="0.7"
+							/>
+						{/each}
+					</svg>
+					<span class="amount">{seat.stack}</span>
+				</div>
+			{/if}
 
-			{#if !hideCards && seat.win_probability !== null}
+			{#if chips[seat.player]}
+				{#key chips[seat.player].label}
+					<div class="action {chips[seat.player].kind}" data-testid="action-chip">
+						{chips[seat.player].label}
+					</div>
+				{/key}
+			{/if}
+
+			{#if inPlay && !hideCards && seat.win_probability !== null && !seat.folded}
 				<div class="chance" data-testid="win-chance">{percent(seat.win_probability)} to win</div>
 			{/if}
 		</section>
@@ -267,13 +297,8 @@
 		gap: 0.25rem;
 	}
 
-	.avatar {
-		width: 1.5rem;
-		height: 1.5rem;
-	}
-
 	.tag {
-		font-size: 0.6rem;
+		font-size: 0.75rem;
 		padding: 0.02rem 0.35rem;
 		border-radius: 999px;
 		border: 1px solid var(--border);
@@ -339,6 +364,42 @@
 			width: 1.25rem;
 			height: 1.8rem;
 			font-size: 0.7rem;
+		}
+	}
+	/* The last action of the street, next to the seat; all-in in brass. */
+	.action {
+		justify-self: center;
+		padding: 0.05rem 0.5rem;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 650;
+		font-variant-numeric: tabular-nums;
+		color: var(--text);
+		background: var(--surface-raised);
+		border: 1px solid var(--border);
+		animation: chip-in 300ms ease-out;
+	}
+
+	.action.all_in {
+		color: var(--bg);
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+
+	.action.fold {
+		color: var(--muted);
+	}
+
+	@keyframes chip-in {
+		from {
+			transform: translateY(4px);
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.action {
+			animation: none;
 		}
 	}
 </style>

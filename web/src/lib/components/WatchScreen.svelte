@@ -2,10 +2,19 @@
 	import type { Snippet } from 'svelte';
 	import type { MatchEvent, Seat, TranscriptLine } from '#lib/api.js';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import Beats from '#lib/components/Beats.svelte';
 	import Board from '#lib/components/Board.svelte';
 	import Commentary from '#lib/components/Commentary.svelte';
+	import ResultCard from '#lib/components/ResultCard.svelte';
 	import { euros } from '#lib/live.js';
-	import { seatModel, seatName, type View } from '#lib/viewer.js';
+	import {
+		resultOf,
+		seatModel,
+		seatName,
+		type Beat,
+		type Placement,
+		type View
+	} from '#lib/viewer.js';
 
 	/**
 	 * One match on screen, live or replayed: the cast, the board as the stage, the
@@ -20,6 +29,8 @@
 		players,
 		costs,
 		active = null,
+		placements = null,
+		ended = false,
 		controls
 	}: {
 		spec: Record<string, unknown> | null;
@@ -31,8 +42,24 @@
 		/** Micro-euros per seat, or null when nothing is known. */
 		costs: Record<string, number> | null;
 		active?: string | null;
+		/** The final ranks, once the match is over. */
+		placements?: Placement[] | null;
+		/** The match is over and its end is on screen: show the result card. */
+		ended?: boolean;
 		controls: Snippet;
 	} = $props();
+
+	let beat = $state<Beat | null>(null);
+	const result = $derived(ended ? resultOf(placements, lines) : null);
+	/** The viewer closed the card to look at the board; it comes back at the next end. */
+	let dismissed = $state(false);
+	$effect(() => {
+		if (!ended) dismissed = false;
+	});
+	/** Seat id to the key of its colour: the model, so a model looks the same in every match. */
+	const colours = $derived(
+		Object.fromEntries(seats.map((seat) => [seat, seatModel(seat, players) ?? seat]))
+	);
 
 	const names = $derived(Object.fromEntries(seats.map((seat) => [seat, seatName(seat, players)])));
 
@@ -59,7 +86,8 @@
 				/>
 				<span class="who">
 					<strong>{seatName(seat, players)}</strong>
-					<small>{model ?? (players?.[seat] ? 'random bot' : seat)}</small>
+					<!-- The model; "bot" for a bot seat; nothing when the name is the seat id already. -->
+					{#if model}<small>{model}</small>{:else if players?.[seat]?.name}<small>bot</small>{/if}
 				</span>
 				{#if costs && model}
 					<span class="cost" title="Model cost so far">{euros(costs[seat] ?? 0)}</span>
@@ -69,8 +97,14 @@
 	</ul>
 
 	<div class="stage-column">
-		<section class="stage" aria-label="Board" data-testid="stage">
-			<Board {spec} spoilers={view === 'spectator'} {events} {names} />
+		<section class="stage" class:shake={beat === 'bang'} aria-label="Board" data-testid="stage">
+			<div class="fit">
+				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} />
+			</div>
+			<Beats {lines} bind:current={beat} />
+			{#if result && !dismissed}
+				<ResultCard {result} {players} {costs} onclose={() => (dismissed = true)} />
+			{/if}
 		</section>
 		<div class="controls">{@render controls()}</div>
 	</div>
@@ -145,6 +179,7 @@
 	}
 
 	.stage {
+		position: relative;
 		min-width: 0;
 		padding: clamp(0.5rem, 2vw, 1.25rem);
 		border-radius: calc(var(--radius) + 4px);
@@ -154,8 +189,34 @@
 		box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
 	}
 
+	/* A live chamber: the stage jolts once. Transform only, and not with reduced motion. */
+	.stage.shake {
+		animation: shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+	}
+
+	@keyframes shake {
+		20%,
+		60% {
+			transform: translateX(-6px);
+		}
+		40%,
+		80% {
+			transform: translateX(6px);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.stage.shake {
+			animation: none;
+		}
+
+		.cast li {
+			transition: none;
+		}
+	}
+
 	/* Square boards would grow past the screen; keep the stage and its controls in view. */
-	.stage > :global(*) {
+	.fit {
 		max-width: min(100%, calc(100svh - 21rem));
 		margin-inline: auto;
 	}

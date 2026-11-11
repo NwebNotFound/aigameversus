@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchEvent, TranscriptLine } from './api.js';
 import {
+	beatOf,
 	chapterLabel,
 	commentary,
 	langOf,
 	linesUpTo,
 	marks,
+	newBeats,
+	ordinal,
+	resultOf,
+	showdownHands,
 	nextStop,
 	previousStop,
 	seatHue,
@@ -105,5 +110,119 @@ describe('seats and words', () => {
 	it("takes a speaker's own words from the event, not the sentence", () => {
 		expect(words(line(1, 'speech', 2, 'Juniper: "Hi"', { text: 'Hi' }))).toBe('Hi');
 		expect(words(line(1, 'speech', 2, 'x'))).toBeNull();
+	});
+});
+
+describe('beats', () => {
+	const at = (seq: number, type: string, importance: 1 | 2 | 3, data = {}) =>
+		({
+			...line(seq, 'result', importance, `${type} ${seq}`),
+			raw: { type, data }
+		}) as TranscriptLine;
+
+	it('gives a highlight its beat by event type, and nightfall one too', () => {
+		expect(beatOf(at(1, 'liar_called', 3))).toBe('call');
+		expect(beatOf(at(1, 'trigger_pulled', 3, { live: true }))).toBe('bang');
+		expect(beatOf(at(1, 'trigger_pulled', 3, { live: false }))).toBe('click');
+		expect(beatOf(at(1, 'night_started', 2))).toBe('night');
+		expect(beatOf(at(1, 'something_new', 3))).toBe('highlight');
+		expect(beatOf(at(1, 'cards_played', 2))).toBeNull();
+	});
+
+	it('plays the beats of what was just watched, not of a jump', () => {
+		const lines = [at(1, 'cards_played', 2), at(2, 'liar_called', 3), at(3, 'trigger_pulled', 3)];
+		expect(newBeats(lines, 1).map((b) => b.beat)).toEqual(['call', 'click']);
+		expect(newBeats(lines, 3)).toEqual([]);
+		expect(newBeats(lines, -1, 2)).toEqual([]);
+	});
+});
+
+describe('results', () => {
+	const end = (type: string, data: Record<string, unknown>, text: string) =>
+		({ ...line(9, 'result', 3, text), raw: { type, data } }) as TranscriptLine;
+
+	it('ranks a free-for-all, shared ranks together', () => {
+		const r = resultOf(
+			[
+				{ player: 'p2', rank: 2 },
+				{ player: 'p1', rank: 1 },
+				{ player: 'p3', rank: 2 }
+			],
+			[end('match_over', { winner: 'p1' }, 'Match over: Juniper is the last one standing')]
+		);
+		expect(r).toEqual({
+			kind: 'ranks',
+			headline: 'Match over: Juniper is the last one standing',
+			ranks: [
+				{ rank: 1, seats: ['p1'] },
+				{ rank: 2, seats: ['p2', 'p3'] }
+			]
+		});
+	});
+
+	it('names the winning side of a team game', () => {
+		const r = resultOf(
+			[
+				{ player: 'p1', rank: 1 },
+				{ player: 'p2', rank: 3 },
+				{ player: 'p3', rank: 1 }
+			],
+			[
+				end(
+					'game_over',
+					{ winner: 'wolves', winners: ['p1', 'p3'] },
+					'Game over: the werewolves win'
+				)
+			]
+		);
+		expect(r).toMatchObject({ kind: 'team', winners: ['p1', 'p3'], others: ['p2'] });
+	});
+
+	it('has no result without placements', () => {
+		expect(resultOf(null, [])).toBeNull();
+	});
+
+	it('writes ordinals', () => {
+		expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(ordinal)).toEqual([
+			'1st',
+			'2nd',
+			'3rd',
+			'4th',
+			'11th',
+			'12th',
+			'13th',
+			'21st',
+			'22nd'
+		]);
+	});
+
+	it('turns a showdown into one row per hand, with what each won', () => {
+		const lines = [
+			{
+				...line(5, 'reveal', 3, 'Showdown: …'),
+				raw: {
+					type: 'showdown',
+					data: {
+						hands: [
+							{ player: 'p3', cards: ['6s', 'Kd'], hand: 'one_pair' },
+							{ player: 'p4', cards: ['Qs', '4s'], hand: 'two_pair' }
+						]
+					}
+				}
+			},
+			{
+				...line(6, 'result', 3, 'Pot'),
+				raw: { type: 'pot_awarded', data: { amount: 900, shares: { p4: 900 } } }
+			},
+			{
+				...line(7, 'result', 3, 'Pot'),
+				raw: { type: 'pot_awarded', data: { amount: 100, shares: { p4: 100 } } }
+			},
+			{ ...line(8, 'heading', 2, 'Hand 2'), raw: { type: 'hand_started', data: {} } }
+		] as TranscriptLine[];
+		expect(showdownHands(lines, 0)).toEqual([
+			{ player: 'p3', cards: ['6s', 'Kd'], hand: 'one pair', won: 0 },
+			{ player: 'p4', cards: ['Qs', '4s'], hand: 'two pair', won: 1000 }
+		]);
 	});
 });

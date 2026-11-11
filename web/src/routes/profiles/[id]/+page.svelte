@@ -7,6 +7,7 @@
 
 	const profile = $derived(data.result.state === 'ok' ? data.result.data : null);
 	const relations = $derived(data.relations.state === 'ok' ? data.relations.data.relations : []);
+	const memories = $derived(data.memories.state === 'ok' ? data.memories.data : []);
 	const gameStats = $derived(
 		data.stats.state === 'ok' ? data.stats.data.games.filter((g) => g.stats !== null) : []
 	);
@@ -156,9 +157,24 @@
 		{/if}
 	</section>
 
-	<section aria-labelledby="later" class="later">
-		<h2 id="later">Memory</h2>
-		<p class="muted">What each player remembers of past matches: {profile.memory.note}.</p>
+	<section aria-labelledby="memory-title">
+		<h2 id="memory-title">Memory</h2>
+		{#if data.memories.state === 'unreachable'}
+			<p class="muted">The memories could not be loaded ({data.memories.reason}).</p>
+		{:else if memories.length === 0}
+			<p class="muted" data-testid="no-memories">
+				No memories yet: each remembered match leaves a short note from this player's view.
+			</p>
+		{:else}
+			<ul class="memories" data-testid="memories">
+				{#each memories as memory (memory.match_id)}
+					<li>
+						<a href="/replays/{memory.match_id}">{gameName(memory.game_id)}</a>
+						<span>{memory.summary}</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	</section>
 {/if}
 
@@ -383,5 +399,26 @@
 	.value {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.memories {
+		display: grid;
+		gap: 0.4rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.memories li {
+		display: grid;
+		gap: 0.15rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: var(--radius);
+		background: var(--surface);
+		border: 1px solid var(--border);
+	}
+
+	.memories a {
+		font-weight: 600;
 	}
 </style>

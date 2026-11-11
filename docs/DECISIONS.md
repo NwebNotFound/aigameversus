@@ -1489,6 +1489,42 @@ Each entry: date, decision, why, alternatives considered.
   every player); decay over time (not in the spec); notes for every match
   without a cap.
 
+## D-075 · Match memories, the memory block, memory off and reset
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - When a match is remembered, every seated profile gets one summary of it
+    from its own view (`match_memories`, migration `0009`, in the same
+    transaction as the trust). The default `TemplateSummarizer` names the game,
+    the opponents, the player's place and at most two notes per opponent, from
+    the facts that player saw. No model is called; a `Summarizer` can.
+  - `memory_block(store, me, opponents)` reads only the player's own rows and
+    only about the profiles at the table: relationship lines first (strongest
+    feeling first, three notes each), then up to five summaries of matches
+    against them, newest first. It stops at the first line that does not fit
+    1,200 characters and is None when the player knows nobody there.
+  - The prompt puts the block before the game data, inside `<memory>`, with
+    `<` escaped; the system message names it as data like the other blocks.
+    `ModelAgent(memory=...)` takes it; without one the prompt is unchanged.
+  - `memory: false` on a match (API, stored on the match record, a checkbox in
+    the new-match form) remembers nothing. The form's box says "without memory",
+    so a form that leaves it out keeps memory on.
+  - Reset forgets relationships and summaries of one profile or of everyone
+    (`POST /memory/reset`, `arena memory reset --yes`); ratings stay, and a match
+    already remembered is not remembered again. There are no seasons yet: a
+    season starts with a reset of everyone.
+  - `arena run --models` does not build a block yet; the next part wires it in.
+- **Why:** The spec's long-term layer and the "only the players at the table,
+  kept short" rule; the block is built from the player's own rows, so it
+  cannot carry another player's secrets. A profile's memories can name roles
+  ("turned out to be a wolf", "hunted with me in the pack"): they are the
+  same notes as on its relations page, written only for finished matches, so
+  they reveal nothing about a match still being played, and spectators see
+  every role anyway.
+- **Alternatives:** the block in the system message (it is data, not an
+  instruction); summaries written by a model now (costs money for every match);
+  a season column on every memory row (no seasons exist yet).
+
 ## D-076 · The monthly cap is 25 euros
 
 - **Date:** 2026-11-11
@@ -1858,6 +1894,55 @@ Each entry: date, decision, why, alternatives considered.
   their ratings comparable.
 - **Alternatives:** summing all personalities of a model (hides what a personality
   changes); keying the page by profile id (the profile page already does that).
+
+## D-099 · Key moments are staged by the watch screen, from the transcript's highlights
+
+- **Date:** 2026-11-11
+- **Decision:** The stage reacts to a key moment with a short beat. A call-out
+  on its top edge holds the transcript line's own words, and a light effect
+  follows the event type: an amber ring for a call or a reveal, a red flash
+  and a short jolt for a live chamber, a soft ring for a click, a brass glow
+  for an all-in or the end, green for a pot won, and night blue at nightfall
+  (`beatOf` in `web/src/lib/viewer.ts`, `Beats.svelte`). A beat plays only for
+  what was just watched: live turns, or a replay that plays or moves on by a
+  moment. Opening a match, seeking and stepping back stay quiet. The Liar's
+  Deck table drops its own banner and its own wording of calls and shots.
+  Boards draw the shared avatar, coloured by model. The revolver cylinder turns
+  one chamber per pull. Poker seats show their last action of the street, and
+  after the last hand there is no pot or odds and a busted seat says "out".
+  Werewolf votes draw one after another. With reduced motion, nothing moves:
+  there are no flashes, jolts, turns or drawing, and the call-out stays as a
+  static label.
+- **Why:** One place stages every game's drama in the same rhythm, and its
+  words come from the transcript (D-078), not from a second wording in the
+  board.
+- **Alternatives:** An animation per board component (three ways to time the
+  same thing, and a banner text in each); full-screen interstitials (they
+  block the board and make fast play tiring).
+
+## D-100 · A finished match ends on a result card; showdowns and the final ranking are structured
+
+- **Date:** 2026-11-11
+- **Decision:** When a match is over and its end is on screen, a result card
+  covers the stage until the viewer closes it ("Show the board"). This means
+  the last step of a replay, or a live match that has finished. The headline
+  is the transcript's own line about the end (`game_over` or `match_over`). A
+  game whose end names a winning side, such as Werewolf's `game_over` with
+  `winner` and `winners`, shows that side large and everyone else small.
+  Every other game shows a podium of the first three ranks (shared ranks side
+  by side), with the rest in a list. The ranks come from the match's
+  placements. In the commentary, the `match_finished` line becomes a ranked
+  list. A `showdown` line becomes a row per hand: avatar, cards, the hand's
+  kind and the chips it won from the pot lines that follow. The caption above
+  the timeline wraps instead of being cut off, and it never shows the ranking
+  line.
+- **Why:** Reviewer's viewer check found the end of a match read as a run-on
+  paragraph cut off with an ellipsis, and showdowns as a wall of text. The
+  data is all in the transcript lines (`raw`) and the match record, so the
+  web adds no new wording: names, hands and amounts come from there.
+- **Alternatives:** A results page apart from the replay (the viewer leaves
+  the board at the climax); asking the transcript for a result sentence per
+  game (still a paragraph).
 
 ## D-104 · One display name per seat, computed by the server, never the seat id
 

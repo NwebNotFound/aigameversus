@@ -96,5 +96,6 @@ test('a call and a shot get a banner while the match is watched', async ({ page,
 	await page.goto(`/matches/${id}`);
 
 	await expect(page.getByTestId('banner')).toBeVisible({ timeout: 40_000 });
-	await expect(page.getByTestId('banner')).toHaveText(/Liar!|click|BANG/);
+	// The call-out says what the transcript says about the moment.
+	await expect(page.getByTestId('banner')).toHaveText(/LIAR|click|BANG/);
 });
