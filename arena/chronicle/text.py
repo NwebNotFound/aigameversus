@@ -289,7 +289,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
 
 CHAPTER_TITLES: dict[str, dict[str, dict[str, str]]] = {
     "en": {
-        "epic": {"round": "The Round of the {n}th Trial", "hand": "The {n}th Hand of Fate", "night": "The {n}th Night"},
+        "epic": {"round": "The Round of the {nth} Trial", "hand": "The {nth} Hand of Fate", "night": "The {nth} Night"},
         "news": {"round": "Round {n}", "hand": "Hand {n}", "night": "Night {n} and the Day After"},
         "sports": {"round": "Round {n}", "hand": "Hand {n}", "night": "Night {n}, Day {n}"},
         "novel": {"round": "Round {n}: Sweaty Palms", "hand": "Hand {n}: Poker Faces", "night": "Chapter {n}: The Long Night"},
@@ -392,11 +392,17 @@ class TemplateNarrator(Narrator):
         return TITLES[lang][style].format(game=GAME_NAMES.get(game, game))
 
     def chapter_title(self, kind: str, number: int, style: str, lang: str) -> str:
-        return CHAPTER_TITLES[lang][style][kind].format(n=number)
+        return CHAPTER_TITLES[lang][style][kind].format(n=number, nth=_ordinal(number))
 
     def tell(self, beats: list[Beat], style: str, lang: str, names: Mapping[str, str]) -> str:
         templates = dict(zip(KINDS, TEXT[lang][style], strict=True))
         return " ".join(templates[beat.kind].format(**_fields(beat, lang, names)) for beat in beats)
+
+
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}" + {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 
 
 def _who(player: Any, names: Mapping[str, str]) -> str:

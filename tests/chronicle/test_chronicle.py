@@ -225,3 +225,11 @@ def test_a_narrator_can_be_swapped_without_a_model():
 
     assert story.chapters[0].text.isupper()
     assert issubclass(Shouting, Narrator) and Chapter.model_fields["beats"]
+
+
+@pytest.mark.parametrize(
+    ("number", "title"),
+    [(1, "1st"), (2, "2nd"), (3, "3rd"), (4, "4th"), (11, "11th"), (12, "12th"), (21, "21st")],
+)
+def test_epic_chapter_titles_count_in_good_english(number, title):
+    assert title in TemplateNarrator().chapter_title("round", number, "epic", "en")
