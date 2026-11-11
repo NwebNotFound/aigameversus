@@ -179,6 +179,35 @@ tokens, or change how they play.
 - **Needs from the arena:** `headline` as a required argument in the tool
   schema for p3 (Builder), recorded in the `thought` event next to the text.
 
+## Proposal: Throne of Tokens pilot (C1, not approved, waits for the plugin)
+
+For when the Civ plugin plays a whole match (roadmap 7.6). Nothing can be measured
+before that, so the numbers below are rough and the first step is a free check.
+
+- **Preset:** 4 nations, a short match of 20 rounds (score at the round limit),
+  the smallest map the generator allows for 4, default balance data, memory off.
+- **Design:** the seed draws the map and the start positions, which belong to
+  the seats. Each seed is played in its 4 cyclic rotations, so every model
+  starts from every position once (the `cyclic` stage kind of W1). The pilot
+  is 1 seed x 4 rotations = 4 matches with 4 clean models (glm-flash,
+  deepseek-flash, gpt-luna, claude-haiku: the most reliable of E1-A2).
+- **Cost, before measuring:** per nation and round about 3 to 6 calls (info
+  tools, two diplomacy turns, one `submit_orders`), so 240 to 480 calls a match.
+  Civ prompts carry a map view and the diplomacy log, perhaps 4 000 to 8 000
+  input tokens. At the cheap models' prices that is 0.15 to 0.60 EUR a match,
+  which may hit the 0.50 EUR cap per match.
+- **Step 0 (free):** play the preset with random bots and run
+  `POST /matches/estimate` on it. Prompt sizes are built exactly as for models,
+  without a call. If the estimate is above 0.40 EUR, shorten the preset to 10
+  rounds or cap the info calls per round before any paid match.
+- **Measures:** reliability per model and per tool (submit_orders rejected,
+  orders refused at resolution), cost and time per round, score, cities and
+  wars per nation, treaties kept and broken, trades made.
+- **Needs from the arena:** the plugin with `submit_orders` and win conditions
+  (Builder, 7.6), a random bot (Coder), Civ analytics later (Heavy).
+- **Budget:** about 1.50 EUR for the 4 pilot matches, to be set from step 0
+  and approved by the owner.
+
 ## Build steps
 
 One step is one branch and one draft pull request, tested on bot and mock-LLM
