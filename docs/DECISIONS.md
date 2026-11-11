@@ -1121,7 +1121,7 @@ Each entry: date, decision, why, alternatives considered.
   the numbers up (an old log would change its meaning when a number is
   tuned); one event per city and round.
 
-## D-054 · Throne of Tokens armies: movement, training, and what a settler may do
+## D-058 · Throne of Tokens armies: movement, training, and what a settler may do
 
 - **Date:** 2026-11-11
 - **Decision:** An army is a list of units on a tile, with an id that is
