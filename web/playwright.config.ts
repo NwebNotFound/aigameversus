@@ -5,6 +5,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
 	testDir: 'tests',
 	fullyParallel: true,
+	// The arena plays at most 10 matches at a time; more workers can hit its 429 limit.
+	workers: 2,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? [['github'], ['list']] : 'list',
