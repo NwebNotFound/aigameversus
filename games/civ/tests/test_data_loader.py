@@ -250,6 +250,15 @@ def test_resolution_order_must_list_each_step_once(data_dir: Path):
     assert "resolution_order must list each step once" in rejected(data_dir)
 
 
+def test_every_city_focus_needs_its_resource(data_dir: Path):
+    edit(data_dir / "balance.yaml", "    military: iron\n", "")
+
+    message = rejected(data_dir)
+
+    assert "balance.yaml" in message
+    assert "focus_yields must name every city focus, missing: military" in message
+
+
 def test_invalid_yaml_is_reported_with_its_file(data_dir: Path):
     edit(data_dir / "victory.yaml", "rounds: 60", "rounds: [60")
 

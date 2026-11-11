@@ -1,8 +1,9 @@
 """Matches through the API: start one, read its record, follow its events over WebSocket."""
 
 import asyncio
+import os
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,7 +16,8 @@ from arena.db.database import connect, migrate
 from arena.db.match_store import MatchStore
 from arena.engine.match import Match
 from arena.engine.replay import replay
-from arena.engine.types import Event
+from arena.engine.types import Event, Placement
+from arena.ratings.store import RatingStore
 from games.toy.plugin import ToyGame
 
 NEVER_ENDS = """
@@ -312,3 +314,52 @@ def test_match_that_could_not_be_recorded_does_not_keep_its_place(client, monkey
 
     # The one place is still free.
     assert start(client)["status"] == "running"
+
+
+def leaderboard_games(client):
+    rows = client.get("/leaderboard", params={"game": "toy"}).json()["rows"]
+    return {row["name"]: row["games_played"] for row in rows}
+
+
+def test_finished_match_rates_its_bots_once(client):
+    match = start(client, players=3, seed=1)
+    follow(client, match["id"])
+
+    rows = client.get("/leaderboard", params={"game": "toy"}).json()["rows"]
+    assert {row["name"]: row["games_played"] for row in rows} == {
+        "Random Bot p1": 1,
+        "Random Bot p2": 1,
+        "Random Bot p3": 1,
+    }
+    assert {row["model_id"] for row in rows} == {"random-bot"}
+    # Ratings follow the placements: the winner is on top and gained points.
+    placements = client.get(f"/matches/{match['id']}").json()["placements"]
+    winner = next(p["player"] for p in placements if p["rank"] == 1)
+    assert rows[0]["name"] == f"Random Bot {winner}"
+    assert rows[0]["rating"] > 1000
+
+    # The same bot names in the next match are the same profiles, rated again.
+    follow(client, start(client, players=3, seed=2)["id"])
+    assert set(leaderboard_games(client).values()) == {2}
+
+
+def test_applying_the_same_match_again_changes_nothing(client):
+    match = start(client, players=2, seed=4)
+    follow(client, match["id"])
+    before = client.get("/leaderboard", params={"game": "toy"}).json()
+
+    async def again():
+        pool = await connect(os.environ["DATABASE_URL"])
+        try:
+            store = RatingStore(pool)
+            profiles = await store.bot_profiles(["p1", "p2"])
+            placements = [
+                Placement(player=str(profiles[p["player"]]), rank=p["rank"])
+                for p in client.get(f"/matches/{match['id']}").json()["placements"]
+            ]
+            return await store.apply_match_result(UUID(match["id"]), "toy", placements)
+        finally:
+            await pool.close()
+
+    assert asyncio.run(again()) is None
+    assert client.get("/leaderboard", params={"game": "toy"}).json() == before

@@ -9,8 +9,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from arena.api.app import app
-from arena.db.database import connect
+from arena.db.database import connect, migrate
+from arena.db.match_store import MatchStore
 from arena.engine.replay import replay
+from arena.engine.types import Placement
 from games.liars_deck.plugin import LiarsDeck
 from tests.db.test_matches_api import as_events, follow, start
 
@@ -215,3 +217,78 @@ def test_match_of_bots_costs_nothing(client):
         "total_micro_eur": 0,
         "players": {},
     }
+
+
+def stored_types(client, match_id):
+    return [event["type"] for event in client.get(f"/matches/{match_id}/events").json()]
+
+
+def wait_for(condition, timeout=10.0):
+    deadline = time.monotonic() + timeout
+    while not condition():
+        if time.monotonic() > deadline:
+            pytest.fail("condition not reached in time")
+        time.sleep(0.02)
+
+
+def test_match_that_has_ended_cannot_be_aborted_while_its_record_is_closed(client, monkeypatch):
+    close = MatchStore.close
+
+    async def slow_close(self, match_id, status, placements=None):
+        if status == "finished":
+            await asyncio.sleep(0.5)  # an abort arrives between the last event and the record
+        await close(self, match_id, status, placements)
+
+    monkeypatch.setattr(MatchStore, "close", slow_close)
+    match = start(client)
+    wait_for(lambda: stored_types(client, match["id"])[-1:] == ["match_finished"])
+
+    aborted = client.post(f"/matches/{match['id']}/abort")
+    follow(client, match["id"])  # until the record is closed
+
+    assert aborted.status_code == 409
+    assert aborted.json()["detail"] == "The match has ended, so it cannot be aborted."
+    record = client.get(f"/matches/{match['id']}").json()
+    assert record["status"] == "finished"
+    assert record["placements"] is not None
+
+
+def test_match_paused_just_before_its_end_still_ends(client):
+    full = stored_types(client, follow_to_end(client, start(client, seed=3)))
+    assert full[-1] == "match_finished"
+    match = start(client, seed=3, turn_delay=1)
+    # Everything but the end is stored: the match waits its delay before the last turn.
+    wait_for(lambda: len(stored_types(client, match["id"])) == len(full) - 1)
+
+    client.post(f"/matches/{match['id']}/pause")
+    wait_for(lambda: client.get(f"/matches/{match['id']}").json()["status"] != "running", 5)
+    log, _ = follow(client, match["id"])
+
+    assert [event["type"] for event in log] == full
+    assert client.get(f"/matches/{match['id']}").json()["status"] == "finished"
+
+
+def follow_to_end(client, match):
+    follow(client, match["id"])
+    return match["id"]
+
+
+def test_a_record_that_is_closed_is_never_closed_again(database_url):
+    match_id = uuid4()
+
+    async def run():
+        pool = await connect(database_url)
+        try:
+            await migrate(pool)
+            store = MatchStore(pool)
+            await store.create(match_id, "toy", ["p1", "p2"], 1, {})
+            await store.close(match_id, "finished", [Placement(player="p1", rank=1)])
+            await store.close(match_id, "aborted")
+            return await store.get(match_id)
+        finally:
+            await pool.close()
+
+    record = asyncio.run(run())
+
+    assert record.status == "finished"
+    assert record.placements == [Placement(player="p1", rank=1)]

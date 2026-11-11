@@ -22,11 +22,19 @@ Iron is scarce, and every nation's start region is short of one resource.
 
 ## Cities
 
-You start with a capital, 1 spearman and 1 settler. A city yields 2 food,
-1 wood and 1 gold, plus the tiles within 1 (within 2 from population 5). Every
-10 surplus food adds 1 population. Each population eats 1 food and adds 1 of
-the city focus resource: growth = food, production = wood, military = iron.
-A city has 3 + population ÷ 2 building slots, at most 8.
+You start with a capital, 1 spearman, 1 settler and a stock of 5 food, 5 wood
+and 5 gold. All your cities fill that one stock, and everything is paid from it.
+
+A city yields 2 food, 1 wood and 1 gold, plus the tiles within 1 of it (within
+2 from population 5). A tile feeds one city: the nearest, or the older of two
+equally near. The tile under a city yields nothing. Each population eats
+1 food and adds 1 of the city focus resource: growth = food, production = wood,
+military = iron. Food a city makes beyond what its own population eats also
+counts towards its growth: every 10 collected add 1 population, at most 1 per
+round.
+
+A city has 3 + population ÷ 2 building slots, at most 8, and one of each
+building.
 
 | Building | Cost | Effect |
 | --- | --- | --- |
@@ -37,10 +45,12 @@ A city has 3 + population ÷ 2 building slots, at most 8.
 | barracks | 5 wood, 2 iron | needed for most units, training −20 % |
 | wall | 6 wood, 3 iron | city defense +50 % |
 | forge | 4 iron, 3 gold | units trained here +1 strength |
-| granary | 5 wood | famine hits 2 rounds later |
+| granary | 5 wood | unpaid upkeep costs units 2 rounds later |
 | watchtower | 3 wood, 1 iron | city vision +2 |
 
-Building takes 1 round. Demolishing refunds 50 %.
+A building is paid when you order it, takes its slot at once and works from
+the next round. Demolishing a finished building refunds 50 % of its cost,
+rounded down.
 
 ## Units
 
@@ -54,8 +64,10 @@ Building takes 1 round. Demolishing refunds 50 %.
 | settler | 6 food, 2 wood | 0 | 1 | 1 food | founds a city, any city |
 | scout | 2 food, 1 gold | 1 | 3 | — | vision +2, flees, any city |
 
-Units without "any city" need a barracks. An army holds up to 10 units. If you
-cannot pay food upkeep, you lose a random unit every round.
+Units without "any city" need a barracks. An army holds up to 10 units. Upkeep
+is paid every round after your population has eaten. In a round in which you
+cannot pay it in full you lose a random unit. A granary covers the first 2
+such rounds in a row; several granaries do not add up.
 
 ## Combat
 
