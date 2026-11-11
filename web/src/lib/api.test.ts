@@ -110,6 +110,24 @@ const BOARD = {
 	]
 };
 
+describe('model', () => {
+	it('asks for one model and tells an unknown one from an unreachable arena', async () => {
+		const calls: string[] = [];
+		const ok = { model: null, profile_id: null, overall: null, usage: {}, games: [] };
+		const fetchFn = (async (url: string) => {
+			calls.push(url);
+			return url.endsWith('/nope')
+				? new Response('{}', { status: 404 })
+				: new Response(JSON.stringify(ok), { status: 200 });
+		}) as unknown as typeof fetch;
+		const arena = createArenaClient('http://arena:8000', fetchFn);
+
+		expect((await arena.model('glm-flash')).state).toBe('ok');
+		expect((await arena.model('nope')).state).toBe('not_found');
+		expect(calls).toEqual(['http://arena:8000/models/glm-flash', 'http://arena:8000/models/nope']);
+	});
+});
+
 describe('leaderboard', () => {
 	it('asks for one game and returns the board', async () => {
 		const { calls, fetchFn } = fakeFetch(() => Response.json(BOARD));
