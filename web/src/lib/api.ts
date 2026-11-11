@@ -63,7 +63,16 @@ export function createArenaClient(
 			if (!response.ok) {
 				return { state: 'unreachable', reason: `the arena answered ${response.status}` };
 			}
-			return { state: 'ok', matches: (await response.json()) as MatchSummary[] };
+			let body: unknown;
+			try {
+				body = await response.json();
+			} catch {
+				body = undefined;
+			}
+			if (!Array.isArray(body)) {
+				return { state: 'unreachable', reason: 'the arena sent an unexpected answer' };
+			}
+			return { state: 'ok', matches: body as MatchSummary[] };
 		}
 	};
 }

@@ -55,6 +55,21 @@ describe('listMatches', () => {
 		expect(result).toEqual({ state: 'unreachable', reason: 'no answer within 3 s' });
 	});
 
+	it.each([
+		['an HTML page', new Response('<html>proxy error</html>', { status: 200 })],
+		['a JSON object', Response.json({ detail: 'x' })],
+		['an empty body', new Response('', { status: 200 })]
+	])('reports a 200 with %s as unreachable', async (_, response) => {
+		const { fetchFn } = fakeFetch(() => response);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).listMatches();
+
+		expect(result).toEqual({
+			state: 'unreachable',
+			reason: 'the arena sent an unexpected answer'
+		});
+	});
+
 	it('reports a server error as unreachable with the status', async () => {
 		const { fetchFn } = fakeFetch(() => new Response('boom', { status: 500 }));
 

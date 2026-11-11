@@ -23,13 +23,14 @@ test('nav has the four sections and marks the current page', async ({ page }) =>
 	await expect(nav.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('running matches show a state instead of an error page', async ({ page }) => {
+// The smoke test runs against the whole stack, so the arena must be reachable.
+// It has no `GET /matches` yet and answers 404, which the UI shows as no matches.
+test('the web reaches the arena and shows no running matches', async ({ page }) => {
 	await page.goto('/');
 
 	const section = page.getByRole('region', { name: 'Running matches' });
-	await expect(
-		section.getByTestId('no-matches').or(section.getByTestId('arena-unreachable'))
-	).toBeVisible();
+	await expect(section.getByTestId('no-matches')).toBeVisible();
+	await expect(section.getByTestId('arena-unreachable')).toHaveCount(0);
 });
 
 for (const [label, title] of [
