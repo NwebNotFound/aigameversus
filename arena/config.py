@@ -28,6 +28,8 @@ class Limits(_Strict):
     usd_to_eur: Decimal = Field(gt=0)
     max_input_tokens: int = Field(gt=0)
     max_output_tokens: int = Field(gt=0)
+    # How much a reasoning model may think before it answers; None leaves it to the model.
+    reasoning_effort: Literal["minimal", "low", "medium", "high"] | None = None
 
 
 class Model(_Strict):

@@ -47,6 +47,7 @@ class Budget:
         real = LiteLLMModel(
             f"{model.provider}/{model.model}",
             max_output_tokens=self._config.limits.max_output_tokens,
+            reasoning_effort=self._config.limits.reasoning_effort,
         )
         return self.meter(player, model_id, real)
 

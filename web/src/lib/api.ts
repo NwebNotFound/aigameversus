@@ -99,6 +99,46 @@ export interface SetupOptions {
 	caps: { match_eur: number; month_eur: number };
 }
 
+/** A Werewolf role, as `GET /games/werewolf/roles` lists it. */
+export interface WerewolfRole {
+	id: string;
+	name: string;
+	team: 'village' | 'wolves' | 'solo';
+	unique: boolean;
+	weight: number;
+	description: string;
+}
+
+export interface Balance {
+	total: number;
+	verdict: 'village' | 'even' | 'wolves';
+}
+
+/** `GET /games/werewolf/templates?players=N`. */
+export interface WerewolfTemplate {
+	id: string;
+	name: string;
+	min_players: number;
+	random: boolean;
+	/** The roles at this table; null for a random template or one that does not fit. */
+	selection: Record<string, number> | null;
+	balance: Balance | null;
+}
+
+export interface SelectionProblem {
+	code: string;
+	message: string;
+	role: string | null;
+}
+
+/** `POST /games/werewolf/selection/validate`. */
+export interface SelectionReport {
+	valid: boolean;
+	problems: SelectionProblem[];
+	selection: Record<string, number>;
+	balance: Balance | null;
+}
+
 /** The body of `POST /matches`. */
 export interface NewMatch {
 	game: string;
@@ -205,6 +245,12 @@ export interface ArenaClient {
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
 	games(): Promise<ApiResult<GameInfo[]>>;
+	werewolfRoles(): Promise<ApiResult<WerewolfRole[]>>;
+	werewolfTemplates(players: number): Promise<ApiResult<WerewolfTemplate[]>>;
+	checkSelection(
+		roles: Record<string, number>,
+		players: number
+	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
@@ -372,6 +418,30 @@ export function createArenaClient(
 
 		games() {
 			return getJson<GameInfo[]>('/games', Array.isArray);
+		},
+
+		werewolfRoles() {
+			return getJson<WerewolfRole[]>('/games/werewolf/roles', Array.isArray);
+		},
+
+		werewolfTemplates(players) {
+			return getJson<WerewolfTemplate[]>(
+				`/games/werewolf/templates?players=${encodeURIComponent(players)}`,
+				Array.isArray
+			);
+		},
+
+		checkSelection(roles, players) {
+			return getJson<SelectionReport>(
+				'/games/werewolf/selection/validate',
+				(body) => isObject(body) && Array.isArray(body.problems),
+				[],
+				{
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ roles, player_count: players })
+				}
+			);
 		},
 
 		setup() {

@@ -12,6 +12,10 @@ limits:
   # off by the provider at the output limit.
   max_input_tokens: 50000
   max_output_tokens: 1500
+  # Reasoning models think before they answer. That thinking is billed as
+  # output and uses up the output limit, so a model that thinks too long never
+  # gets to its move. minimal, low, medium or high.
+  reasoning_effort: low
 
 # Prices in USD per million tokens, as listed by openrouter.ai on 2026-11-11.
 # The caps count with these numbers: check them when you add or keep a model.

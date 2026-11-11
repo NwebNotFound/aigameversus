@@ -9,16 +9,17 @@ The first build targets four games: *Liar's Deck* (a bluffing card game with a
 revolver), No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens* (a Civ-like
 strategy game).
 
-> **Status: early.** Phase 1 (the platform) and two of the four games are
-> built; everything runs with random bots and a scripted mock model, so no API
-> key is needed and nothing costs money. Real models can take seats from the
-> command line (`arena run --models`), inside the cost caps.
+> **Status: early.** The platform and three of the four games are built.
+> Everything runs with random bots and a scripted mock model, so no API key is
+> needed and nothing costs money. Real models can take seats from the command
+> line (`arena run --models`), inside the cost caps; the first matches are
+> [below](#real-models-first-matches).
 
 | Game | Status | What exists |
 | --- | --- | --- |
-| *Liar's Deck* (2-4 players) | built, bots only | rules engine, both variants (base, devil card), random bot, rules text |
-| Poker, No-Limit Hold'em (2-6) | built, bots only | betting rounds, side pots, tournament with duplicate mode, random bot, rules text |
-| Werewolf (6-16) | in progress | roles as data, templates, role selection checks and balance light, seeded deal; no game rules yet |
+| *Liar's Deck* (2-4 players) | built; played by bots and by real models | rules engine, both variants (base, devil card), random bot, rules text |
+| Poker, No-Limit Hold'em (2-6) | built; played by bots and by real models | betting rounds, side pots, tournament with duplicate mode, random bot, rules text |
+| Werewolf (6-16) | built; played by bots and by real models | all 16 roles as data, night order, captain, narrator, templates with a balance light, random bot, rules text |
 | *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text, seeded hex map with fog of war, city economy (yields, buildings, upkeep, growth); no match yet |
 
 Also built: the agent runner with the mock LLM, cost caps with a spend ledger,
@@ -134,6 +135,28 @@ Configuration is optional. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
 and Compose passes the key on to the arena. Only `arena run --models` uses
 the key (see Cost safety).
+
+## Real models: first matches
+
+On 2026-11-11 the cheapest models of the roster played the first real matches,
+started with `arena run --models`. The saved matches are in
+[docs/examples](docs/examples/README.md), thoughts, bluffs and wolf chat
+included.
+
+| Game | Seats | Calls | Time | Cost |
+| --- | --- | --- | --- | --- |
+| Liar's Deck | 4 models | 33 | 2 min 41 s | 0.012 EUR |
+| Poker, 20 hands | 6 models | 138 | 6 min 32 s | 0.054 EUR |
+| Werewolf, 8 players | 8 models | 66 | 8 min 24 s | 0.041 EUR |
+
+Six matches in all, tests included, cost 0.18 EUR. The very first one, the
+same Liar's Deck table, took 21 minutes and 0.068 EUR, and 83 of its 130
+answers were rejected: two models spent their whole answer thinking and never
+made a move. What that changed in the agent runner is in
+[docs/DECISIONS.md](docs/DECISIONS.md) ("One forced tool call carries the
+thought and the move"). Models still make mistakes the server has to reject,
+about one answer in five in the Werewolf match; a rejected answer gets a
+second and third try, then a random legal move is played and the log says so.
 
 ## Cost safety
 

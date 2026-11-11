@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from arena.agents.model import Message, ModelCall, ModelError, ModelReply
-from arena.agents.prompt import build_messages, tool_schemas
+from arena.agents.prompt import THOUGHT, build_messages, tool_schemas
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import Action, AgentError, Reply, TurnRequest
 
@@ -67,9 +67,13 @@ class ModelAgent:
 def _read(reply: ModelReply) -> Reply:
     thought = (reply.text or "").strip() or None
     if not reply.tool_calls:
-        return Reply(
-            problem="Your answer contained no tool call. Call exactly one tool.", thought=thought
-        )
+        problem = "Your answer contained no tool call. Call exactly one tool."
+        if reply.cut_off:
+            problem = (
+                "Your answer was cut off at the length limit before it called a tool. "
+                "Think in one or two short sentences, then call exactly one tool."
+            )
+        return Reply(problem=problem, thought=thought)
     call = reply.tool_calls[0]  # one action per request: further calls are ignored
     try:
         arguments = json.loads(call.arguments)
@@ -83,4 +87,9 @@ def _read(reply: ModelReply) -> Reply:
             ),
             thought=thought,
         )
+    # The thought travels inside the call (see `tool_schemas`); text beside the call is the
+    # fallback for a model that wrote its thinking there.
+    said = arguments.pop(THOUGHT, None)
+    if isinstance(said, str) and said.strip():
+        thought = said.strip()
     return Reply(action=Action(tool=call.name, arguments=arguments), thought=thought)

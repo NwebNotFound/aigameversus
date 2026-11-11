@@ -6,19 +6,20 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	const arena = createArenaClient(ARENA_API_URL, fetch);
-	const [games, setup] = await Promise.all([arena.games(), arena.setup()]);
-	return { games, setup };
+	const [games, setup, werewolfRoles] = await Promise.all([
+		arena.games(),
+		arena.setup(),
+		arena.werewolfRoles()
+	]);
+	return { games, setup, werewolfRoles };
 };
 
 export const actions: Actions = {
 	default: async ({ fetch, request }) => {
 		const form = await request.formData();
 		// Sent back with every refusal, so the form keeps what was entered.
-		const values = Object.fromEntries(
-			['game', 'players', 'seed', 'language', 'turn_delay', 'no_memory'].map((name) => [
-				name,
-				String(form.get(name) ?? '')
-			])
+		const values: Record<string, string> = Object.fromEntries(
+			[...form.entries()].filter(([name]) => name !== 'seat').map(([k, v]) => [k, String(v)])
 		);
 		const arena = createArenaClient(ARENA_API_URL, fetch);
 		const games = await arena.games();
@@ -28,6 +29,19 @@ export const actions: Actions = {
 		}
 		const parsed = parseForm(form, games.data);
 		if (!parsed.ok) return fail(400, { values, errors: parsed.errors });
+
+		const roles = parsed.match.settings.roles as Record<string, number> | undefined;
+		if (roles) {
+			// Problems next to their roles, before the arena refuses the match as a whole.
+			const report = await arena.checkSelection(roles, parsed.match.players);
+			if (report.state === 'ok' && !report.data.valid) {
+				return fail(400, {
+					values,
+					errors: { roles: 'These roles cannot be played; see below.' },
+					problems: report.data.problems
+				});
+			}
+		}
 
 		const started = await arena.startMatch(parsed.match);
 		if (started.state === 'refused') {

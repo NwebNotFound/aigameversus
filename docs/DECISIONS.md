@@ -1285,6 +1285,33 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** leaving models and cost limit out until phase 2; accepting
   and ignoring them in `POST /matches`; a language setting for every game.
 
+## D-066 · Werewolf role selection in the new-match form
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The form shows the templates for the chosen table size
+    (`GET /games/werewolf/templates?players=N`, which gives each template's
+    roles at that size, or none when it does not fit). A template that needs
+    more players is listed but disabled. Choosing one fills the checklist; a
+    template in use follows the player count.
+  - Changing a count makes the mix "Custom". The checklist is grouped by team;
+    a unique role is a checkbox, any other role a count. Villagers are not
+    chosen: they fill the free seats and their number is shown.
+  - The web server checks a custom mix a quarter second after each change
+    (`/matches/new/werewolf`, which forwards to the arena's selection check)
+    and shows its balance light (green when even, amber when it favours one
+    side) and its problems: next to the role when the problem names one, above
+    the checklist otherwise. On submit the same check runs again before the
+    match starts, so a mix that cannot be played is refused at its fields with
+    the counts kept.
+  - A template goes to the match as `settings.template`, a custom mix as
+    `settings.roles` (counts above 0). The random template shows no checklist:
+    its roles come from the match seed.
+- **Why:** The selection rules and balance stay in `games/werewolf/selection.py`;
+  the form only shows what the arena says, so the two cannot disagree.
+- **Alternatives:** checking the rules in the browser; a villager count to set
+  by hand; a red light for imbalance (the arena has three verdicts, not a scale).
+
 ## D-067 · Game tables are components chosen by the render_spec layout
 
 - **Date:** 2026-11-11
@@ -1362,6 +1389,44 @@ Each entry: date, decision, why, alternatives considered.
   from a prompt in the terminal (a second way to spend that tests cannot
   cover).
 
+## D-071 · One forced tool call carries the thought and the move; reasoning is kept short
+
+- **Date:** 2026-11-11
+- **Decision:** This replaces the answer format of the agent decision (text
+  is the thought, the tool call is the move) for what goes to a model:
+  - Every call is sent with `tool_choice: required`.
+  - Every tool gets a first argument `thought`, added where the tools are
+    described for the model (`tool_schemas`). The agent runner takes it out
+    and logs it as the thought; a game never sees it, and a game tool with an
+    argument of that name is refused. Text beside the call is still the
+    thought when the argument is empty or missing.
+  - Every call carries `reasoning_effort` from `limits.reasoning_effort` in
+    `config/models.yaml`, set to `low`. When an answer has no text of its
+    own, the model's reasoning is its text.
+  - A reply knows whether it ran into the output limit (`ModelReply.cut_off`);
+    such a reply without a tool call is told that it was cut off and to be
+    brief. The output limit stays at 1500 tokens.
+  - A request that a provider refuses (400, 404 or 422) while it carries
+    these options is sent once more without them. Only if that is refused
+    too does the seat lose its model. In a test of all eight roster models
+    one refused the options outright, and another, served by several
+    providers, took them in one match and refused them in the next.
+- **Why:** Two real matches with the cheapest models of the roster. In the
+  first (Liar's Deck, four models) 83 of 130 answers were rejected and 18
+  turns went to the random fallback: two reasoning models spent the whole
+  output limit thinking in 73 of 87 calls, and that thinking was 90 % of the
+  output tokens paid for. With `reasoning_effort: low` (Poker, six models)
+  those two were clean and calls were three times faster, but 30 of 138
+  answers were still rejected: two other models answered in prose or wrote
+  the call as text. Asking for text and a tool call in one answer is more
+  than several of these models do; one call that holds both is what all of
+  them can do, and it is one model call per move, which is also the cheapest.
+- **Alternatives:** A higher output limit (pays for more of the same); a
+  separate `think` tool as in the spec (a second call per move); thoughts
+  only from models that write text beside a call (most cheap ones do not);
+  parsing calls out of prose (guesswork per model); dropping the models that
+  failed (they are among the cheapest).
+
 ## D-072 · Replays: one event per step, the board from the API, the step in the address
 
 - **Date:** 2026-11-11
@@ -1417,3 +1482,35 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** trust from the whole log (the seer's checks would reach
   every player); decay over time (not in the spec); notes for every match
   without a cap.
+
+## D-075 · Match memories, the memory block, memory off and reset
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - When a match is remembered, every seated profile gets one summary of it
+    from its own view (`match_memories`, migration `0009`, in the same
+    transaction as the trust). The default `TemplateSummarizer` names the game,
+    the opponents, the player's place and at most two notes per opponent, from
+    the facts that player saw. No model is called; a `Summarizer` can.
+  - `memory_block(store, me, opponents)` reads only the player's own rows and
+    only about the profiles at the table: relationship lines first (strongest
+    feeling first, three notes each), then up to five summaries of matches
+    against them, newest first. It stops at the first line that does not fit
+    1,200 characters and is None when the player knows nobody there.
+  - The prompt puts the block before the game data, inside `<memory>`, with
+    `<` escaped; the system message names it as data like the other blocks.
+    `ModelAgent(memory=...)` takes it; without one the prompt is unchanged.
+  - `memory: false` on a match (API, stored on the match record, a checkbox in
+    the new-match form) remembers nothing. The form's box says "without memory",
+    so a form that leaves it out keeps memory on.
+  - Reset forgets relationships and summaries of one profile or of everyone
+    (`POST /memory/reset`, `arena memory reset --yes`); ratings stay, and a match
+    already remembered is not remembered again. There are no seasons yet: a
+    season starts with a reset of everyone.
+  - `arena run --models` does not build a block yet; the next part wires it in.
+- **Why:** The spec's long-term layer and the "only the players at the table,
+  kept short" rule; the block is built from the player's own rows, so it
+  cannot carry another player's secrets.
+- **Alternatives:** the block in the system message (it is data, not an
+  instruction); summaries written by a model now (costs money for every match);
+  a season column on every memory row (no seasons exist yet).
