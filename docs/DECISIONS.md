@@ -1582,7 +1582,7 @@ Each entry: date, decision, why, alternatives considered.
   yet); model seats always on (any local script could spend); a separate
   table for seats (the record is read with the match anyway).
 
-## D-092 · The spend ledger in a database of its own, the key in a file
+## D-095 · The spend ledger in a database of its own, the key in a file
 
 - **Date:** 2026-11-11
 - **Decision:** The ledger (`model_calls`) lives where `LEDGER_DATABASE_URL`
