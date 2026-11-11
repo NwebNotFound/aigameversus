@@ -35,10 +35,7 @@ test('the web reaches the arena and lists its running matches', async ({ page })
 	await expect(section.getByTestId('arena-unreachable')).toHaveCount(0);
 });
 
-for (const [label, title] of [
-	['New match', 'New match'],
-	['Replays', 'Replays']
-]) {
+for (const [label, title] of [['New match', 'New match']]) {
 	test(`${label} is a coming-soon page`, async ({ page }) => {
 		await page.goto('/');
 

@@ -4,6 +4,7 @@ Everything here shows a match the way a spectator sees it: all events, also
 thoughts and hidden cards. The API listens on localhost only.
 """
 
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -143,6 +144,16 @@ class Board(BaseModel):
     )
 
 
+class Replay(BaseModel):
+    id: UUID
+    game: str
+    players: list[str]
+    winners: list[str] = Field(description="The players with rank 1")
+    started_at: datetime
+    finished_at: datetime
+    cost_micro_eur: int = Field(description="What its model calls cost; 0 for bots")
+
+
 class Cost(BaseModel):
     total_micro_eur: int = Field(description="Millionths of a euro, all players together")
     players: dict[str, int] = Field(description="Millionths of a euro per player")
@@ -202,13 +213,24 @@ async def abort_match(match_id: UUID, live: Live) -> MatchRecord:
 
 
 @router.get("/matches/{match_id}/board")
-async def get_board(match_id: UUID, live: Live) -> Board:
-    """What the game draws for spectators, after the completed turns so far."""
+async def get_board(
+    match_id: UUID,
+    live: Live,
+    events: Annotated[
+        int | None, Query(ge=0, description="Only the first this many events (for replays)")
+    ] = None,
+) -> Board:
+    """What the game draws for spectators, after the completed turns so far.
+
+    With `events`, after that many events of the log instead: a replay can show
+    the board at any point of a match.
+    """
     record = await _record(live, match_id)
     plugin = live.games.get(record.game)
     if plugin is None:
         raise HTTPException(404, f"The game {record.game!r} is not installed")
-    events = await live.log(match_id)
+    log = await live.log(match_id)
+    events = log if events is None else log[:events]
     render = getattr(plugin, "render_spec", None)
     spec = render(replay(plugin, events)) if render and events else None
     return Board(game=record.game, events=len(events), spec=spec)
@@ -220,3 +242,20 @@ async def get_cost(match_id: UUID, live: Live) -> Cost:
     await _record(live, match_id)
     players = await live.ledger.match_costs(match_id)
     return Cost(total_micro_eur=sum(players.values()), players=players)
+
+
+@router.get("/replays")
+async def list_replays(live: Live) -> list[Replay]:
+    """The newest 100 finished matches, newest first, with winners and cost."""
+    return [
+        Replay(
+            id=record.id,
+            game=record.game,
+            players=record.players,
+            winners=[p.player for p in record.placements or [] if p.rank == 1],
+            started_at=record.started_at,
+            finished_at=record.finished_at,
+            cost_micro_eur=cost,
+        )
+        for record, cost in await live.matches.finished_with_cost()
+    ]

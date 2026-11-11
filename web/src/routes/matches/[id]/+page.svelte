@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ControlAction, LiveState, MatchEvent } from '#lib/api.js';
-	import Board from '#lib/components/Board.svelte';
+	import MatchColumns from '#lib/components/MatchColumns.svelte';
 	import { gameName } from '#lib/games.js';
-	import { SPEEDS, columnOf, describe, euros, merge, playersOf } from '#lib/live.js';
+	import { SPEEDS, euros, merge } from '#lib/live.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -17,19 +17,11 @@
 		'connecting'
 	);
 	let spoilers = $state(true);
-	let player = $state('all');
 	let confirmAbort = $state(false);
 	let busy = $state(false);
 	let problem = $state<string | null>(null);
 
 	const status = $derived(live?.control?.paused ? 'paused' : (live?.match.status ?? 'unknown'));
-	const publicLines = $derived(log.filter((e) => columnOf(e) === 'public').toReversed());
-	const behindLines = $derived(
-		log
-			.filter((e) => columnOf(e) === 'behind')
-			.filter((e) => player === 'all' || playersOf(e).includes(player))
-			.toReversed()
-	);
 
 	const stateUrl = $derived(`/matches/${encodeURIComponent(params.id)}/state`);
 
@@ -171,69 +163,8 @@
 		{#if problem}<p class="problem" role="alert">{problem}</p>{/if}
 	</section>
 
-	<div class="columns">
-		<section aria-labelledby="board-title">
-			<h2 id="board-title">Board</h2>
-			<Board spec={live.board.spec} {spoilers} events={log} />
-		</section>
-
-		<section aria-labelledby="public-title">
-			<h2 id="public-title">Public</h2>
-			{#if publicLines.length === 0}
-				<p class="muted">Nothing public yet.</p>
-			{/if}
-			<ol class="feed" data-testid="public-feed">
-				{#each publicLines as event (event.seq)}
-					{@render line(event)}
-				{/each}
-			</ol>
-		</section>
-
-		<section aria-labelledby="behind-title">
-			<h2 id="behind-title">Behind the scenes</h2>
-			{#if spoilers}
-				<label class="filter">
-					Player
-					<select bind:value={player}>
-						<option value="all">All players</option>
-						{#each live.match.players as name (name)}
-							<option value={name}>{name}</option>
-						{/each}
-					</select>
-				</label>
-				<ol class="feed" data-testid="behind-feed">
-					{#each behindLines as event (event.seq)}
-						{@render line(event)}
-					{/each}
-				</ol>
-			{:else}
-				<div class="notice" role="status" data-testid="spoilers-off">
-					<strong>Spoilers off</strong>
-					<span>Thoughts, hands and private messages stay hidden, so you can guess along.</span>
-				</div>
-			{/if}
-		</section>
-	</div>
+	<MatchColumns spec={live.board.spec} {spoilers} events={log} players={live.match.players} />
 {/if}
-
-{#snippet line(event: MatchEvent)}
-	{@const shown = describe(event)}
-	<li data-seq={event.seq} data-kind={shown.kind} data-players={playersOf(event).join(' ')}>
-		{#if shown.kind === 'message'}
-			<strong>{shown.player}</strong>
-			<q>{shown.text}</q>
-		{:else if shown.kind === 'thought'}
-			<strong>{shown.player}</strong> <span class="muted">thinks</span>
-			<em>{shown.text}</em>
-		{:else if shown.kind === 'narration'}
-			<span class="narration">{shown.text}</span>
-		{:else}
-			{#if shown.player}<strong>{shown.player}</strong>{/if}
-			<span>{shown.title}</span>
-			{#if shown.details}<small class="muted">{shown.details}</small>{/if}
-		{/if}
-	</li>
-{/snippet}
 
 <style>
 	.top {
@@ -250,14 +181,6 @@
 	h1 {
 		margin: 0;
 		font-size: clamp(1.6rem, 5vw, 2.4rem);
-	}
-
-	h2 {
-		font-size: 0.95rem;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: var(--muted);
-		margin: 0 0 0.75rem;
 	}
 
 	.pill {
@@ -328,69 +251,5 @@
 
 	.problem {
 		color: var(--danger);
-	}
-
-	.columns {
-		display: grid;
-		gap: var(--gap);
-		padding-block: 1rem 2rem;
-	}
-
-	.columns > section {
-		min-width: 0;
-		padding: 1rem;
-		border-radius: var(--radius);
-		background: var(--surface);
-		border: 1px solid var(--border);
-	}
-
-	@media (min-width: 64rem) {
-		.columns {
-			grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
-			align-items: start;
-		}
-
-		.feed {
-			max-height: 70vh;
-			overflow-y: auto;
-		}
-	}
-
-	.filter {
-		margin-bottom: 0.75rem;
-	}
-
-	.feed {
-		display: grid;
-		gap: 0.4rem;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.feed li {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.15rem 0.45rem;
-		padding: 0.45rem 0.6rem;
-		border-radius: 8px;
-		background: var(--surface-raised);
-		overflow-wrap: anywhere;
-	}
-
-	.feed li[data-kind='message'] {
-		border-left: 3px solid var(--accent-2);
-	}
-
-	.feed li[data-kind='thought'] {
-		border-left: 3px solid var(--accent);
-	}
-
-	.feed small {
-		flex-basis: 100%;
-	}
-
-	.narration {
-		font-style: italic;
 	}
 </style>
