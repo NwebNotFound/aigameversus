@@ -125,3 +125,31 @@ def test_a_badly_formed_order_gets_a_message_not_an_error(order, message):
     owner = realm.state.cities[0].owner
 
     assert message in order_problem(realm.state, DATA, owner, order)
+
+
+def test_the_observation_lists_only_what_can_be_done_now_and_how_close_each_win_is():
+    realm = new_realm(9)
+    begin_round(realm.state, realm.ctx)
+    observation = observe(
+        realm.state,
+        DATA,
+        "ada",
+        extras={"gold_held_rounds": 2},
+        changes=["bo broke the peace treaty"],
+        plan="build a farm",
+    )
+
+    city = observation["cities"][0]
+    for building in city["can_build"]:
+        assert economy.build_problem(realm.state, DATA, "ada", city["id"], building) is None
+    for unit, most in city["can_train"].items():
+        assert armies.train_problem(realm.state, DATA, "ada", city["id"], unit, most) is None
+        assert armies.train_problem(realm.state, DATA, "ada", city["id"], unit, most + 1)
+    army = observation["armies"][0]
+    for tile in army["can_reach"]:
+        assert armies.move_problem(realm.state, DATA, "ada", army["id"], tuple(tile)) is None
+    win = observation["win"]
+    assert win["domination"].startswith("1 of 2 cities needed (4 exist)")
+    assert "held 2 of 5" in win["economy"] and win["closest_win"] in ("domination", "economy")
+    assert observation["changed"] == ["bo broke the peace treaty"]
+    assert observation["your_plan_from_last_round"] == "build a farm"
