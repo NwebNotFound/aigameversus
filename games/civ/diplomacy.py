@@ -386,9 +386,13 @@ def declare_war(state: CivState, data: CivData, ctx: TurnContext, player: str, o
 
 
 def expire(state: CivState, ctx: TurnContext) -> None:
-    """At the start of a round: unanswered offers of earlier rounds lapse, ended treaties go."""
+    """At the start of a round: unanswered offers lapse, ended treaties go.
+
+    A nation acts once a round, so an offer made in round r is answered in round r + 1
+    and lapses when round r + 2 starts (docs/civ-interfaces.md).
+    """
     for offer in list(state.offers):
-        if offer.round < state.round:
+        if offer.round < state.round - 1:
             ctx.emit("offer_lapsed", {"offer": offer.id}, visible_to=[offer.sender, offer.to])
     for pact in list(state.treaties):
         if pact.ends_round is not None and pact.ends_round < state.round:
