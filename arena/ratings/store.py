@@ -63,9 +63,14 @@ class RatingStore:
         self._k = k
 
     async def create_profile(
-        self, name: str, model_id: str, personality_id: str | None = None
+        self,
+        name: str,
+        model_id: str,
+        personality_id: str | None = None,
+        profile_id: UUID | None = None,
     ) -> UUID:
-        profile_id = uuid4()
+        """Add a profile; a random id unless `profile_id` is given."""
+        profile_id = profile_id or uuid4()
         await self._pool.execute(
             "INSERT INTO player_profiles (id, name, model_id, personality_id) "
             "VALUES ($1, $2, $3, $4)",

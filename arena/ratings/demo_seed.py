@@ -68,7 +68,11 @@ async def _demo_profiles(pool: asyncpg.Pool, store: RatingStore) -> list[str]:
     }
     ids: list[UUID] = []
     for name in DEMO_NAMES:
-        ids.append(existing.get(name) or await store.create_profile(name, DEMO_MODEL))
+        # Fixed ids: bots draw their moves from streams keyed by player id.
+        demo_id = uuid5(NAMESPACE_URL, f"aigameversus-demo/profile/{name}")
+        ids.append(
+            existing.get(name) or await store.create_profile(name, DEMO_MODEL, None, demo_id)
+        )
     return [str(profile_id) for profile_id in ids]
 
 

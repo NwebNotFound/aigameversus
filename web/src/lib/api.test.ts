@@ -93,3 +93,66 @@ describe('health', () => {
 		expect(await createArenaClient('http://arena:8000', fetchFn).health()).toBe(false);
 	});
 });
+
+const BOARD = {
+	game: 'toy',
+	games: ['toy'],
+	rows: [
+		{
+			rank: 1,
+			profile_id: 'a1',
+			name: 'DEMO Ada',
+			model_id: 'random-bot',
+			rating: 1016,
+			games_played: 1,
+			win_rate: 1,
+			average_placement: 1
+		}
+	]
+};
+
+describe('leaderboard', () => {
+	it('asks for one game and returns the board', async () => {
+		const { calls, fetchFn } = fakeFetch(() => Response.json(BOARD));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).leaderboard('toy');
+
+		expect(result).toEqual({ state: 'ok', data: BOARD });
+		expect(calls).toEqual(['http://arena:8000/leaderboard?game=toy']);
+	});
+
+	it('asks for the overall board without a game', async () => {
+		const { calls, fetchFn } = fakeFetch(() => Response.json({ ...BOARD, game: null }));
+
+		await createArenaClient('http://arena:8000', fetchFn).leaderboard();
+
+		expect(calls).toEqual(['http://arena:8000/leaderboard']);
+	});
+
+	it('rejects a body without rows', async () => {
+		const { fetchFn } = fakeFetch(() => Response.json({ game: null }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).leaderboard();
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena sent an unexpected answer' });
+	});
+});
+
+describe('profile', () => {
+	it('reports an unknown profile as not found', async () => {
+		const { calls, fetchFn } = fakeFetch(() => new Response('', { status: 404 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).profile('x/y');
+
+		expect(result).toEqual({ state: 'not_found' });
+		expect(calls).toEqual(['http://arena:8000/profiles/x%2Fy']);
+	});
+
+	it('reports a refused connection as unreachable', async () => {
+		const { fetchFn } = fakeFetch(() => Promise.reject(new TypeError('fetch failed')));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).profile('a1');
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'no connection' });
+	});
+});
