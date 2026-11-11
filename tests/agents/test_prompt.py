@@ -4,7 +4,7 @@ from arena.agents.prompt import HISTORY_LIMIT, build_messages, tool_schemas
 from arena.engine.types import MESSAGE, Event, EventSource, ToolSpec, TurnRequest
 from games.toy.plugin import PLAY_CARD
 
-ASK = "It is your turn. Answer with one tool call."
+ASK = "You are p1. It is your turn. Answer with one tool call."
 
 
 def game_event(type, data, visible_to=None):
@@ -33,6 +33,7 @@ def test_system_message_gives_the_role_the_rules_and_the_answer_format():
     system, _ = prompt()
 
     assert system.startswith("You are player p1 in a match of High Card")
+    assert "Wherever the game data or another player names p1, that is you" in system
     assert "# Rules of High Card\n\nThe highest card wins.\n\n# How to answer" in system
     assert "Answer with exactly one call of one of the offered tools" in system
     assert "a call written out as text is not a call" in system
@@ -51,10 +52,24 @@ def test_user_message_shows_the_situation_then_the_events_then_the_ask():
     assert user == (
         '<situation>\n{"hand": [2, 7]}\n</situation>\n\n'
         "<events>\n"
-        'hand_dealt (seen only by p1) {"player": "p1", "cards": [2, 7]}\n'
+        '[you] hand_dealt (seen only by p1) {"player": "p1", "cards": [2, 7]}\n'
         'card_played {"player": "p2", "card": 4}\n'
         "</events>\n\n" + ASK
     )
+
+
+def test_events_about_the_reader_are_marked_as_theirs_and_others_are_not():
+    _, user = prompt(
+        game_event("vote_cast", {"player": "p1", "target": "p2"}),
+        game_event("vote_cast", {"player": "p2", "target": "p1"}),
+        game_event("night_started", {"night": 1}),
+    )
+
+    lines = user.splitlines()
+    assert '[you] vote_cast {"player": "p1", "target": "p2"}' in lines
+    # A vote against the reader is not theirs: only the acting player decides the mark.
+    assert 'vote_cast {"player": "p2", "target": "p1"}' in lines
+    assert 'night_started {"night": 1}' in lines
 
 
 def test_text_of_another_player_is_labelled_as_their_words():
@@ -124,7 +139,7 @@ def test_rejected_answer_is_explained_in_the_ask():
     assert user.endswith(
         "</events>\n\n"
         "The server rejected your last answer: Card 99 is not in your hand. Your hand: [2, 7].\n"
-        "Answer again with one tool call."
+        "You are p1. Answer again with one tool call."
     )
 
 

@@ -245,6 +245,11 @@ The system message is what the server says: who the player is, the game's
 `<situation>`, the last 40 visible events in `<events>`, then the ask (with
 the server's error on a correction).
 
+- The player's seat is named three times: at the top of the system message
+  ("wherever the game data names p8, that is you"), in the ask at the end
+  ("You are p8."), and on every event the player did, which starts with
+  `[you]`. In the first real Werewolf match a model argued against its own
+  claim and voted for itself; it had read its seat once, far above.
 - A prompt is built only from the `TurnRequest`, and the engine fills that
   with events the player may see. Thoughts and other players' private events
   never get there.
