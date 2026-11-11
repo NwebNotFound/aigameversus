@@ -43,6 +43,14 @@ same numbers for the same log. The definitions follow the Researcher's review
 | `rejected` | Answers of this move the engine rejected (each one led to a correction). |
 | `fallback` | The engine played this move (see above). |
 
+## Sections (`sections`, `numbers`)
+
+Every answer lists the parts it has besides `game`, `spoilers`, `events` and
+`meta`, in order: `["situation"]` for a game with a situation only (Poker
+today), `["situation", "players", "moves", ...]` for Liar's Deck. A client
+checks this list instead of probing for keys. `numbers` is `false` when the
+answer has the situation only, `true` otherwise.
+
 ## Situation (`situation`), every game with one
 
 "How is the game going?" at the end of the log read: `situation.facts` (numbers)

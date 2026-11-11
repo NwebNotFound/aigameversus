@@ -48,13 +48,22 @@ def match_analytics(
             if e.visible_to is None or e.type == "match_started"
         ]
     numbers = analyze(log, spoilers) if analyze else {"meta": {}}
-    return {
+    result = {
         "game": game,
         "spoilers": spoilers,
         "events": len(log),
         "situation": situation(game, log, spoilers, names or {}),
         **numbers,
     }
+    # Which parts this answer has, so a client checks one list instead of probing keys:
+    # Poker answers with ["situation"] only, Liar's Deck with its moves, totals and more.
+    result["sections"] = [key for key in result if key not in _HEAD]
+    # False: a situation only, no numbers yet for this game (Poker today).
+    result["numbers"] = result["sections"] != ["situation"]
+    return result
+
+
+_HEAD = {"game", "spoilers", "events", "meta", "sections", "numbers"}
 
 
 def _public_start(event: Event) -> Event:
