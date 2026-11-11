@@ -56,13 +56,18 @@ def start(client, **body):
     return response.json()
 
 
-def follow(client, match_id):
-    """Everything the event stream of a match sends until the server closes it."""
+def follow(client, match_id, *, at_most=None):
+    """Everything the event stream of a match sends until the server closes it.
+
+    With `at_most`, a match that sends more events fails the test instead of running on.
+    """
     received = []
     with client.websocket_connect(f"/matches/{match_id}/events") as stream:
         try:
             while True:
                 received.append(stream.receive_json())
+                if at_most is not None and len(received) > at_most:
+                    pytest.fail("match did not stop at its turn limit")
         except WebSocketDisconnect as closed:
             return received, closed.code
 
@@ -262,7 +267,7 @@ def test_match_of_a_game_that_never_ends_stops_at_the_turn_limit_and_fails(
 
     with TestClient(app) as client:
         match = client.post("/matches", json={"game": "endless"}).json()
-        log, close_code = follow(client, match["id"])
+        log, close_code = follow(client, match["id"], at_most=1000)
         record = client.get(f"/matches/{match['id']}").json()
         stored = client.get(f"/matches/{match['id']}/events").json()
 

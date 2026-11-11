@@ -16,9 +16,9 @@ strategy game).
 > hard cost caps, and a match pauses at a cap. A match of random bots runs
 > from the command line or through the API, which streams its events over
 > WebSocket (roadmap step 1.6, the end of phase 1). So far the players are
-> random bots and a scripted mock model. Liar's Deck, the first of the four
-> games, plays full matches with them, next to a small reference game; the
-> other three games are not built yet.
+> random bots and a scripted mock model. Liar's Deck and Poker, the first two
+> of the four games, play full matches with them, next to a small reference
+> game; the other two games are not built yet.
 
 ![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
 
@@ -81,8 +81,8 @@ The answer holds the match `id`. `ws://localhost:8100/matches/<id>/events`
 streams the events of the match from its first one while it is played;
 `GET /matches/<id>/events` returns them as a list, `GET /matches` lists the
 matches. Without Docker, `uv run arena run --game toy --bots` does the same as
-the first command. `arena games` lists what can be played; `toy` is High Card,
-the small reference game, and `liars_deck` is Liar's Deck.
+the first command. `arena games` lists what can be played: `toy` is High Card,
+the small reference game, `liars_deck` is Liar's Deck and `poker` is Poker.
 
 Configuration is optional for now. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,

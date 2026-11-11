@@ -19,15 +19,15 @@ model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models, but nothing
 starts a match with a real model yet: the `arena` command and `POST /matches`
-seat random bots only, and there is no API key before phase 2. Two games can
-be played: High Card (`games/toy`), the reference plugin, and Liar's Deck
-(`games/liars_deck`). The arena API starts bot matches, lists them and streams
-their events over WebSocket, next to `GET /health` (it
-migrates the database at startup), the leaderboard and the Werewolf setup
-endpoints. The worker is a heartbeat placeholder, the web UI (`web/`,
-SvelteKit) has a home page and placeholders for the other pages. Sections below
-marked *not built yet* describe the target from the spec and get filled in as
-their phase lands.
+seat random bots only, and there is no API key before phase 2. Three games can
+be played: High Card (`games/toy`), the reference plugin, Liar's Deck
+(`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
+matches, lists them and streams their events over WebSocket, next to
+`GET /health` (it migrates the database at startup), the leaderboard and the
+Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
+(`web/`, SvelteKit) has a home page and placeholders for the other pages.
+Sections below marked *not built yet* describe the target from the spec and
+get filled in as their phase lands.
 
 ## Architecture
 
