@@ -1,24 +1,17 @@
-"""The random bot of Throne of Tokens: valid random orders, never a rejected one.
+"""The random bot of Throne of Tokens: a few legal random orders, built from the observation only.
 
-    orders = random_orders(state, data, player, rng)
+    call = random_orders(observation, rng)  # {"orders": [...]} for submit_orders
 
-It plays on a copy of the state and carries out each order it picks, so a later order is legal
-after the earlier ones (the stock is spent, a new army exists). Combat, diplomacy and events
-are not its business; it only fills the order form.
+As docs/civ-interfaces.md says, a random bot never needs the state: it picks from ``legal``
+(what each city may build and train) and ``armies[].reachable``, and keeps count of what it
+spends so that the orders do not outbid its own stock. It does not attack (it never moves
+onto a tile where another nation stands) and does not talk; it answers offers at random.
 """
 
 from __future__ import annotations
 
 import random
-from collections.abc import Callable
-
-from arena.engine.plugin import TurnContext
-from arena.engine.rng import derive_rng
-from games.civ import armies as army_rules
-from games.civ.data_loader import CivData
-from games.civ.orders import Order, apply_order, order_problem
-from games.civ.state import CivState
-from games.civ.turn import apply_event
+from typing import Any
 
 # the chance, per city or army, that the bot gives it an order this round
 CITY_BUILD = 0.5
@@ -27,62 +20,58 @@ CITY_FOCUS = 0.1
 ARMY_MOVE = 0.6
 ARMY_SPLIT = 0.1
 ARMY_DISBAND = 0.02
+FOCUSES = ("growth", "production", "military")
 
 
-def random_orders(state: CivState, data: CivData, player: str, rng: random.Random) -> list[Order]:
-    """Legal random orders for this nation: city orders first, then army orders."""
-    scratch = state.model_copy(deep=True)
-    ctx = TurnContext(
-        lambda *key: derive_rng(rng.getrandbits(32), "civ-bot", *key),
-        lambda event: apply_event(scratch, event),
-    )
-    chosen: list[Order] = []
+def random_orders(observation: dict[str, Any], rng: random.Random) -> dict[str, Any]:
+    """A `submit_orders` call: city orders, army orders, then answers to offers."""
+    stock = dict(observation["stock"])
+    orders: list[dict[str, Any]] = []
+    legal = observation["legal"]
 
-    def take(order: Order) -> bool:
-        if order_problem(scratch, data, player, order) is not None:
+    def pay(cost: dict[str, int]) -> bool:
+        if any(stock.get(resource, 0) < amount for resource, amount in cost.items()):
             return False
-        apply_order(scratch, data, ctx, player, order)
-        chosen.append(order)
+        for resource, amount in cost.items():
+            stock[resource] -= amount
         return True
 
-    for city in [c for c in scratch.cities if c.owner == player]:
+    for city in observation["cities"]:
+        options = legal["cities"].get(city["id"], {"build": {}, "train": {}})
         if rng.random() < CITY_FOCUS:
-            focus = rng.choice(sorted(data.balance.city.focus_yields))
-            take({"order": "set_focus", "city": city.id, "focus": focus})
-        if rng.random() < CITY_BUILD:
-            builds = [
-                {"order": "build", "city": city.id, "building": b} for b in sorted(data.buildings)
-            ]
-            _take_one(rng, builds, take)
+            orders.append({"type": "focus", "city": city["id"], "focus": rng.choice(FOCUSES)})
+        if rng.random() < CITY_BUILD and city["slots_free"] > 0:
+            for building in rng.sample(sorted(options["build"]), len(options["build"])):
+                if pay(options["build"][building]):
+                    orders.append({"type": "build", "city": city["id"], "building": building})
+                    break
         if rng.random() < CITY_TRAIN:
-            units = sorted(u for u in data.units if data.units[u].strength > 0)
-            trains = [
-                {"order": "train", "city": city.id, "unit": u, "count": rng.randint(1, 3)}
-                for u in units
-            ]
-            _take_one(rng, trains, take)
+            for unit in rng.sample(sorted(options["train"]), len(options["train"])):
+                count = rng.randint(1, options["train"][unit])
+                cost = {r: n * count for r, n in legal["unit_cost"][unit].items()}
+                if pay(cost):
+                    orders.append(
+                        {"type": "train", "city": city["id"], "unit": unit, "count": count}
+                    )
+                    break
 
-    for army in [a for a in scratch.armies if a.owner == player]:
-        if army.id not in {a.id for a in scratch.armies}:  # merged or disbanded earlier
-            continue
-        if take({"order": "settle", "army": army.id}):
+    taken = {tuple(c["tile"]) for c in observation["seen"]["cities"]}
+    taken |= {tuple(a["tile"]) for a in observation["seen"]["armies"]}
+    for army in observation["armies"]:
+        if army["can_settle"]:
+            orders.append({"type": "settle", "army": army["id"]})
             continue
         roll = rng.random()
         if roll < ARMY_DISBAND:
-            take({"order": "disband", "army": army.id})
-        elif roll < ARMY_DISBAND + ARMY_SPLIT and len(army.units) > 1:
-            kinds = [troop.kind for troop in army.units]
-            take({"order": "split", "army": army.id, "units": [rng.choice(kinds)]})
+            orders.append({"type": "disband", "army": army["id"]})
+        elif roll < ARMY_DISBAND + ARMY_SPLIT and sum(army["units"].values()) > 1:
+            kinds = [kind for kind, n in sorted(army["units"].items()) for _ in range(n)]
+            orders.append({"type": "split", "army": army["id"], "units": [rng.choice(kinds)]})
         elif roll < ARMY_DISBAND + ARMY_SPLIT + ARMY_MOVE:
-            ways = army_rules.reachable(scratch, data, army.id)
-            if ways and scratch.army(army.id).moved_in_round != scratch.round:
-                col, row = rng.choice(sorted(ways))
-                take({"order": "move", "army": army.id, "to": [col, row]})
-    return chosen
+            free = [t for t in army["reachable"] if tuple(t) not in taken]
+            if free:
+                orders.append({"type": "move", "army": army["id"], "to": rng.choice(free)})
 
-
-def _take_one(rng: random.Random, options: list[Order], take: Callable[[Order], bool]) -> None:
-    rng.shuffle(options)
-    for option in options:
-        if take(option):
-            return
+    for offer in observation["offers"]:
+        orders.append({"type": "respond", "offer": offer["id"], "accept": rng.random() < 0.5})
+    return {"orders": orders}

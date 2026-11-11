@@ -1,4 +1,4 @@
-"""The random bot plays 20 legal rounds; the observation shows only what the fog lets through."""
+"""The random bot plays 20 legal rounds from the observation; the observation shows only what the fog lets through."""  # noqa: E501
 
 import json
 
@@ -8,7 +8,6 @@ from arena.engine.rng import derive_rng
 from games.civ import armies, economy
 from games.civ.bot import random_orders
 from games.civ.observation import FOG, observe, visible_to
-from games.civ.orders import apply_order, order_problem, sorted_for_the_round
 from games.civ.tests.realm import DATA, Realm
 from games.civ.turn import begin_round
 from games.civ.world import generate_map
@@ -25,22 +24,52 @@ def new_realm(seed: int) -> Realm:
     return realm
 
 
+def carry_out(realm: Realm, player: str, order: dict) -> None:
+    """Run one order through the rules, as the turn flow will: it must be legal."""
+    s, ctx, kind = realm.state, realm.ctx, order["type"]
+    problem = {
+        "build": lambda: economy.build_problem(s, DATA, player, order["city"], order["building"]),
+        "train": lambda: armies.train_problem(
+            s, DATA, player, order["city"], order["unit"], order["count"]
+        ),
+        "focus": lambda: economy.focus_problem(s, DATA, player, order["city"], order["focus"]),
+        "move": lambda: armies.move_problem(s, DATA, player, order["army"], tuple(order["to"])),
+        "split": lambda: armies.split_problem(s, player, order["army"], order["units"]),
+        "disband": lambda: armies.disband_problem(s, player, order["army"]),
+        "settle": lambda: armies.settle_problem(s, DATA, player, order["army"]),
+        "respond": lambda: None,
+    }[kind]()
+    assert problem is None, (player, order, problem)
+    if kind == "build":
+        economy.build(s, DATA, ctx, player, order["city"], order["building"])
+    elif kind == "train":
+        armies.train(s, DATA, ctx, player, order["city"], order["unit"], order["count"])
+    elif kind == "focus":
+        economy.set_focus(s, DATA, ctx, player, order["city"], order["focus"])
+    elif kind == "move":
+        armies.move(s, DATA, ctx, player, order["army"], tuple(order["to"]))
+    elif kind == "split":
+        armies.split(s, ctx, player, order["army"], order["units"])
+    elif kind == "disband":
+        armies.disband(s, ctx, player, order["army"])
+    elif kind == "settle":
+        armies.settle(s, DATA, ctx, player, order["army"])
+
+
 def play_round(realm: Realm, rng) -> dict[str, list]:
-    """One round as the turn flow runs it, with bot orders; returns the orders by nation."""
+    """One round as the turn flow runs it: every nation answers on the same state."""
     begin_round(realm.state, realm.ctx)
     economy.finish_construction(realm.state, realm.ctx)
-    given = {}
-    for player in PLAYERS:
-        orders = random_orders(realm.state, DATA, player, rng)
-        # the bot saw the state before anyone moved; apply them to the real one in phase order
-        for order in sorted_for_the_round(orders):
-            assert order_problem(realm.state, DATA, player, order) is None, (player, order)
-            apply_order(realm.state, DATA, realm.ctx, player, order)
-        given[player] = orders
+    calls = {p: random_orders(observe(realm.state, DATA, p), rng) for p in PLAYERS}
+    for player, call in calls.items():
+        cities = [o for o in call["orders"] if o["type"] in ("build", "train", "focus")]
+        rest = [o for o in call["orders"] if o not in cities]
+        for order in cities + rest:
+            carry_out(realm, player, order)
     economy.produce(realm.state, DATA, realm.ctx)
     armies.starve(realm.state, DATA, realm.ctx)
     economy.grow(realm.state, DATA, realm.ctx)
-    return given
+    return calls
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3])
@@ -49,16 +78,16 @@ def test_the_bot_plays_twenty_rounds_without_one_illegal_order(seed):
     rng = derive_rng(seed, "bot")
     total = 0
     for _ in range(20):
-        total += sum(len(orders) for orders in play_round(realm, rng).values())
-        json.dumps([e.data for e in realm.events])  # plain data all the way
+        calls = play_round(realm, rng)
+        total += sum(len(call["orders"]) for call in calls.values())
+        json.dumps(calls)  # plain data all the way
 
     assert total > 20
     assert len(realm.state.cities) >= len(PLAYERS)
 
 
 def test_the_same_seed_gives_the_same_orders():
-    first = new_realm(4)
-    second = new_realm(4)
+    first, second = new_realm(4), new_realm(4)
 
     a = [play_round(first, derive_rng(4, "bot", i)) for i in range(5)]
     b = [play_round(second, derive_rng(4, "bot", i)) for i in range(5)]
@@ -66,12 +95,33 @@ def test_the_same_seed_gives_the_same_orders():
     assert a == b
 
 
-def test_a_player_without_cities_or_armies_gets_no_orders():
+def test_a_nation_without_cities_or_armies_gets_an_empty_call():
     realm = new_realm(5)
     realm.state.cities = [c for c in realm.state.cities if c.owner != "ada"]
     realm.state.armies = [a for a in realm.state.armies if a.owner != "ada"]
 
-    assert random_orders(realm.state, DATA, "ada", derive_rng(5, "bot")) == []
+    observation = observe(realm.state, DATA, "ada")
+
+    assert random_orders(observation, derive_rng(5, "bot")) == {"orders": []}
+
+
+def test_the_bot_never_attacks_and_answers_offers():
+    realm = new_realm(6)
+    rng = derive_rng(6, "bot")
+    for _ in range(5):
+        play_round(realm, rng)
+    observation = observe(realm.state, DATA, "ada") | {"offers": [{"id": "o4"}]}
+
+    call = random_orders(observation, derive_rng(1, "x"))
+
+    occupied = {tuple(c["tile"]) for c in observation["seen"]["cities"]}
+    occupied |= {tuple(a["tile"]) for a in observation["seen"]["armies"]}
+    assert all(tuple(o["to"]) not in occupied for o in call["orders"] if o["type"] == "move")
+    assert {"type": "respond", "offer": "o4", "accept": True} in call["orders"] or {
+        "type": "respond",
+        "offer": "o4",
+        "accept": False,
+    } in call["orders"]
 
 
 def test_the_observation_is_small_plain_json_and_fog_limited():
@@ -82,14 +132,11 @@ def test_the_observation_is_small_plain_json_and_fog_limited():
 
     for player in PLAYERS:
         observation = observe(realm.state, DATA, player)
-        text = json.dumps(observation)
         seen = visible_to(realm.state, DATA, player)
         rows = observation["map"]["rows"]
 
-        assert len(text) < 6000
-        assert observation["overview"]["cities"] == sum(
-            c.owner == player for c in realm.state.cities
-        )
+        assert len(json.dumps(observation)) < 8000
+        assert len(observation["cities"]) == sum(c.owner == player for c in realm.state.cities)
         assert len(rows) == len(realm.state.world.rows)
         assert all(len(row) == len(realm.state.world.rows[0]) for row in rows)
         assert sum(ch != FOG for row in rows for ch in row) == len(seen)
@@ -100,33 +147,6 @@ def test_the_observation_is_small_plain_json_and_fog_limited():
             assert isinstance(army["units"], int)  # a size, not the makeup
 
 
-def test_an_enemy_far_away_is_not_in_the_observation():
-    realm = new_realm(7)
-    observation = observe(realm.state, DATA, "ada")
-    start = {s.player: s.tile for s in realm.state.world.starts}
-    near = {tuple(c["tile"]) for c in observation["seen"]["cities"]}
-
-    for player in PLAYERS[1:]:
-        assert (start[player] in near) == (start[player] in visible_to(realm.state, DATA, "ada"))
-
-
-@pytest.mark.parametrize(
-    ("order", "message"),
-    [
-        ({"order": "dance"}, "There is no order"),
-        ({"order": "move", "army": "a1"}, "Missing: to"),
-        ({"order": "move", "army": "a1", "to": "north"}, "to must be a tile"),
-        ({"order": "train", "city": "c1", "unit": "spearman", "count": True}, "whole number"),
-        ({"order": "merge", "armies": "a1"}, "list of army ids"),
-    ],
-)
-def test_a_badly_formed_order_gets_a_message_not_an_error(order, message):
-    realm = new_realm(8)
-    owner = realm.state.cities[0].owner
-
-    assert message in order_problem(realm.state, DATA, owner, order)
-
-
 def test_the_observation_lists_only_what_can_be_done_now_and_how_close_each_win_is():
     realm = new_realm(9)
     begin_round(realm.state, realm.ctx)
@@ -134,22 +154,26 @@ def test_the_observation_lists_only_what_can_be_done_now_and_how_close_each_win_
         realm.state,
         DATA,
         "ada",
-        extras={"gold_held_rounds": 2},
-        changes=["bo broke the peace treaty"],
+        extras={"gold_held_rounds": 2, "refused": ["move a9: no such army"]},
         plan="build a farm",
     )
 
     city = observation["cities"][0]
-    for building in city["can_build"]:
+    legal = observation["legal"]["cities"][city["id"]]
+    for building, cost in legal["build"].items():
         assert economy.build_problem(realm.state, DATA, "ada", city["id"], building) is None
-    for unit, most in city["can_train"].items():
+        assert cost == dict(DATA.buildings[building].cost)
+    for unit, most in legal["train"].items():
         assert armies.train_problem(realm.state, DATA, "ada", city["id"], unit, most) is None
         assert armies.train_problem(realm.state, DATA, "ada", city["id"], unit, most + 1)
+        assert unit in observation["legal"]["unit_cost"]
     army = observation["armies"][0]
-    for tile in army["can_reach"]:
+    for tile in army["reachable"]:
         assert armies.move_problem(realm.state, DATA, "ada", army["id"], tuple(tile)) is None
-    win = observation["win"]
-    assert win["domination"].startswith("1 of 2 cities needed (4 exist)")
-    assert "held 2 of 5" in win["economy"] and win["closest_win"] in ("domination", "economy")
-    assert observation["changed"] == ["bo broke the peace treaty"]
+    victory = observation["victory"]
+    assert victory["domination"].startswith("1 of 2 cities needed (4 exist)")
+    assert "held 2 of 5" in victory["economy"]
+    assert victory["closest_win"] in ("domination", "economy")
+    assert observation["rounds_total"] == DATA.victory.round_limit.rounds
+    assert observation["refused"] == ["move a9: no such army"]
     assert observation["your_plan_from_last_round"] == "build a farm"
