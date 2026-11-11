@@ -107,3 +107,4 @@ with `python scripts/decisions.py adopt`.
 - [D-103](decisions/D-103-a-seat-s-identity-comes-from-the-match-record-first-a-model.md) · A seat's identity comes from the match record first; a model seat never reads as a bot
 - [D-104](decisions/D-104-one-display-name-per-seat-computed-by-the-server-never-the.md) · One display name per seat, computed by the server, never the seat id
 - [D-106](decisions/D-106-match-analytics-a-pure-function-of-the-log-public-events.md) · Match analytics: a pure function of the log, public events only without spoilers
+- [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
