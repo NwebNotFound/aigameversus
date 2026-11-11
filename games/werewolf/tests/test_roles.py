@@ -31,9 +31,17 @@ def test_ids_unique():
     assert len(ids) == len(set(ids))
 
 
-def test_templates_reference_known_roles():
-    ids = {load(p)["id"] for p in ROLE_FILES}
+def test_templates_are_fillable_and_valid():
+    roles = {load(p)["id"]: load(p) for p in ROLE_FILES}
     templates = yaml.safe_load((ROOT / "templates.yaml").read_text(encoding="utf-8"))["templates"]
     assert len(templates) == 4
     for t in templates:
-        assert set(t.get("roles", {})) <= ids
+        counts = {r: n for r, n in t.get("roles", {}).items() if n != "fill"}
+        assert set(counts) <= set(roles), t["id"]
+        fixed = sum(counts.values())
+        assert fixed <= t["min_players"], f"{t['id']}: {fixed} fixed roles > min_players"
+        for role_id, n in counts.items():
+            assert not (roles[role_id]["unique"] and n > 1), f"{t['id']}: {role_id} is unique"
+        if "roles" in t:
+            wolves = sum(n for r, n in counts.items() if roles[r]["team"] == "wolves")
+            assert 1 <= wolves < t["min_players"] / 2, f"{t['id']}: wolves {wolves}"

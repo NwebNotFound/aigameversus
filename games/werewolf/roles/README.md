@@ -9,7 +9,7 @@
    - `first_night_only`: optional, `true` for roles that act only on night 1
    - `hooks`: map of hook name to handler name, e.g. `on_morning: bear_growl`. Handler logic lives in code, not in YAML.
    - `description`: English rules text
-3. Run `python3.12 -m pytest games/werewolf/tests`.
+3. Run `uv run pytest games/werewolf`.
 
 Night order: 1 cupid, 2 wild_child, 3 protector, 4 seer, 5 little_girl, 6 wolves (werewolf, prime_wolf), 7 white_wolf (every second night), 8 witch, 9 raven.
 The captain is an office, not a role; see `../options.yaml`.
