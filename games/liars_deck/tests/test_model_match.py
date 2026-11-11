@@ -1,6 +1,5 @@
 """A whole Liar's Deck match played by mock-LLM seats through the agent runner."""
 
-import asyncio
 import json
 import re
 
@@ -10,6 +9,7 @@ from arena.engine.match import Match
 from arena.engine.replay import replay
 from arena.engine.types import MESSAGE
 from games.liars_deck.plugin import LiarsDeck
+from games.liars_deck.tests.test_plugin import run_match
 
 PLAYERS = ["p1", "p2", "p3"]
 
@@ -57,7 +57,7 @@ def test_mock_llm_seats_finish_a_match_through_the_agent_runner():
     agents = {p: ModelAgent(mock, plugin, sleep=no_pause) for p, mock in mocks.items()}
     match = Match(plugin, agents, seed=6, settings={"variant": "devil_card"})
 
-    placements = asyncio.run(match.run())
+    placements = run_match(match)
 
     assert len(match.state.alive) == 1
     assert sorted(p.player for p in placements) == PLAYERS

@@ -69,12 +69,28 @@ class Table:
         return [event.data for event in self.events if event.type == type]
 
 
+# A match takes well under a second; a rules bug that never ends one fails fast instead.
+MATCH_TIME_LIMIT = 5  # seconds
+
+
+def run_match(match):
+    """Run a match to its end, or fail after MATCH_TIME_LIMIT seconds."""
+
+    async def bounded():
+        try:
+            async with asyncio.timeout(MATCH_TIME_LIMIT):
+                return await match.run()
+        except TimeoutError:
+            pytest.fail(f"match did not end within {MATCH_TIME_LIMIT} s; a rule never ends it")
+
+    return asyncio.run(bounded())
+
+
 def bot_match(players, *, seed=1, variant="base", agents=None):
     plugin = LiarsDeck()
     bots = random_bots(plugin, players, seed) | (agents or {})
     match = Match(plugin, bots, seed=seed, settings={"variant": variant})
-    placements = asyncio.run(match.run())
-    return match, placements
+    return match, run_match(match)
 
 
 def game_events(match):
@@ -278,15 +294,19 @@ def test_no_call_on_the_first_turn():
 
 
 def test_a_player_without_cards_is_skipped():
-    hands = {"p1": ["K1", "K4"], "p2": ["Q2"], "p3": ["A3", "K3"]}
+    hands = {"p1": ["K1", "K4", "K6"], "p2": ["Q2"], "p3": ["A3", "K3", "K5"]}
     table = Table(hands, table_card="king")
     table.act("p1", "play_cards", card_ids=["K1"])
     table.act("p2", "play_cards", card_ids=["Q2"])  # p2 is now out of cards
     table.act("p3", "play_cards", card_ids=["K3"])
+    assert table.state.current == "p1"
 
-    assert table.state.current == "p1"  # p2 is skipped
+    # p1 and p3 still hold cards, so this is a normal turn: it skips empty-handed p2.
     table.act("p1", "play_cards", card_ids=["K4"])
+
     assert table.state.current == "p3"
+    assert table.state.phase == "turn"
+    assert table.of_type("liar_called") == []
 
 
 def test_only_player_with_cards_calls_automatically():
@@ -430,7 +450,7 @@ def test_no_player_ever_sees_hidden_cards_or_chambers(variant, seed):
     plugin = LiarsDeck()
     spies = {p: Spy(plugin, derive_rng(seed, "spy", p)) for p in SEATS}
     match = Match(plugin, spies, seed=seed, settings={"variant": variant})
-    asyncio.run(match.run())
+    run_match(match)
 
     for player, spy in spies.items():
         assert spy.requests, player
