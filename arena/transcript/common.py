@@ -124,6 +124,10 @@ class Base:
         if built is None:
             return None
         kind, actor, text, detail, importance = built
+        raw = event.model_dump(mode="json")
+        if not self.spoilers:
+            # The seed would give every hidden draw away, so it is not in the raw event either.
+            raw["data"] = {k: v for k, v in raw["data"].items() if k != "seed"}
         return TranscriptLine(
             seq=seq,
             kind=kind,
@@ -131,7 +135,7 @@ class Base:
             text=text,
             detail=detail,
             importance=importance,
-            raw=event.model_dump(mode="json"),
+            raw=raw,
         )
 
     def learn(self, event: Event) -> None:

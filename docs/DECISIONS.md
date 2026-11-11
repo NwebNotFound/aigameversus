@@ -1411,6 +1411,10 @@ Each entry: date, decision, why, alternatives considered.
     too does the seat lose its model. In a test of all eight roster models
     one refused the options outright, and another, served by several
     providers, took them in one match and refused them in the next.
+    The budget has booked that call once, at its upper bound; the second
+    request goes out under the same booking. That holds only because a
+    refused request is not billed, so at most one of the two costs money.
+    The set of statuses must therefore never grow to one a provider may bill.
 - **Why:** Two real matches with the cheapest models of the roster. In the
   first (Liar's Deck, four models) 83 of 130 answers were rejected and 18
   turns went to the random fallback: two reasoning models spent the whole
@@ -1483,7 +1487,21 @@ Each entry: date, decision, why, alternatives considered.
   every player); decay over time (not in the spec); notes for every match
   without a cap.
 
-## D-074 · One transcript renders every match for every reader
+## D-076 · The monthly cap is 25 euros
+
+- **Date:** 2026-11-11
+- **Decision:** `limits.month_eur` in `config/models.yaml` is 25.00 (it was
+  5.00, D-001). The cap per match stays 0.50 EUR. Whatever is above 25 EUR a
+  month still pauses a match, as before.
+- **Why:** The project owner set it after the first real matches (six
+  matches, 0.18 EUR together): he wants stronger models and research runs,
+  which a 5 EUR month would stop early. He kept the per-match cap; a single
+  research run may get a larger budget only when that is set for the run
+  (a per-run budget is still to be built).
+- **Alternatives:** No monthly cap (one runaway batch could spend without
+  limit); a higher cap per match for everyone (a mistake would cost more).
+
+## D-078 · One transcript renders every match for every reader
 
 - **Date:** 2026-11-11
 - **Decision:** `arena/transcript/` turns the events of a match into readable

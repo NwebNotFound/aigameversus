@@ -143,6 +143,17 @@ def test_the_seed_is_only_in_the_spoiler_view():
     assert "seed" not in plain and "seed 7" in full
 
 
+@pytest.mark.parametrize("game", sorted(GAMES))
+def test_the_seed_is_nowhere_in_a_transcript_without_spoilers_not_even_in_raw(game):
+    lines = render_match(bot_events(game), spoilers=False)
+
+    dumped = json.dumps([line.model_dump() for line in lines])
+    full = json.dumps([line.model_dump() for line in render_match(bot_events(game), spoilers=True)])
+
+    assert "seed" not in dumped
+    assert '"seed"' in full
+
+
 def test_german_and_english_differ_and_names_are_used():
     events = bot_events("liars_deck")
     names = labels({"p1": "glm", "p2": "gpt", "p3": "claude", "p4": "gemini"})

@@ -96,3 +96,15 @@ def test_unknown_match_game_and_options_are_refused(client):
         client.get(f"/matches/{match_id}/transcript", params={"min_importance": 9}).status_code
         == 422
     )
+
+
+def test_the_seed_is_not_in_the_json_of_a_transcript_without_spoilers(client):
+    match_id = start(client, "liars_deck", players=3, seed=5)
+    finish(client, match_id)
+    url = f"/matches/{match_id}/transcript"
+
+    plain = client.get(url, params={"spoilers": False}).text
+    spoiled = client.get(url, params={"spoilers": True}).text
+
+    assert "seed" not in plain
+    assert '"seed"' in spoiled
