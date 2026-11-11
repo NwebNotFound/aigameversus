@@ -48,7 +48,13 @@
 			: undefined
 	);
 
-	const allLines = $derived(namedLines(transcript?.lines ?? [], players));
+	const allLines = $derived(
+		namedLines(
+			transcript?.lines ?? [],
+			players,
+			Object.values(transcript?.players ?? {}).some((p) => p.display)
+		)
+	);
 	const moments = $derived(stops(log, allLines, 2));
 	/** The transcript covers the log up to here; the playout never runs ahead of its words. */
 	const covered = $derived.by(() => {
