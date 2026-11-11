@@ -233,8 +233,8 @@ Each entry: date, decision, why, alternatives considered.
 
 - **Date:** 2026-11-11
 - **Decision:** For the selection rules ("at least 1 wolf", "wolves fewer
-  than half the players") the White Werewolf counts as a wolf with the team
-  `wolves`, because it hunts with them. The balance light sums `weight × count`
+  than half the players") the White Werewolf (team `solo`) counts as a wolf,
+  like the roles of team `wolves`, because it hunts with them. The balance light sums `weight × count`
   over the filled selection: above +5 is *village*, below −5 is *wolves*,
   anything from −5 to +5 is *even*, i.e. less than one werewolf's weight (−6)
   away from 0. "Zufällig ausgewogen" draws 300 random playable mixes from the
