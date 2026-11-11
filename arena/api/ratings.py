@@ -79,7 +79,6 @@ class ProfileOut(BaseModel):
     overall: StandingOut | None = Field(description="null until the first rated match")
     ratings: list[GameStanding]
     recent_matches: list[RecentMatch]
-    relations: NotAvailable = Field(default_factory=NotAvailable)
     memory: NotAvailable = Field(default_factory=NotAvailable)
 
 

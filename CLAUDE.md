@@ -484,6 +484,21 @@ missing. A role without new abilities needs none.
 `games/werewolf/templates.yaml` (role counts per template, `fill` for villagers)
 and `games/werewolf/options.yaml` (captain, role visibility). Same test command.
 
+### A trust rule
+
+After every rated match the server turns what each player saw into facts
+(`arena/memory/facts.py`, one extractor per game) and the facts into trust
+between profiles (-100 to +100, clamped) with a short note each
+(`arena/memory/store.py`, once per match id). How much a fact is worth, and its
+note, is data: `config/memory/trust.yaml`. A fact is read only from the events
+its observer could see, so it never carries another player's secret. A new kind
+of fact needs its extractor case, its name in `KINDS` and a rule in the file;
+the loader refuses a fact without a rule and a rule without a fact.
+
+```bash
+uv run pytest tests/memory
+```
+
 ### A personality
 
 One YAML file in `config/personalities/<id>.yaml`, checked against
