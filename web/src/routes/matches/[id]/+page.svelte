@@ -5,7 +5,7 @@
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS, euros, merge } from '#lib/live.js';
-	import { langOf } from '#lib/viewer.js';
+	import { langOf, mergeSeats } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -136,7 +136,7 @@
 		events={log}
 		lines={transcript?.lines ?? []}
 		seats={live.match.players}
-		players={transcript?.players}
+		players={mergeSeats(live.match.players, live.match.seats, transcript?.players, data.roster)}
 		costs={live.cost.players}
 		active={typeof turn === 'string' ? turn : null}
 		placements={live.match.placements}

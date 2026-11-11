@@ -26,6 +26,17 @@ export interface MatchRecord extends MatchSummary {
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
+	/** Who sits where: set for every match since model seats (D-082). */
+	seats?: Record<string, RecordSeat>;
+	origin?: 'played' | 'imported';
+}
+
+/** A seat as the match record stores it. */
+export interface RecordSeat {
+	name: string;
+	model_id: string | null;
+	kind: 'model' | 'bot';
+	personality?: string | null;
 }
 
 /** One event of a match log, as the event stream sends it. */
@@ -94,10 +105,17 @@ export interface TranscriptLine {
 	raw: Record<string, unknown>;
 }
 
-/** Who sits in a seat; both null for random bots and unrated matches. */
+/** Who sits in a seat; name and model null for seats nobody named. */
 export interface Seat {
 	name: string | null;
 	model: string | null;
+	/** Filled in by the web from the match record and the model roster. */
+	kind?: 'model' | 'bot';
+	/** The provider's company, e.g. "google" from "google/gemini-2.5-flash-lite". */
+	vendor?: string | null;
+	personality?: string | null;
+	/** US dollars per million tokens, from config/models.yaml. */
+	price?: { input: number; output: number } | null;
 }
 
 export interface Transcript {

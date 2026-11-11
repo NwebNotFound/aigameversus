@@ -2,7 +2,7 @@
 	import type { Seat } from '#lib/api.js';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import { euros } from '#lib/live.js';
-	import { ordinal, seatModel, seatName, type Result } from '#lib/viewer.js';
+	import { colourKey, ordinal, seatModel, seatName, type Result } from '#lib/viewer.js';
 
 	/**
 	 * How the match ended, on the stage: a podium for a ranked game, the winning side for a
@@ -22,7 +22,7 @@
 
 	const name = (seat: string) => seatName(seat, players);
 	const model = (seat: string) => seatModel(seat, players);
-	const colour = (seat: string) => model(seat) ?? seat;
+	const colour = (seat: string) => colourKey(seat, players);
 
 	/** The podium shows the first three ranks, the winner in the middle. */
 	const podium = $derived(

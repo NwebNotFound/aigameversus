@@ -9,7 +9,7 @@
 	import { gameName } from '#lib/games.js';
 	import { euros } from '#lib/live.js';
 	import { PLAY_SPEEDS, clampStep, shareLink, stepFromQuery } from '#lib/replay.js';
-	import { linesUpTo, marks, nextStop, previousStop, stops } from '#lib/viewer.js';
+	import { linesUpTo, marks, nextStop, previousStop, stops, mergeSeats } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -19,7 +19,11 @@
 	const log = $derived(data.events.state === 'ok' ? data.events.data : []);
 	const transcript = $derived(data.transcript.state === 'ok' ? data.transcript.data : null);
 	const lines = $derived(transcript?.lines ?? []);
-	const players = $derived(transcript?.players);
+	const players = $derived(
+		match
+			? mergeSeats(match.match.players, match.match.seats, transcript?.players, data.roster)
+			: undefined
+	);
 
 	// svelte-ignore state_referenced_locally
 	let step = $state(stepFromQuery(page.url.searchParams.get('step'), log.length));

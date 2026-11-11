@@ -4,7 +4,7 @@
  *
  * Text comes only from the transcript (`arena/transcript`); nothing here words an event.
  */
-import type { MatchEvent, Seat, TranscriptLine } from './api.js';
+import type { MatchEvent, RecordSeat, Seat, SetupOptions, TranscriptLine } from './api.js';
 
 /** Spectator view shows thoughts, hands and roles; spoiler-free shows what every player saw. */
 export type View = 'spectator' | 'spoiler-free';
@@ -261,4 +261,47 @@ export function showdownHands(lines: TranscriptLine[], index: number): ShownHand
 			}
 		];
 	});
+}
+
+/**
+ * Who sits in each seat, from every source the page has. The match record's seats come
+ * first (they exist for running and finished matches), then the transcript's players,
+ * then the roster for vendor and price. A model seat is never shown as a bot.
+ */
+export function mergeSeats(
+	order: string[],
+	record: Record<string, RecordSeat> | undefined,
+	transcript: Record<string, Seat> | undefined,
+	roster: SetupOptions['models'] = []
+): Record<string, Seat> {
+	const byId = new Map(roster.map((m) => [m.id, m]));
+	return Object.fromEntries(
+		order.map((seat) => {
+			const stored = record?.[seat];
+			const told = transcript?.[seat];
+			const model = stored?.model_id ?? told?.model ?? null;
+			const known = model ? byId.get(model) : undefined;
+			const kind: 'model' | 'bot' | undefined =
+				stored?.kind ?? (model ? 'model' : told?.name ? 'bot' : undefined);
+			return [
+				seat,
+				{
+					name: told?.name ?? stored?.name ?? null,
+					model,
+					kind,
+					vendor: known?.model.includes('/') ? known.model.split('/')[0] : null,
+					personality: stored?.personality ?? null,
+					price: known
+						? { input: known.input_usd_per_mtok, output: known.output_usd_per_mtok }
+						: null
+				}
+			];
+		})
+	);
+}
+
+/** The colour key of a seat: its vendor, so one company's models share a family of hues. */
+export function colourKey(seat: string, players: Record<string, Seat> | undefined): string {
+	const info = players?.[seat];
+	return info?.vendor ?? info?.model ?? seat;
 }
