@@ -98,6 +98,35 @@ that: results are per team, so a model needs many matches per role.
 Later, once the arena supports them: memory on against memory off, and
 Throne of Tokens.
 
+## Proposal: prompt p1 against p2 (not approved, no spend)
+
+The prompt pack v2 (pull requests #65, #66, #68) gives every game a second
+prompt: new rules text and a situation summary built from the observation.
+`prompt_version` is a setting of the whole match, so all four seats read the
+same version. That decides the design:
+
+- **Version per match (possible once the runner passes settings):** stage A of
+  experiment 1 runs with p1. Afterwards the same 56 seed and seating
+  combinations of its first replicate are played again with p2. Each p2 match
+  has a p1 twin with the same cards and the same seats, so the comparison is
+  paired. Outcomes: rejected answers and fallback turns per move, call
+  accuracy, lie rate, and whether a model's rank changes. Win shares cannot
+  move as a whole, because every seat has the same prompt. About 1.10 EUR
+  (56 matches at stage A's cost per match), budget 1.30 EUR, from the
+  unassigned 2.02 EUR. Test: Wilcoxon signed rank on the paired per-match
+  fallback rate, two-sided; the rest as effect sizes with intervals.
+- **Version per seat (needs the arena to take settings per seat):** the
+  mirror design of stage B with p1 and p2 instead of two efforts. Only that
+  says whether p2 makes a model win more. Planned when the arena supports it.
+
+Experiment 1 itself stays on p1 in all stages, passed explicitly, so its
+results compare with the matches already played.
+
+Seen by Arena Coder while writing v2: the Werewolf rules of p1 do not name
+the tools `stay_in_bed` and `let_them_die`. That is a likely cause of tool
+errors in Werewolf and a confound for any Werewolf comparison across the two
+versions.
+
 ## Build steps
 
 One step is one branch and one draft pull request, tested on bot and mock-LLM
