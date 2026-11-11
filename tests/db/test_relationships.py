@@ -108,7 +108,8 @@ def client(database_url, monkeypatch):
 def test_a_bot_match_through_the_api_fills_the_relations_of_its_bots(client):
     match = start(client, game="werewolf", players=8, seed=4)
     log, _ = follow(client, match["id"])
-    rows = client.get("/leaderboard", params={"game": "werewolf"}).json()["rows"]
+    params = {"game": "werewolf", "kind": "all", "group_bots": False}
+    rows = client.get("/leaderboard", params=params).json()["rows"]
     bots = {row["name"].removeprefix("Random Bot "): row["profile_id"] for row in rows}
 
     relations = client.get(f"/profiles/{bots['p1']}/relations").json()
