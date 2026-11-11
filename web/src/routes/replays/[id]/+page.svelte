@@ -31,7 +31,13 @@
 			? mergeSeats(match.match.players, match.match.seats, transcript?.players, data.roster)
 			: undefined
 	);
-	const lines = $derived(namedLines(transcript?.lines ?? [], players));
+	const lines = $derived(
+		namedLines(
+			transcript?.lines ?? [],
+			players,
+			Object.values(transcript?.players ?? {}).some((p) => p.display)
+		)
+	);
 
 	// svelte-ignore state_referenced_locally
 	let step = $state(stepFromQuery(page.url.searchParams.get('step'), log.length));

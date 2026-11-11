@@ -3,9 +3,11 @@
 	import type { Seat, TranscriptLine } from '#lib/api.js';
 	import { card } from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import Mention from '#lib/components/Mention.svelte';
 	import {
 		colourKey,
 		commentary,
+		mentionParts,
 		ordinal,
 		seatModel,
 		seatName,
@@ -34,6 +36,8 @@
 	let tab = $state<'all' | 'thoughts'>('all');
 	let who = $state('all');
 	let bookkeeping = $state(false);
+	/** Show what the players wrote exactly, seat ids and all, instead of name chips. */
+	let raw = $state(false);
 	let list = $state<HTMLOListElement>();
 	let pinned = true;
 
@@ -124,7 +128,15 @@
 								<span class="tag whisper-tag">whispers</span>
 							{/if}
 						</span>
-						<p class="bubble">{words(line) ?? line.text}</p>
+						<p class="bubble">
+							{#if raw}{words(line) ??
+									line.text}{:else}{#each mentionParts(words(line) ?? line.text, players) as part, i (i)}{#if 'seat' in part}<Mention
+											seat={part.seat}
+											name={name(part.seat)}
+											colourKey={colour(part.seat)}
+											written={part.text}
+										/>{:else}{part.text}{/if}{/each}{/if}
+						</p>
 					</div>
 				{:else if line.raw?.type === 'match_finished' && ranksOf(line).length}
 					<div class="final" data-testid="final-ranks">
@@ -176,10 +188,16 @@
 		{/each}
 	</ol>
 
-	<label class="bookkeeping">
-		<input type="checkbox" bind:checked={bookkeeping} />
-		Show bookkeeping
-	</label>
+	<div class="switches">
+		<label class="bookkeeping">
+			<input type="checkbox" bind:checked={bookkeeping} />
+			Show bookkeeping
+		</label>
+		<label class="bookkeeping">
+			<input type="checkbox" bind:checked={raw} data-testid="raw-words" />
+			Show raw words
+		</label>
+	</div>
 </section>
 
 <style>
@@ -527,6 +545,16 @@
 		color: var(--muted);
 		font-size: 0.8rem;
 		padding-left: 0.2rem;
+	}
+
+	.switches {
+		display: flex;
+		flex-wrap: wrap;
+		border-top: 1px solid var(--border);
+	}
+
+	.switches .bookkeeping {
+		border-top: 0;
 	}
 
 	.bookkeeping {
