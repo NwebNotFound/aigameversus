@@ -166,6 +166,37 @@ def test_a_short_all_in_does_not_reopen_raising():
     assert round_.next_actor() is None
 
 
+def test_after_a_short_all_in_going_all_in_is_refused_when_it_would_raise():
+    round_ = street({"a": 1000, "b": 1000, "c": 130})
+    act(round_, ("a", "raise", 100), ("b", "call"), ("c", "all_in"))
+
+    assert round_.problem("a", "all_in") == (
+        "You may not raise now, and all your chips would be a raise; call or fold."
+    )
+
+
+def test_all_in_that_is_only_a_call_stays_legal_when_raising_is_not():
+    round_ = street({"a": 1000, "b": 120, "c": 130})
+    act(round_, ("a", "raise", 100), ("b", "call"), ("c", "all_in"))  # short all-in to 130
+    # b has 20 behind: its all-in reaches 120, below the 130 to call.
+
+    assert round_.next_actor() == "a"
+    act(round_, ("a", "call"))
+    assert round_.problem("b", "all_in") is None
+    round_.apply("b", "all_in")
+    assert round_.bets["b"] == 120 and round_.next_actor() is None
+
+
+def test_a_short_big_blind_does_not_lower_the_bet_to_call():
+    round_ = street(
+        {"utg": 1000, "sb": 1000, "bb": 15}, posted={"sb": 10, "bb": 15}, order=["utg", "sb", "bb"]
+    )
+
+    assert round_.current_bet == 20
+    legal = round_.legal("utg")
+    assert (legal.call_amount, legal.min_raise_to) == (20, 40)
+
+
 def test_a_full_all_in_raise_reopens_raising():
     round_ = street({"a": 1000, "b": 1000, "c": 200})
     act(round_, ("a", "raise", 100), ("b", "call"), ("c", "all_in"))  # a full raise of 100

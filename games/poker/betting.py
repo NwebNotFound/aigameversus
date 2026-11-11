@@ -69,6 +69,8 @@ class Street(BaseModel):
         all_in = [p for p in order if p in all_in or (stacks[p] == 0 and p not in folded)]
         active = [p for p in order if p not in folded and p not in all_in]
         current = max(bets.values(), default=0)
+        if posted:  # a short big blind does not lower what the others must call
+            current = max(current, big_blind)
         street = cls(
             order=list(order),
             stacks={p: stacks[p] for p in order},
@@ -117,6 +119,9 @@ class Street(BaseModel):
             return f"You cannot check: {legal.call_amount} to call. Call, raise or fold."
         if kind == "call" and legal.can_check:
             return "There is nothing to call; check instead."
+        all_chips = self.bets[player] + self.stacks[player]
+        if kind == "all_in" and legal.min_raise_to is None and all_chips > self.current_bet:
+            return "You may not raise now, and all your chips would be a raise; call or fold."
         if kind == "raise":
             if legal.min_raise_to is None:
                 return "You may not raise now; call or fold."

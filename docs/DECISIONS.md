@@ -549,7 +549,10 @@ Each entry: date, decision, why, alternatives considered.
   The minimum raise is the current bet plus the size of the last full raise,
   and at least the big blind; before the flop that is double the big blind, as
   the spec's "double the last bet". An all-in below a full raise does not
-  reopen raising for players who already acted: they may only call or fold.
+  reopen raising for players who already acted: they may only call or fold,
+  and going all-in is refused for them when it would put in more than a call.
+  A big blind posted short does not lower the bet: the others still owe the
+  full big blind (the short blind is all-in, side pots sort out the rest).
   Side pots come from each player's total contribution in the hand; folded
   chips stay in the pots, and a pot that only one player can win returns an
   uncalled bet. Odd chips of a split pot go one each to the winners in seat
