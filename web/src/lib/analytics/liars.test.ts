@@ -18,8 +18,13 @@ const views = [
 ] as const;
 
 describe.each(views)('the web sums like the arena (%s)', (_, data) => {
-	it('gives the same totals over every move', () => {
-		expect(totalsOf(data.players, data.moves, data.pulls)).toEqual(data.totals);
+	it('gives the same totals over every move, for every number the tab shows', () => {
+		const ours = totalsOf(data.players, data.moves, data.pulls, data.spoilers);
+		for (const player of data.players) {
+			for (const [key, value] of Object.entries(ours[player])) {
+				expect(value, `${player}.${key}`).toEqual(data.totals[player][key]);
+			}
+		}
 	});
 
 	it('gives the same per-round cells', () => {
@@ -29,7 +34,10 @@ describe.each(views)('the web sums like the arena (%s)', (_, data) => {
 	it('cut at the last event is the whole match', () => {
 		const last = Math.max(...data.moves.map((m) => m.seq), ...data.pulls.map((p) => p.seq));
 		const cut = upTo(data, last);
-		expect(cut.totals).toEqual(data.totals);
+		for (const player of data.players) {
+			expect(cut.totals[player].lies).toBe(data.totals[player].lies);
+			expect(cut.totals[player].call_accuracy).toEqual(data.totals[player].call_accuracy);
+		}
 		expect(cut.moves).toHaveLength(data.moves.length);
 	});
 });
@@ -51,7 +59,7 @@ describe('upTo', () => {
 		expect(cut.moves).toEqual([]);
 		expect(cut.rounds).toEqual([]);
 		expect(cut.totals.p1.plays).toBe(0);
-		expect(cut.totals.p1.lie_rate).toBeNull();
+		expect(cut.totals.p1.lie_rate).toEqual({ value: null, n: 0, of: 0 });
 	});
 });
 

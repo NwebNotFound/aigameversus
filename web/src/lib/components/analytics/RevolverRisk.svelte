@@ -4,7 +4,7 @@
 
 	/**
 	 * Every trigger pull of the match, per player: survived (ring) or fired (filled red), and
-	 * in spectator view the chance it would fire at that moment as the bar behind it.
+	 * the chance it would fire at that moment (public: live chambers over chambers left).
 	 */
 	let {
 		data,
@@ -16,9 +16,7 @@
 
 <figure class="chart" data-testid="chart-revolver">
 	<figcaption>
-		Trigger pulls <small
-			>{data.spoilers ? 'with the chance each one fired' : 'survived or fired'}</small
-		>
+		Trigger pulls <small>with the chance each one fired</small>
 	</figcaption>
 	{#if data.pulls.length === 0}
 		<p class="empty">Nobody has pulled the trigger yet.</p>

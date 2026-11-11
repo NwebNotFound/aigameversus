@@ -8,6 +8,10 @@
 	 */
 	let { data, names }: { data: LiarsAnalytics; names: Record<string, string> } = $props();
 
+	/** "3 of 12": how many a rate rests on, so a small sample reads as one. */
+	const rateTitle = (r: { n: number; of: number } | null) =>
+		r ? `${r.n} of ${r.of}` : 'needs the hidden cards';
+
 	const most = $derived(
 		Math.max(
 			1,
@@ -62,18 +66,21 @@
 						</span>
 						<small>{t.calls_correct} · {t.calls_wrong}</small>
 					</td>
-					<td class="num" data-testid="lie-rate">{pct(t.lie_rate)}</td>
-					<td class="num">{pct(t.call_accuracy)}</td>
+					<td class="num" data-testid="lie-rate" title={rateTitle(t.lie_rate)}
+						>{pct(t.lie_rate?.value)}</td
+					>
+					<td class="num" title={rateTitle(t.call_accuracy)}>{pct(t.call_accuracy?.value)}</td>
 				</tr>
 			{/each}
 		</tbody>
 	</table>
 	{#if !data.spoilers}
 		<p class="note">
-			Spoiler-free: a lie counts only once its cards were turned over, so lie rates lean towards
-			called plays.
+			Spoiler-free: a lie counts only once its cards were turned over, so lie rates need the
+			spectator view.
 		</p>
 	{/if}
+	<p class="note">Moves the engine played for a model (random fallbacks) are not counted here.</p>
 </figure>
 
 <style>

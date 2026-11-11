@@ -4,7 +4,7 @@
 	import { seatHue } from '#lib/viewer.js';
 
 	/**
-	 * Thinking time of every move (network time included, docs/METRICS.md), a bar each in
+	 * Response time of every move (network time included, docs/METRICS.md), a bar each in
 	 * the player's colour; slow outliers are outlined. Until the runner records it, this
 	 * says so instead of drawing nothing.
 	 */
@@ -31,12 +31,12 @@
 	const colour = (player: string) => `oklch(0.75 0.12 ${seatHue(colours[player] ?? player)})`;
 </script>
 
-<figure class="chart" data-testid="chart-thinking">
-	<figcaption>Thinking time <small>per move · outlined = unusually slow</small></figcaption>
+<figure class="chart" data-testid="chart-response">
+	<figcaption>Response time <small>per move · outlined = unusually slow</small></figcaption>
 	{#if timed.length === 0}
-		<p class="empty" data-testid="thinking-empty">
-			No thinking times in this match yet: bots do not think, and the runner records the time of
-			model moves from the next build on.
+		<p class="empty" data-testid="response-empty">
+			No response times in this match: bots answer at once, and the arena records the time of model
+			moves from the decision events on.
 		</p>
 	{:else}
 		<div class="scroll">
@@ -45,7 +45,7 @@
 				{width}
 				height={H + 20}
 				role="img"
-				aria-label="Thinking time per move"
+				aria-label="Response time per move"
 			>
 				{#each [0, top / 2, top] as tick (tick)}
 					<line class="grid" x1="36" x2={width} y1={y(tick)} y2={y(tick)} />

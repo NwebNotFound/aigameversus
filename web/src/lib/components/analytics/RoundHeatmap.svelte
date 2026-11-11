@@ -18,7 +18,13 @@
 		if (!c) return null;
 		const plays = c.honest + c.lies + c.unknown;
 		const known = c.honest + c.lies;
-		return { plays, calls: c.calls, lieShare: known ? c.lies / known : null, unknown: c.unknown };
+		return {
+			plays,
+			calls: c.calls,
+			fallbacks: c.fallbacks ?? 0,
+			lieShare: known ? c.lies / known : null,
+			unknown: c.unknown
+		};
 	}
 
 	/** Lie share 0..1 as a colour from honest green to lying red; grey when unknown. */
@@ -58,7 +64,7 @@
 						{#each data.rounds as round (round.round)}
 							{@const c = round.players.includes(player) ? cell(round.round, player) : null}
 							<td>
-								{#if c && (c.plays || c.calls)}
+								{#if c && (c.plays || c.calls || c.fallbacks)}
 									<span
 										class="heat"
 										style="background: {c.plays ? colour(c.lieShare) : 'transparent'}"
@@ -69,7 +75,10 @@
 											: ''}"
 										data-testid="heat-cell"
 									>
-										{c.plays || ''}{#if c.calls}<b>◆</b>{/if}
+										{c.plays || ''}{#if c.calls}<b>◆</b>{/if}{#if c.fallbacks}<i
+												class="fb"
+												title="{c.fallbacks} random fallback">r</i
+											>{/if}
 									</span>
 								{:else if !round.players.includes(player)}
 									<span class="out" title="Out of the game">·</span>
@@ -136,6 +145,13 @@
 		color: #0d0c12;
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.heat .fb {
+		font-size: 0.75rem;
+		font-style: normal;
+		font-weight: 800;
+		color: #3a3346;
 	}
 
 	.heat b {

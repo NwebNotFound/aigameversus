@@ -20,7 +20,13 @@
 
 	const CELL = 14;
 	const GAP = 3;
-	const LABEL = 116;
+	/** The name column fits the longest name (about 7 px a letter at 12 px), within bounds. */
+	const LABEL = $derived(
+		Math.min(
+			220,
+			Math.max(80, 16 + 7 * Math.max(...data.players.map((p) => (names[p] ?? p).length)))
+		)
+	);
 	const columns = $derived(Math.max(data.moves.length, 1));
 	const width = $derived(LABEL + columns * (CELL + GAP));
 	const rows = $derived(data.players.length);

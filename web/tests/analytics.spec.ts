@@ -22,16 +22,16 @@ test('the tab draws the match and its numbers are the arena numbers', async ({ p
 
 	const panel = page.getByTestId('analytics');
 	await expect(panel.getByTestId('kpi-moves')).toHaveText(String(arena.moves.length));
-	for (const chart of ['moves', 'players', 'heatmap', 'revolver', 'cards', 'thinking']) {
+	for (const chart of ['moves', 'players', 'heatmap', 'revolver', 'cards', 'response']) {
 		await expect(panel.getByTestId(`chart-${chart}`)).toBeVisible();
 	}
 	await expect(panel.locator('[data-testid="chart-moves"] [data-seq]')).toHaveCount(
 		arena.moves.length
 	);
-	// Bots do not think: the chart says so instead of drawing empty bars.
-	await expect(panel.getByTestId('thinking-empty')).toBeVisible();
+	// Bots answer at once: the chart says so instead of drawing empty bars.
+	await expect(panel.getByTestId('response-empty')).toBeVisible();
 	const p1 = arena.totals.p1;
-	const rate = p1.lie_rate === null ? '–' : `${Math.round(p1.lie_rate * 100)} %`;
+	const rate = p1.lie_rate?.value == null ? '–' : `${Math.round(p1.lie_rate.value * 100)} %`;
 	await expect(
 		panel.locator('[data-testid="chart-players"] tr[data-player="p1"] [data-testid="lie-rate"]')
 	).toHaveText(rate);
@@ -70,7 +70,15 @@ test('spoiler-free analytics carry no hidden truth', async ({ page, request }) =
 	expect(bodies.length).toBeGreaterThan(0);
 	const data = JSON.parse(bodies[0]);
 	expect(data.spoilers).toBe(false);
-	for (const pull of data.pulls) expect(pull.risk).toBeNull();
+	// What needs the hidden cards is null; the revolver risk is public in both views.
+	expect(data.meta?.seed ?? null).toBeNull();
+	for (const totals of Object.values(data.totals) as {
+		lie_rate: unknown;
+		chosen_lie_rate: unknown;
+	}[]) {
+		expect(totals.lie_rate).toBeNull();
+		expect(totals.chosen_lie_rate).toBeNull();
+	}
 	// A play counts as honest or a lie only once its cards were turned over.
 	for (const move of data.moves.filter((m: { kind: string }) => m.kind === 'play')) {
 		if (!move.called) expect(move.honest).toBeNull();

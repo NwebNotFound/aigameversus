@@ -20,6 +20,8 @@ export interface LiarsMove {
 	automatic?: boolean;
 	correct?: boolean | null;
 	fallback: boolean | null;
+	/** The player's own revolver risk at that moment; public, in both views. */
+	risk?: number | null;
 	latency_ms: number | null;
 	tokens_in: number | null;
 	tokens_out: number | null;
@@ -33,29 +35,36 @@ export interface LiarsPull {
 	player: string;
 	pull: number;
 	live: boolean;
-	/** Chance the pull fires; null without spoilers. */
+	/** Chance the pull fires: live chambers over chambers left; public. */
 	risk: number | null;
 }
 
+/** A rate as the arena sends it: the value (null with nothing to count) and its n. */
+export interface Rate {
+	value: number | null;
+	n: number;
+	of: number;
+}
+
+/** The totals the tab shows; the arena sends more (docs/METRICS.md), all read as they come. */
 export interface LiarsTotals {
 	plays: number;
 	plays_known: number;
 	honest: number;
 	lies: number;
 	lies_called: number;
-	lie_rate: number | null;
+	/** Spoilers only (null without): over revealed plays it would lean towards called plays. */
+	lie_rate: Rate | null;
 	calls: number;
 	calls_correct: number;
 	calls_wrong: number;
-	call_accuracy: number | null;
-	cards_claimed: number;
+	call_accuracy: Rate;
 	pulls: number;
 	pulls_survived: number;
 	fallbacks: number;
-	thinking_ms_total: number | null;
-	thinking_ms_mean: number | null;
-	tokens_in: number | null;
-	tokens_out: number | null;
+	response_ms_total: number | null;
+	response_ms_mean: number | null;
+	[more: string]: unknown;
 }
 
 export interface LiarsAnalytics {
@@ -69,8 +78,12 @@ export interface LiarsAnalytics {
 	totals: Record<string, LiarsTotals>;
 	by_round: {
 		round: number;
-		players: Record<string, { honest: number; lies: number; unknown: number; calls: number }>;
+		players: Record<
+			string,
+			{ honest: number; lies: number; unknown: number; calls: number; fallbacks: number }
+		>;
 	}[];
+	meta?: Record<string, unknown>;
 }
 
 /** The analytics as they stood after the event at `lastSeq` (all of them when null). */
@@ -85,7 +98,7 @@ export function upTo(data: LiarsAnalytics, lastSeq: number | null): LiarsAnalyti
 		moves,
 		pulls,
 		rounds,
-		totals: totalsOf(data.players, moves, pulls),
+		totals: totalsOf(data.players, moves, pulls, data.spoilers),
 		by_round: byRound(data.players, rounds, moves)
 	};
 }
@@ -95,28 +108,33 @@ const sum = (values: (number | null)[]) => {
 	return known.length ? known.reduce((a, b) => a + b, 0) : null;
 };
 
+const rate = (n: number, of: number): Rate => ({ value: of ? n / of : null, n, of });
+
 /**
- * The per-player totals of docs/METRICS.md over the given moves and pulls: the same sums the
- * arena makes, for a replay that stopped part-way.
+ * The totals the tab shows, by the rules of docs/METRICS.md, for a replay cut part-way:
+ * skill numbers count the model's own moves (fallbacks apart), the lie rate needs the
+ * hidden cards. Summed over every move they equal the arena's (tested); the arena's other
+ * numbers are not recomputed here.
  */
 export function totalsOf(
 	players: string[],
 	moves: LiarsMove[],
-	pulls: LiarsPull[]
+	pulls: LiarsPull[],
+	spoilers: boolean
 ): Record<string, LiarsTotals> {
 	return Object.fromEntries(
 		players.map((player) => {
-			const plays = moves.filter((m) => m.player === player && m.kind === 'play');
+			const mine = moves.filter((m) => m.player === player);
+			const own = mine.filter((m) => !m.fallback);
+			const plays = own.filter((m) => m.kind === 'play');
 			const known = plays.filter((m) => m.honest !== null && m.honest !== undefined);
 			const lies = known.filter((m) => m.honest === false);
-			const chosen = moves.filter((m) => m.player === player && m.kind === 'call' && !m.automatic);
-			const judged = chosen.filter((m) => m.correct !== null && m.correct !== undefined);
+			const calls = own.filter((m) => m.kind === 'call');
+			const judged = calls.filter((m) => m.correct !== null && m.correct !== undefined);
 			const correct = judged.filter((m) => m.correct).length;
-			const own = moves.filter((m) => m.player === player);
-			const latencies = own.map((m) => m.latency_ms);
-			const thinking = sum(latencies);
-			const timed = latencies.filter((v) => v !== null).length;
-			const mine = pulls.filter((p) => p.player === player);
+			const times = mine.map((m) => m.latency_ms).filter((v): v is number => v !== null);
+			const total = times.length ? times.reduce((a, b) => a + b, 0) : null;
+			const myPulls = pulls.filter((p) => p.player === player);
 			return [
 				player,
 				{
@@ -125,19 +143,16 @@ export function totalsOf(
 					honest: known.length - lies.length,
 					lies: lies.length,
 					lies_called: lies.filter((m) => m.called).length,
-					lie_rate: known.length ? lies.length / known.length : null,
-					calls: chosen.length,
+					lie_rate: spoilers ? rate(lies.length, known.length) : null,
+					calls: calls.length,
 					calls_correct: correct,
 					calls_wrong: judged.length - correct,
-					call_accuracy: judged.length ? correct / judged.length : null,
-					cards_claimed: plays.reduce((a, m) => a + (m.cards ?? 0), 0),
-					pulls: mine.length,
-					pulls_survived: mine.filter((p) => !p.live).length,
-					fallbacks: own.filter((m) => m.fallback).length,
-					thinking_ms_total: thinking,
-					thinking_ms_mean: thinking === null ? null : thinking / timed,
-					tokens_in: sum(own.map((m) => m.tokens_in)),
-					tokens_out: sum(own.map((m) => m.tokens_out))
+					call_accuracy: rate(correct, judged.length),
+					pulls: myPulls.length,
+					pulls_survived: myPulls.filter((p) => !p.live).length,
+					fallbacks: mine.filter((m) => m.fallback).length,
+					response_ms_total: total,
+					response_ms_mean: total === null ? null : total / times.length
 				}
 			];
 		})
@@ -154,7 +169,8 @@ export function byRound(
 		round,
 		players: Object.fromEntries(
 			players.map((player) => {
-				const mine = moves.filter((m) => m.round === round && m.player === player);
+				const all = moves.filter((m) => m.round === round && m.player === player);
+				const mine = all.filter((m) => !m.fallback);
 				const plays = mine.filter((m) => m.kind === 'play');
 				return [
 					player,
@@ -162,7 +178,8 @@ export function byRound(
 						honest: plays.filter((m) => m.honest === true).length,
 						lies: plays.filter((m) => m.honest === false).length,
 						unknown: plays.filter((m) => m.honest === null || m.honest === undefined).length,
-						calls: mine.filter((m) => m.kind === 'call').length
+						calls: mine.filter((m) => m.kind === 'call').length,
+						fallbacks: all.filter((m) => m.fallback).length
 					}
 				];
 			})
@@ -171,7 +188,7 @@ export function byRound(
 }
 
 /**
- * Moves that took unusually long: above the median plus 2.5 times the median absolute
+ * Moves whose response took unusually long: above the median plus 2.5 times the median absolute
  * deviation of all timed moves (a robust cut that a single huge outlier does not move).
  */
 export function slowMoves(moves: LiarsMove[]): Set<number> {

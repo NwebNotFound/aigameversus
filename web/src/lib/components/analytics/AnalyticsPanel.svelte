@@ -7,7 +7,7 @@
 	import PlayerBars from './PlayerBars.svelte';
 	import RevolverRisk from './RevolverRisk.svelte';
 	import RoundHeatmap from './RoundHeatmap.svelte';
-	import ThinkingBars from './ThinkingBars.svelte';
+	import ResponseBars from './ResponseBars.svelte';
 
 	/**
 	 * The Analytics tab: the arena's numbers about the match (GET /matches/{id}/analytics,
@@ -69,7 +69,7 @@
 	const allLies = $derived(sum((t) => t.lies));
 	const allKnown = $derived(sum((t) => t.plays_known));
 	const caught = $derived(sum((t) => t.lies_called));
-	const thinking = $derived(
+	const response = $derived(
 		shown
 			? (() => {
 					const times = shown.moves.map((m) => m.latency_ms).filter((v): v is number => v !== null);
@@ -91,16 +91,20 @@
 	{:else if shown}
 		<ul class="kpis" aria-label="Key numbers">
 			<li><b data-testid="kpi-moves">{shown.moves.length}</b><span>moves</span></li>
-			<li>
-				<b>{pct(allKnown ? allLies / allKnown : null)}</b><span>of known plays were lies</span>
-			</li>
+			{#if shown.spoilers}
+				<li>
+					<b>{pct(allKnown ? allLies / allKnown : null)}</b><span>of the plays were lies</span>
+				</li>
+			{:else}
+				<li><b>{allLies}</b><span>lies revealed by a call</span></li>
+			{/if}
 			<li><b>{caught} / {allLies}</b><span>lies caught</span></li>
 			<li>
 				<b>{shown.pulls.filter((p) => p.live).length} / {shown.pulls.length}</b><span
 					>pulls fired</span
 				>
 			</li>
-			<li><b>{seconds(thinking)}</b><span>mean thinking time</span></li>
+			<li><b>{seconds(response)}</b><span>mean response time</span></li>
 		</ul>
 
 		<MoveStrip data={shown} {names} {slow} {onjump} />
@@ -110,7 +114,7 @@
 			<RevolverRisk data={shown} {names} {onjump} />
 			<CardsLeft data={shown} {names} {colours} />
 		</div>
-		<ThinkingBars data={shown} {names} {colours} {slow} {onjump} />
+		<ResponseBars data={shown} {names} {colours} {slow} {onjump} />
 		<p class="foot">
 			{#if view === 'spoiler-free'}Spoiler-free: only what every player saw counts here.{:else}Spectator
 				view: hidden cards and the revolver loading are counted.{/if}
