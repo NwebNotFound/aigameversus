@@ -24,6 +24,8 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "no_execution": "Das Dorf ist sich nicht einig. Heute stirbt niemand.",
         "game_over": "Das Spiel ist aus. {winner}",
         "grief": "{player} stirbt aus Kummer um {lover}.",
+        "bear_growl": "Der Bär des Bärenführers brummt: Neben ihm sitzt ein Werwolf.",
+        "raven_mark": "Der Rabe hat {player} markiert: zwei Stimmen gegen {player} heute.",
         "idiot_spared": "{player} ist der Dorfdepp und überlebt, darf aber nicht mehr abstimmen.",
         "scapegoat": "Gleichstand. Der Sündenbock {player} muss sterben.",
         "powers_lost": (
@@ -41,6 +43,8 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "no_execution": "The village cannot agree. Nobody dies today.",
         "game_over": "The game is over. {winner}",
         "grief": "{player} dies of grief for {lover}.",
+        "bear_growl": "The Bear Tamer's bear growls: a werewolf sits next to him.",
+        "raven_mark": "The Raven has marked {player}: two votes against {player} today.",
         "idiot_spared": "{player} is the Village Idiot and survives, but may no longer vote.",
         "scapegoat": "A tie. The scapegoat {player} must die.",
         "powers_lost": (
@@ -55,12 +59,14 @@ WINNERS = {
         "wolves": "Die Werwölfe haben gewonnen.",
         "nobody": "Niemand hat überlebt.",
         "lovers": "Das Liebespaar hat gewonnen.",
+        "white_wolf": "Der Weiße Werwolf hat als Letzter überlebt und gewinnt.",
     },
     "en": {
         "village": "The village wins.",
         "wolves": "The werewolves win.",
         "nobody": "Nobody survived.",
         "lovers": "The lovers win.",
+        "white_wolf": "The White Werewolf is the last one alive and wins.",
     },
 }
 

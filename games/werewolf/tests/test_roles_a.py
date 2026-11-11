@@ -320,9 +320,10 @@ def test_without_a_tie_the_scapegoat_is_safe():
     assert table.of_type("vote_result")[0].data["executed"] == "c"
 
 
-@pytest.mark.parametrize("template", ["duesterwald"])
-def test_templates_with_batch_a_roles_still_wait_for_the_bear_tamer(template):
+@pytest.mark.parametrize("template", ["classic", "duesterwald", "chaos"])
+def test_every_template_is_playable(template):
     from games.werewolf.plugin import Werewolf
 
-    with pytest.raises(ValueError, match="bear_tamer"):
-        Werewolf().initial_state([f"p{i}" for i in range(10)], {"template": template})
+    state = Werewolf().initial_state([f"p{i}" for i in range(16)], {"template": template})
+
+    assert sum(state.selection.values()) == 16
