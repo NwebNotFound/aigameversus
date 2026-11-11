@@ -19,7 +19,9 @@ script from the running UI; no image file was downloaded or copied.
 | Werewolf circle: avatars, night and day backdrop, moon and sun, vote arrows | `web/src/lib/components/WerewolfCircle.svelte` | the live view and replays of Werewolf | original, inline SVG and CSS |
 | Player avatars (a letter in a coloured ring) | the three components above | seats of every table | original, inline SVG |
 | Screenshots | `docs/images/*.png` | README and docs | taken from this UI with Playwright; every player is a random bot |
-| UI audit screenshots (before) | `docs/images/ui/before-*.png` | `docs/UI-DESIGN.md`, UI pull requests | taken from this UI with Playwright; every player is a random bot |
+| UI screenshots (before and after) | `docs/images/ui/*.png` | `docs/UI-DESIGN.md`, UI pull requests | taken from this UI with Playwright; the players are random bots or the models of `docs/examples/` |
+| Player avatars on the watch screen (a lit disc with an initial and a small mark, coloured by model) | `web/src/lib/components/Avatar.svelte` | the cast, the commentary | original, inline SVG |
+| View switch and thought icons (eye, crossed eye, lock) | `web/src/lib/components/ViewSwitch.svelte`, `Commentary.svelte` | the watch screen | original, inline SVG |
 | GIFs | `docs/images/showcase-*.gif` | README | recorded from this UI by `scripts/make_showcase.sh` (Playwright frames, assembled with Pillow); random bots only |
 
 Fonts: none are bundled; the UI uses the system font stack (see `web/src/app.css`).

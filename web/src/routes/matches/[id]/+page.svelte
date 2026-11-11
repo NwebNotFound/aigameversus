@@ -1,37 +1,49 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ControlAction, LiveState, MatchEvent } from '#lib/api.js';
-	import MatchColumns from '#lib/components/MatchColumns.svelte';
+	import type { ControlAction, LiveState, MatchEvent, Transcript } from '#lib/api.js';
+	import ViewSwitch from '#lib/components/ViewSwitch.svelte';
+	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS, euros, merge } from '#lib/live.js';
+	import { langOf } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
+
+	const view = $derived(data.view);
+	/** `?view=spoiler-free` on every call, so the web server sends public data only. */
+	const viewQuery = $derived(view === 'spoiler-free' ? '?view=spoiler-free' : '');
 
 	/** The latest snapshot from /state; until the first one, what the page was loaded with. */
 	let fresh = $state<LiveState | null>(null);
 	const live = $derived(fresh ?? (data.result.state === 'ok' ? data.result.data : null));
 
 	let log = $state<MatchEvent[]>([]);
+	let transcript = $state<Transcript | null>(null);
 	let connection = $state<'connecting' | 'live' | 'reconnecting' | 'ended' | 'missing'>(
 		'connecting'
 	);
-	let spoilers = $state(true);
 	let confirmAbort = $state(false);
 	let busy = $state(false);
 	let problem = $state<string | null>(null);
 
 	const status = $derived(live?.control?.paused ? 'paused' : (live?.match.status ?? 'unknown'));
-
-	const stateUrl = $derived(`/matches/${encodeURIComponent(params.id)}/state`);
+	const base = $derived(`/matches/${encodeURIComponent(params.id)}`);
+	const lang = $derived(live ? langOf(live.match.settings) : 'en');
+	const turn = $derived(live?.board.spec?.turn);
 
 	let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-	/** Board, cost and status after new turns; at most about three times a second. */
+	/** Board, cost, status and commentary after new turns; at most about three times a second. */
 	function refreshSoon() {
 		refreshTimer ??= setTimeout(async () => {
 			refreshTimer = undefined;
-			const response = await fetch(stateUrl).catch(() => null);
-			if (response?.ok) fresh = await response.json();
+			const join = viewQuery ? '&' : '?';
+			const [state, lines] = await Promise.all([
+				fetch(`${base}/state${viewQuery}`).catch(() => null),
+				fetch(`${base}/transcript${viewQuery}${join}lang=${lang}`).catch(() => null)
+			]);
+			if (state?.ok) fresh = await state.json();
+			if (lines?.ok) transcript = await lines.json();
 		}, 300);
 	}
 
@@ -39,7 +51,7 @@
 		busy = true;
 		problem = null;
 		try {
-			const response = await fetch(stateUrl, {
+			const response = await fetch(`${base}/state${viewQuery}`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify(body)
@@ -55,7 +67,7 @@
 	}
 
 	onMount(() => {
-		const source = new EventSource(`/matches/${encodeURIComponent(params.id)}/stream`);
+		const source = new EventSource(`${base}/stream${viewQuery}`);
 		source.onopen = () => (connection = 'live');
 		source.onerror = () => {
 			if (connection !== 'ended' && connection !== 'missing') connection = 'reconnecting';
@@ -74,6 +86,7 @@
 				refreshSoon();
 			});
 		}
+		refreshSoon();
 		return () => {
 			source.close();
 			clearTimeout(refreshTimer);
@@ -96,25 +109,44 @@
 		</span>
 	</div>
 {:else}
-	<section class="top" aria-label="Match">
+	<header class="top" aria-label="Match">
 		<div class="title">
 			<h1>{gameName(live.match.game)}</h1>
-			<span class="pill" data-status={status} data-testid="status">{status}</span>
+			<span class="pill" data-status={status} data-testid="status">
+				{#if status === 'running' && connection === 'live'}<i class="dot"></i>{/if}{status}
+			</span>
 			<span class="muted" data-testid="connection">
 				{#if connection === 'live'}live{:else if connection === 'reconnecting'}reconnecting…
 				{:else if connection === 'ended'}whole log loaded{:else if connection === 'missing'}
 					not found{:else}connecting…{/if}
 			</span>
+			<span class="total" data-testid="cost">{euros(live.cost.total_micro_eur)}</span>
 		</div>
-		<p class="muted">
-			{live.match.players.join(' · ')} · seed {live.match.seed}
-		</p>
-
 		<div class="bar">
+			<ViewSwitch {view} />
+			{#if view === 'spectator'}<span class="muted" data-testid="seed">seed {live.match.seed}</span
+				>{/if}
+		</div>
+		{#if problem}<p class="problem" role="alert">{problem}</p>{/if}
+	</header>
+
+	<WatchScreen
+		spec={live.board.spec}
+		{view}
+		events={log}
+		lines={transcript?.lines ?? []}
+		seats={live.match.players}
+		players={transcript?.players}
+		costs={live.cost.players}
+		active={typeof turn === 'string' ? turn : null}
+	>
+		{#snippet controls()}
 			{#if live.control}
 				<div class="controls" role="group" aria-label="Controls">
 					{#if live.control.paused}
-						<button disabled={busy} onclick={() => command({ action: 'resume' })}>Resume</button>
+						<button class="primary" disabled={busy} onclick={() => command({ action: 'resume' })}
+							>Resume</button
+						>
 					{:else}
 						<button disabled={busy} onclick={() => command({ action: 'pause' })}>Pause</button>
 					{/if}
@@ -148,51 +180,45 @@
 						</button>
 					{/if}
 				</div>
+			{:else if live.match.status === 'finished'}
+				<a class="replay-link" href="/replays/{params.id}{viewQuery}">Watch the replay →</a>
 			{/if}
-			<label class="toggle">
-				<input type="checkbox" bind:checked={spoilers} />
-				Show spoilers
-			</label>
-			<div class="cost" data-testid="cost">
-				<span>Cost <strong>{euros(live.cost.total_micro_eur)}</strong></span>
-				{#each Object.entries(live.cost.players) as [name, micro] (name)}
-					<span class="muted">{name} {euros(micro)}</span>
-				{/each}
-			</div>
-		</div>
-		{#if problem}<p class="problem" role="alert">{problem}</p>{/if}
-	</section>
-
-	<MatchColumns spec={live.board.spec} {spoilers} events={log} players={live.match.players} />
+		{/snippet}
+	</WatchScreen>
 {/if}
 
 <style>
 	.top {
-		padding-block: 1.25rem 0.5rem;
+		display: grid;
+		gap: 0.6rem;
+		padding-top: 1.25rem;
 	}
 
 	.title {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.5rem 0.9rem;
+		gap: 0.4rem 0.8rem;
 	}
 
 	h1 {
 		margin: 0;
-		font-size: clamp(1.6rem, 5vw, 2.4rem);
+		font-size: clamp(1.6rem, 4vw, 2.4rem);
 	}
 
 	.pill {
-		padding: 0.1rem 0.7rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.1rem 0.65rem;
 		border-radius: 999px;
 		border: 1px solid var(--border);
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 	}
 
 	.pill[data-status='running'] {
-		color: #7ad69a;
-		border-color: #7ad69a;
+		color: var(--ok);
+		border-color: var(--ok);
 	}
 
 	.pill[data-status='paused'] {
@@ -206,22 +232,52 @@
 		border-color: var(--danger);
 	}
 
+	.dot {
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background: currentColor;
+		animation: pulse 1.6s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.3;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.dot {
+			animation: none;
+		}
+	}
+
+	.total {
+		margin-left: auto;
+		font-variant-numeric: tabular-nums;
+		color: var(--accent);
+		font-weight: 650;
+	}
+
 	.muted {
 		color: var(--muted);
+		font-size: 0.85rem;
 	}
 
 	.bar,
 	.controls,
-	.cost,
 	.confirm {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.5rem 0.9rem;
+		gap: 0.5rem 0.75rem;
 	}
 
-	.bar {
-		gap: 0.75rem 1.5rem;
+	.controls {
+		padding: 0.75rem 0.9rem;
+		border-radius: var(--radius);
+		background: var(--surface);
+		border: 1px solid var(--border);
 	}
 
 	button,
@@ -239,6 +295,12 @@
 		cursor: pointer;
 	}
 
+	button.primary {
+		color: var(--bg);
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+
 	button.danger {
 		color: var(--danger);
 	}
@@ -247,6 +309,10 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
+	}
+
+	.replay-link {
+		color: var(--accent);
 	}
 
 	.problem {
