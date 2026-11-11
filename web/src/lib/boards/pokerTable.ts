@@ -1,3 +1,4 @@
+import type { MatchEvent } from '../api.js';
 /** Pure helpers of the Poker table: seat positions, card faces, chip stacks, percentages. */
 
 export interface Point {
@@ -61,4 +62,29 @@ const POSITIONS: Record<string, string> = {
 /** The short tag of a table position; nothing for the others. */
 export function positionTag(position: unknown): string | null {
 	return typeof position === 'string' ? (POSITIONS[position] ?? null) : null;
+}
+
+export interface ActionChip {
+	kind: string;
+	/** "raise 120", "all-in 1000", "call", "fold": the action and the amount it went to. */
+	label: string;
+}
+
+/**
+ * Each player's last action on the current street, for the chip next to the seat. A new
+ * street or hand clears them.
+ */
+export function actionChips(events: MatchEvent[]): Record<string, ActionChip> {
+	let chips: Record<string, ActionChip> = {};
+	for (const event of events) {
+		if (event.type === 'hand_started' || event.type === 'street_started') chips = {};
+		if (event.type !== 'bet_action') continue;
+		const { player, kind, to } = event.data as { player?: unknown; kind?: unknown; to?: unknown };
+		if (typeof player !== 'string' || typeof kind !== 'string') continue;
+		const word = kind.replaceAll('_', '-');
+		const amount =
+			['raise', 'bet', 'all_in'].includes(kind) && typeof to === 'number' ? ` ${to}` : '';
+		chips[player] = { kind, label: `${word}${amount}` };
+	}
+	return chips;
 }

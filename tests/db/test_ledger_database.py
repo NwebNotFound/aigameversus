@@ -209,3 +209,11 @@ def test_without_its_ledger_costs_are_unknown_and_the_rest_still_shows(
     usage = page.json()["usage"]
     assert (usage["cost_total_micro_eur"], usage["cost_per_game_micro_eur"]) == (None, None)
     assert usage["tool_error_rate"] == pytest.approx(0.1)
+
+
+def test_without_its_ledger_the_month_is_unknown_not_zero(server, closed_port_url):
+    with server(closed_port_url) as client:
+        month = client.get("/ledger/month")
+
+    assert month.status_code == 503
+    assert "spend ledger cannot be read" in month.json()["detail"]

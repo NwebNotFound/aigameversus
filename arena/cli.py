@@ -33,6 +33,7 @@ from arena.engine.plugin import GamePlugin
 from arena.engine.replay import replay
 from arena.engine.types import Event, MatchPaused, Placement
 from arena.games import load_games
+from arena.memory.store import MemoryStore
 from arena.ratings.store import RatingStore
 from arena.transcript import (
     RENDERERS,
@@ -56,6 +57,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="arena", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("games", help="list the games that can be played")
+    memory = commands.add_parser("memory", help="what players remember of each other")
+    memory_commands = memory.add_subparsers(dest="memory_command", required=True)
+    reset = memory_commands.add_parser(
+        "reset", help="forget relationships and match summaries (ratings stay)"
+    )
+    reset.add_argument("--profile", metavar="ID", help="only what this profile remembers")
+    reset.add_argument(
+        "--yes", action="store_true", help="really forget; needed, it cannot be undone"
+    )
     show = commands.add_parser(
         "transcript", help="print a stored match, or a saved match file, as a readable play-by-play"
     )
@@ -122,6 +132,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Lines go out as they are printed, so a match written to a file can be followed.
     sys.stdout.reconfigure(errors="backslashreplace", line_buffering=True)
     games = load_games()
+    if args.command == "memory":
+        try:
+            return asyncio.run(_reset_memory(args.profile, args.yes))
+        except _WrongCall as error:
+            parser.error(str(error))
     if args.command == "games":
         for game in games.values():
             print(f"{game.id:<12} {game.name} ({game.min_players} to {game.max_players} players)")
@@ -152,6 +167,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         return asyncio.run(_play_models(plugin, args.models.split(","), options, args.save, args))
     except _WrongCall as error:
         parser.error(str(error))
+
+
+async def _reset_memory(profile: str | None, yes: bool) -> int:
+    try:
+        profile_id = None if profile is None else UUID(profile)
+    except ValueError:
+        raise _WrongCall(f"--profile needs a profile id, got {profile!r}") from None
+    if not yes:
+        raise _WrongCall("memory reset forgets for good; add --yes to do it")
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise _WrongCall("memory reset needs DATABASE_URL")
+    pool = await connect(url)
+    try:
+        await migrate(pool)
+        done = await MemoryStore(pool).reset(profile_id)
+    finally:
+        await pool.close()
+    whose = "every player" if profile_id is None else f"profile {profile_id}"
+    print(
+        f"Forgot {done.relationships} relationships and {done.memories} match memories of {whose}."
+    )
+    return 0
 
 
 def _play_bots(
