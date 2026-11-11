@@ -268,6 +268,11 @@ uv run python -m games.liars_deck.variants   # regenerate the schema
 uv run pytest games/liars_deck
 ```
 
+A new Werewolf role already shows up in the role selection
+(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles` and
+`POST /games/werewolf/selection/validate`): give it a `team`, `unique` and a
+balance `weight`.
+
 ### A unit, building or event
 
 An entry in `games/civ/data/units.yaml` or `buildings.yaml`, or a new file in

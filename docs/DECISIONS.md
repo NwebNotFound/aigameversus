@@ -282,6 +282,43 @@ Each entry: date, decision, why, alternatives considered.
   joker keeps the deck size and the table-card rules unchanged.
 - **Alternatives:** A 21st card; one king, queen or ace marked as devil.
 
+## D-022 · Werewolf role selection: wolf count and balance light
+
+- **Date:** 2026-11-11
+- **Decision:** For the selection rules ("at least 1 wolf", "wolves fewer
+  than half the players") the White Werewolf (team `solo`) counts as a wolf,
+  like the roles of team `wolves`, because it hunts with them. The balance light sums `weight × count`
+  over the filled selection: above +5 is *village*, below −5 is *wolves*,
+  anything from −5 to +5 is *even*, i.e. less than one werewolf's weight (−6)
+  away from 0. "Zufällig ausgewogen" draws 300 random playable mixes from the
+  match seed (wolf count, special roles on both sides, villagers for the rest)
+  and keeps the first one closest to the template's `target_balance`. Problems
+  carry a stable `code` and the role id, so the UI can translate the English
+  message.
+- **Why:** A fixed margin tied to the strongest repeatable role is easy to
+  explain next to the light; counting the White Werewolf keeps 3 wolves plus it
+  from passing as "3 wolves".
+- **Alternatives:** a margin scaled by player count; counting only team
+  `wolves`; picking the random mix by search instead of sampling.
+
+## D-023 · Werewolf "Klassisch" scales its wolves with the table
+
+- **Date:** 2026-11-11
+- **Decision:** The Klassisch template has `by_players`, a per-size table in
+  `games/werewolf/templates.yaml` that overrides the werewolf count: 2 wolves
+  for 6-8 players, 3 for 9-15, 4 for 16. Seer, witch and hunter stay one each;
+  villagers fill the rest. `apply_template` reads the table; there is no wolf
+  formula in code.
+- **Why:** The balance light (D-022) must not favour the village. With the
+  fixed roles the total is `11 + players - 7 * wolves`: +3, +4, +5 for 6-8
+  players, -1, 0, +1 for 9-11, +2 to +5 for 12-15 and -1 for 16. The light is
+  *even* at every size from 6 to 16. 6-8 players cannot get closer to 0 (3 of
+  6 is not allowed, 3 of 7-8 is a large share of a small table). Wolves stay
+  under half the players everywhere. A test checks every size.
+- **Alternatives:** `max(2, players // 4)` wolves, i.e. 2 wolves up to 11
+  players (rejected: leaves 9-11 players village-favoured at +6 to +8); a
+  formula field in the template format.
+
 ## D-030 · Spectator UI: SvelteKit 3 on Node, API calls server-side, English chrome
 
 - **Date:** 2026-11-11
