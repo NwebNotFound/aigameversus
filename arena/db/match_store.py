@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from arena.engine.types import Placement, PlayerId
 
-Status = Literal["running", "finished", "failed", "interrupted"]
+Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 
 _COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements"
 
@@ -54,9 +54,10 @@ class MatchStore:
     async def close(
         self, match_id: UUID, status: Status, placements: Sequence[Placement] | None = None
     ) -> None:
-        """Record how a match stopped."""
+        """Record how a match stopped. A match that is no longer running keeps its record."""
         await self._pool.execute(
-            "UPDATE matches SET status = $2, placements = $3, finished_at = now() WHERE id = $1",
+            "UPDATE matches SET status = $2, placements = $3, finished_at = now() "
+            "WHERE id = $1 AND status = 'running'",
             match_id,
             status,
             None if placements is None else [p.model_dump() for p in placements],

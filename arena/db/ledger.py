@@ -70,6 +70,15 @@ class Ledger:
                 cost,
             )
 
+    async def match_costs(self, match_id: UUID) -> dict[PlayerId, int]:
+        """What each player of a match has cost so far, in millionths of a euro."""
+        rows = await self._pool.fetch(
+            "SELECT player, sum(cost_micro_eur) AS cost FROM model_calls "
+            "WHERE match_id = $1 GROUP BY player ORDER BY player",
+            match_id,
+        )
+        return {row["player"]: int(row["cost"]) for row in rows}
+
     async def settle(self, call_id: int, input_tokens: int, output_tokens: int, cost: int) -> None:
         """Replace the upper bound of a booked call by what it was billed for."""
         await self._pool.execute(
