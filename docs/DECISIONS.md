@@ -972,7 +972,80 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** a secret Raven mark; the infection kept for a later night
   when the victim is saved; the White Werewolf counted for the pack's win.
 
-## D-052 · Throne of Tokens economy: one stock per nation, and what the spec leaves open about cities
+## D-052 · A finished API match rates its random bots
+
+- **Date:** 2026-11-11
+- **Decision:** When a match started through `POST /matches` finishes,
+  `LiveMatches` (`arena/api/live.py`) applies its placements to the ratings
+  (`RatingStore.apply_match_result`, keyed by the match id, so it counts once).
+  Every seat has a bot profile, "Random Bot p1", "Random Bot p2", ...
+  (`model_id` `random-bot`), created on first use with an id derived from the
+  seat name. Failed, interrupted and paused matches are not rated. A rating
+  error is logged and never fails the match. `demo_seed` ignores `random-bot`
+  profiles when it checks for real profiles. The `arena` command stores
+  nothing, so it rates nothing.
+- **Why:** A profile can be rated only once per match, so the bots need one
+  profile per seat, not one per kind. The leaderboard then fills from real
+  matches. Rating after the record is closed keeps the match status true even
+  if the rating fails.
+- **Alternatives:** one profile per bot kind (impossible: the same profile
+  twice in one match); rating only matches with real model players (the
+  leaderboard would stay empty until phase 2).
+
+## D-053 · Per-game statistics are pure functions over the event log
+
+- **Date:** 2026-11-11
+- **Decision:** Statistics live in `arena/stats/<game>.py` as pure functions
+  from the stored event log of one match to a Pydantic model per player
+  (`match_stats`), plus `aggregate` over many matches of one player. They read
+  only events the plugin already emits. The first one is Liar's Deck: lie rate
+  (lies / plays, a lie is a play with a card that is neither the table card nor a
+  joker), times caught lying, success rate of "Liar!" calls (only calls the
+  player chose to make; automatic calls are forced), rounds survived (rounds
+  played minus the round of the fall) and the boldest bluff (the highest
+  revolver risk, live chambers left / chambers left, faced while lying).
+- **Why:** Computing from the log keeps the numbers reproducible and needs no
+  change to a plugin. The helpers in `arena/ratings/stats.py` do the rates, so
+  "no data" is `None`, never 0.
+- **Alternatives:** counting in the plugin state (changes the plugins, and old
+  logs would have no numbers); storing the numbers per match in a table.
+## D-054 · Poker statistics: definitions
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/stats/poker.py` counts, over the hands a player was
+  dealt into: VPIP (a call, raise or all-in before the flop; blinds and a free
+  check do not count), aggression factor (aggressive actions / calls; an
+  all-in is aggressive only if it goes above the street's highest bet), bluff
+  rate (bluff hands / hands with a bet or raise; a bluff hand is a win without
+  showdown with less than a pair, or a showdown loss), chips per 100 hands
+  (pot shares won minus chips put in, blinds included) and worst decisions
+  (a fold whose cards plus the final board would have beaten every shown hand
+  at the showdown).
+- **Why:** The spec names the numbers but not the formulas. These use only
+  events the plugin already emits, including the spectator-only hole cards,
+  and chips balance exactly (the net chips of all players sum to 0, which the
+  tests check on real bot matches).
+- **Alternatives:** counting a showdown loss only when the hand was weak
+  (needs a notion of a "strong" hand); counting every all-in as aggressive.
+## D-055 · Werewolf statistics: definitions
+
+- **Date:** 2026-11-11
+- **Decision:** `arena/stats/werewolf.py` counts per player and match: vote
+  accuracy (of the votes for a player cast while on the village side, the
+  share that hit a wolf; abstentions are counted separately and wolves' own
+  votes are left out), rounds alive (a round is a night and the day after it;
+  a player who dies in round `n` was alive for `n` rounds, a survivor for all
+  rounds), wins (from `game_over`), and for the seer the rounds she lived and
+  whether she died. The wolf side is the pack from `pack_revealed` plus
+  `joined_pack` and `infected` players, from the moment they join.
+- **Why:** The spec names "vote accuracy, survival, seer outing speed" without
+  formulas. Everything comes from events the plugin already emits (the
+  spectator log has all roles). "Outing speed" is measured as how long the seer
+  lives, since the log has no event for a claim.
+- **Alternatives:** counting wolves' votes too (a hit means the opposite for
+  them); measuring the outing by chat text (the log has no claim event).
+
+## D-056 · Throne of Tokens economy: one stock per nation, and what the spec leaves open about cities
 
 - **Date:** 2026-11-11
 - **Decision:** A nation has one stock of food, wood, iron and gold. Its
@@ -1020,7 +1093,7 @@ Each entry: date, decision, why, alternatives considered.
   regions are balanced for six worked tiles); losing population when a city
   cannot be fed (a second starvation rule next to the one for units).
 
-## D-053 · Throne of Tokens state: one model, systems that emit, events that carry outcomes
+## D-057 · Throne of Tokens state: one model, systems that emit, events that carry outcomes
 
 - **Date:** 2026-11-11
 - **Decision:** The game has one state model, `CivState` in
