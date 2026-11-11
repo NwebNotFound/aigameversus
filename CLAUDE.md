@@ -255,6 +255,7 @@ arena/
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
   liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
+  poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
   werewolf/     Werewolf: plugin, abilities, roles, templates, selection
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
