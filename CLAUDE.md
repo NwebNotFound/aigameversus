@@ -11,7 +11,9 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.6, the end of phase 1. The engine runs
+**State of the build:** phases 1 to 6 are built (platform, Liar's Deck, Poker, Werewolf,
+spectator UI, profiles with statistics and trust); the Throne of Tokens match (phase 7)
+is not playable yet. The engine runs
 complete matches of any plugin, stores their event logs in Postgres and
 rebuilds the state from a log. A seat is played by a random bot or by the
 agent runner, which prompts a model and reads its answer; in tests and CI that
@@ -19,9 +21,9 @@ model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models. The `arena`
 command can seat them (`--models`, paid calls inside the caps); `POST /matches`
-seats random bots only. Three games can
+seats random bots only. Four games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
-(`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
+(`games/liars_deck`), Poker (`games/poker`) and Werewolf (`games/werewolf`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard, player
 profiles with their game statistics (`GET /profiles/{id}/stats`), the
