@@ -9,6 +9,7 @@
 		seatPoint
 	} from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import SeatTag from '#lib/components/SeatTag.svelte';
 	import { hidden } from '#lib/live.js';
 	import { seatHue } from '#lib/viewer.js';
 
@@ -22,13 +23,15 @@
 		spoilers,
 		events = [],
 		names = {},
-		colours = {}
+		colours = {},
+		subs = {}
 	}: {
 		spec: Record<string, unknown>;
 		spoilers: boolean;
 		events?: MatchEvent[];
 		names?: Record<string, string>;
 		colours?: Record<string, string>;
+		subs?: Record<string, string | null>;
 	} = $props();
 	const label = (seat: string) => names[seat] ?? seat;
 
@@ -84,7 +87,9 @@
 		{#if pots.length > 1}
 			<ul class="pots" data-testid="side-pots">
 				{#each pots as pot, i (i)}
-					<li>{i === 0 ? 'Main' : `Side ${i}`}: {pot.amount} ({pot.eligible.join(', ')})</li>
+					<li>
+						{i === 0 ? 'Main' : `Side ${i}`}: {pot.amount} ({pot.eligible.map(label).join(', ')})
+					</li>
 				{/each}
 			</ul>
 		{/if}
@@ -99,6 +104,7 @@
 			class:broke={busted(seat)}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
+			data-seat={seat.player}
 			aria-label={label(seat.player)}
 		>
 			<header>
@@ -109,7 +115,7 @@
 					active={seat.player === spec.turn}
 					out={busted(seat)}
 				/>
-				<strong>{label(seat.player)}</strong>
+				<SeatTag seat={seat.player} name={label(seat.player)} sub={subs[seat.player]} compact />
 				{#if tag}<span class="tag" class:dealer={tag === 'D'} data-testid="position">{tag}</span
 					>{/if}
 				{#if seat.folded}<span class="tag">folded</span>{/if}

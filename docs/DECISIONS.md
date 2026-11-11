@@ -1489,6 +1489,42 @@ Each entry: date, decision, why, alternatives considered.
   every player); decay over time (not in the spec); notes for every match
   without a cap.
 
+## D-075 · Match memories, the memory block, memory off and reset
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - When a match is remembered, every seated profile gets one summary of it
+    from its own view (`match_memories`, migration `0009`, in the same
+    transaction as the trust). The default `TemplateSummarizer` names the game,
+    the opponents, the player's place and at most two notes per opponent, from
+    the facts that player saw. No model is called; a `Summarizer` can.
+  - `memory_block(store, me, opponents)` reads only the player's own rows and
+    only about the profiles at the table: relationship lines first (strongest
+    feeling first, three notes each), then up to five summaries of matches
+    against them, newest first. It stops at the first line that does not fit
+    1,200 characters and is None when the player knows nobody there.
+  - The prompt puts the block before the game data, inside `<memory>`, with
+    `<` escaped; the system message names it as data like the other blocks.
+    `ModelAgent(memory=...)` takes it; without one the prompt is unchanged.
+  - `memory: false` on a match (API, stored on the match record, a checkbox in
+    the new-match form) remembers nothing. The form's box says "without memory",
+    so a form that leaves it out keeps memory on.
+  - Reset forgets relationships and summaries of one profile or of everyone
+    (`POST /memory/reset`, `arena memory reset --yes`); ratings stay, and a match
+    already remembered is not remembered again. There are no seasons yet: a
+    season starts with a reset of everyone.
+  - `arena run --models` does not build a block yet; the next part wires it in.
+- **Why:** The spec's long-term layer and the "only the players at the table,
+  kept short" rule; the block is built from the player's own rows, so it
+  cannot carry another player's secrets. A profile's memories can name roles
+  ("turned out to be a wolf", "hunted with me in the pack"): they are the
+  same notes as on its relations page, written only for finished matches, so
+  they reveal nothing about a match still being played, and spectators see
+  every role anyway.
+- **Alternatives:** the block in the system message (it is data, not an
+  instruction); summaries written by a model now (costs money for every match);
+  a season column on every memory row (no seasons exist yet).
+
 ## D-076 · The monthly cap is 25 euros
 
 - **Date:** 2026-11-11
@@ -1884,6 +1920,89 @@ Each entry: date, decision, why, alternatives considered.
   same thing, and a banner text in each); full-screen interstitials (they
   block the board and make fast play tiring).
 
+## D-100 · A finished match ends on a result card; showdowns and the final ranking are structured
+
+- **Date:** 2026-11-11
+- **Decision:** When a match is over and its end is on screen, a result card
+  covers the stage until the viewer closes it ("Show the board"). This means
+  the last step of a replay, or a live match that has finished. The headline
+  is the transcript's own line about the end (`game_over` or `match_over`). A
+  game whose end names a winning side, such as Werewolf's `game_over` with
+  `winner` and `winners`, shows that side large and everyone else small.
+  Every other game shows a podium of the first three ranks (shared ranks side
+  by side), with the rest in a list. The ranks come from the match's
+  placements. In the commentary, the `match_finished` line becomes a ranked
+  list. A `showdown` line becomes a row per hand: avatar, cards, the hand's
+  kind and the chips it won from the pot lines that follow. The caption above
+  the timeline wraps instead of being cut off, and it never shows the ranking
+  line.
+- **Why:** Reviewer's viewer check found the end of a match read as a run-on
+  paragraph cut off with an ellipsis, and showdowns as a wall of text. The
+  data is all in the transcript lines (`raw`) and the match record, so the
+  web adds no new wording: names, hands and amounts come from there.
+- **Alternatives:** A results page apart from the replay (the viewer leaves
+  the board at the climax); asking the transcript for a result sentence per
+  game (still a paragraph).
+
+## D-103 · A seat's identity comes from the match record first; a model seat never reads as a bot
+
+- **Date:** 2026-11-11
+- **Decision:** The web builds each seat from all the sources it has
+  (`mergeSeats` in `web/src/lib/viewer.ts`):
+  - the match record's `seats` (name, model id, kind), which exists for
+    running and finished matches;
+  - then the transcript's `players`, whose name wins when it gives a profile
+    name;
+  - then the model roster of `GET /setup`, for the vendor (the provider path
+    before "/") and the price per million tokens.
+  Every chip, avatar, commentary line, board seat and result card reads this
+  one map. A chip shows:
+  - the name and a kind badge (model or bot);
+  - the model id when the name does not already say it, and the vendor;
+  - a personality when the record has one, and the cost so far.
+  The tooltip adds the price per million tokens. Avatar colours follow the
+  vendor.
+- **Why:** On the first real-model match, the chips read "random bot" for
+  every seat. The transcript's `players` was empty for a running match while
+  the record already knew each seat. A seat's identity must not depend on one
+  endpoint being complete.
+- **Display names:** every visible name is a display name, computed once per
+  match (`withDisplayNames`) unless the API sends `display`:
+  - a model is its short name (the profile name, else the model id), with
+    "#2" for its second seat;
+  - bots are "Bot 1", "Bot 2", in seat order, with "Random Bot" as the small
+    line under the name;
+  - the seat id appears only as a small number badge on the board
+    (`SeatTag`).
+  Until the transcript names players itself, the web swaps seat ids in its
+  sentences for display names (`namedText`, `namedLines`, applied once where
+  the page reads the transcript). This changes names only, never wording.
+  Player-written words (speech, thoughts) are shown as written.
+- **Alternatives:** Waiting for the transcript to fill `players` for every
+  match (the fix belongs there too, and Arena Coder has it); a colour per
+  model (the same company's models then look unrelated).
+
+## D-104 · One display name per seat, computed by the server, never the seat id
+
+- **Date:** 2026-11-11
+- **Decision:** The name shown for a seat is made once, in `display_names`
+  (`arena/transcript/common.py`), and used in every line of the transcript (English and
+  German), in `arena transcript`, in `arena run`, and handed to the UI as
+  `players[seat].display`. A model is shown by its short name (`name` in
+  `config/models.yaml`, else its id), numbered `gpt-luna #1`, `gpt-luna #2` when the same
+  model sits more than once; a bot is `Bot 3`, with the number of its seat. The names are
+  unique within a match. The seat id (`p3`) is a separate field `players[seat].seat`, for a
+  small badge. The names come from the match record's seats (known from the first turn of
+  a running match); a match recorded before seats were kept falls back to its profile
+  labels, else the seat id.
+- **Why:** People could not tell which seat was which model: the board said `p3`, the
+  commentary `p1 plays 1 card`, the bubbles `p2`. A name made in one place cannot differ
+  between the board, the commentary and the bubbles.
+- **Alternatives:** each page building its own label (they drifted apart); the seat id as
+  the name with the model in brackets (`p1 (glm-flash)`, what the lines said before: long,
+  and still led with the number); suffixing only the second seat of a repeated model (the
+  first and the second then look different for no reason).
+
 ## D-106 · Match analytics: a pure function of the log, public events only without spoilers
 
 - **Date:** 2026-11-11
@@ -1907,3 +2026,4 @@ Each entry: date, decision, why, alternatives considered.
   stays correct for imported replays.
 - **Alternatives:** stored per-match analytics (stale when a definition
   changes); estimating lies from public data (a guess shown as a number).
+

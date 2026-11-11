@@ -59,6 +59,7 @@ class _Running:
         self.aborted = False
         self.finished = False  # its match_finished is stored; it can no longer be aborted
         self.task: asyncio.Task | None = None
+        self.memory = True  # False: a fair benchmark, nothing is remembered
         self._delay_changed = asyncio.Event()
 
     def control(self) -> Control:
@@ -109,6 +110,7 @@ class LiveMatches:
         settings: Mapping[str, Any],
         turn_delay: float,
         models: Mapping[str, str] | None = None,
+        memory: bool = True,
     ) -> MatchRecord:
         """Start a match and return its record. It plays on in the background.
 
@@ -161,6 +163,7 @@ class LiveMatches:
                 "Try again when one has ended."
             )
         running = _Running(match, turn_delay)
+        running.memory = memory
         # The place is taken before the first await, so two requests cannot share the last one.
         self._running[match_id] = running
         try:
@@ -171,6 +174,7 @@ class LiveMatches:
                 seed,
                 match.settings,
                 seats=seats,
+                memory=memory,
                 prompt_version=plugin.prompt_version(match.settings),
             )
         except BaseException:
@@ -187,7 +191,7 @@ class LiveMatches:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
             if rated:  # bots only until model profiles reach the API (D-082)
-                await self._rate(match_id, running.match, placements)
+                await self._rate(match_id, running.match, placements, memory=running.memory)
         except MatchPaused as pause:
             # Nobody here can allow more money: a cap ends the match. Its log says why.
             log.warning("Match %s stopped at a cost cap (%s)", match_id, pause.reason)
@@ -241,8 +245,10 @@ class LiveMatches:
         running.task.cancel()
         await asyncio.gather(running.task, return_exceptions=True)
 
-    async def _rate(self, match_id: UUID, match: Match, placements: Sequence[Placement]) -> None:
-        """Rate the bots of a finished match and add it to their relationships.
+    async def _rate(
+        self, match_id: UUID, match: Match, placements: Sequence[Placement], *, memory: bool
+    ) -> None:
+        """Rate the bots of a finished match and, unless memory is off, remember it.
 
         A rating or memory problem never fails the match.
         """
@@ -258,8 +264,12 @@ class LiveMatches:
         except Exception:
             log.exception("Rating of match %s failed", match_id)
             return
+        if not memory:
+            return
         try:
-            await self._memory.remember_match(match_id, game_id, match.events, profiles)
+            await self._memory.remember_match(
+                match_id, game_id, match.events, profiles, game_name=match.plugin.name
+            )
         except Exception:
             log.exception("Remembering match %s failed", match_id)
 

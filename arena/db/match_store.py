@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from arena.engine.types import Placement, PlayerId
 from arena.ratings.store import BOT_MODEL_ID
+from arena.transcript.common import display_names
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 Origin = Literal["played", "imported"]
@@ -29,7 +30,7 @@ def bot_seats(players: Sequence[PlayerId]) -> dict[PlayerId, Seat]:
 
 _COLUMNS = (
     "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, "
-    "origin, prompt_version"
+    "origin, memory, prompt_version"
 )
 
 
@@ -45,6 +46,7 @@ class MatchRecord(BaseModel):
     placements: list[Placement] | None
     seats: dict[PlayerId, Seat] | None = None  # None for matches recorded before seats were
     origin: Origin = "played"
+    memory: bool = True  # False: the match neither reads nor writes memory
     prompt_version: str | None = None  # None for matches recorded before it was
 
     @property
@@ -66,13 +68,14 @@ class MatchStore:
         settings: dict[str, Any],
         seats: dict[PlayerId, Seat] | None = None,
         origin: Origin = "played",
+        memory: bool = True,
         prompt_version: str | None = None,
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
             "INSERT INTO matches "
-            "(id, game, status, players, seed, settings, seats, origin, prompt_version) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7, $8) RETURNING {_COLUMNS}",
+            "(id, game, status, players, seed, settings, seats, origin, memory, prompt_version) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7, $8, $9) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
@@ -80,6 +83,7 @@ class MatchStore:
             settings,
             None if seats is None else {p: s.model_dump() for p, s in seats.items()},
             origin,
+            memory,
             prompt_version,
         )
         return MatchRecord(**row)
@@ -129,6 +133,16 @@ class MatchStore:
             seat: name if model in (BOT_MODEL_ID, name) else f"{name} ({model})"
             for seat, (name, model) in profiles.items()
         }
+
+    async def display_names(self, record: MatchRecord) -> dict[str, str]:
+        """The name shown for each seat everywhere (see `arena.transcript.common.display_names`).
+
+        From the match record's seats; a match recorded before seats were kept falls back to
+        its profile labels, else the seat id.
+        """
+        if record.seats:
+            return display_names({p: (s.kind, s.name) for p, s in record.seats.items()})
+        return {**{p: p for p in record.players}, **await self.seat_names(record.id)}
 
     async def finished(self, limit: int = 100) -> list[MatchRecord]:
         """The newest finished matches, newest first."""

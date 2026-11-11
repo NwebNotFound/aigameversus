@@ -5,8 +5,18 @@
 	import Beats from '#lib/components/Beats.svelte';
 	import Board from '#lib/components/Board.svelte';
 	import Commentary from '#lib/components/Commentary.svelte';
+	import ResultCard from '#lib/components/ResultCard.svelte';
 	import { euros } from '#lib/live.js';
-	import { seatModel, seatName, type Beat, type View } from '#lib/viewer.js';
+	import {
+		colourKey,
+		resultOf,
+		seatModel,
+		seatName,
+		seatSub,
+		type Beat,
+		type Placement,
+		type View
+	} from '#lib/viewer.js';
 
 	/**
 	 * One match on screen, live or replayed: the cast, the board as the stage, the
@@ -21,6 +31,8 @@
 		players,
 		costs,
 		active = null,
+		placements = null,
+		ended = false,
 		controls
 	}: {
 		spec: Record<string, unknown> | null;
@@ -32,14 +44,42 @@
 		/** Micro-euros per seat, or null when nothing is known. */
 		costs: Record<string, number> | null;
 		active?: string | null;
+		/** The final ranks, once the match is over. */
+		placements?: Placement[] | null;
+		/** The match is over and its end is on screen: show the result card. */
+		ended?: boolean;
 		controls: Snippet;
 	} = $props();
 
 	let beat = $state<Beat | null>(null);
+
+	/** The chip's tooltip: model, vendor, price per million tokens and the cost so far. */
+	function chipTitle(seat: string): string {
+		const info = players?.[seat];
+		const parts = [seatName(seat, players)];
+		if (info?.model) parts.push(info.vendor ? `${info.model} by ${info.vendor}` : info.model);
+		if (info?.personality) parts.push(`personality: ${info.personality}`);
+		if (info?.price) {
+			parts.push(`$${info.price.input} in / $${info.price.output} out per 1M tokens`);
+		}
+		if (costs && (info?.kind === 'model' || info?.model))
+			parts.push(`spent so far: ${euros(costs[seat] ?? 0)}`);
+		if (info?.kind === 'bot') parts.push('plays random legal moves, no model');
+		return parts.join('\n');
+	}
+	const result = $derived(ended ? resultOf(placements, lines) : null);
+	/** The viewer closed the card to look at the board; it comes back at the next end. */
+	let dismissed = $state(false);
+	$effect(() => {
+		if (!ended) dismissed = false;
+	});
 	/** Seat id to the key of its colour: the model, so a model looks the same in every match. */
 	const colours = $derived(
-		Object.fromEntries(seats.map((seat) => [seat, seatModel(seat, players) ?? seat]))
+		Object.fromEntries(seats.map((seat) => [seat, colourKey(seat, players)]))
 	);
+
+	/** The small line under a seat's name on the board: model id (if not the name) and vendor. */
+	const subs = $derived(Object.fromEntries(seats.map((seat) => [seat, seatSub(seat, players)])));
 
 	const names = $derived(Object.fromEntries(seats.map((seat) => [seat, seatName(seat, players)])));
 
@@ -55,21 +95,33 @@
 <div class="watch" data-view={view} data-testid="watch" data-events={events.length}>
 	<ul class="cast" aria-label="Players" data-testid="cast">
 		{#each seats as seat (seat)}
+			{@const info = players?.[seat]}
 			{@const model = seatModel(seat, players)}
-			<li class:active={active === seat} class:out={out.has(seat)} data-seat={seat}>
+			{@const isModel = info?.kind === 'model' || !!model}
+			<li
+				class:active={active === seat}
+				class:out={out.has(seat)}
+				data-seat={seat}
+				data-kind={isModel ? 'model' : (info?.kind ?? 'seat')}
+				title={chipTitle(seat)}
+			>
 				<Avatar
 					name={seatName(seat, players)}
-					colourKey={model ?? seat}
+					colourKey={colours[seat]}
 					size={34}
 					active={active === seat}
 					out={out.has(seat)}
 				/>
 				<span class="who">
-					<strong>{seatName(seat, players)}</strong>
-					<small>{model ?? (players?.[seat] ? 'random bot' : seat)}</small>
+					<span class="line1">
+						<strong>{seatName(seat, players)}</strong>
+						{#if isModel}<span class="kind model">model</span>{/if}
+					</span>
+					{#if subs[seat]}<small data-testid="chip-model">{subs[seat]}</small>{/if}
+					{#if info?.personality}<small class="persona">{info.personality}</small>{/if}
 				</span>
-				{#if costs && model}
-					<span class="cost" title="Model cost so far">{euros(costs[seat] ?? 0)}</span>
+				{#if costs && isModel}
+					<span class="cost">{euros(costs[seat] ?? 0)}</span>
 				{/if}
 			</li>
 		{/each}
@@ -78,9 +130,12 @@
 	<div class="stage-column">
 		<section class="stage" class:shake={beat === 'bang'} aria-label="Board" data-testid="stage">
 			<div class="fit">
-				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} />
+				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} {subs} />
 			</div>
 			<Beats {lines} bind:current={beat} />
+			{#if result && !dismissed}
+				<ResultCard {result} {players} {costs} onclose={() => (dismissed = true)} />
+			{/if}
 		</section>
 		<div class="controls">{@render controls()}</div>
 	</div>
@@ -139,6 +194,30 @@
 	.who small {
 		font-size: 0.75rem;
 		color: var(--muted);
+	}
+
+	.line1 {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.kind {
+		font-size: 0.75rem;
+		line-height: 1.2;
+		padding: 0 0.35rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		color: var(--muted);
+	}
+
+	.kind.model {
+		color: var(--accent-2);
+		border-color: color-mix(in srgb, var(--accent-2) 45%, transparent);
+	}
+
+	.persona {
+		font-style: italic;
 	}
 
 	.cost {

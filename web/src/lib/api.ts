@@ -26,6 +26,18 @@ export interface MatchRecord extends MatchSummary {
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
+	/** Who sits where: set for every match since model seats (D-082). */
+	seats?: Record<string, RecordSeat>;
+	origin?: 'played' | 'imported';
+}
+
+/** A seat as the match record stores it. */
+export interface RecordSeat {
+	name: string;
+	model_id: string | null;
+	kind: 'model' | 'bot';
+	personality?: string | null;
+	display?: string | null;
 }
 
 /** One event of a match log, as the event stream sends it. */
@@ -94,10 +106,19 @@ export interface TranscriptLine {
 	raw: Record<string, unknown>;
 }
 
-/** Who sits in a seat; both null for random bots and unrated matches. */
+/** Who sits in a seat; name and model null for seats nobody named. */
 export interface Seat {
 	name: string | null;
 	model: string | null;
+	/** The name people read: "gpt-luna", "gpt-luna #2", "Bot 1"; never the seat id. */
+	display?: string | null;
+	/** Filled in by the web from the match record and the model roster. */
+	kind?: 'model' | 'bot';
+	/** The provider's company, e.g. "google" from "google/gemini-2.5-flash-lite". */
+	vendor?: string | null;
+	personality?: string | null;
+	/** US dollars per million tokens, from config/models.yaml. */
+	price?: { input: number; output: number } | null;
 }
 
 export interface Transcript {
@@ -194,10 +215,20 @@ export interface NewMatch {
 	seed?: number;
 	settings: Record<string, unknown>;
 	turn_delay: number;
+	/** false: a fair benchmark, the match neither reads nor writes memory. */
+	memory: boolean;
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
 	/** Must be true with `models`: the match spends money. */
 	confirm_spend?: boolean;
+}
+
+/** `GET /profiles/{id}/memories`: the player's own summaries of past matches. */
+export interface MatchMemory {
+	match_id: string;
+	game_id: string;
+	summary: string;
+	created_at: string;
 }
 
 /** `GET /ledger/month`: what model calls cost this month and what the cap still allows. */
@@ -270,7 +301,6 @@ export interface Profile {
 	overall: Standing | null;
 	ratings: (Standing & { game_id: string })[];
 	recent_matches: RecentMatch[];
-	memory: { available: boolean; note: string };
 }
 
 /** What a model cost and how often the server refused its answers. */
@@ -331,6 +361,7 @@ export interface ArenaClient {
 	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
+	memories(id: string): Promise<ApiResult<MatchMemory[]>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
 	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
@@ -437,6 +468,14 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}`,
 				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
 				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
+			);
+		},
+
+		memories(id) {
+			return getJson<MatchMemory[]>(
+				`/profiles/${encodeURIComponent(id)}/memories`,
+				Array.isArray,
 				[404, 422]
 			);
 		},
