@@ -1027,7 +1027,6 @@ Each entry: date, decision, why, alternatives considered.
   tests check on real bot matches).
 - **Alternatives:** counting a showdown loss only when the hand was weak
   (needs a notion of a "strong" hand); counting every all-in as aggressive.
-
 ## D-055 · Werewolf statistics: definitions
 
 - **Date:** 2026-11-11
