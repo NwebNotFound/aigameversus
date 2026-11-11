@@ -2,6 +2,8 @@
 
 Input is the whole stored log, as a spectator sees it (private events included:
 `cards_hidden` shows what a player really played). Nothing here changes a plugin.
+These numbers use hidden information: they must never reach a player's prompt or
+memory while a match is running (roadmap 6.3).
 
 Definitions, per player:
 

@@ -6,7 +6,8 @@
 Every profile is named "DEMO …" and plays as a random bot in real High Card
 matches (`games/toy`), so no model is called. The match ids derive from the
 seed: running it twice with the same seed adds nothing. It refuses to touch a
-database that has any profile not named "DEMO …". For local development only.
+database that has any profile not named "DEMO …" (random-bot profiles of API
+matches do not count). For local development only.
 """
 
 import argparse
@@ -37,7 +38,9 @@ class RefusedError(RuntimeError):
 async def seed_demo(pool: asyncpg.Pool, matches: int = 40, seed: int = 1) -> int:
     """Play `matches` random-bot matches between the demo profiles; return how many were new."""
     real = await pool.fetchval(
-        "SELECT count(*) FROM player_profiles WHERE name NOT LIKE $1", DEMO_PREFIX + "%"
+        "SELECT count(*) FROM player_profiles WHERE name NOT LIKE $1 AND model_id <> $2",
+        DEMO_PREFIX + "%",
+        DEMO_MODEL,
     )
     if real:
         raise RefusedError(f"{real} profile(s) are not demo data; refusing to add demo matches")
