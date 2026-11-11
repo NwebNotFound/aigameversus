@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=event.schema.json
+# A neutral army appears on a free tile and attacks whatever is nearest.
+id: barbarians
+name: Barbarians
+name_de: Barbaren
+probability_per_round: 0.05
+target: map
+effects:
+  spawn_neutral_army:
+    - {unit: spearman, count: 2}
+    - {unit: swordsman, count: 1}

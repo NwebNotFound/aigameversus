@@ -8,6 +8,8 @@ dependencies = [
     "fastapi>=0.162.4",
     "jsonschema>=4.26.0",
     "litellm>=1.109.0",
+    "pydantic>=2.14.3",
+    "pyyaml>=6.0.3",
     "redis>=8.1.0",
     "uvicorn>=0.54.0",
 ]
@@ -35,6 +37,5 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 dev = [
     "httpx2>=2.16.0",
     "pytest>=9.2.0",
-    "pyyaml>=6.0.3",
     "ruff>=0.17.4",
 ]

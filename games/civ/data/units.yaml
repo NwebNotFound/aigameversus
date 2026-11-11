@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=units.schema.json
+# Units. upkeep is per round. trained_in: building required to train, null = any city.
+# counters: strength multiplier against the target unit.
+units:
+  - id: spearman
+    name: Spearman
+    name_de: Speerträger
+    cost: {wood: 2, food: 1}
+    strength: 3
+    movement: 1
+    upkeep: {food: 1}
+    counters: [{target: horseman, multiplier: 2}]
+    trained_in: null
+
+  - id: swordsman
+    name: Swordsman
+    name_de: Schwertkämpfer
+    cost: {iron: 3, food: 1}
+    strength: 4
+    movement: 1
+    upkeep: {food: 1}
+    counters: [{target: spearman, multiplier: 2}]
+    trained_in: barracks
+
+  - id: horseman
+    name: Horseman
+    name_de: Reiter
+    cost: {iron: 3, food: 2, gold: 2}
+    strength: 4
+    movement: 3
+    upkeep: {food: 2}
+    counters: [{target: swordsman, multiplier: 2}]
+    trained_in: barracks
+
+  - id: archer
+    name: Archer
+    name_de: Bogenschütze
+    cost: {wood: 3, iron: 1}
+    strength: 2
+    movement: 1
+    upkeep: {food: 1}
+    trained_in: barracks
+    ranged: true
+    first_strike: true
+    city_defense: 0.5
+
+  - id: siege_engine
+    name: Siege Engine
+    name_de: Belagerungsgerät
+    cost: {wood: 6, iron: 3}
+    strength: 2
+    movement: 1
+    upkeep: {food: 1, gold: 1}
+    trained_in: barracks
+    vs_walls_multiplier: 3
+
+  - id: settler
+    name: Settler
+    name_de: Siedler
+    cost: {food: 6, wood: 2}
+    strength: 0
+    movement: 1
+    upkeep: {food: 1}
+    trained_in: null
+    founds_city: true
+
+  - id: scout
+    name: Scout
+    name_de: Kundschafter
+    cost: {food: 2, gold: 1}
+    strength: 1
+    movement: 3
+    trained_in: null
+    vision_bonus: 2
+    auto_retreat: true

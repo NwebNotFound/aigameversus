@@ -26,6 +26,13 @@ def test_role_matches_schema(path):
     assert not isinstance(data["weight"], bool)
 
 
+@pytest.mark.parametrize("path", ROLE_FILES, ids=lambda p: p.stem)
+def test_rules_snippet_is_one_to_three_sentences(path):
+    snippet = " ".join(load(path)["rules_snippet"].split())
+    sentences = [s for s in snippet.replace("?", ".").replace("!", ".").split(".") if s.strip()]
+    assert 1 <= len(sentences) <= 3, snippet
+
+
 def test_ids_unique():
     ids = [load(p)["id"] for p in ROLE_FILES]
     assert len(ids) == len(set(ids))

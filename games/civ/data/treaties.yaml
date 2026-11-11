@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=treaties.schema.json
+# Treaty types. duration_rounds: proposals pick a length in [min, max]; null = until broken.
+reputation:
+  min: 0
+  max: 100
+  start: 50
+  break_treaty_penalty: -20 # public, applied to the nation that breaks a treaty
+
+treaties:
+  - id: peace
+    name: Peace
+    name_de: Frieden
+    duration_rounds: null
+    forbids_attack: true
+
+  - id: non_aggression
+    name: Non-Aggression Pact
+    name_de: Nichtangriffspakt
+    duration_rounds: {default: 10, min: 3, max: 30}
+    forbids_attack: true
+
+  - id: alliance
+    name: Alliance
+    name_de: Bündnis
+    duration_rounds: null
+    forbids_attack: true
+    shared_vision: true
+    joint_war: true
+    open_borders: true
+
+  - id: open_borders
+    name: Open Borders
+    name_de: Offene Grenzen
+    duration_rounds: {default: 10, min: 3, max: 30}
+    open_borders: true
+
+  - id: tribute
+    name: Tribute
+    name_de: Tributzahlung
+    duration_rounds: {default: 5, min: 1, max: 20}
+    payment_per_round: true

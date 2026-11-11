@@ -8,3 +8,5 @@ hooks:
   on_night: witch_potions
 description: >
   Sees the wolves' victim. Has one healing potion and one poison potion per game.
+rules_snippet: >
+  You see the wolves' victim each night. You own one healing potion and one poison potion for the whole game, each usable once.

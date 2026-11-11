@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=event.schema.json
+# A recently conquered city breaks away and becomes neutral.
+id: rebellion
+name: Rebellion
+name_de: Rebellion
+probability_per_round: 0.05
+target: city
+only_conquered_within_rounds: 10
+effects:
+  city_becomes_neutral: true

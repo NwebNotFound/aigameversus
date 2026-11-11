@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=buildings.schema.json
+# City buildings. Building slots per city are in balance.yaml (city.building_slots).
+rules:
+  build_rounds: 1
+  demolish_refund: 0.5 # share of the cost returned by demolish
+
+buildings:
+  - id: farm
+    name: Farm
+    name_de: Farm
+    cost: {wood: 4}
+    effects:
+      yields: {food: 2}
+
+  - id: sawmill
+    name: Sawmill
+    name_de: Sägewerk
+    cost: {wood: 3, gold: 1}
+    effects:
+      yields: {wood: 2}
+
+  - id: mine
+    name: Mine
+    name_de: Mine
+    cost: {wood: 5}
+    requires_adjacent_terrain: [hills, iron_deposit]
+    effects:
+      yields: {iron: 2}
+
+  - id: market
+    name: Market
+    name_de: Markt
+    cost: {wood: 4, gold: 3}
+    effects:
+      yields: {gold: 3}
+      trade_fee_modifier: -0.5
+
+  - id: barracks
+    name: Barracks
+    name_de: Kaserne
+    cost: {wood: 5, iron: 2}
+    effects:
+      training_cost_modifier: -0.2 # units name it in trained_in to require it
+
+  - id: wall
+    name: Wall
+    name_de: Mauer
+    cost: {wood: 6, iron: 3}
+    effects:
+      city_defense: 0.5
+
+  - id: forge
+    name: Forge
+    name_de: Schmiede
+    cost: {iron: 4, gold: 3}
+    effects:
+      trained_unit_strength_bonus: 1
+
+  - id: granary
+    name: Granary
+    name_de: Speicher
+    cost: {wood: 5}
+    effects:
+      famine_delay_rounds: 2
+
+  - id: watchtower
+    name: Watchtower
+    name_de: Wachturm
+    cost: {wood: 3, iron: 1}
+    effects:
+      vision_bonus: 2

@@ -229,7 +229,60 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** Keeping the working title; a different title, which
   remains possible because of the single definition.
 
-## D-019 · An agent answers with one action and a thought; thoughts are an engine channel
+## D-019 · Throne of Tokens data: layout and loader
+
+- **Date:** 2026-11-11
+- **Decision:** Content lives in `games/civ/data/` (events in
+  `games/civ/data/events/`, not `games/civ/events/` as one spec line says, to
+  match the repo layout in the same spec). Lists are YAML lists of entries with
+  an `id`, so duplicates are caught (YAML mappings silently drop duplicate
+  keys). One event per file, file name = id. Pydantic models in
+  `games/civ/data_loader.py` are the single source of the schema; the
+  `*.schema.json` files are generated from them and a test fails when they are
+  stale. Building-slot numbers sit in `balance.yaml` only, not also in
+  `buildings.yaml`.
+- **Why:** One place for each number; readable errors; editor validation for
+  free.
+- **Alternatives:** hand-written JSON schemas validated with `jsonschema`;
+  one file per unit and building; id-keyed mappings.
+
+## D-020 · Throne of Tokens values the spec leaves open
+
+- **Date:** 2026-11-11
+- **Decision:** Starting values, all in the data files and meant to be tuned:
+  - Event chance per round: plague 4 %, drought 3 % (food −50 %, radius 2,
+    3 rounds), rebellion 5 % (only cities conquered within 10 rounds), barbarians
+    5 % (2 spearmen, 1 swordsman), gold find 5 % (+25 gold), good harvest 6 %
+    (+5 food).
+  - Treaties: peace and alliance last until broken; non-aggression and open
+    borders 3–30 rounds (default 10); tribute 1–20 (default 5). An alliance
+    includes open borders.
+  - Reputation starts at 50. Trade fee 10 %, +10 % below reputation 30.
+  - Start stock 5 food, 5 wood, 0 iron, 5 gold, besides the capital and units.
+  - City focus: growth → food, production → wood, military → iron.
+  - Pillage yields 50 % of the building's cost. One of each building per city.
+  - Divisions in the score and in building slots round down.
+  - English ids: Reiter = `horseman`, Belagerung = `siege_engine`,
+    Schmiede = `forge`, Speicher = `granary`.
+- **Why:** The spec gives no number for these; these keep events rare enough
+  not to decide a 60-round match on their own.
+- **Alternatives:** leave them out until the systems need them (phase 7
+  engine work would then block on data).
+
+## D-021 · Liar's Deck devil card is one of the jokers
+
+- **Date:** 2026-11-11
+- **Decision:** In the devil-card variant the devil card is one of the two jokers
+  (`devil_card: {card: joker, count: 1, trigger: revealed_on_liar_call, effect:
+  all_others_shoot}` in `games/liars_deck/variants/devil_card.yaml`). The deck
+  stays at 20 cards. When a "Liar!" call reveals it, every living player
+  except the one who played it (the caller included) shoots at the same time,
+  and the normal shot of that round is skipped (`replaces_normal_shot: true`).
+- **Why:** The spec says "one card is the devil card" without saying which. A
+  joker keeps the deck size and the table-card rules unchanged.
+- **Alternatives:** A 21st card; one king, queen or ace marked as devil.
+
+## D-022 · An agent answers with one action and a thought; thoughts are an engine channel
 
 - **Date:** 2026-11-11
 - **Decision:** `Agent.act` returns a `Reply`: exactly one `Action`, or a
@@ -251,7 +304,7 @@ Each entry: date, decision, why, alternatives considered.
   author; an exception for unusable answers (the thought of that answer would
   be lost); a batch of actions per reply.
 
-## D-020 · The turn clock is in the engine, and an agent that gives up loses its seat
+## D-023 · The turn clock is in the engine, and an agent that gives up loses its seat
 
 - **Date:** 2026-11-11
 - **Decision:** `Match(turn_timeout=60)` limits one turn of one player,
@@ -272,7 +325,7 @@ Each entry: date, decision, why, alternatives considered.
   turn of a slow player (needs a "do nothing" in every game); ending the match
   when a model fails; counting timeouts towards losing the seat.
 
-## D-021 · One model-call boundary; the runner retries; the mock LLM stands behind it
+## D-024 · One model-call boundary; the runner retries; the mock LLM stands behind it
 
 - **Date:** 2026-11-11
 - **Decision:** The agent runner (`ModelAgent`) reaches its model only through
@@ -281,7 +334,7 @@ Each entry: date, decision, why, alternatives considered.
   implement it. The runner retries a failed call 3 times with pauses of 1, 2
   and 4 seconds; a failure marked as not retryable (wrong key, bad request) is
   not retried. When that is used up, the model counts as failed for good: the
-  runner raises `AgentError` and the engine takes the seat (D-020). LiteLLM's
+  runner raises `AgentError` and the engine takes the seat (D-023). LiteLLM's
   own retries are switched off. `LiteLLMModel` imports LiteLLM on first use
   and in LiteLLM's offline mode; it maps a failure to its class name and drops
   the provider's message.
@@ -299,7 +352,7 @@ Each entry: date, decision, why, alternatives considered.
   several failed turns in a row (more state for a rare case; can be added if
   real matches show short outages).
 
-## D-022 · Prompt layout, and how other players' words are kept apart from instructions
+## D-025 · Prompt layout, and how other players' words are kept apart from instructions
 
 - **Date:** 2026-11-11
 - **Decision:** Two messages. System: who the player is, the game's
@@ -326,7 +379,7 @@ Each entry: date, decision, why, alternatives considered.
   filter can be talked around); a summary of older events (comes with memory,
   phase 6).
 
-## D-023 · What an agent writes is made storable before it is logged
+## D-026 · What an agent writes is made storable before it is logged
 
 - **Date:** 2026-11-11
 - **Decision:** The engine cleans every reply before it uses it: NUL
@@ -339,12 +392,16 @@ Each entry: date, decision, why, alternatives considered.
   the model cannot see); cleaning in the store (the stored log would differ
   from the events the match applied, against D-016).
 
-## D-024 · A game's title and rules text each live in one place
+## D-027 · A game's title and rules text each live in one place
 
 - **Date:** 2026-11-11
 - **Decision:** `GamePlugin.name` is the title that prompts, and later the UI,
-  show. `GamePlugin.rules()` returns the game's `rules.md`, which does not
-  repeat the title. This is the "exactly one place" of D-018.
+  show; code never writes a title anywhere else. This is the "exactly one
+  place" of D-018. `GamePlugin.rules()` returns the game's `rules.md`. The
+  prompt puts the `name` above the rules, so a rules text does not need the
+  title. The rules texts written before their plugins (Liar's Deck, Poker,
+  Werewolf, Throne of Tokens) still open with a title heading; it goes when
+  each game gets its plugin.
 - **Why:** A rename is then a one-line change, and the rules text a model
   reads is a file that people can read and review too.
 - **Alternatives:** The title as the heading of `rules.md`; rules as a string

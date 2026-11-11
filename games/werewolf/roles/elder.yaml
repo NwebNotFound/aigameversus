@@ -9,3 +9,5 @@ hooks:
   on_execution: elder_strips_powers
 description: >
   Survives the first wolf attack. If the village executes them, all village special roles lose their powers.
+rules_snippet: >
+  You survive the first wolf attack. If the village executes you, all village special roles lose their powers.

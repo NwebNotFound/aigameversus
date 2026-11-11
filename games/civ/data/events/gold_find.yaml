@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=event.schema.json
+id: gold_find
+name: Gold Find
+name_de: Goldfund
+probability_per_round: 0.05
+target: nation
+effects:
+  resources: {gold: 25}
