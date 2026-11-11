@@ -218,6 +218,9 @@ class Replay(BaseModel):
     )
     seats: dict[str, Seat] | None = Field(description="Who played each seat; null for old rows")
     origin: Origin
+    prompt_version: str | None = Field(
+        description="Which prompt the models read (the game's prompt_version); null for old rows"
+    )
     real: bool = Field(description="Whether a model played any seat")
 
 
@@ -333,6 +336,7 @@ async def list_replays(live: Live) -> list[Replay]:
             cost_micro_eur=costs.get(record.id),
             seats=record.seats,
             origin=record.origin,
+            prompt_version=record.prompt_version,
             real=record.real,
         )
         for record in records

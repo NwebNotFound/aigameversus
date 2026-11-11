@@ -1724,8 +1724,10 @@ Each entry: date, decision, why, alternatives considered.
   `rules(settings)` once and for `situation_summary(observation, settings)`
   every turn, and puts the summary in a `<summary>` block above
   `<situation>`; the system message then names that block too. The match
-  records `prompt_version(settings)` in `match_started`, and `arena run
-  --save` writes it into the export. Without a summary the prompt is the one
+  records `prompt_version(settings)` in `match_started` and in its record
+  (column `matches.prompt_version`, also in `/replays`), and `arena run
+  --save` writes it into the export. A `-p2` version always means its rules
+  and its summary together, so the id says exactly what the models read. Without a summary the prompt is the one
   from before, byte for byte (the p1 golden files check it).
 - **Why:** Poker and Werewolf have a second prompt version (new rules, a
   summary of the turn), and an A/B comparison needs every match to say which

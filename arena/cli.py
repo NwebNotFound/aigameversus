@@ -226,6 +226,7 @@ async def _play_models(
                 player: Seat(name=display_name(config, model), model_id=model, kind="model")
                 for player, model in seats.items()
             },
+            prompt_version=plugin.prompt_version(match.settings),
         )
         print(f"{plugin.name} ({plugin.id}), match {match_id}, seed {match.seed}")
         print("Seats: " + "  ".join(f"{player} {model}" for player, model in seats.items()))

@@ -171,6 +171,7 @@ class LiveMatches:
                 seed,
                 match.settings,
                 seats=seats,
+                prompt_version=plugin.prompt_version(match.settings),
             )
         except BaseException:
             del self._running[match_id]

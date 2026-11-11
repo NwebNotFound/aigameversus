@@ -162,6 +162,7 @@ def test_bot_match_names_its_seats_as_random_bots(client):
 
     match = finish(client, response.json()["id"])
     assert match["seats"]["p3"] == {"name": "Random Bot p3", "model_id": None, "kind": "bot"}
+    assert match["prompt_version"] == "v1"
     assert KEY not in response.text
 
 
@@ -238,4 +239,6 @@ def test_model_seats_get_the_prompt_version_of_the_settings(client, answer_with)
     assert match["status"] == "finished"
     started = client.get(f"/matches/{match['id']}/events").json()[0]
     assert started["data"]["prompt_version"] == "poker-p2"
+    assert match["prompt_version"] == "poker-p2"
+    assert client.get("/replays").json()[0]["prompt_version"] == "poker-p2"
     assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")
