@@ -1,24 +1,23 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	import type { MatchEvent } from '#lib/api.js';
-	import { face, moments, sides, tableCardName, type Moment } from '#lib/boards/liarsDeck.js';
+	import { face, sides, tableCardName } from '#lib/boards/liarsDeck.js';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import { hidden } from '#lib/live.js';
 
 	/**
 	 * The bar table of Liar's Deck: a round table with 2 to 4 seats, a card stand and a
-	 * revolver per seat, the table card and the last play in the middle. `events` is the
-	 * match log so far; new calls and shots get a short banner with a pause.
+	 * revolver per seat, the table card and the last play in the middle. Calls and shots are
+	 * staged by the watch screen (Beats), from the transcript.
 	 */
 	let {
 		spec,
 		spoilers,
-		events = [],
-		names = {}
+		names = {},
+		colours = {}
 	}: {
 		spec: Record<string, unknown>;
 		spoilers: boolean;
-		events?: MatchEvent[];
 		names?: Record<string, string>;
+		colours?: Record<string, string>;
 	} = $props();
 	const label = (seat: string) => names[seat] ?? seat;
 
@@ -39,45 +38,9 @@
 	const places = $derived(sides(seats.length));
 	const hideHands = $derived(hidden('hand', spoilers));
 	const hidePlay = $derived(hidden('cards', spoilers));
-
-	const HOLD_MS = 1300;
-	let banner = $state<Moment | null>(null);
-	let queue: Moment[] = [];
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	/** The log up to this position was there when the table appeared, or has been shown. */
-	let shown = -1;
-	let started = false;
-
-	function next() {
-		const moment = queue.shift();
-		banner = moment ?? null;
-		if (moment) timer = setTimeout(next, HOLD_MS);
-	}
-
-	$effect(() => {
-		const newest = events.length ? events[events.length - 1].seq : -1;
-		if (!started) {
-			// The backlog of a match that is already running (or over) is not replayed as drama.
-			started = true;
-			shown = newest;
-			return;
-		}
-		const fresh = moments(events, shown);
-		shown = Math.max(shown, newest);
-		if (fresh.length === 0) return;
-		queue.push(...fresh.slice(-6));
-		if (!banner) next();
-	});
-
-	onDestroy(() => clearTimeout(timer));
-
-	const palette = ['#f0b35a', '#7fb8ff', '#7ad69a', '#ff7a7a'];
-	const colour = (index: number) => palette[index % palette.length];
 </script>
 
 <div class="table" data-testid="board" data-layout="card_table">
-	<p class="sr-only" aria-live="polite" data-testid="banner-text">{banner?.text ?? ''}</p>
-
 	<div class="felt" aria-hidden="true"></div>
 
 	<div class="middle">
@@ -121,19 +84,13 @@
 			aria-label={label(seat.player)}
 		>
 			<header>
-				<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
-					<circle
-						cx="20"
-						cy="20"
-						r="19"
-						fill="var(--surface-raised)"
-						stroke={colour(index)}
-						stroke-width="2"
-					/>
-					<text x="20" y="26" text-anchor="middle" font-size="18" fill={colour(index)}>
-						{seat.player.slice(-1).toUpperCase()}
-					</text>
-				</svg>
+				<Avatar
+					name={label(seat.player)}
+					colourKey={colours[seat.player] ?? seat.player}
+					size={30}
+					active={seat.player === spec.turn}
+					out={!seat.alive}
+				/>
 				<strong>{label(seat.player)}</strong>
 				{#if seat.player === spec.turn}<span class="tag act">to act</span>{/if}
 				{#if !seat.alive}<span class="tag">out</span>{/if}
@@ -185,17 +142,6 @@
 			</div>
 		</section>
 	{/each}
-
-	{#if banner}
-		<div
-			class="banner {banner.kind}"
-			class:bang={banner.kind === 'shot' && banner.live}
-			role="status"
-			data-testid="banner"
-		>
-			{banner.text}
-		</div>
-	{/if}
 </div>
 
 <style>
@@ -351,11 +297,6 @@
 		gap: 0.3rem;
 	}
 
-	.avatar {
-		width: 1.7rem;
-		height: 1.7rem;
-	}
-
 	.tag {
 		font-size: 0.65rem;
 		padding: 0.05rem 0.4rem;
@@ -396,63 +337,21 @@
 		font-size: 0.8rem;
 	}
 
-	/* A short call-out at the top edge: it never covers the cards on the table. */
-	.banner {
-		position: absolute;
-		top: 0.4rem;
-		left: 50%;
-		z-index: 3;
-		max-width: calc(100% - 1rem);
-		transform: translateX(-50%);
-		padding: 0.35rem 1rem;
-		border-radius: 999px;
-		background: rgb(10 8 14 / 0.88);
-		border: 1px solid currentColor;
-		box-shadow: 0 6px 20px rgb(0 0 0 / 0.45);
-		font-size: clamp(0.95rem, 3vw, 1.2rem);
-		font-weight: 800;
-		text-align: center;
-		pointer-events: none;
-		animation: pop 0.25s ease-out;
+	.hammer {
+		fill: var(--muted);
 	}
 
-	.banner.liar {
-		color: var(--accent);
-	}
-
-	.banner.shot {
-		color: var(--text);
-	}
-
-	.banner.bang {
-		color: var(--danger);
-		background: rgb(58 10 16 / 0.92);
-	}
-
-	@keyframes pop {
-		from {
-			transform: translateX(-50%) scale(0.9);
-			opacity: 0;
-		}
-		to {
-			transform: translateX(-50%) scale(1);
-			opacity: 1;
-		}
+	/* The cylinder turns one chamber per pull; the fired chambers are red. */
+	.cylinder {
+		transform: rotate(var(--turn));
+		transform-origin: 22px 22px;
+		transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.banner {
-			animation: none;
+		.cylinder {
+			transition: none;
 		}
-	}
-
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
 	}
 
 	@media (max-width: 30rem) {

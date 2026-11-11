@@ -75,6 +75,12 @@
 		filter: grayscale(1) brightness(0.6);
 	}
 
+	@media (prefers-reduced-motion: reduce) {
+		.avatar {
+			transition: none;
+		}
+	}
+
 	.mark {
 		fill: oklch(0.97 0.03 var(--hue) / 0.85);
 	}

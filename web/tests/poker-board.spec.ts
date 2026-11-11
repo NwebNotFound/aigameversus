@@ -80,3 +80,23 @@ test('spoilers off turn hole cards into backs and hide the win chances', async (
 	await expect(page.getByTestId('seat').first().locator('.card.face')).toHaveCount(0);
 	await expect(page.getByTestId('secret').first()).toBeVisible();
 });
+
+test('after the last hand: no pot, no odds, and busted players are out', async ({
+	page,
+	request
+}) => {
+	const id = await start(request, { players: 4, seed: 6 });
+	await expect
+		.poll(async () => (await (await request.get(`${ARENA}/matches/${id}`)).json()).status, {
+			timeout: 60_000
+		})
+		.toBe('finished');
+
+	await page.goto(`/replays/${id}`);
+
+	await expect(page.getByTestId('board')).toBeVisible();
+	await expect(page.getByTestId('pot')).toHaveCount(0);
+	await expect(page.getByTestId('win-chance')).toHaveCount(0);
+	// Everyone but the winner lost their chips.
+	await expect(page.getByTestId('out')).toHaveCount(3);
+});
