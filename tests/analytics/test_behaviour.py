@@ -121,12 +121,27 @@ def test_sharp_eye_needs_a_gap_of_point_two_and_no_overlap(hits, alarms, tagged)
 
 
 @pytest.mark.parametrize(
-    ("risky", "plays", "tagged"), [(3, 10, True), (2, 12, False), (3, 9, False)]
+    ("risky_lies", "risky_honest", "plays", "tagged"),
+    [
+        (3, 1, 10, True),  # 3 of 4 risky plays were lies
+        (3, 3, 10, True),  # exactly half
+        (3, 4, 10, False),  # often at risk, lies rarely there: not a risk-taker
+        (2, 0, 12, False),  # under 3 risky lies
+        (3, 0, 9, False),  # n just under the minimum
+    ],
 )
-def test_risk_taker_lies_three_times_at_a_third_or_more(risky, plays, tagged):
-    moves = [move(honest=False, risk=0.33) for _ in range(risky)]
-    moves += [move(honest=False, risk=0.2) for _ in range(plays - risky)]
-    assert ("risk_taker" in tags(table(totals(), moves))) is tagged
+def test_risk_taker_lies_at_a_third_or_more_three_times_and_half_the_time(
+    risky_lies, risky_honest, plays, tagged
+):
+    moves = [move(honest=False, risk=0.33) for _ in range(risky_lies)]
+    moves += [move(honest=True, risk=0.5) for _ in range(risky_honest)]
+    moves += [move(honest=False, risk=0.2) for _ in range(plays - risky_lies - risky_honest)]
+    found = tags(table(totals(), moves))
+    assert ("risk_taker" in found) is tagged
+    if tagged and risky_honest == 1:
+        assert found["risk_taker"]["text"]["en"] == (
+            "lied 3 of the 4 times it played at a 33 % or higher chance that the next pull fires"
+        )
 
 
 @pytest.mark.parametrize(

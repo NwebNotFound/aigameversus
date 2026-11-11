@@ -30,6 +30,7 @@ TRIGGER_HAPPY_ABOVE = 0.5
 SHARP_EYE_GAP = 0.2  # hit rate at least this far above the false-alarm rate
 RISK_TAKER_RISK = 0.33  # a lie at this revolver risk or more is a risky lie
 RISK_TAKER_TIMES = 3
+RISK_TAKER_SHARE = 0.5  # and those risky lies are at least half of the plays at that risk
 RULE_BREAKER_ABOVE = 0.25  # rejected answers per own move
 REPLACED_ABOVE = 0.10  # share of moves the random bot played instead
 SLOW_FACTOR = 2.0  # median response time against the other seats' median
@@ -217,22 +218,24 @@ def _sharp_eye(totals: dict) -> dict | None:
 
 
 def _risk_taker(mine: list[dict]) -> dict | None:
+    """Lies at a high revolver risk: at least 3 of them, and at least half of such plays."""
     plays = [m for m in mine if m["kind"] == "play"]
     if len(plays) < MIN_N:
         return None
-    risky = sum(1 for m in plays if m["honest"] is False and (m["risk"] or 0) >= RISK_TAKER_RISK)
-    if risky < RISK_TAKER_TIMES:
+    exposed = [m for m in plays if m["honest"] is not None and (m["risk"] or 0) >= RISK_TAKER_RISK]
+    risky = sum(1 for m in exposed if m["honest"] is False)
+    if risky < RISK_TAKER_TIMES or risky < RISK_TAKER_SHARE * len(exposed):
         return None
     share = _percent(RISK_TAKER_RISK)
     return _tag(
         "risk_taker",
         "style",
         True,
+        risky / len(exposed),
         risky,
-        risky,
-        len(plays),
-        f"lied {risky} times with a {share} or higher chance that the next pull fires",
-        f"log {risky}-mal bei {share} oder mehr Gefahr, dass der nächste Abzug losgeht",
+        len(exposed),
+        f"lied {risky} of the {len(exposed)} times it played at a {share} or higher chance that the next pull fires",
+        f"log {risky} von {len(exposed)} Mal, als es bei {share} oder mehr Gefahr spielte, dass der nächste Abzug losgeht",
     )
 
 

@@ -95,7 +95,7 @@ Rules for every tag:
 | Cautious | call rate below 0.15 of call opportunities | ≥ 10 opportunities |
 | Trigger-happy | call rate above 0.5 | ≥ 10 opportunities |
 | Sharp eye | hit rate at least 0.2 above the false-alarm rate, and their intervals do not overlap | ≥ 10 on each side |
-| Risk-taker | at least 3 lies at a revolver risk of 0.33 or more | ≥ 10 plays |
+| Risk-taker | at least 3 lies at a revolver risk of 0.33 or more, and at least half of the plays at that risk were lies; the text names both counts | ≥ 10 plays |
 | Rule-breaker | refused answers per own move above 0.25 | ≥ 10 moves |
 | Often replaced by the bot (`kind: reliability`) | fallback share above 10 % | ≥ 10 moves |
 | Slow / Quick to answer | median response time above 2× / below 0.5× the other seats' median; includes network and provider queue | ≥ 10 moves on both sides |
@@ -103,7 +103,10 @@ Rules for every tag:
 `compare` puts each rate (`call_rate`, `call_accuracy`, and with spoilers
 `chosen_lie_rate`) against the other seats of the match pooled: `above` when the
 player's interval lies wholly above theirs, `below` wholly below, `about` when
-they overlap, `too few` under 10 on either side.
+they overlap, `too few` under 10 on either side. The UI says "clearly above/below" and "about the same",
+never "average". `call_accuracy` depends on how often the others lie, which is
+fine within one match; a cross-match view compares hit and false-alarm rates
+instead.
 
 Speed tags need response times, which come with the per-move `decision` events
 (#94); until then no player gets one.
