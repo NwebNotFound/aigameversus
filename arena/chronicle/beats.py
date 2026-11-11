@@ -99,6 +99,11 @@ def liars_deck(events: Iterable[Event]) -> list[Chapter]:
 
 
 def poker(events: Iterable[Event]) -> list[Chapter]:
+    events = list(events)
+    finished = next((e for e in events if e.type == "match_finished"), None)
+    placements = finished.data["placements"] if finished else []
+    leaders = [p["player"] for p in placements if p["rank"] == 1]
+
     def handle(event: Event, chapter: Chapter) -> None:
         data = event.data
         match event.type:
@@ -128,8 +133,12 @@ def poker(events: Iterable[Event]) -> list[Chapter]:
             case "players_eliminated":
                 for player in data["players"]:
                     chapter.beats.append(Beat(kind="pk_out", facts={"player": player}))
-            case "match_over":
+            case "match_over" if data["winner"] is not None:
                 chapter.beats.append(Beat(kind="pk_win", facts={"winner": data["winner"]}))
+            case (
+                "match_over"
+            ):  # the hand limit ended it: the chip leaders are first in the standings
+                chapter.beats.append(Beat(kind="pk_limit", facts={"leaders": leaders}))
 
     return _chapters(_game_events(events), "hand_started", "hand", handle)
 
@@ -171,7 +180,7 @@ def werewolf(events: Iterable[Event]) -> list[Chapter]:
                     )
                 )
             case "game_over":
-                chapter.beats.append(Beat(kind="ww_end", facts={"winner": data["winner"]}))
+                chapter.beats.append(Beat(kind="ww_end", facts={"outcome": data["winner"]}))
 
     return _chapters(events, "night_started", "night", handle)
 

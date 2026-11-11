@@ -14,7 +14,7 @@ from arena.chronicle import (
     tell,
     to_markdown,
 )
-from arena.chronicle.text import FIELDS, KINDS, TEXT
+from arena.chronicle.text import FIELDS, KINDS, MORE, TEXT
 from arena.engine.match import Match
 from arena.engine.types import Event, EventSource
 from games.liars_deck.plugin import LiarsDeck
@@ -148,7 +148,7 @@ def test_the_werewolf_story_names_roles_causes_and_the_winner():
     assert "p1 (seer), p2 (werewolf), p3 (villager)" in text
     assert "p1, the seer, torn apart by the wolves" in text.replace("They found ", "")
     assert "p2 was chosen with 2 vote(s)" in text or "p2 was chosen" in text
-    assert "the village had won" in text
+    assert "The village has won." in text
     assert tell(log, style="news", lang="de").chapters[0].text.count("Seherin") >= 1
 
 
@@ -233,3 +233,49 @@ def test_a_narrator_can_be_swapped_without_a_model():
 )
 def test_epic_chapter_titles_count_in_good_english(number, title):
     assert title in TemplateNarrator().chapter_title("round", number, "epic", "en")
+
+
+def werewolf_ending(winner):
+    return [
+        started("werewolf", ["p1", "p2"]),
+        game("night_started", {"night": 1}),
+        game("game_over", {"winner": winner, "winners": ["p1"]}),
+        FINISHED,
+    ]
+
+
+@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("style", STYLES)
+def test_the_werewolf_ending_names_the_winning_side_in_good_grammar(style, lang):
+    words = {
+        "en": {"wolves": "The wolves have won.", "village": "The village has won."},
+        "de": {"wolves": "Die Wölfe haben gewonnen.", "village": "Das Dorf hat gewonnen."},
+    }[lang]
+
+    for side, phrase in words.items():
+        text = tell(werewolf_ending(side), style=style, lang=lang).chapters[0].text
+
+        assert phrase in text, (style, lang, side, text)
+        assert "win(s)" not in text and "Sieger ist die" not in text and "ist die W" not in text
+
+
+def test_the_poker_hand_limit_names_the_chip_leader():
+    standings = [{"player": "p2", "rank": 1}, {"player": "p1", "rank": 2}]
+    log = [
+        started("poker", ["p1", "p2"]),
+        game("hand_started", {"hand": 1, "button": "p1", "players": ["p1", "p2"], "big_blind": 20}),
+        game("match_over", {"reason": "hand_limit", "winner": None}),
+        engine("match_finished", {"placements": standings}),
+    ]
+
+    for lang in LANGS:
+        for style in STYLES:
+            text = tell(log, style=style, lang=lang).chapters[0].text
+            assert "p2" in text.split("p1")[-1] and "niemand" not in text and "nobody" not in text
+
+
+def test_the_extra_templates_use_known_fields():
+    for lang in LANGS:
+        for style in STYLES:
+            for kind, template in MORE[lang][style].items():
+                assert set(re.findall(r"{(\w+)}", template)) <= set(FIELDS[kind])

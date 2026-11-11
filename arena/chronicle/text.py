@@ -43,9 +43,11 @@ FIELDS: dict[str, tuple[str, ...]] = {
     "ww_vote": ("executed", "votes"),
     "ww_novote": (),
     "ww_hunter": ("player", "target"),
-    "ww_end": ("winner",),
+    "ww_end": ("outcome",),
+    "pk_limit": ("leaders",),
 }
-KINDS = tuple(FIELDS)
+# pk_limit (the hand limit ended the match) has its own templates in MORE.
+KINDS = tuple(k for k in FIELDS if k != "pk_limit")
 
 # fmt: off
 TEXT: dict[str, dict[str, tuple[str, ...]]] = {
@@ -77,7 +79,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "The village voted, and {executed} fell with {votes} voice(s) against.",
             "The village could not agree, and no one was led to the gallows.",
             "With a last breath, {player} the Hunter loosed a shot and took {target} along.",
-            "And so the tale ended: {winner} had won.",
+            "And so the tale ended: {outcome}",
         ),
         "news": (
             "ROUND {round}: the table card is {card}. Players: {players}.",
@@ -106,7 +108,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "Vote result: {executed} is executed with {votes} vote(s).",
             "Vote result: no majority, no execution.",
             "Last-minute shot: {player}, the Hunter, takes {target} down.",
-            "Final result: {winner} win(s) the game.",
+            "Final result: {outcome}",
         ),
         "sports": (
             "And we are off in round {round}! Table card: {card}. {players} at the table!",
@@ -135,7 +137,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "The vote is in: {executed} goes with {votes} vote(s)!",
             "A split vote, nobody goes this round!",
             "What a last play: {player}, the Hunter, fires and takes {target} with them!",
-            "Final whistle: {winner} take the game!",
+            "Final whistle: {outcome}",
         ),
         "novel": (
             "Round {round}. The table card was {card}, and {players} were already sweating.",
@@ -164,7 +166,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "The hands went up: {executed} was chosen with {votes} vote(s). Nobody met their eyes.",
             "Nobody could decide. The day passed with no one on the gallows.",
             "{player}, the Hunter, raised a shaking bow and took {target} along.",
-            "And that was how it ended: {winner} had won.",
+            "And that was how it ended: {outcome}",
         ),
     },
     "de": {
@@ -195,7 +197,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "Das Dorf stimmte ab, und {executed} fiel mit {votes} Stimme(n) gegen sich.",
             "Das Dorf wurde sich nicht einig, und niemand wurde zum Galgen geführt.",
             "Mit dem letzten Atemzug schoss {player}, der Jäger, und nahm {target} mit.",
-            "So endete die Geschichte: Sieger war {winner}.",
+            "So endete die Geschichte: {outcome}",
         ),
         "news": (
             "RUNDE {round}: Tischkarte ist {card}. Spieler: {players}.",
@@ -224,7 +226,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "Abstimmungsergebnis: {executed} wird mit {votes} Stimme(n) hingerichtet.",
             "Abstimmungsergebnis: keine Mehrheit, keine Hinrichtung.",
             "Letzter Schuss: {player}, der Jäger, reißt {target} mit.",
-            "Endergebnis: {winner} gewinnt das Spiel.",
+            "Endergebnis: {outcome}",
         ),
         "sports": (
             "Und los geht es in Runde {round}! Tischkarte: {card}. {players} am Tisch!",
@@ -253,7 +255,7 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "Die Abstimmung ist durch: {executed} muss mit {votes} Stimme(n) gehen!",
             "Gleichstand, diese Runde muss niemand gehen!",
             "Was für ein letzter Spielzug: {player}, der Jäger, schießt und nimmt {target} mit!",
-            "Abpfiff: Sieger ist {winner}!",
+            "Abpfiff: {outcome}",
         ),
         "novel": (
             "Runde {round}. Die Tischkarte war {card}, und {players} schwitzten bereits.",
@@ -282,8 +284,36 @@ TEXT: dict[str, dict[str, tuple[str, ...]]] = {
             "Die Hände gingen hoch: {executed} wurde mit {votes} Stimme(n) gewählt. Niemand sah dem anderen in die Augen.",
             "Keiner konnte sich entscheiden. Der Tag verging, ohne dass jemand an den Galgen kam.",
             "{player}, der Jäger, hob den zitternden Bogen und nahm {target} mit.",
-            "Und so endete es: Gewonnen hatte {winner}.",
+            "Und so endete es: {outcome}",
         ),
+    },
+}
+
+MORE: dict[str, dict[str, dict[str, str]]] = {
+    "en": {
+        "epic": {"pk_limit": "The hand limit fell, and the chips were counted: {leaders} stood highest."},
+        "news": {"pk_limit": "Hand limit reached. Chip leader: {leaders}."},
+        "sports": {"pk_limit": "That is the hand limit! {leaders} lead(s) the chip count!"},
+        "novel": {"pk_limit": "The last hand was over. When they counted, {leaders} had the most chips."},
+    },
+    "de": {
+        "epic": {"pk_limit": "Das Handlimit fiel, die Chips wurden gezählt: Am höchsten stand {leaders}."},
+        "news": {"pk_limit": "Handlimit erreicht. Chipführer: {leaders}."},
+        "sports": {"pk_limit": "Das ist das Handlimit! Chipführer ist {leaders}!"},
+        "novel": {"pk_limit": "Die letzte Hand war vorbei. Beim Zählen hatte {leaders} die meisten Chips."},
+    },
+}
+
+OUTCOMES = {
+    "en": {
+        "wolves": "the wolves have won.", "village": "the village has won.",
+        "lovers": "the lovers have won.", "white_wolf": "the White Werewolf has won.",
+        "nobody": "nobody has won.",
+    },
+    "de": {
+        "wolves": "die Wölfe haben gewonnen.", "village": "das Dorf hat gewonnen.",
+        "lovers": "das Liebespaar hat gewonnen.", "white_wolf": "der Weiße Werwolf hat gewonnen.",
+        "nobody": "niemand hat gewonnen.",
     },
 }
 
@@ -395,7 +425,7 @@ class TemplateNarrator(Narrator):
         return CHAPTER_TITLES[lang][style][kind].format(n=number, nth=_ordinal(number))
 
     def tell(self, beats: list[Beat], style: str, lang: str, names: Mapping[str, str]) -> str:
-        templates = dict(zip(KINDS, TEXT[lang][style], strict=True))
+        templates = dict(zip(KINDS, TEXT[lang][style], strict=True)) | MORE[lang][style]
         return " ".join(templates[beat.kind].format(**_fields(beat, lang, names)) for beat in beats)
 
 
@@ -439,11 +469,11 @@ def _fields(beat: Beat, lang: str, names: Mapping[str, str]) -> dict[str, str]:
     for key in FIELDS[beat.kind]:
         value = f[key]
         if key in ("player", "caller", "target", "button", "winner", "executed"):
-            if beat.kind == "ww_end":
-                out[key] = WINNERS[lang].get(value, str(value))
-            else:
-                out[key] = _who(value, names) if value is not None else WINNERS[lang]["nobody"]
-        elif key == "players" or key == "winners":
+            out[key] = _who(value, names) if value is not None else WINNERS[lang]["nobody"]
+        elif key == "outcome":
+            text = OUTCOMES[lang].get(value, OUTCOMES[lang]["nobody"])
+            out[key] = text[0].upper() + text[1:]
+        elif key in ("players", "winners", "leaders"):
             out[key] = _list(value, names, lang)
         elif key == "card":
             out[key] = RANKS[lang][value]
