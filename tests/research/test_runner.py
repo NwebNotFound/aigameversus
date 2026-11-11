@@ -394,3 +394,21 @@ def test_a_drain_file_stops_new_starts_and_lets_running_matches_finish(tmp_path)
     (tmp_path / "DRAIN").unlink()  # resume
     reports = league(tmp_path, arena, parallel=2).run()
     assert len(reports) == 120 and len(arena.started) == 120
+
+
+def test_a_batch_field_goes_with_every_start_with_its_index(tmp_path):
+    arena = FakeArena(cost=1_000)
+
+    league(tmp_path, arena, parallel=2, batch=("E1-A2", "E1 league A2")).run()
+
+    batches = [body["batch"] for body in arena.started]
+    assert [b["index"] for b in batches] == list(range(1, 121))
+    assert {(b["id"], b["label"], b["of"]) for b in batches} == {("E1-A2", "E1 league A2", 120)}
+
+
+def test_without_a_batch_no_batch_field_is_sent(tmp_path):
+    arena = FakeArena(cost=1_000)
+
+    runner(tmp_path, arena, pilot=True).run()
+
+    assert all("batch" not in body for body in arena.started)

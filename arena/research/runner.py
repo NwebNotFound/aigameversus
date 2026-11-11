@@ -201,6 +201,7 @@ class Runner:
         parallel: int = 1,
         per_model: int = 3,
         match_bound_eur: float = 0.08,
+        batch: tuple[str, str] | None = None,
         web: str = "http://127.0.0.1:3100",
         sleep: Callable[[float], None] = time.sleep,
         say: Callable[[str], None] = print,
@@ -237,6 +238,7 @@ class Runner:
         self.parallel = parallel
         self.per_model = per_model
         self.match_bound = int(match_bound_eur * MICRO)
+        self.batch = batch  # (id, label): sent with every start, so the arena can group the run
         self.web = web.rstrip("/")
         self.sleep = sleep
         self.say = say
@@ -434,6 +436,15 @@ class Runner:
             "turn_delay": self.turn_delay,
             "memory": False,  # experiments are played without memory: nothing read, nothing written
         }
+        if self.batch is not None:
+            batch_id, label = self.batch
+            index = self.matches.index(match) + 1
+            body["batch"] = {
+                "id": batch_id,
+                "label": label,
+                "index": index,
+                "of": len(self.matches),
+            }
         if self.bots:
             body["players"] = len(models)
         else:
@@ -545,6 +556,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--match-bound", type=float, default=0.08, help="EUR a running match may still cost"
     )
+    parser.add_argument(
+        "--batch-id", help="send a batch field with every start (needs --batch-label)"
+    )
+    parser.add_argument("--batch-label", help="the batch's name as people read it")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(errors="backslashreplace", line_buffering=True)
     settings = {}
@@ -568,6 +583,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             parallel=args.parallel,
             per_model=args.per_model,
             match_bound_eur=args.match_bound,
+            batch=(args.batch_id, args.batch_label) if args.batch_id else None,
             web=args.web,
         )
         reports = runner.run()
