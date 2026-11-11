@@ -60,6 +60,7 @@ class League(_Stage):
     models: list[str] = Field(min_length=8, max_length=8)
     effort: Effort
     pilot_tables: int = Field(ge=0)  # these tables' first seed is played before the rest
+    pilot_budget_eur: Decimal = Field(gt=0)  # for the pilot matches; part of `budget_eur`
 
 
 class Mirror(_Stage):
@@ -99,6 +100,7 @@ class Experiment(_Strict):
     registered: str
     author: str
     amendments: list[dict[str, Any]]
+    approvals: list[dict[str, Any]]
     question: str
     game: str
     settings: dict[str, Any]
@@ -122,6 +124,8 @@ class Experiment(_Strict):
             unknown = sorted(set(_stage_models(stage)) - set(self.models))
             if unknown:
                 raise ValueError(f"stage {stage.id} names models the plan does not list: {unknown}")
+            if isinstance(stage, League) and stage.pilot_budget_eur > stage.budget_eur:
+                raise ValueError(f"stage {stage.id}: the pilot budget is above the stage budget")
         budget = self.budget
         planned = (
             sum(stage.budget_eur for stage in self.stages)

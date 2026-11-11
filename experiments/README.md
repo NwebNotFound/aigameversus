@@ -8,12 +8,13 @@ the plan fixes, with seed, seating and order.
 
 | File | Question | Status |
 | --- | --- | --- |
-| [E1_liars_deck.yaml](E1_liars_deck.yaml) | Liar's Deck: do cheap models differ, does more reasoning help, do stronger models win? | proposed |
+| [E1_liars_deck.yaml](E1_liars_deck.yaml) | Liar's Deck: do cheap models differ, does more reasoning help, do stronger models win? | stage A approved, B and C proposed; nothing played |
 
 ## Rules
 
-- A plan is `proposed` until Arena Lead approves it. Only an `approved` plan
-  may spend money, and only up to the budget of each stage.
+- Every paid run needs the project owner's own yes. A plan lists what he has
+  agreed to under `approvals`, stage by stage; a stage without an entry
+  spends nothing, and an approved stage spends at most its budget.
 - After approval a plan changes only by an entry under `amendments` (date,
   what, why) and a higher `version`. Results never change a hypothesis, a test
   or a stopping rule.

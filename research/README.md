@@ -5,6 +5,11 @@ How the models in the arena are evaluated: plans under
 reports here. This page is the research plan. It holds no result yet: no
 experiment has been played.
 
+Two kinds of matches are analysed with the same tools: matches of a
+registered experiment, and any match somebody starts by hand in the UI or on
+the command line. Every paid run needs the project owner's own yes; of
+experiment 1 he has approved the pilot and stage A.
+
 State: 2026-11-11, `main` at `b8dc53e`.
 
 ## What the arena can run today
@@ -50,8 +55,12 @@ Needed from the arena core (Arena Builder), most of it already planned:
    check that "high effort" was really more thinking.
 5. The commit of the arena in every saved match, as the prompt version.
 
-Built here, under `arena/research/`: the batch runner, the analysis and the
-reports (steps below).
+6. Model seats in `POST /matches`: experiment matches run through the API of
+   the shared stack, one at a time, so that they can be watched live and one
+   ledger counts every call.
+
+Built here, under `arena/research/`: the export, the batch runner, the
+analysis and the reports (steps below).
 
 Known limits that stay and are reported with every result: a prompt shows the
 last 40 events only; sampling is the provider's default; one model id can be
@@ -66,11 +75,11 @@ the cap stays unplanned.
 | Line | Matches | Estimate | Budget |
 | --- | --- | --- | --- |
 | Spent before | 6 | | 0.18 |
-| E1 stage A: league of the 8 cheap models, Liar's Deck | 112 | 2.20 | 3.00 |
-| E1 stage B: one model at high and low reasoning effort | 96 | 4.20 | 5.00 |
-| E1 stage C: 4 stronger models as guests among cheap hosts | 96 | 7.20 | 8.00 |
-| E2: Poker in duplicate mode, cheap roster (own plan, later) | 48 | 2.60 | 2.80 |
-| Not assigned | | | 1.02 |
+| E1 stage A: league of the 8 cheap models, Liar's Deck (approved; pilot of 8 matches up to 0.30, stop at 90 %) | 112 | 2.20 | 3.00 |
+| E1 stage B: one model at high and low reasoning effort (not approved) | 96 | 4.20 | 4.50 |
+| E1 stage C: 4 stronger models as guests among cheap hosts (not approved) | 96 | 7.20 | 7.50 |
+| Poker in duplicate mode, cheap roster (own plan, later; not approved) | 48 | 2.60 | 2.80 |
+| Not assigned | | | 2.02 |
 | Reserve, 20 % | | | 5.00 |
 | **Sum** | | | **25.00** |
 
@@ -82,8 +91,8 @@ times the listed prices. A stage stops at its budget, whatever the estimate.
 
 Why Liar's Deck first: it is the cheapest and fastest game with four seats, a
 match has one winner and a full order of places, and its skills (lying,
-calling) can be counted from the log without a judge model. Poker follows as
-E2, because duplicate mode removes most of the card luck. Werewolf comes after
+calling) can be counted from the log without a judge model. Poker follows,
+because duplicate mode removes most of the card luck. Werewolf comes after
 that: results are per team, so a model needs many matches per role.
 
 Later, once the arena supports them: memory on against memory off, and
@@ -92,16 +101,19 @@ Throne of Tokens.
 ## Build steps
 
 One step is one branch and one draft pull request, tested on bot and mock-LLM
-matches, without a paid call.
+matches, without a paid call. Every command works on whatever matches are in
+the database or in saved files, not only on experiment matches.
 
 | Step | Content |
 | --- | --- |
 | R1 (this one) | Plan format and loader, seatings, schedule, power; plan of experiment 1. |
-| R2 | Batch runner: plays a schedule match by match through the arena's `Budget`, resumes after a stop, enforces the stage budget and the pilot rule, writes one saved match per line of the schedule and a run log. Tested with bots and the mock LLM. |
-| R3 | Data set: saved matches to tidy tables (matches, seats, moves, calls) as CSV, with reliability and cost per seat. |
-| R4 | Outcome statistics: win share with Wilson intervals, mean rank, the permutation tests of the plan, Holm correction, seat and seed effects. |
-| R5 | Ratings: Plackett-Luce strengths and Elo with bootstrap intervals over whole seeds. |
-| R6 | Game skills with intervals: Liar's Deck first (lie rate, call accuracy and its 2x2 test, bluffing against revolver risk), then Poker and Werewolf. |
-| R7 | Thoughts against words: rule-based checks per game; a judge model only with its own approved budget. |
-| R8 | Report generator: Markdown, CSV and figures per experiment, one page per model, methods and limits, model ids, dates, commit. |
-| R9 | Paper skeleton under `research/paper/`. |
+| R2 | `arena research export`: all or filtered matches as flat tables (matches, players, turns, events, thoughts and messages, tool calls, costs and tokens, statistics per game) in CSV, JSON and one SQLite file; the schema in `research/DATA.md`. |
+| R3 | Batch runner as a client of the arena API: plays a schedule one match at a time, prints the live address of each match, pauses between matches, resumes after a stop, enforces the run budget (stop at 90 %) and the pilot rule. Tested with bot seats. |
+| R4 | Leaderboard with intervals: win share (Wilson), mean rank, Plackett-Luce strengths and Elo with bootstrap intervals; head-to-head matrix; seat effects; the permutation tests of the plan with Holm correction. |
+| R5 | Views over time: learning curves and variance per model, by seed and by date. |
+| R6 | Play style: features per model and game (lie and call rates, risk taken against the revolver or the pot odds, aggression, timing of deception, voting), with intervals; which models play alike (clusters, nearest neighbours), outliers, notable moments. |
+| R7 | Failure modes: ignored tools, repeated rejected answers, timeouts, fallbacks, cut-off answers, per model. |
+| R8 | Thoughts against words: rule-based contradiction checks per game; a judge model only with its own approved budget. |
+| R9 | Report generator: Markdown with figures per model and per game, methods and limits, model ids, dates, commit. |
+| R10 | `research/GUIDE.md`: how to design and run an own experiment (plan template with comments), estimate its cost before the run, export, analyse and read the report. |
+| R11 | Paper skeleton under `research/paper/`. |

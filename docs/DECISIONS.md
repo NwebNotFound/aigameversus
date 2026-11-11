@@ -1507,9 +1507,10 @@ Each entry: date, decision, why, alternatives considered.
 - **Decision:**
   - An experiment is one YAML file in `experiments/` with its question, fixed
     conditions, models (ids and prices of that day), stages, hypotheses with
-    their tests, stopping and exclusion rules and budgets. It is `proposed`
-    until Arena Lead approves it; after that it changes only by a dated entry
-    under `amendments`.
+    their tests, stopping and exclusion rules and budgets. Every paid run
+    needs the project owner's own yes: the plan lists it per stage under
+    `approvals`. An approved stage changes only by a dated entry under
+    `amendments`.
   - The schedule (every match: seed, seating, order) is generated from the
     plan by `arena/research/experiment.py` and stored next to it; a test keeps
     the two in step.
