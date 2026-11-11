@@ -1,0 +1,148 @@
+{
+  "$defs": {
+    "Duration": {
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "Default"
+        },
+        "min": {
+          "minimum": 1,
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "minimum": 1,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "default",
+        "min",
+        "max"
+      ],
+      "title": "Duration",
+      "type": "object"
+    },
+    "Reputation": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "title": "Max",
+          "type": "integer"
+        },
+        "start": {
+          "title": "Start",
+          "type": "integer"
+        },
+        "break_treaty_penalty": {
+          "maximum": 0,
+          "title": "Break Treaty Penalty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max",
+        "start",
+        "break_treaty_penalty"
+      ],
+      "title": "Reputation",
+      "type": "object"
+    },
+    "Treaty": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "English display name",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "name_de": {
+          "description": "German display name",
+          "minLength": 1,
+          "title": "Name De",
+          "type": "string"
+        },
+        "duration_rounds": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Duration"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null = until broken"
+        },
+        "forbids_attack": {
+          "default": false,
+          "title": "Forbids Attack",
+          "type": "boolean"
+        },
+        "shared_vision": {
+          "default": false,
+          "title": "Shared Vision",
+          "type": "boolean"
+        },
+        "joint_war": {
+          "default": false,
+          "title": "Joint War",
+          "type": "boolean"
+        },
+        "open_borders": {
+          "default": false,
+          "title": "Open Borders",
+          "type": "boolean"
+        },
+        "payment_per_round": {
+          "default": false,
+          "title": "Payment Per Round",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "name_de",
+        "duration_rounds"
+      ],
+      "title": "Treaty",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "reputation": {
+      "$ref": "#/$defs/Reputation"
+    },
+    "treaties": {
+      "items": {
+        "$ref": "#/$defs/Treaty"
+      },
+      "minItems": 1,
+      "title": "Treaties",
+      "type": "array"
+    }
+  },
+  "required": [
+    "reputation",
+    "treaties"
+  ],
+  "title": "TreatiesFile",
+  "type": "object"
+}
