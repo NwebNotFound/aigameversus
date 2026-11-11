@@ -8,3 +8,5 @@ hooks:
   on_morning: bear_growl
 description: >
   If a living werewolf sits directly next to them in the seating circle (dead players are skipped), the bear growls and everyone hears it.
+rules_snippet: >
+  Each morning your bear growls if a living werewolf sits directly next to you (dead players are skipped). Everyone hears it.

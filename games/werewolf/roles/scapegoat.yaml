@@ -8,3 +8,5 @@ hooks:
   on_vote_tie: scapegoat_dies
 description: >
   If the vote is tied, they die instead of nobody.
+rules_snippet: >
+  If a vote is tied, you die instead of nobody dying.

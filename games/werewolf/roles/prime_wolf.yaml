@@ -8,3 +8,5 @@ hooks:
   on_night: prime_wolf_infect
 description: >
   Hunts with the wolves. Once per game may turn the victim into a werewolf instead of killing them.
+rules_snippet: >
+  You hunt with the wolves. Once per game you may turn the victim into a werewolf instead of killing them.
