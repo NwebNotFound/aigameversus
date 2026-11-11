@@ -92,3 +92,73 @@ Each entry: date, decision, why, alternatives considered.
   silently. Python 3.12 is the version the spec names.
 - **Alternatives:** `latest` tags; an image with pgvector, which is deferred
   until the memory layer needs it (phase 6).
+
+## D-009 · Plugins change state only through events
+
+- **Date:** 2026-11-11
+- **Decision:** The plugin interface differs from the sketch in the spec.
+  `setup`, `apply_actions` and `step` get a context and call `ctx.emit(...)`
+  instead of returning events; the engine passes every emitted event to a new
+  method `apply_event`, the only place where a plugin may mutate its state.
+  `initial_state` (pure, no randomness) replaces the state-building half of the
+  spec's `setup`. `validate` returns `None` or an error message. `random_action`
+  is part of the interface. `render_spec` is left out until the UI defines what
+  it needs (phase 5).
+- **Why:** If state changes only by applying events, the event log is complete
+  by construction: replay is a fold over the log, needs no seed and no rule
+  logic, and keeps working for old logs after rules change. Emitting and
+  applying in one call means a plugin writes each state change once and can
+  read the updated state right away.
+- **Alternatives:** Mutating in `apply_actions` and returning descriptive
+  events (the log may then silently miss state); storing only actions and
+  re-running the rules for replay (breaks old replays when rules change).
+
+## D-010 · Named random streams derived from the seed
+
+- **Date:** 2026-11-11
+- **Decision:** A plugin gets randomness from `ctx.rng(*key)`, a stream derived
+  from the match seed and the key by SHA-256. A key may be used once per match.
+  Random bots and the engine fallback use separate streams.
+- **Why:** A stream depends only on seed and key, so a match can continue from
+  its log without saved generator state, rejected attempts and bot draws cannot
+  shift the game's randomness, and a game can deal the same cards again on
+  purpose (duplicate poker: key by hand number).
+- **Alternatives:** One generator for the whole match (its state must be saved
+  to resume, and any extra draw changes everything after it).
+
+## D-011 · Validation order and fallback
+
+- **Date:** 2026-11-11
+- **Decision:** The engine checks an action in three steps: the tool is offered
+  now, the arguments match the tool's JSON Schema (`jsonschema`), the plugin's
+  `validate` accepts it. A rejected action is returned with the error; after 2
+  corrections the game's `random_action` plays instead and the log marks it
+  with `action_fallback`. Every attempt is logged, visible only to that player
+  and to spectators.
+- **Why:** Generic checks give every game the same clear errors for malformed
+  model output, and plugins validate only rules. A random legal move keeps the
+  match going in every game without a per-game notion of "do nothing".
+- **Alternatives:** A per-game default action; skipping the player's turn.
+
+## D-012 · One engine loop for all turn modes, one action per request
+
+- **Date:** 2026-11-11
+- **Decision:** The loop is the same for `sequential`, `simultaneous` and
+  `tick`: ask all active players at once, apply their actions together, then
+  `step`. Sequential games may name at most one active player; tick games may
+  name none. An agent returns one action per request; a turn with several
+  actions (talk, then play) is the plugin keeping the player active. The engine
+  is async. A turn that produces no game event stops the match as a plugin bug.
+- **Why:** One code path to test. Async lets simultaneous players call their
+  models in parallel later, while the log order stays the seat order.
+- **Alternatives:** A loop per turn mode; batches of actions per request (may
+  come with the agent runner if model calls need it).
+
+## D-013 · High Card as a shipped reference game
+
+- **Date:** 2026-11-11
+- **Decision:** `games/toy` is a real plugin (a small trick-taking game), not a
+  test fixture.
+- **Why:** It is the game the CLI runs before a real game exists, and the
+  template `CLAUDE.md` points to for adding a game.
+- **Alternatives:** A fixture under `tests/` only.

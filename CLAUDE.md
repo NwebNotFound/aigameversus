@@ -11,10 +11,12 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.1, the skeleton. The arena exposes
-`GET /health`, the worker is a heartbeat placeholder, the web UI is a static
-page. Sections below marked *not built yet* describe the target from the spec
-and get filled in as their phase lands.
+**State of the build:** roadmap step 1.2. The engine runs complete matches of
+any plugin with random bots, in memory. There is one reference game, High Card
+(`games/toy`). The arena API still exposes only `GET /health`, the worker is a
+heartbeat placeholder, the web UI is a static page. Sections below marked *not
+built yet* describe the target from the spec and get filled in as their phase
+lands.
 
 ## Architecture
 
@@ -28,11 +30,44 @@ and get filled in as their phase lands.
 | Worker | runs matches from the queue | `arena/worker.py` |
 | Spectator UI | live view, replays, rankings, settings | `web/` |
 
-One turn (*not built yet*): the server asks the plugin who is active and what
-that player may see; the agent runner turns that into a prompt with the allowed
-tools; the model answers with thoughts, messages and tool calls; the server
-validates every action (clear error, up to 2 retries); the plugin resolves the
-turn; everything is stored as events and streamed to the UI.
+### One turn
+
+`arena/engine/match.py` runs this loop until the plugin says the game is over:
+
+1. Ask the plugin who is active. Each active player gets a `TurnRequest`: their
+   observation and the tools allowed now. In a simultaneous game all active
+   players decide on the same state.
+2. The agent answers with one `Action`. The engine checks the tool name, then
+   the arguments against the tool's JSON Schema, then the plugin's `validate`.
+   A rejected action goes back with a clear error, up to 2 corrections. After
+   that the game's `random_action` plays and the turn is marked
+   (`action_fallback`).
+3. `apply_actions`, then `step`, let the plugin emit game events.
+4. A turn without a game event is a plugin bug and stops the match.
+
+*Not built yet:* prompts and model calls (step 1.4), persistence and replay
+(1.3), streaming to the UI (1.6).
+
+### Events and state
+
+A match is a list of `Event`s. Engine events (`match_started`,
+`action_accepted`, `action_rejected`, `action_fallback`, `match_finished`) are
+bookkeeping. Game events come from the plugin through `ctx.emit` and are the
+only thing that changes the game state: `emit` records the event and passes it
+to the plugin's `apply_event` at once. Replaying the game events over
+`initial_state` therefore rebuilds the exact state.
+
+Every event says who may see it: `visible_to=None` is public, a list of
+players is private to them, an empty list is spectators only. The seed is
+spectators only.
+
+### Randomness
+
+`ctx.rng("deal", state.round_no)` returns a random stream derived from the
+match seed and that key. Name the stream after what it decides and include a
+counter; asking for the same key twice in a match is an error. Random bots and
+the fallback use their own streams, so rejected attempts and bot choices never
+shift the game's randomness.
 
 ## Rules that do not bend
 
@@ -70,6 +105,7 @@ arena/
   gamemaster/   match setup, scheduling, narrator
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
+  toy/          High Card, the reference plugin
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -125,10 +161,30 @@ commit `pyproject.toml` together with `uv.lock`.
 
 ### A game
 
-*Not built yet: the plugin interface lands in step 1.2.* Target: create
-`games/<id>/` with `plugin.py` implementing the plugin interface, `rules.md`
-(the rule summary given to models), a random bot, and `tests/`. UI, replays,
-ratings and memory then work without changes to the core.
+Copy the shape of `games/toy/`, the smallest complete game.
+
+1. Create `games/<id>/` with `__init__.py`, `plugin.py` and `tests/`.
+2. Define the state as a Pydantic model and subclass `GamePlugin`
+   (`arena/engine/plugin.py`). Set `id`, `version`, `min_players`,
+   `max_players` and `turn_mode`.
+3. `initial_state` builds the state before anything happened, without
+   randomness, and raises `ValueError` for bad settings. `setup` emits the
+   opening events (deal, assign roles).
+4. Change the state only in `apply_event`. `setup`, `apply_actions` and `step`
+   decide what happens and call `ctx.emit(type, data, visible_to=...)`.
+5. `get_observation` returns only what that player may see, as a copy.
+   `get_tools` returns the allowed actions as `ToolSpec`s with a JSON Schema.
+   `validate` returns `None` or a message that tells the player how to fix the
+   action.
+6. `random_action` picks a random legal action from an observation. It is the
+   game's random bot and the engine's fallback.
+7. Tests, as in `games/toy/tests/`: full bot matches for every player count,
+   same seed gives the same events and state, observations do not depend on
+   other players' hidden information, private events are private, rejected
+   actions carry a useful message.
+
+*Not built yet:* `rules.md` for model prompts (step 1.4), the registry that
+finds games by id (1.6), and what the UI needs to draw a game (phase 5).
 
 ### A role or variant
 

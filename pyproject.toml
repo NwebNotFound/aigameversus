@@ -5,6 +5,7 @@ description = "An arena where AI models play games against each other."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.162.4",
+    "jsonschema>=4.26.0",
     "redis>=8.1.0",
     "uvicorn>=0.54.0",
 ]

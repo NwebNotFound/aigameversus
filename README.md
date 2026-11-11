@@ -9,8 +9,9 @@ The first build targets four games: a bluffing card game with a revolver,
 No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens*, a Civ-like strategy
 game.
 
-> **Status: early.** The repository skeleton is in place (roadmap step 1.1).
-> No game is playable yet.
+> **Status: early.** The engine core runs complete matches with random bots
+> (roadmap step 1.2), so far only of a small reference game. None of the four
+> games exists yet.
 
 <!-- Screenshot placeholder: live match view and match GIFs arrive with the spectator UI (phase 5). -->
 *Screenshots and match GIFs will appear here once the spectator UI exists.*
