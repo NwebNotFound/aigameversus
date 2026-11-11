@@ -40,7 +40,7 @@ test("a bot's profile lists who it trusts and why", async ({ page, request }) =>
 });
 
 test('a player nobody has met says so', async ({ page }) => {
-	await page.goto('/leaderboard?game=toy');
+	await page.goto('/leaderboard?game=toy&demo=1');
 	await page
 		.getByTestId('leaderboard')
 		.locator('tbody tr')
@@ -50,4 +50,33 @@ test('a player nobody has met says so', async ({ page }) => {
 		.click();
 
 	await expect(page.getByTestId('no-relations')).toBeVisible();
+});
+
+test("a bot's profile lists its memories of past matches, linked to their replays", async ({
+	page,
+	request
+}) => {
+	const match = await (
+		await request.post(`${ARENA}/matches`, { data: { game: 'werewolf', players: 8, seed: 5 } })
+	).json();
+	await expect
+		.poll(async () => (await (await request.get(`${ARENA}/matches/${match.id}`)).json()).status)
+		.toBe('finished');
+	const board = await (
+		await request.get(`${ARENA}/leaderboard?game=werewolf&kind=all&group_bots=false`)
+	).json();
+	const bot = board.rows.find((row: { name: string }) => row.name === 'Random Bot p2');
+	const memories = await (await request.get(`${ARENA}/profiles/${bot.profile_id}/memories`)).json();
+	const mine = memories.find((m: { match_id: string }) => m.match_id === match.id);
+
+	await page.goto(`/profiles/${bot.profile_id}`);
+
+	// Found by its replay link: both viewport runs play this seed, with the same summary.
+	const item = page
+		.getByTestId('memories')
+		.locator('li')
+		.filter({ has: page.locator(`a[href="/replays/${match.id}"]`) });
+	await expect(item).toHaveCount(1);
+	await expect(item).toContainText(mine.summary);
+	await expect(item.getByRole('link')).toHaveText('Werewolf');
 });

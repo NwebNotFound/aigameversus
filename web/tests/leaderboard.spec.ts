@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // (CI does this after starting the stack). Demo profiles play High Card (`toy`).
 
 test('overall leaderboard lists the demo players by rating', async ({ page }) => {
-	await page.goto('/leaderboard?kind=all');
+	await page.goto('/leaderboard?kind=all&demo=1');
 
 	const tabs = page.getByRole('navigation', { name: 'Games' });
 	await expect(tabs.getByRole('link', { name: 'Overall' })).toHaveAttribute('aria-current', 'page');
@@ -21,7 +21,7 @@ test('overall leaderboard lists the demo players by rating', async ({ page }) =>
 });
 
 test('a game tab shows that game', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?demo=1');
 
 	await page
 		.getByRole('navigation', { name: 'Games' })
@@ -48,7 +48,7 @@ test('a game without matches shows the empty state', async ({ page }) => {
 });
 
 test('a player links to a profile with rating bars and stats', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?demo=1');
 	const first = page
 		.getByTestId('leaderboard')
 		.locator('tbody tr')
@@ -64,7 +64,7 @@ test('a player links to a profile with rating bars and stats', async ({ page }) 
 	await expect(page.getByRole('region', { name: 'Statistics', exact: true })).toContainText(
 		'Win rate'
 	);
-	await expect(page.getByText('not available yet')).toBeVisible();
+	await expect(page.getByTestId('no-memories')).toBeVisible();
 });
 
 test('a malformed profile id is the same 404 page', async ({ page }) => {
@@ -94,12 +94,12 @@ for (const path of ['/leaderboard', '/leaderboard?game=toy']) {
 
 // No real model is rated in the demo stack, so the default view falls back to everyone.
 test('real models are the default and the filter can show bots or all', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?demo=1');
 
 	const filter = page.getByRole('navigation', { name: 'Who' });
 	// Real models are asked for; none is rated, so the board shows everyone and says so.
 	await expect(filter.getByTestId('kind-all')).toHaveAttribute('aria-current', 'page');
-	await expect(page.getByTestId('kind-fallback')).toContainText('No real model is rated yet');
+	await expect(page.getByTestId('kind-fallback')).toContainText('No rated real-model matches yet');
 	await expect(
 		page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / })
 	).toHaveCount(6);
@@ -111,6 +111,20 @@ test('real models are the default and the filter can show bots or all', async ({
 	await filter.getByTestId('kind-bots').click();
 	await expect(filter.getByTestId('kind-bots')).toHaveAttribute('aria-current', 'page');
 	await expect(page.getByTestId('leaderboard')).toBeVisible();
+});
+
+test('demo data is hidden until the switch is used', async ({ page }) => {
+	await page.goto('/leaderboard?kind=all');
+
+	const demo = page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / });
+	await expect(demo).toHaveCount(0);
+	await expect(page.getByTestId('demo-switch')).toContainText('6 demo profiles hidden');
+
+	await page.getByTestId('demo-toggle').click();
+
+	await expect(page).toHaveURL(/demo=1/);
+	await expect(demo).toHaveCount(6);
+	await expect(page.getByTestId('demo-toggle')).toHaveText('Hide demo data');
 });
 
 test('the table shows model, cost per game and tool errors, and bot seats are one row', async ({

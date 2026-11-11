@@ -89,6 +89,41 @@ def test_models_play_a_match_that_is_metered_and_says_who_sat_where(
     assert (replay["id"], replay["real"]) == (match["id"], True)
 
 
+def test_the_transcript_names_the_models_of_a_running_match_and_after_it(client, answer_with):
+    answer_with(**PLAY_3)
+    config = load_config()
+    response = client.post(
+        "/matches",
+        json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": 4, "turn_delay": 5},
+    )
+    match_id = response.json()["id"]
+
+    def players():
+        return client.get(f"/matches/{match_id}/transcript").json()["players"]
+
+    expected = {
+        f"p{n}": {
+            "seat": f"p{n}",
+            "display": model,
+            "name": config.models[model].name or model,
+            "model": model,
+            "kind": "model",
+            "vendor": config.models[model].model.split("/")[0],
+        }
+        for n, model in enumerate(MODELS, start=1)
+    }
+    running = players()  # the match is still running: nobody has rated it yet
+    client.post(f"/matches/{match_id}/abort")
+    finish(client, match_id)
+
+    assert client.get(f"/matches/{match_id}").json()["status"] == "aborted"
+    assert running == expected
+    assert players() == expected
+    text = client.get(f"/matches/{match_id}/transcript", params={"format": "text"}).text
+    assert "glm-flash" in text and "deepseek-flash" in text
+    assert "Bot " not in text and "p1" not in text
+
+
 def test_cap_ends_a_model_match_as_interrupted_before_any_call(
     client, database_url, answer_with, monkeypatch
 ):
@@ -187,21 +222,86 @@ def rated_rows(database_url):
     return asyncio.run(read())
 
 
-def test_a_finished_model_match_is_not_rated(client, database_url, answer_with):
-    """Model profiles are not built in the API yet (D-082): no rating, no profile, no memory."""
+def test_a_finished_model_match_is_rated_with_one_profile_per_model(
+    client, database_url, answer_with
+):
+    """D-081: model matches are rated, one profile per model, the same in every match."""
+    answer_with(**PLAY_3)
+    body = {"game": "toy", "models": MODELS, "confirm_spend": True}
+
+    for seed in (4, 5):
+        response = client.post("/matches", json={**body, "seed": seed})
+        assert finish(client, response.json()["id"])["status"] == "finished"
+
+    rows = rated_rows(database_url)
+    assert (rows["player_profiles"], rows["rated_matches"], rows["match_seats"]) == (2, 2, 4)
+    board = client.get("/leaderboard", params={"kind": "models"}).json()["rows"]
+    assert sorted(row["name"] for row in board) == sorted(MODELS)
+    assert {row["games_played"] for row in board} == {2}
+    bots = finish(client, client.post("/matches", json={"game": "toy"}).json()["id"])
+    assert bots["status"] == "finished"
+    assert rated_rows(database_url)["rated_matches"] == 3  # the bot match is rated too
+
+
+def test_a_model_in_two_seats_leaves_the_match_unrated_and_the_match_finishes(
+    client, database_url, answer_with
+):
     answer_with(**PLAY_3)
 
+    response = client.post(
+        "/matches",
+        json={"game": "toy", "models": ["glm-flash", "glm-flash"], "confirm_spend": True},
+    )
+
+    assert finish(client, response.json()["id"])["status"] == "finished"
+    assert set(rated_rows(database_url).values()) == {0}
+
+
+def test_a_rating_error_never_fails_a_model_match(client, answer_with, monkeypatch):
+    from arena.ratings.store import RatingStore
+
+    answer_with(**PLAY_3)
+
+    async def broken(*args, **kwargs):
+        raise RuntimeError("the database is gone")
+
+    monkeypatch.setattr(RatingStore, "rate_model_match", broken)
     response = client.post(
         "/matches", json={"game": "toy", "models": MODELS, "confirm_spend": True}
     )
 
-    match = finish(client, response.json()["id"])
-    assert match["status"] == "finished"
-    assert set(rated_rows(database_url).values()) == {0}
-    assert client.get("/leaderboard").json()["rows"] == []
-    bots = finish(client, client.post("/matches", json={"game": "toy"}).json()["id"])
-    assert bots["status"] == "finished"
-    assert rated_rows(database_url)["rated_matches"] == 1  # a bot match is rated
+    assert finish(client, response.json()["id"])["status"] == "finished"
+
+
+def test_the_backfill_rates_the_model_matches_played_before_and_only_once(
+    client, database_url, answer_with, monkeypatch, capsys
+):
+    from arena import cli
+    from arena.ratings.store import RatingStore
+
+    answer_with(**PLAY_3)
+    real = RatingStore.rate_model_match
+
+    async def not_yet(*args, **kwargs):
+        return "not rated in those days"
+
+    monkeypatch.setattr(RatingStore, "rate_model_match", not_yet)
+    for seed in (4, 5):
+        started = client.post(
+            "/matches", json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": seed}
+        )
+        assert finish(client, started.json()["id"])["status"] == "finished"
+    assert client.get("/leaderboard", params={"kind": "models"}).json()["rows"] == []
+    monkeypatch.setattr(RatingStore, "rate_model_match", real)
+
+    first = cli.main(["ratings", "backfill"])
+    assert (first, capsys.readouterr().out) == (0, "Rated 2 model match(es).\n")
+    again = cli.main(["ratings", "backfill"])
+
+    assert (again, capsys.readouterr().out) == (0, "Rated 0 model match(es).\n")
+    board = client.get("/leaderboard", params={"kind": "models"}).json()["rows"]
+    assert sorted(row["name"] for row in board) == sorted(MODELS)
+    assert {row["games_played"] for row in board} == {2}
 
 
 def test_key_is_read_from_its_file_at_every_start(client, answer_with, monkeypatch, tmp_path):
@@ -242,3 +342,29 @@ def test_model_seats_get_the_prompt_version_of_the_settings(client, answer_with)
     assert match["prompt_version"] == "poker-p2"
     assert client.get("/replays").json()[0]["prompt_version"] == "poker-p2"
     assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")
+
+
+def test_a_model_match_with_memory_on_is_remembered_like_a_bot_match(
+    client, database_url, answer_with
+):
+    answer_with(**PLAY_3)
+    models = client.post(
+        "/matches",
+        json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": 4, "memory": True},
+    ).json()
+    quiet = client.post(
+        "/matches",
+        json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": 5, "memory": False},
+    ).json()
+    assert finish(client, models["id"])["status"] == "finished"
+    assert finish(client, quiet["id"])["status"] == "finished"
+
+    async def remembered():
+        pool = await connect(database_url)
+        try:
+            rows = await pool.fetch("SELECT DISTINCT match_id FROM match_memories")
+            return {str(row["match_id"]) for row in rows}
+        finally:
+            await pool.close()
+
+    assert asyncio.run(remembered()) == {models["id"]}  # rated, and memory on; the other off

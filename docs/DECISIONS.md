@@ -1489,6 +1489,42 @@ Each entry: date, decision, why, alternatives considered.
   every player); decay over time (not in the spec); notes for every match
   without a cap.
 
+## D-075 · Match memories, the memory block, memory off and reset
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - When a match is remembered, every seated profile gets one summary of it
+    from its own view (`match_memories`, migration `0009`, in the same
+    transaction as the trust). The default `TemplateSummarizer` names the game,
+    the opponents, the player's place and at most two notes per opponent, from
+    the facts that player saw. No model is called; a `Summarizer` can.
+  - `memory_block(store, me, opponents)` reads only the player's own rows and
+    only about the profiles at the table: relationship lines first (strongest
+    feeling first, three notes each), then up to five summaries of matches
+    against them, newest first. It stops at the first line that does not fit
+    1,200 characters and is None when the player knows nobody there.
+  - The prompt puts the block before the game data, inside `<memory>`, with
+    `<` escaped; the system message names it as data like the other blocks.
+    `ModelAgent(memory=...)` takes it; without one the prompt is unchanged.
+  - `memory: false` on a match (API, stored on the match record, a checkbox in
+    the new-match form) remembers nothing. The form's box says "without memory",
+    so a form that leaves it out keeps memory on.
+  - Reset forgets relationships and summaries of one profile or of everyone
+    (`POST /memory/reset`, `arena memory reset --yes`); ratings stay, and a match
+    already remembered is not remembered again. There are no seasons yet: a
+    season starts with a reset of everyone.
+  - `arena run --models` does not build a block yet; the next part wires it in.
+- **Why:** The spec's long-term layer and the "only the players at the table,
+  kept short" rule; the block is built from the player's own rows, so it
+  cannot carry another player's secrets. A profile's memories can name roles
+  ("turned out to be a wolf", "hunted with me in the pack"): they are the
+  same notes as on its relations page, written only for finished matches, so
+  they reveal nothing about a match still being played, and spectators see
+  every role anyway.
+- **Alternatives:** the block in the system message (it is data, not an
+  instruction); summaries written by a model now (costs money for every match);
+  a season column on every memory row (no seasons exist yet).
+
 ## D-076 · The monthly cap is 25 euros
 
 - **Date:** 2026-11-11
@@ -1564,7 +1600,9 @@ Each entry: date, decision, why, alternatives considered.
 ## D-081 · A model has one rating profile, whatever seat it sits in
 
 - **Date:** 2026-11-11
-- **Decision:** A finished `arena run --models` match is rated. Each model gets
+- **Decision:** A finished model match is rated, whether it was started with
+  `arena run --models` or with `POST /matches` (final rule; D-082 once left the
+  API unrated as a step). Each model gets
   one profile per personality (`RatingStore.model_profile`; the id derives from
   model id and personality, so it is the same in every match and every seat; no
   personality is chosen from the command line yet). Its rating, statistics and
@@ -1572,6 +1610,12 @@ Each entry: date, decision, why, alternatives considered.
   match with the same model in several seats is left unrated and the command says
   so. Random bots keep one profile per seat, as the log needs a seat per profile
   (D-052); the leaderboard groups them by kind when it shows them.
+  The API rates a finished match in its own task: once per match id, a rating
+  problem is logged and never fails the match. `arena ratings backfill` rates
+  the finished model matches that were played before (also imported ones), and
+  can be run again. Demo profiles (`arena.ratings.demo_seed`) carry
+  `is_demo`; the leaderboard leaves them out unless asked (`demo=true`, the
+  "Show demo data" switch), and says how many it hides.
 - **Why:** The leaderboard compares models, not seats: a model that sat in seat 3
   yesterday and seat 1 today is the same player. Rating the same profile twice in
   one match would break the match's placements.
@@ -1586,10 +1630,8 @@ Each entry: date, decision, why, alternatives considered.
   server refuses model seats unless it was started with
   `ARENA_ALLOW_MODEL_SEATS=1`, the request must carry `confirm_spend: true`,
   and the provider's key must be set; otherwise nothing is recorded or sent.
-  A cost cap ends the match as `interrupted`. Model matches are not rated
-  yet. That is a step, not the rule: model matches are rated, one profile per
-  model and personality (D-081), and the API rates them as soon as those
-  profiles are on main.
+  A cost cap ends the match as `interrupted`. Model matches are rated like
+  bot matches: one profile per model and personality (D-081).
   Every match records who sat where (`seats`: name, model id, kind) and
   whether it was played here or imported (`origin`).
 - **Why:** The project owner wants to start and watch real matches from the
@@ -1946,12 +1988,57 @@ Each entry: date, decision, why, alternatives considered.
   match (the fix belongs there too, and Arena Coder has it); a colour per
   model (the same company's models then look unrelated).
 
+## D-104 · One display name per seat, computed by the server, never the seat id
+
+- **Date:** 2026-11-11
+- **Decision:** The name shown for a seat is made once, in `display_names`
+  (`arena/transcript/common.py`), and used in every line of the transcript (English and
+  German), in `arena transcript`, in `arena run`, and handed to the UI as
+  `players[seat].display`. A model is shown by its short name (`name` in
+  `config/models.yaml`, else its id), numbered `gpt-luna #1`, `gpt-luna #2` when the same
+  model sits more than once; a bot is `Bot 3`, with the number of its seat. The names are
+  unique within a match. The seat id (`p3`) is a separate field `players[seat].seat`, for a
+  small badge. The names come from the match record's seats (known from the first turn of
+  a running match); a match recorded before seats were kept falls back to its profile
+  labels, else the seat id.
+- **Why:** People could not tell which seat was which model: the board said `p3`, the
+  commentary `p1 plays 1 card`, the bubbles `p2`. A name made in one place cannot differ
+  between the board, the commentary and the bubbles.
+- **Alternatives:** each page building its own label (they drifted apart); the seat id as
+  the name with the model in brackets (`p1 (glm-flash)`, what the lines said before: long,
+  and still led with the number); suffixing only the second seat of a repeated model (the
+  first and the second then look different for no reason).
+
+## D-106 · Match analytics: a pure function of the log, public events only without spoilers
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - `GET /matches/{id}/analytics?spoilers=` returns per-move rows, per-player
+    totals and per-round cells, built on each request from the stored log by
+    `arena/analytics/` (one module per game, Liar's Deck first). A running match
+    answers with its turns so far; a replay file gives the same numbers.
+  - Without spoilers only public events are read. Numbers that need a hidden
+    event are `null` (a play's honesty until its cards are turned over, the
+    risk at a pull), never estimated. With spoilers everything is read.
+  - Every move carries its log position (`seq`), so a chart can jump the
+    replay to it.
+  - Thinking time and tokens are read from the decision event
+    (`action_accepted` / `action_fallback`) once the runner writes them there;
+    until then they are `null`.
+  - The definitions are in `docs/METRICS.md`; the Liar's Deck totals agree with
+    the profile statistics (`arena/stats`), checked by a test.
+- **Why:** One rule for hidden information, the same as the transcript's, keeps a
+  spoiler-free viewer honest; computing from the log needs no new tables and
+  stays correct for imported replays.
+- **Alternatives:** stored per-match analytics (stale when a definition
+  changes); estimating lies from public data (a guess shown as a number).
+
 ## D-107 · The Analytics tab draws the arena's numbers with its own small SVG charts
 
 - **Date:** 2026-11-11
 - **Decision:** Live matches and replays get an Analytics tab next to Watch
   (and Chronicle). It shows the arena's `GET /matches/{id}/analytics`
-  (Arena Coder Heavy's analytics API, `docs/METRICS.md`) as charts drawn in plain SVG and CSS, with no
+  (D-106, `docs/METRICS.md`) as charts drawn in plain SVG and CSS, with no
   chart library. Liar's Deck comes first; the other games say "coming".
   - **Key numbers:** moves, lie share, lies caught, pulls fired, and mean
     thinking time.
