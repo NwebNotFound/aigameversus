@@ -281,6 +281,10 @@ class Match[StateT: BaseModel]:
                 "reasoning_tokens": total("reasoning_tokens"),
                 "retries": sum(stats.retries for stats in reported),
                 "fallback": fallback,
+                # A repaired move is a valid move but not a clean one: research counts both.
+                "repairs": sorted({repair for stats in reported for repair in stats.repairs}),
+                "raw_arguments": [s.raw_arguments for s in reported if s.raw_arguments],
+                "simple_schema": any(stats.simple_schema for stats in reported),
             },
             visible_to=(),
         )
@@ -336,7 +340,7 @@ class Match[StateT: BaseModel]:
         try:
             jsonschema.validate(action.arguments, spec.parameters)
         except jsonschema.ValidationError as invalid:
-            return f"Invalid arguments for '{action.tool}': {invalid.message}."
+            return f"Invalid arguments for '{action.tool}': {invalid.message}. {_fields(spec)}"
         return self.plugin.validate(self.state, player, action)
 
     def _stream(self, *key: str | int) -> random.Random:
@@ -386,6 +390,19 @@ def _storable(value: Any) -> Any:
     if isinstance(value, list | tuple):
         return [_storable(item) for item in value]
     return value
+
+
+def _fields(spec: ToolSpec) -> str:
+    """What a call of this tool may hold, for a correction."""
+    properties = spec.parameters.get("properties") or {}
+    if not properties:
+        return f"'{spec.name}' takes no arguments: send {{}} (and your thought)."
+    required = spec.parameters.get("required") or []
+    fields = ", ".join(
+        f"{name} ({schema.get('type', 'value')}{', required' if name in required else ''})"
+        for name, schema in properties.items()
+    )
+    return f"'{spec.name}' takes only: {fields}."
 
 
 def _engine_event(

@@ -113,3 +113,4 @@ with `python scripts/decisions.py adopt`.
 - [D-108](decisions/D-108-every-model-move-says-what-it-took-in-a-spectators-only.md) · Every model move says what it took, in a spectators-only event
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
 - [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
+- [D-114](decisions/D-114-a-garbled-tool-call-that-clearly-means-one-move-is-repaired.md) · A garbled tool call that clearly means one move is repaired, and the move says so

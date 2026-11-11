@@ -89,6 +89,9 @@ class AnswerStats(_Frozen):
     tokens_out: int | None = None
     reasoning_tokens: int | None = None
     retries: int = 0  # failed calls tried again before this answer
+    repairs: tuple[str, ...] = ()  # how a garbled call was read (arena/agents/arguments.py)
+    raw_arguments: str | None = None  # the call as sent, when it was repaired or unreadable
+    simple_schema: bool = False  # the model was offered its tools without `thought`
 
 
 class Reply(_Frozen):
