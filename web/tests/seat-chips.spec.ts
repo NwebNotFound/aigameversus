@@ -40,8 +40,8 @@ test('model seats show the model and are never called bots', async ({ page, requ
 	await expect(model).not.toContainText(/\bbot\b/i);
 	await expect(model).toContainText('0.0012 €');
 	await expect(bot).toHaveAttribute('data-kind', 'bot');
-	// A bot is "Bot 1" with "Random Bot" under it; its seat id is not its name.
-	await expect(bot).toContainText('Bot 1');
+	// A bot is "Bot <seat number>" with "Random Bot" under it; its seat id is not its name.
+	await expect(bot).toContainText('Bot 2');
 	await expect(bot).toContainText('Random Bot');
 	await expect(bot).not.toContainText('p2');
 
