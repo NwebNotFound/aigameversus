@@ -17,6 +17,33 @@ export interface MatchSummary {
 	status: MatchStatus;
 	players: string[];
 	started_at: string;
+	/** Who sits where: set for every match since model seats (D-082). */
+	seats?: Record<string, RecordSeat>;
+	/** The batch it was played in (a league, an experiment stage); null or missing: none. */
+	batch?: MatchBatch | null;
+}
+
+/** A match's batch, as `POST /matches` took it. */
+export interface MatchBatch {
+	id: string;
+	label: string;
+	index: number | null;
+	of: number | null;
+	budget_eur: number | null;
+}
+
+/** `GET /batches/{id}`: how far a batch is and what it cost. */
+export interface BatchSummary {
+	id: string;
+	label: string;
+	of: number | null;
+	budget_eur: number | null;
+	matches: number;
+	statuses: Partial<Record<MatchStatus, number>>;
+	/** null while the ledger cannot be read. */
+	cost_micro_eur: number | null;
+	first_started_at: string;
+	last_started_at: string;
 }
 
 /** A match as `GET /matches/{id}` returns it. */
@@ -26,8 +53,6 @@ export interface MatchRecord extends MatchSummary {
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
-	/** Who sits where: set for every match since model seats (D-082). */
-	seats?: Record<string, RecordSeat>;
 	origin?: 'played' | 'imported';
 }
 
@@ -72,6 +97,8 @@ export interface ReplaySummary {
 	started_at: string;
 	finished_at: string;
 	cost_micro_eur: number;
+	seats?: Record<string, RecordSeat>;
+	real?: boolean;
 }
 
 /** `GET /matches/{id}/cost`, in millionths of a euro. */
@@ -292,6 +319,8 @@ export interface RecentMatch {
 	match_id: string;
 	game_id: string;
 	rated_at: string;
+	/** When the match itself ended; `rated_at` is when its rating was applied. */
+	played_at: string;
 	rank: number;
 	players: number;
 	rating_change: number;
@@ -378,6 +407,10 @@ export interface ArenaClient {
 	replays(): Promise<ApiResult<ReplaySummary[]>>;
 	/** The whole stored log of a match. */
 	events(id: string): Promise<ApiResult<MatchEvent[]>>;
+	/** The board after the stored turns, and what the match cost so far. */
+	board(id: string): Promise<ApiResult<Board>>;
+	cost(id: string): Promise<ApiResult<Cost>>;
+	batch(id: string): Promise<ApiResult<BatchSummary>>;
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
 	/** The readable play-by-play; without `spoilers`, only what every player could see. */
@@ -502,6 +535,29 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}/stats`,
 				(body) => isObject(body) && Array.isArray(body.games),
 				[404, 422]
+			);
+		},
+
+		board(id) {
+			return getJson<Board>(
+				`/matches/${encodeURIComponent(id)}/board`,
+				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
+			);
+		},
+
+		cost(id) {
+			return getJson<Cost>(
+				`/matches/${encodeURIComponent(id)}/cost`,
+				(body) => isObject(body) && isObject(body.players),
+				[404, 422]
+			);
+		},
+
+		batch(id) {
+			return getJson<BatchSummary>(
+				`/batches/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && isObject(body.statuses)
 			);
 		},
 

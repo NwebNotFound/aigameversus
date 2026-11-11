@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import random
+import time
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -14,10 +15,11 @@ import asyncpg
 from arena.agents.budget import Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
+from arena.catalog import resolve
 from arena.config import display_name, load_config
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
-from arena.db.match_store import MatchRecord, MatchStore, Seat, bot_seats
+from arena.db.match_store import Batch, MatchRecord, MatchStore, Seat, bot_seats
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import Event, MatchPaused, Placement
@@ -111,6 +113,7 @@ class LiveMatches:
         turn_delay: float,
         models: Mapping[str, str] | None = None,
         memory: bool = True,
+        batch: Batch | None = None,
     ) -> MatchRecord:
         """Start a match and return its record. It plays on in the background.
 
@@ -144,7 +147,7 @@ class LiveMatches:
             seats = bot_seats(players)
         else:
             await self.ledger.check(await self.matches.model_matches())
-            config = load_config()
+            config = await resolve(load_config(), models.values())
             budget = Budget(self.ledger, match_id, config)
             agents = {
                 seat: ModelAgent(budget.model(seat, models[seat]), plugin, settings=settings)
@@ -156,7 +159,8 @@ class LiveMatches:
                 )
                 for seat in players
             }
-        match = Match(plugin, agents, seed=seed, settings=settings, sink=sink)
+        # Timed: thinking time is part of what spectators and analyses read.
+        match = Match(plugin, agents, seed=seed, settings=settings, sink=sink, clock=time.monotonic)
         if len(self._running) >= MAX_RUNNING:
             raise ArenaBusy(
                 f"{MAX_RUNNING} matches are running, the most this server plays at a time. "
@@ -176,6 +180,7 @@ class LiveMatches:
                 seats=seats,
                 memory=memory,
                 prompt_version=plugin.prompt_version(match.settings),
+                batch=batch,
             )
         except BaseException:
             del self._running[match_id]

@@ -39,9 +39,12 @@ async function waitUntilStopped(request: APIRequestContext, id: string) {
 		.not.toBe('running');
 }
 
-/** How many events the page holds: the stream merges every position once. */
+/**
+ * How many events the page has received: the stream merges every position once. (What is
+ * on screen plays out from these at reading pace; tests/pacing.spec.ts covers that.)
+ */
 async function shownEvents(page: Page): Promise<number> {
-	return Number(await page.getByTestId('watch').getAttribute('data-events'));
+	return Number(await page.getByTestId('live-header').getAttribute('data-received'));
 }
 
 test('the live view follows a running match to its end, every event once', async ({

@@ -309,33 +309,39 @@ export function mergeSeats(
 }
 
 /**
- * The display name of every seat (Lead's rule), unless the API already gave one: a model
- * by its short name, with "#2" for the second seat of the same model; a bot "Bot 1",
- * "Bot 2" in seat order. Unique within the match; the seat id is never the name.
+ * The display name of every seat, as the arena names them (D-104), for an arena that does
+ * not send `display` yet: a model by its short name, every seat of a repeated model
+ * numbered ("gpt-luna #1", "gpt-luna #2"); a bot "Bot N" with N its seat number, so it
+ * matches the seat badge. The arena's own `display` always wins.
  */
 export function withDisplayNames(
 	order: string[],
 	seats: Record<string, Seat>
 ): Record<string, Seat> {
+	const baseOf = (info: Seat) =>
+		info.model ? (info.name && info.name !== info.model ? info.name : info.model) : info.name;
+	const isBot = (info: Seat) =>
+		info.kind === 'bot' || (!info.model && /^Random Bot/i.test(info.name ?? ''));
+	const counts = new Map<string, number>();
+	for (const seat of order) {
+		const info = seats[seat];
+		if (!info || info.display || isBot(info)) continue;
+		const base = baseOf(info);
+		if (base) counts.set(base, (counts.get(base) ?? 0) + 1);
+	}
 	const seen = new Map<string, number>();
-	let bots = 0;
 	for (const seat of order) {
 		const info = seats[seat];
 		if (!info || info.display) continue;
-		if (info.kind === 'bot' || (!info.model && /^Random Bot/i.test(info.name ?? ''))) {
-			bots += 1;
-			info.display = `Bot ${bots}`;
+		if (isBot(info)) {
+			info.display = `Bot ${seatNumber(seat)}`;
 			continue;
 		}
-		const base = info.model
-			? info.name && info.name !== info.model
-				? info.name
-				: info.model
-			: info.name;
+		const base = baseOf(info);
 		if (!base) continue;
-		const count = (seen.get(base) ?? 0) + 1;
-		seen.set(base, count);
-		info.display = count === 1 ? base : `${base} #${count}`;
+		const n = (seen.get(base) ?? 0) + 1;
+		seen.set(base, n);
+		info.display = (counts.get(base) ?? 1) > 1 ? `${base} #${n}` : base;
 	}
 	return seats;
 }
@@ -347,8 +353,12 @@ export function withDisplayNames(
  */
 export function namedText(text: string, players: Record<string, Seat> | undefined): string {
 	if (!players) return text;
-	return text.replace(/(?:Random Bot )?\b(p\d+)\b(?: \(random-bot\))?/g, (whole, seat: string) =>
-		players[seat] ? seatName(seat, players) : whole
+	return text.replace(
+		/(?:Random Bot )?(?<![A-Za-z0-9])([pP]\d+)(?!\d)(?: \(random-bot\))?/g,
+		(whole, id: string) => {
+			const seat = id.toLowerCase();
+			return players[seat] ? seatName(seat, players) : whole;
+		}
 	);
 }
 
@@ -361,14 +371,22 @@ export function colourKey(seat: string, players: Record<string, Seat> | undefine
 /** The lines with every seat id in their text and detail replaced by display names. */
 export function namedLines(
 	lines: TranscriptLine[],
-	players: Record<string, Seat> | undefined
+	players: Record<string, Seat> | undefined,
+	/** The arena already names players in its lines (it sent `display`): only player words. */
+	named = false
 ): TranscriptLine[] {
 	if (!players) return lines;
-	return lines.map((line) => ({
-		...line,
-		text: namedText(line.text, players),
-		detail: line.detail === null ? null : namedText(line.detail, players)
-	}));
+	// With names from the arena, only the players' own words still hold seat ids.
+	const own = new Set(['speech', 'whisper', 'thought']);
+	return lines.map((line) =>
+		named && !own.has(line.kind)
+			? line
+			: {
+					...line,
+					text: namedText(line.text, players),
+					detail: line.detail === null ? null : namedText(line.detail, players)
+				}
+	);
 }
 
 /**
@@ -381,4 +399,34 @@ export function seatSub(seat: string, players: Record<string, Seat> | undefined)
 	const model = info?.model && info.model !== shown ? info.model : null;
 	const line = [model, info?.vendor].filter(Boolean).join(' · ');
 	return line || (info?.kind === 'bot' ? 'Random Bot' : null);
+}
+
+/**
+ * A seat id in player-written text: "p4", also with what a language glues to it ("p4s Frage",
+ * "p3's vote", "p4-Antwort", "p4:"), in any case ("P4"), and in lists ("p1/p2"). Not inside a
+ * word ("mp3", "top2") and not a longer number ("p41" is not p4).
+ */
+const SEAT_MENTION = /(?<![A-Za-z0-9])[pP]([1-9][0-9]?)(?![0-9])/g;
+
+/** A piece of player-written text: plain words, or a seat the player named by its id. */
+export type Part = { text: string } | { seat: string; text: string };
+
+/**
+ * Player-written words split around the seat ids they name ("p2, two kings?"), so each
+ * mention can be drawn as that seat's name chip. Only seats of this match count; "p9" in
+ * a four-seat match stays text. Matching ignores case ("P2").
+ */
+export function mentionParts(text: string, players: Record<string, Seat> | undefined): Part[] {
+	if (!players) return [{ text }];
+	const parts: Part[] = [];
+	let last = 0;
+	for (const match of text.matchAll(SEAT_MENTION)) {
+		const seat = `p${match[1]}`;
+		if (!players[seat]) continue;
+		if (match.index > last) parts.push({ text: text.slice(last, match.index) });
+		parts.push({ seat, text: match[0] });
+		last = match.index + match[0].length;
+	}
+	if (last < text.length) parts.push({ text: text.slice(last) });
+	return parts.length ? parts : [{ text }];
 }
