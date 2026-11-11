@@ -1545,7 +1545,7 @@ Each entry: date, decision, why, alternatives considered.
   small); a formatter in the browser (a second wording to keep in sync); hide
   thoughts by default (hides the project's main attraction).
 
-## D-083 · The watch screen: spoiler-free by allowlist in the web server, playback by moments
+## D-086 · The watch screen: spoiler-free by allowlist in the web server, playback by moments
 
 - **Date:** 2026-11-11
 - **Decision:** The live view and the replay share one component
