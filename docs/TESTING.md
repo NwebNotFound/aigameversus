@@ -76,6 +76,10 @@ socket and would not notice a server that cannot speak WebSocket.
 while it plays. The `fake_games` fixture (`tests/conftest.py`) replaces the
 `games` folder by plugins a test writes itself, for example a broken one.
 `tests/test_cli.py` calls `arena.cli.main([...])` and reads what it printed.
+`tests/db/test_cli_models.py` does the same for `--models`: LiteLLM answers
+from its own mock with every name lookup refused (the `litellm` and
+`answer_with` fixtures), so the whole path to the provider runs and nothing
+is sent.
 `tests/test_games.py` plays and replays a bot match of every game it finds,
 so a new game is covered as soon as its folder exists.
 

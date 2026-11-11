@@ -187,7 +187,9 @@ sequenceDiagram
   stored log (`null` for a game without one), `GET /matches/{id}/cost` the
   ledger of the match per player.
 - `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
-  its own process and prints the events.
+  its own process and prints the events. With `--models` it seats real models
+  behind a `Budget` and writes the match, its events and the ledger to the
+  same tables.
 - Games come from `arena/games.py`: one plugin per folder `games/<id>/` with a
   `plugin.py`.
 
