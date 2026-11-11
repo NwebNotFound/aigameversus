@@ -47,7 +47,7 @@ describe('progressOf', () => {
 });
 
 describe('matchLine', () => {
-	it('names model seats by model, a second seat of one model with #2, and marks it real', () => {
+	it('names model seats by model, every seat of a repeated model numbered, and marks it real', () => {
 		const line = matchLine(
 			match({
 				p1: model('glm-flash'),
@@ -60,7 +60,7 @@ describe('matchLine', () => {
 		);
 
 		expect(line.seats.map((s) => s.name)).toEqual([
-			'glm-flash',
+			'glm-flash #1',
 			'glm-flash #2',
 			'anthropic/claude-haiku'
 		]);
