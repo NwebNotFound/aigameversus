@@ -3,6 +3,7 @@
 import random
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping, Sequence
+from importlib import resources
 from typing import Any, ClassVar
 
 from pydantic import BaseModel
@@ -42,6 +43,10 @@ class TurnContext:
 
         `visible_to=None` is public. A list restricts the event to those
         players; an empty list hides it from all players (spectators only).
+
+        Text a player wrote goes out as `emit(MESSAGE, {"player": author,
+        "text": words})` and in no other event, so that prompts can show it as
+        that player's words.
         """
         self._record(
             Event(
@@ -67,10 +72,16 @@ class GamePlugin[StateT: BaseModel](ABC):
     """
 
     id: ClassVar[str]
+    name: ClassVar[str]  # the title players and spectators read; the only place it is written
     version: ClassVar[str]  # bump when rules or data change the meaning of old logs
     min_players: ClassVar[int]
     max_players: ClassVar[int]
     turn_mode: ClassVar[TurnMode]
+
+    def rules(self) -> str:
+        """The rule summary a model gets in its prompt: `rules.md` next to the plugin."""
+        package = type(self).__module__.rpartition(".")[0]
+        return resources.files(package).joinpath("rules.md").read_text(encoding="utf-8")
 
     @abstractmethod
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> StateT:

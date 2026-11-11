@@ -5,7 +5,7 @@ import pytest
 from arena.agents.random_bot import random_bots
 from arena.engine.match import Match
 from arena.engine.replay import replay
-from arena.engine.types import Action, Event, EventSource
+from arena.engine.types import Action, Event, EventSource, Reply
 from games.toy.plugin import ToyGame
 
 SEATS = ["p1", "p2", "p3", "p4"]
@@ -151,7 +151,7 @@ class Clumsy:
     async def act(self, request):
         self.errors.append(request.error)
         if request.error is None:
-            return Action(tool="play_card", arguments={"card": 99})
+            return Reply(action=Action(tool="play_card", arguments={"card": 99}))
         return await self._bot.act(request)
 
 
@@ -177,6 +177,16 @@ def test_rejected_attempts_do_not_change_the_game():
     assert any(event.type == "action_rejected" for event in bumpy.events)
     assert game_events(bumpy) == game_events(clean)
     assert bumpy.state == clean.state
+
+
+def test_rules_for_model_prompts_come_with_the_game():
+    rules = ToyGame().rules()
+
+    assert "The highest card wins the trick." in rules
+    assert "call `play_card` with one card from your hand" in rules
+    # The title lives in `ToyGame.name` only.
+    assert ToyGame.name == "High Card"
+    assert "High Card" not in rules
 
 
 @pytest.mark.parametrize("settings", [{"hand_size": 0}, {"hand_size": 6}, {"hand_size": "3"}])
