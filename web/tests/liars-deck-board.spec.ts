@@ -7,7 +7,9 @@ const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
 let started: string[] = [];
 
 async function start(request: APIRequestContext, body: Record<string, unknown>): Promise<string> {
-	const response = await request.post(`${ARENA}/matches`, { data: { game: 'liars_deck', ...body } });
+	const response = await request.post(`${ARENA}/matches`, {
+		data: { game: 'liars_deck', ...body }
+	});
 	expect(response.status(), await response.text()).toBe(201);
 	const match = await response.json();
 	started.push(match.id);
@@ -52,7 +54,8 @@ test('after the match each revolver shows the shots of its player', async ({ pag
 		.toBe('finished');
 	const shots: Record<string, number> = {};
 	for (const event of await log(request, id)) {
-		if (event.type === 'trigger_pulled') shots[event.data.player] = (shots[event.data.player] ?? 0) + 1;
+		if (event.type === 'trigger_pulled')
+			shots[event.data.player] = (shots[event.data.player] ?? 0) + 1;
 	}
 
 	await page.goto(`/matches/${id}`);
