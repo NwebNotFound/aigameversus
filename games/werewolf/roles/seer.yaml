@@ -8,3 +8,5 @@ hooks:
   on_night: seer_inspect
 description: >
   Inspects one player's role each night.
+rules_snippet: >
+  Each night you inspect one player and learn their role. Use the knowledge without revealing yourself too early.
