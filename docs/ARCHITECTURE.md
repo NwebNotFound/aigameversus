@@ -31,7 +31,7 @@ flowchart LR
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built; real models are not wired to matches until the cost caps exist (step 1.5) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
-| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches; New match, Leaderboard, Replays are placeholders |
+| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, leaderboard with game tabs, player profiles; New match and Replays are placeholders |
 
 ## Engine
 
@@ -116,12 +116,16 @@ flowchart LR
 - `arena/db/event_store.py`: `EventStore.append(match_id, first_seq, events)` and
   `load(match_id)` on the `match_events` table.
 - `arena/db/database.py`: `connect(url)` and `migrate(pool)`; numbered SQL files
-  in `arena/db/migrations/` (today `0001_match_events.sql`, `0002_ratings.sql`),
+  in `arena/db/migrations/` (today `0001_match_events.sql`, `0002_ratings.sql`, `0003_match_placements.sql`),
   applied at API startup under an advisory lock.
 - `arena/ratings/`: multiplayer Elo (`elo.update_ratings`, `overall_rating`),
   count-based statistics (`stats`), and `RatingStore` on the `player_profiles`,
   `ratings` and `rated_matches` tables. `apply_match_result(match_id, game_id,
-  placements)` counts each match once. Nothing calls it yet; match setup (1.6)
+  placements)` counts each match once and stores every player's rank and rating
+  change in `match_placements`. `GET /leaderboard?game=` and
+  `GET /profiles/{id}` (`arena/api/ratings.py`) read them, and
+  `python -m arena.ratings.demo_seed` fills them with DEMO random-bot data.
+  Nothing rates real matches yet; match setup (1.6)
   and profiles with memory (phase 6) will.
 
 ## Processes and Compose services

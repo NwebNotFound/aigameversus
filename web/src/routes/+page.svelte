@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { GAMES } from '#lib/games.js';
+	import { GAMES, gameName } from '#lib/games.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-
-	const gameName = (id: string) => GAMES.find((game) => game.id === id)?.name ?? id;
 </script>
 
 <svelte:head>
@@ -137,29 +135,6 @@
 		border-radius: 999px;
 		color: var(--card-accent);
 		border: 1px solid color-mix(in srgb, var(--card-accent) 50%, transparent);
-	}
-
-	.notice {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		padding: 1rem 1.25rem;
-		border-radius: var(--radius);
-		background: var(--surface);
-		border: 1px dashed var(--border);
-		color: var(--muted);
-	}
-
-	.notice strong {
-		color: var(--text);
-	}
-
-	.notice.error {
-		border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
-	}
-
-	.notice.error strong {
-		color: var(--danger);
 	}
 
 	.match-list {

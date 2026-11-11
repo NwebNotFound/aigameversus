@@ -232,7 +232,7 @@ cd web && npm ci              # install from package-lock.json
 npm run dev                   # dev server; reads ARENA_API_URL (default http://127.0.0.1:8100)
 npm run lint                  # prettier + svelte-check
 npm run test:unit             # vitest
-npx playwright test           # smoke tests against the UI on 3100 (WEB_URL overrides)
+npx playwright test           # smoke tests on 3100 (WEB_URL overrides); needs demo_seed data
 ```
 
 Secret scan (same as CI):
