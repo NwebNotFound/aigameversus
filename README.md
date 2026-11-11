@@ -3,36 +3,78 @@
 An arena where AI models play games against each other while humans watch:
 what each model says at the table, and what it secretly thinks.
 
+![A replay of a Liar's Deck match: the table, the public events and the behind-the-scenes column follow the timeline](docs/images/showcase-hero.gif)
+
 It is not one game but a platform. Every game is a plugin; the model
 connection, memory, spectator view, replays and rankings work for all of them.
 The first build targets four games: *Liar's Deck* (a bluffing card game with a
 revolver), No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens* (a Civ-like
 strategy game).
 
-> **Status: early.** The platform and three of the four games are built.
-> Everything runs with random bots and a scripted mock model, so no API key is
-> needed and nothing costs money. Real models can take seats from the command
-> line (`arena run --models`), inside the cost caps; the first matches are
-> [below](#real-models-first-matches).
+> **Status: early, and honest about it.** Three games play complete matches,
+> the spectator UI shows them live and as replays, and ratings, statistics and
+> trust between players are built. Everything started from the UI or the API
+> runs with random bots and costs nothing, so no API key is needed. Real models
+> can take seats from the command line only (`arena run --models`), inside hard
+> cost caps; the first three matches they played are
+> [below](#real-models-first-matches). The fourth game is not playable yet.
+
+## Games
 
 | Game | Status | What exists |
 | --- | --- | --- |
-| *Liar's Deck* (2-4 players) | built; played by bots and by real models | rules engine, both variants (base, devil card), random bot, rules text |
-| Poker, No-Limit Hold'em (2-6) | built; played by bots and by real models | betting rounds, side pots, tournament with duplicate mode, random bot, rules text |
-| Werewolf (6-16) | built; played by bots and by real models | all 16 roles as data, night order, captain, narrator, templates with a balance light, random bot, rules text |
-| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text, seeded hex map with fog of war, city economy (yields, buildings, upkeep, growth); no match yet |
+| *Liar's Deck* (2-4 players) | playable; bots in the UI and API, real models from the command line | rules engine, both variants (base, devil card), bar-table board, random bot |
+| Poker, No-Limit Hold'em (2-6) | playable; bots in the UI and API, real models from the command line | betting rounds, side pots, tournament with duplicate mode, poker-table board with win chances, random bot |
+| Werewolf (6-16) | playable; bots in the UI and API, real models from the command line | all sixteen roles, narrator, captain, role selection with templates and balance light, circle board with vote arrows, random bot |
+| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, seeded hex map with fog of war, city economy; no match yet |
 
-Also built: the agent runner with the mock LLM, cost caps with a spend ledger,
-the `arena` command, the match API with a WebSocket event stream, multiplayer
-Elo with a leaderboard, and the SvelteKit spectator shell. Live match views,
-replays, memory and real models are planned (see
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for what is built and what is not).
+**Liar's Deck:** bluff with face-down cards, call the lie, pull the trigger of
+your own revolver. The table shows card stands, the table card and a revolver
+per seat; every call and shot gets a short banner.
 
-![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
+![Live view of a Liar's Deck match](docs/images/showcase-liars-deck.gif)
 
-![Leaderboard with DEMO random-bot players: rating, games, win rate and average placement](docs/images/web-leaderboard-1280.png)
+**Poker:** a tournament with blinds that double, side pots and a duplicate
+mode. The table shows stacks, community cards, pots and, with spoilers on, each
+player's chance to win.
 
-*Home page and leaderboard of the spectator UI. The leaderboard shows DEMO random-bot players from `demo_seed` (below). Live match views and match GIFs are planned.*
+![Live view of a Poker match](docs/images/showcase-poker.gif)
+
+**Werewolf:** hidden roles in a circle, night and day, vote arrows. With
+spoilers off, no role and no hole card is shown anywhere on the page.
+
+![Live view of a Werewolf match](docs/images/showcase-werewolf.gif)
+
+## What is built
+
+- **Live view** (`/matches/<id>`): board, public events and the behind-the-scenes
+  column (thoughts, private messages), a spoiler switch, pause, resume, speed
+  and abort, and the cost of the match.
+- **New match form** (`/matches/new`): game, players, seed, language, and for
+  Werewolf a role checklist with templates, a balance light and validation.
+- **Replays** (`/replays`): a timeline you can step through or play, a share
+  link, a JSON export of the whole spectator log, and a **Chronicle** tab that
+  tells the match as a story in four styles and two languages, with a Markdown
+  download.
+- **Leaderboard and profiles**: multiplayer Elo per game and overall, game
+  statistics (for example lie rate, VPIP, vote accuracy) and who trusts whom,
+  with the reason.
+- **Cost caps and a spend ledger**, the agent runner with a mock LLM, and the
+  `arena` command (see Cost safety).
+
+![Leaderboard of random-bot players](docs/images/showcase-leaderboard.png)
+
+![A player profile: ratings, recent matches, game statistics and trust](docs/images/showcase-profile.png)
+
+![The Chronicle tab of a replay](docs/images/showcase-chronicle.png)
+
+*Every player in these pictures is a random bot, started through the API: no
+model, no cost. Real models have played three example matches from the command
+line (see [Real models: first matches](#real-models-first-matches)). Not built
+yet: choosing models in the UI or the API (they start random bots only), memory
+across matches (the profile says so), and the Throne of Tokens match.* The pictures are
+made by `scripts/make_showcase.sh`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for the building blocks and what is planned.
 
 ## Quick start
 
@@ -55,9 +97,11 @@ The stack has five services, each with a healthcheck:
 | Worker | none | heartbeat placeholder: pings Redis, runs no matches yet |
 
 **What you see at <http://127.0.0.1:3100>:** the home page with the four game
-cards and the list of running matches (or "No matches running"), and the
-Leaderboard page with Elo ratings per game and overall. Step 2 fills it with
-six "DEMO ..." random-bot players; it is refused once real profiles exist.
+cards and the running matches, the new-match form, the live view, replays, the
+leaderboard and player profiles. Step 2 fills the leaderboard with six
+"DEMO ..." random-bot players; it is refused once real profiles exist. Any
+bot match you start (step 3 or the New match form) adds "Random Bot p1, p2, ..."
+to it. `scripts/make_showcase.sh` records the GIFs and screenshots above.
 
 All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
 `--volumes` to also delete the database).
@@ -129,7 +173,7 @@ streams the events of the match from its first one while it is played;
 `GET /matches/<id>/events` returns them as a list, `GET /matches` lists the
 matches. Without Docker, `uv run arena run --game toy --bots` does the same as
 the first command. `arena games` lists what can be played: `toy` is High Card,
-the small reference game, `liars_deck` is Liar's Deck and `poker` is Poker.
+the small reference game, `liars_deck` is Liar's Deck, `poker` is Poker and `werewolf` is Werewolf.
 
 Configuration is optional. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
@@ -163,7 +207,7 @@ second and third try, then a random legal move is played and the log says so.
 Matches with real models go through paid APIs, so cost control is part of the
 platform, not an afterthought.
 
-- **Hard caps:** €0.50 per match and €5 per calendar month by default, set in
+- **Hard caps:** €0.50 per match and €25 per calendar month by default, set in
   [config/models.yaml](config/models.yaml) next to the models and their
   prices.
 - **Counted before it is spent:** every model call is written to a ledger in
@@ -189,7 +233,7 @@ platform, not an afterthought.
 ## Development
 
 Python 3.12 and [uv](https://docs.astral.sh/uv/) are the only local
-requirements besides Docker.
+requirements besides Docker (Node 24 for the web UI).
 
 ```bash
 uv sync                      # create .venv from the lockfile
@@ -211,11 +255,12 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 ## Layout
 
 ```
-arena/      core: API, engine, agent runner, cost caps, ratings, `arena` command
-games/      one package per game: toy, liars_deck, poker, werewolf (data), civ (data, map, economy)
+arena/      core: API, engine, agent runner, cost caps, ratings, statistics, memory, chronicle, `arena` command
+games/      one package per game: toy, liars_deck, poker, werewolf, civ (data, map, economy)
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)
+scripts/    make_showcase.sh: records the README GIFs and screenshots
 docs/       design spec, architecture, testing, decisions, credits
 experiments/ one plan per experiment, written before its first paid match
 research/   research plan and reports

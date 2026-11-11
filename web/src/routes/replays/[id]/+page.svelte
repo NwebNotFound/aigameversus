@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
 	import type { Board } from '#lib/api.js';
+	import ChroniclePanel from '#lib/components/ChroniclePanel.svelte';
 	import MatchColumns from '#lib/components/MatchColumns.svelte';
 	import { gameName } from '#lib/games.js';
 	import { euros } from '#lib/live.js';
@@ -25,6 +26,10 @@
 	let playMs = $state(DEFAULT_PLAY_MS);
 	let spoilers = $state(true);
 	let copied = $state(false);
+	// svelte-ignore state_referenced_locally
+	let tab = $state<'replay' | 'chronicle'>(
+		page.url.searchParams.get('tab') === 'chronicle' ? 'chronicle' : 'replay'
+	);
 
 	const shown = $derived(log.slice(0, step));
 	const current = $derived(step > 0 ? log[step - 1] : null);
@@ -76,6 +81,8 @@
 	$effect(() => {
 		const url = new URL(page.url.href);
 		url.searchParams.set('step', String(step));
+		if (tab === 'chronicle') url.searchParams.set('tab', 'chronicle');
+		else url.searchParams.delete('tab');
 		if (url.href !== page.url.href) replaceState(url, {});
 	});
 
@@ -123,72 +130,100 @@
 			{euros(match.cost.total_micro_eur)}
 		</p>
 
-		<div class="timeline" role="group" aria-label="Timeline">
-			<input
-				type="range"
-				min="0"
-				max={log.length}
-				value={step}
-				oninput={(e) => go(e.currentTarget.valueAsNumber)}
-				aria-label="Step"
-				aria-valuetext="Step {step} of {log.length}"
-			/>
-			<div class="buttons">
-				<button onclick={() => go(0)} aria-label="To the start">⏮</button>
-				<button onclick={() => go(step - 1)} disabled={step === 0} aria-label="Step back">◀</button>
-				<button onclick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
-					{playing ? '❚❚' : '▶'}
-				</button>
-				<button
-					onclick={() => go(step + 1)}
-					disabled={step >= log.length}
-					aria-label="Step forward"
-				>
-					▶|
-				</button>
-				<button onclick={() => go(log.length)} aria-label="To the end">⏭</button>
-				<label>
-					Speed
-					<select bind:value={playMs}>
-						{#each PLAY_SPEEDS as speed (speed.ms)}
-							<option value={speed.ms}>{speed.label}</option>
-						{/each}
-					</select>
-				</label>
-			</div>
-			<p class="position" data-testid="position">
-				Step {step} of {log.length}{#if current}: {current.type.replaceAll('_', ' ')}{/if}
-			</p>
-		</div>
-
-		<div class="bar">
+		<div class="tabs" role="tablist" aria-label="Replay views">
+			<button
+				role="tab"
+				aria-selected={tab === 'replay'}
+				onclick={() => (tab = 'replay')}
+				data-testid="tab-replay">Replay</button
+			>
+			<button
+				role="tab"
+				aria-selected={tab === 'chronicle'}
+				onclick={() => {
+					playing = false;
+					tab = 'chronicle';
+				}}
+				data-testid="tab-chronicle">Chronicle</button
+			>
 			<label class="toggle">
 				<input type="checkbox" bind:checked={spoilers} />
 				Show spoilers
 			</label>
-			<a
-				class="button"
-				href="/replays/{params.id}/export.json"
-				download
-				title="The whole spectator log: hidden cards, roles and the players' thoughts included"
-			>
-				Export JSON
-			</a>
-			<small class="muted export-note"> Includes hidden cards, roles and thoughts. </small>
-			<span class="share">
-				<input
-					readonly
-					value={link}
-					aria-label="Share link"
-					onfocus={(e) => e.currentTarget.select()}
-				/>
-				<button onclick={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
-			</span>
 		</div>
-		{#if boardFailed}<p class="problem" role="status">The board for this step did not load.</p>{/if}
+
+		{#if tab === 'replay'}
+			<div class="timeline" role="group" aria-label="Timeline">
+				<input
+					type="range"
+					min="0"
+					max={log.length}
+					value={step}
+					oninput={(e) => go(e.currentTarget.valueAsNumber)}
+					aria-label="Step"
+					aria-valuetext="Step {step} of {log.length}"
+				/>
+				<div class="buttons">
+					<button onclick={() => go(0)} aria-label="To the start">⏮</button>
+					<button onclick={() => go(step - 1)} disabled={step === 0} aria-label="Step back"
+						>◀</button
+					>
+					<button onclick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
+						{playing ? '❚❚' : '▶'}
+					</button>
+					<button
+						onclick={() => go(step + 1)}
+						disabled={step >= log.length}
+						aria-label="Step forward"
+					>
+						▶|
+					</button>
+					<button onclick={() => go(log.length)} aria-label="To the end">⏭</button>
+					<label>
+						Speed
+						<select bind:value={playMs}>
+							{#each PLAY_SPEEDS as speed (speed.ms)}
+								<option value={speed.ms}>{speed.label}</option>
+							{/each}
+						</select>
+					</label>
+				</div>
+				<p class="position" data-testid="position">
+					Step {step} of {log.length}{#if current}: {current.type.replaceAll('_', ' ')}{/if}
+				</p>
+			</div>
+
+			<div class="bar">
+				<a
+					class="button"
+					href="/replays/{params.id}/export.json"
+					download
+					title="The whole spectator log: hidden cards, roles and the players' thoughts included"
+				>
+					Export JSON
+				</a>
+				<small class="muted export-note"> Includes hidden cards, roles and thoughts. </small>
+				<span class="share">
+					<input
+						readonly
+						value={link}
+						aria-label="Share link"
+						onfocus={(e) => e.currentTarget.select()}
+					/>
+					<button onclick={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
+				</span>
+			</div>
+			{#if boardFailed}<p class="problem" role="status">
+					The board for this step did not load.
+				</p>{/if}
+		{/if}
 	</section>
 
-	<MatchColumns {spec} {spoilers} events={shown} players={match.match.players} />
+	{#if tab === 'replay'}
+		<MatchColumns {spec} {spoilers} events={shown} players={match.match.players} />
+	{:else}
+		<ChroniclePanel id={params.id} {spoilers} onreveal={() => (spoilers = true)} />
+	{/if}
 {/if}
 
 <style>
@@ -226,6 +261,28 @@
 		border-radius: 999px;
 		border: 1px solid var(--border);
 		font-size: 0.85rem;
+	}
+
+	.tabs {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.tabs button {
+		border-radius: 8px 8px 0 0;
+		border-bottom-color: transparent;
+	}
+
+	.tabs .toggle {
+		margin-left: auto;
+	}
+
+	.tabs button[aria-selected='true'] {
+		color: var(--accent);
+		border-color: var(--accent);
+		border-bottom-color: var(--bg);
 	}
 
 	.timeline {

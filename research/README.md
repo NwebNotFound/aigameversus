@@ -5,7 +5,7 @@ How the models in the arena are evaluated: plans under
 reports here. This page is the research plan. It holds no result yet: no
 experiment has been played.
 
-State: 2026-11-11, `main` at `0106060`.
+State: 2026-11-11, `main` at `b8dc53e`.
 
 ## What the arena can run today
 
@@ -16,9 +16,9 @@ State: 2026-11-11, `main` at `0106060`.
 | Seeds | One seed fixes cards, revolvers and roles. The luck belongs to the seat (`p1`, `p2`, ...), not to the model, so the same seed with another seating gives another model the same luck. |
 | Seat rotation | By the order of `--models`. Poker also has `duplicate` (same cards, rotated seats). No batch runner. |
 | Blinding | Prompts say `player p1`; no model name reaches a prompt. |
-| Memory | No memory reaches a prompt yet, so every match is "memory off". |
+| Memory | No memory reaches a prompt on `main` (a pull request for it is open), so every match is "memory off". |
 | Thinking | One global `reasoning_effort` (`low`) and one output limit (1 500 tokens) for all models. No temperature is set. |
-| Ledger | Every call is booked in `model_calls` (tokens, cost, time of the call) against 0.50 EUR per match and a monthly cap; the file still says 5 EUR. |
+| Ledger | Every call is booked in `model_calls` (tokens, cost, time of the call) against 0.50 EUR per match and 25 EUR per calendar month. |
 | Export | `--save` writes seats, result, cost per seat and all events, thoughts included. No time stamps, tokens or provider per call. |
 | Statistics | `arena/stats/`: lie rate, calls and call accuracy (Liar's Deck); VPIP, aggression, bluffs, chips per 100 hands (Poker); vote accuracy, seer survival (Werewolf). Multiplayer Elo in `arena/ratings/`. No intervals, no tests. |
 
@@ -39,7 +39,7 @@ A call cost 0.0001 to 0.001 EUR with the cheap roster. Random bots need about
 
 Needed from the arena core (Arena Builder), most of it already planned:
 
-1. Monthly cap of 25 EUR in `config/models.yaml` and a budget per run.
+1. A budget per run (the monthly cap of 25 EUR is in the config since D-076).
 2. Reasoning effort and output limit per seat. At 1 500 output tokens a model
    at high effort is cut off before its move. The same model must be able to
    sit in several seats with different settings.

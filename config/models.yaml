@@ -4,7 +4,7 @@
 limits:
   # A match pauses and asks before a model call that could take it past a cap.
   match_eur: 0.50   # per match
-  month_eur: 5.00   # all matches of one calendar month (UTC) together
+  month_eur: 25.00  # all matches of one calendar month (UTC) together
   # Prices below are in US dollars, the caps in euros. 1.0 counts every dollar
   # as a full euro; set the real rate if a dollar is worth more than a euro.
   usd_to_eur: 1.0

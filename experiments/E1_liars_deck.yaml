@@ -37,7 +37,7 @@ conditions:
   provider_routing: "OpenRouter's default; the serving provider is stored per call if the export has it"
   usd_to_eur: "1.0 as in config/models.yaml (overstates cost)"
   needs_before_start:
-    stage_A: "month cap 25 EUR and a per-run budget in the arena"
+    stage_A: "a per-run budget in the arena"
     stage_B: "reasoning effort and output limit per seat; one model in several seats"
     stage_C: "the four strong models in config/models.yaml"
     all: "per call in the export: tokens in and out, duration, outcome"

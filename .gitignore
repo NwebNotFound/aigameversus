@@ -14,6 +14,16 @@ dist/
 
 # Node (web UI)
 node_modules/
+/web/.svelte-kit/
+/web/build/
+test-results/
+playwright-report/
+.showcase-frames/
+
+# Logs and coverage
+*.log
+.coverage
+htmlcov/
 
 # Editors and OS
 .idea/
