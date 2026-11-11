@@ -205,6 +205,7 @@ arena/
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
+  werewolf/     Werewolf: plugin, abilities, roles, templates, selection
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -322,8 +323,10 @@ uv run pytest games/werewolf   # schema check of every role and template
 To make the role selectable in a template, add it to
 `games/werewolf/templates.yaml`; the test checks that the template stays
 fillable (counts, unique roles, wolves below half). Today nothing loads the
-roles at startup; the test is the check. A new ability needs a handler in code
-(planned, phase 4); a role without new abilities needs none.
+roles at startup; the test is the check. A new ability needs a handler in
+`games/werewolf/abilities.py` (a `NightAbility` in `NIGHT`, or a passive hook
+the plugin handles by name); the plugin refuses a role whose handlers are
+missing. A role without new abilities needs none.
 
 ### A Werewolf template or option
 

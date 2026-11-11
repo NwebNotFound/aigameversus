@@ -19,7 +19,9 @@ def test_roles_lists_every_role_with_its_selection_fields():
         "weight": 7,
         "night_order": roles["seer"]["night_order"],
         "first_night_only": False,
+        "hooks": {"on_night": "seer_inspect"},
         "description": roles["seer"]["description"],
+        "rules_snippet": roles["seer"]["rules_snippet"],
     }
 
 
