@@ -874,7 +874,7 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** lovers win with their teams; protection against poison;
   wolves informed when they catch the girl; the Elder surviving poison.
 
-## D-043 · Werewolf roles batch B: Raven, Wild Child, Prime Wolf, White Werewolf, Bear
+## D-049 · Werewolf roles batch B: Raven, Wild Child, Prime Wolf, White Werewolf, Bear
 
 - **Date:** 2026-11-11
 - **Decision:**
