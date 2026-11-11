@@ -82,16 +82,28 @@ class TurnRequest(_Frozen):
     error: str | None = None  # why the previous attempt of this turn was rejected
 
 
+class AnswerStats(_Frozen):
+    """What one answer of a model took, as far as its provider said."""
+
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    reasoning_tokens: int | None = None
+    retries: int = 0  # failed calls tried again before this answer
+
+
 class Reply(_Frozen):
     """What an agent answers: one action, or the reason why there is none.
 
     `thought` is the agent's private reasoning. The engine logs it for
-    spectators only; no player ever gets it, not even its author.
+    spectators only; no player ever gets it, not even its author. `stats` is
+    what the answer took (a model agent's; None for a bot), logged for
+    spectators in the move's `decision` event.
     """
 
     action: Action | None = None
     problem: str | None = None  # set instead of `action`: what was wrong with the answer
     thought: str | None = None
+    stats: AnswerStats | None = None
 
     @model_validator(mode="after")
     def _action_or_problem(self) -> Self:

@@ -15,6 +15,7 @@ import json
 import os
 import random
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -330,7 +331,7 @@ async def _play_models(
             player: ModelAgent(budget.model(player, model_id), plugin, settings=options["settings"])
             for player, model_id in seats.items()
         }
-        match = _match(plugin, agents, options, store_and_print)
+        match = _match(plugin, agents, {**options, "clock": time.monotonic}, store_and_print)
         await matches.create(
             match_id,
             plugin.id,

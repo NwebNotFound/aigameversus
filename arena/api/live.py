@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import random
+import time
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -157,7 +158,8 @@ class LiveMatches:
                 )
                 for seat in players
             }
-        match = Match(plugin, agents, seed=seed, settings=settings, sink=sink)
+        # Timed: thinking time is part of what spectators and analyses read.
+        match = Match(plugin, agents, seed=seed, settings=settings, sink=sink, clock=time.monotonic)
         if len(self._running) >= MAX_RUNNING:
             raise ArenaBusy(
                 f"{MAX_RUNNING} matches are running, the most this server plays at a time. "
