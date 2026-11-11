@@ -150,7 +150,7 @@ class LiarsDeck(GamePlugin[LiarsState]):
     max_players = 4
     # Each round ends with a trigger pull and each revolver has `chambers` pulls,
     # so there are at most players x chambers rounds. A round has at most one play
-    # per card dealt (min_cards each) plus the call, each with one table_talk (D-041).
+    # per card dealt (min_cards each) plus the call, each with one table_talk (D-045).
     max_turns = max(
         v.players.max
         * v.revolver.chambers

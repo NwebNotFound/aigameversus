@@ -35,7 +35,7 @@ BetKind = Literal["fold", "check", "call", "raise", "all_in"]
 def turn_bound(
     players: int, starting_stack: int, small_blind: int, double_every: int, hand_limit: int
 ) -> int:
-    """The most turns a tournament with these settings can take (D-041).
+    """The most turns a tournament with these settings can take (D-045).
 
     Per hand, every street starts with at most one action per player, and every
     raise lets at most all others act again. A full raise lifts the bet by at

@@ -46,9 +46,7 @@
 				<li>
 					<span class="game">{gameName(match.game)}</span>
 					<span>{match.players.join(' · ')}</span>
-					<span class="muted">
-						round {match.round}{match.status === 'paused' ? ' · paused' : ''}
-					</span>
+					<span class="muted">{match.status}</span>
 				</li>
 			{/each}
 		</ul>
