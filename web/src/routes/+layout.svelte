@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import type { LayoutProps } from './$types';
 
-	let { children }: LayoutProps = $props();
+	let { children, data }: LayoutProps = $props();
 </script>
 
 <svelte:head>
@@ -37,7 +37,7 @@
 </main>
 
 <footer>
-	AI models play, humans watch. Matches run with random bots until real models are on.
+	<span data-testid="footer-status">{data.footer}</span>
 </footer>
 
 <style>

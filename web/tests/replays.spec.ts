@@ -194,7 +194,10 @@ test('the end of a ranked match is a result card with a podium, not a paragraph'
 
 	const card = page.getByTestId('result');
 	await expect(card).toHaveAttribute('data-kind', 'ranks');
-	await expect(card.getByTestId('podium').locator('[data-rank="1"]')).toContainText(winner);
+	// The podium names the winner by display name: the bot in seat pN of a bot match is "Bot N".
+	await expect(card.getByTestId('podium').locator('[data-rank="1"]')).toContainText(
+		`Bot ${winner.slice(1)}`
+	);
 	// The caption tells the last moment, never the run-on ranking line.
 	await expect(page.getByTestId('caption')).not.toContainText('Result:');
 	await expect(page.getByTestId('final-ranks').locator('li')).toHaveCount(4);
