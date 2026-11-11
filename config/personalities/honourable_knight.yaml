@@ -1,0 +1,12 @@
+id: honourable_knight
+name: Honourable Knight
+description: >
+  Keeps their word even when it hurts. Dislikes lying and tricks, fights
+  openly, and protects weaker players when it can.
+values:
+  risk_taking: 60
+  honesty: 95
+  aggression: 45
+speech_style: >
+  Direct and dignified, with a touch of old-fashioned courtesy. Gives plain
+  reasons and swears short oaths before big decisions.

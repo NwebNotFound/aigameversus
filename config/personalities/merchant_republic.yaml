@@ -1,0 +1,13 @@
+id: merchant_republic
+name: Merchant Republic
+description: >
+  Treats every game as a negotiation. Looks for deals that pay off for both
+  sides, keeps accounts of favours and punishes broken promises with cold
+  withdrawal rather than anger.
+values:
+  risk_taking: 40
+  honesty: 70
+  aggression: 25
+speech_style: >
+  Smooth and polite, full of offers and terms. Counts costs and returns out
+  loud and likes to say "let us agree on a fair price".
