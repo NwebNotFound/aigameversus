@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // (CI does this after starting the stack). Demo profiles play High Card (`toy`).
 
 test('overall leaderboard lists the demo players by rating', async ({ page }) => {
-	await page.goto('/leaderboard');
+	await page.goto('/leaderboard?kind=all');
 
 	const tabs = page.getByRole('navigation', { name: 'Games' });
 	await expect(tabs.getByRole('link', { name: 'Overall' })).toHaveAttribute('aria-current', 'page');
@@ -91,3 +91,38 @@ for (const path of ['/leaderboard', '/leaderboard?game=toy']) {
 		expect(overflow).toBeLessThanOrEqual(0);
 	});
 }
+
+// No real model is rated in the demo stack, so the default view falls back to everyone.
+test('real models are the default and the filter can show bots or all', async ({ page }) => {
+	await page.goto('/leaderboard');
+
+	const filter = page.getByRole('navigation', { name: 'Who' });
+	await expect(filter.getByTestId('kind-models')).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByTestId('kind-fallback')).toContainText('No real model is rated yet');
+	await expect(
+		page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / })
+	).toHaveCount(6);
+
+	await filter.getByTestId('kind-models').click();
+	await expect(page).toHaveURL(/kind=models/);
+	await expect(page.getByTestId('empty-leaderboard')).toBeVisible();
+
+	await filter.getByTestId('kind-bots').click();
+	await expect(filter.getByTestId('kind-bots')).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByTestId('leaderboard')).toBeVisible();
+});
+
+test('the table shows model, cost per game and tool errors, and bot seats are one row', async ({
+	page
+}) => {
+	await page.goto('/leaderboard?kind=all');
+
+	const headers = await page.getByTestId('leaderboard').locator('th').allInnerTexts();
+	expect(headers.join(' ')).toMatch(/Cost per game/i);
+	expect(headers.join(' ')).toMatch(/Tool errors/i);
+	const seatRows = page
+		.getByTestId('leaderboard')
+		.locator('tbody tr')
+		.filter({ hasText: /Random Bot p\d/ });
+	await expect(seatRows).toHaveCount(0);
+});
