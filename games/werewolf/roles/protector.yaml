@@ -1,0 +1,10 @@
+id: protector
+name: Beschützer
+team: village
+unique: true
+weight: 3
+night_order: 3
+hooks:
+  on_night: protector_guard
+description: >
+  Protects one player from the wolves each night; never the same player twice in a row.

@@ -1,0 +1,7 @@
+# Game options (the Hauptmann is an office, not a role).
+captain:
+  enabled: true             # elect a captain on day 1
+  vote_weight: 2            # the captain's vote counts double
+  successor_on_death: true  # the dying captain names the successor
+roles_visible_to_agents: false  # role list public to the AIs or secret
+spectators_see_roles: true
