@@ -146,6 +146,10 @@
 				}}
 				data-testid="tab-chronicle">Chronicle</button
 			>
+			<label class="toggle">
+				<input type="checkbox" bind:checked={spoilers} />
+				Show spoilers
+			</label>
 		</div>
 
 		{#if tab === 'replay'}
@@ -190,10 +194,6 @@
 			</div>
 
 			<div class="bar">
-				<label class="toggle">
-					<input type="checkbox" bind:checked={spoilers} />
-					Show spoilers
-				</label>
 				<a
 					class="button"
 					href="/replays/{params.id}/export.json"
@@ -222,7 +222,7 @@
 	{#if tab === 'replay'}
 		<MatchColumns {spec} {spoilers} events={shown} players={match.match.players} />
 	{:else}
-		<ChroniclePanel id={params.id} />
+		<ChroniclePanel id={params.id} {spoilers} onreveal={() => (spoilers = true)} />
 	{/if}
 {/if}
 
@@ -265,6 +265,7 @@
 
 	.tabs {
 		display: flex;
+		align-items: center;
 		gap: 0.25rem;
 		border-bottom: 1px solid var(--border);
 	}
@@ -272,6 +273,10 @@
 	.tabs button {
 		border-radius: 8px 8px 0 0;
 		border-bottom-color: transparent;
+	}
+
+	.tabs .toggle {
+		margin-left: auto;
 	}
 
 	.tabs button[aria-selected='true'] {

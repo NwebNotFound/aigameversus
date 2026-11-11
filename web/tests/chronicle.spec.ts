@@ -107,3 +107,39 @@ test('the tab fits the viewport and the replay tab still works', async ({ page, 
 	await expect(page.getByTestId('position')).toBeVisible();
 	await expect(page.getByTestId('chronicle')).toHaveCount(0);
 });
+
+test('with spoilers off the chronicle stays closed until the viewer shows them', async ({
+	page,
+	request
+}) => {
+	const id = await start(request, { game: 'werewolf', seed: 3, players: 8 });
+	await finished(request, id);
+	const log = await (await request.get(`${ARENA}/matches/${id}/events`)).json();
+	const roles: string[] = [
+		...new Set<string>(
+			log
+				.filter((e: { type: string }) => e.type === 'role_assigned')
+				.map((e: { data: { role: string } }) => e.data.role.replaceAll('_', ' '))
+		)
+	].filter((role) => !['villager', 'werewolf'].includes(role)); // 'werewolf' is the game's name too
+
+	await page.goto(`/replays/${id}`);
+	await page.getByLabel('Show spoilers').uncheck();
+	await page.getByTestId('tab-chronicle').click();
+
+	// The switch is still there on this tab, the story is closed and no role name is on the page.
+	await expect(page.getByLabel('Show spoilers')).not.toBeChecked();
+	await expect(page.getByTestId('chronicle-spoilers')).toContainText('names hidden roles');
+	await expect(page.getByTestId('chronicle-story')).toHaveCount(0);
+	await expect(page.getByTestId('chronicle-download')).toHaveCount(0);
+	const text = (await page.locator('body').innerText()).toLowerCase();
+	for (const role of roles) expect(text).not.toContain(role);
+
+	await page.getByTestId('chronicle-reveal').click();
+
+	await expect(page.getByLabel('Show spoilers')).toBeChecked();
+	await expect(page.getByTestId('chronicle-story')).toBeVisible();
+	await expect(page.getByTestId('chronicle-download')).toBeVisible();
+	const story = (await page.getByTestId('chronicle-story').innerText()).toLowerCase();
+	expect(roles.some((role) => story.includes(role))).toBe(true);
+});
