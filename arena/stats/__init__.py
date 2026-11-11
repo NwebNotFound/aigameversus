@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, NamedTuple
 
 from arena.engine.types import Event, PlayerId
-from arena.stats import liars_deck, poker
+from arena.stats import liars_deck, poker, werewolf
 
 
 class GameStats(NamedTuple):
@@ -20,4 +20,5 @@ class GameStats(NamedTuple):
 STATS: dict[str, GameStats] = {
     "liars_deck": GameStats(liars_deck.match_stats, liars_deck.aggregate),
     "poker": GameStats(poker.match_stats, poker.aggregate),
+    "werewolf": GameStats(werewolf.match_stats, werewolf.aggregate),
 }
