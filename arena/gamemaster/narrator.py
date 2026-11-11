@@ -6,6 +6,9 @@ has a model can pass each narration event here; without one, or whenever the
 model fails or answers off-script, the template text stands.
 
     text = await retell(event.data, model_call, style="epic")
+
+With a real model, pass the match's metered call (`Budget.model(...)`), never a
+bare model: narration counts against the match's cost caps like every call.
 """
 
 import json
