@@ -13,7 +13,13 @@
   but not clean. After 3 garbled answers in a match a model is offered its
   tools without the `thought` argument (`simple_schema` on the event); its
   thought is then the text beside the call. A call the engine still refuses
-  is told exactly which fields the tool takes.
+  is told exactly which fields the tool takes. All of this only with the match
+  setting `answer_repair: "v1"`; the default `"off"` reads every call as sent,
+  with the old correction text and no switch, so experiments stay comparable
+  with matches played before. The engine keeps the setting from the game
+  (`game_settings`) and records it in `match_started`; an unknown value is
+  refused (422 at `POST /matches`). Experiment runs send it explicitly; the
+  launch form offers `v1` for the owner's own matches.
 - **Why:** In a heads-up Poker match 14 of gpt-luna's 66 answers were
   refused for the format of a call whose meaning was clear (reasoning text in
   the arguments, mojibake keys on `check`), and every refusal cost a

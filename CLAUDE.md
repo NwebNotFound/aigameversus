@@ -162,7 +162,11 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   JSON inside text, unknown keys dropped, `{}` for a tool without arguments,
   numbers written as text); each repair is named on the move's `decision`
   event (`repairs`, `raw_arguments`), and after 3 garbled answers in a match
-  the model gets its tools without `thought` (`simple_schema`).
+  the model gets its tools without `thought` (`simple_schema`). Only with the
+  match setting `answer_repair: "v1"`: the default `"off"` reads every call as
+  sent, as before. It is the engine's setting, not the game's: `game_settings`
+  removes it before the plugin and replay see the settings; `match_started`
+  records it.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool

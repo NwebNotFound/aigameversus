@@ -20,6 +20,9 @@ IGNORED_EXTRA_KEYS = "ignored_extra_keys"  # keys the tool does not have were dr
 COERCED_NUMBERS = "coerced_numbers"  # "40" became 40 where the schema wants a number
 IGNORED_THOUGHT = "ignored_thought"  # a thought that was not text was dropped
 
+SCAN_CHARS = 32_000  # of a call's text, searched for an object
+SCAN_STARTS = 50  # "{" tried as the start of one
+
 _INTEGER = re.compile(r"-?\d+")
 _NUMBER = re.compile(r"-?(\d+\.?\d*|\.\d+)")
 
@@ -61,6 +64,12 @@ def read_arguments(
     return arguments, repairs
 
 
+def as_sent(raw: str) -> dict[str, Any] | None:
+    """The arguments exactly as sent, if they are one JSON object (answer_repair "off")."""
+    arguments = _parse(raw)
+    return arguments if isinstance(arguments, dict) else None
+
+
 def _parse(raw: str) -> Any:
     try:
         return json.loads(raw)
@@ -69,31 +78,26 @@ def _parse(raw: str) -> Any:
 
 
 def _first_object(raw: str) -> dict[str, Any] | None:
-    """The first balanced {...} in the text that is a JSON object."""
+    """The first JSON object in the text, from one of its first SCAN_STARTS "{".
+
+    The decoder fails at once on garbage, and the scan is bounded, so a model that
+    sends nothing but braces cannot hold up the server (this runs on its event loop).
+    """
     if not isinstance(raw, str):
         return None
-    for start in [i for i, char in enumerate(raw) if char == "{"]:
-        depth, in_string, escaped = 0, False, False
-        for end in range(start, len(raw)):
-            char = raw[end]
-            if in_string:
-                if escaped:
-                    escaped = False
-                elif char == "\\":
-                    escaped = True
-                elif char == '"':
-                    in_string = False
-            elif char == '"':
-                in_string = True
-            elif char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    found = _parse(raw[start : end + 1])
-                    if isinstance(found, dict):
-                        return found
-                    break
+    text = raw[:SCAN_CHARS]
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    for _ in range(SCAN_STARTS):
+        if start == -1:
+            return None
+        try:
+            found, _end = decoder.raw_decode(text, start)
+        except (ValueError, RecursionError):
+            found = None
+        if isinstance(found, dict):
+            return found
+        start = text.find("{", start + 1)
     return None
 
 

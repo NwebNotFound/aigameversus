@@ -5,11 +5,19 @@ import logging
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
-from arena.agents.arguments import read_arguments
+from arena.agents.arguments import as_sent, read_arguments
 from arena.agents.model import Message, ModelCall, ModelError, ModelReply
 from arena.agents.prompt import THOUGHT, build_messages, tool_schemas
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Action, AgentError, AnswerStats, Reply, ToolSpec, TurnRequest
+from arena.engine.types import (
+    Action,
+    AgentError,
+    AnswerStats,
+    Reply,
+    ToolSpec,
+    TurnRequest,
+    repair_of,
+)
 
 log = logging.getLogger(__name__)
 
@@ -47,14 +55,15 @@ class ModelAgent:
         self._rules = plugin.rules(settings)
         self._sleep = sleep
         self._malformed = 0  # answers of this match whose call was garbled
+        self._repair = repair_of(settings or {}) != "off"
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
         messages = build_messages(self._plugin.name, self._rules, request, summary, self._memory)
-        simple = self._malformed >= MALFORMED_LIMIT
+        simple = self._repair and self._malformed >= MALFORMED_LIMIT
         schemas = tool_schemas(request.tools, with_thought=not simple)
         answer, tries = await self._call_model(messages, schemas)
-        reply, repairs, raw = _read(answer, request.tools)
+        reply, repairs, raw = _read(answer, request.tools, repair=self._repair)
         if repairs or raw is not None:
             self._malformed += 1
         usage = answer.usage
@@ -89,8 +98,14 @@ class ModelAgent:
                 await self._sleep(delay)
 
 
-def _read(reply: ModelReply, tools: Sequence[ToolSpec]) -> tuple[Reply, list[str], str | None]:
-    """The reply, the repairs made to its call, and the raw call if it was garbled."""
+def _read(
+    reply: ModelReply, tools: Sequence[ToolSpec], *, repair: bool
+) -> tuple[Reply, list[str], str | None]:
+    """The reply, the repairs made to its call, and the raw call if it was garbled.
+
+    Without `repair` (answer_repair "off") the arguments are read as sent: anything but
+    one JSON object is a problem, and every key goes to the engine.
+    """
     thought = (reply.text or "").strip() or None
     if not reply.tool_calls:
         problem = "Your answer contained no tool call. Call exactly one tool."
@@ -102,8 +117,11 @@ def _read(reply: ModelReply, tools: Sequence[ToolSpec]) -> tuple[Reply, list[str
         return Reply(problem=problem, thought=thought), [], None
     call = reply.tool_calls[0]  # one action per request: further calls are ignored
     spec = next((tool for tool in tools if tool.name == call.name), None)
-    arguments, repairs = read_arguments(call.arguments, spec, THOUGHT)
-    raw = str(call.arguments)[:RAW_CHARS] if repairs or arguments is None else None
+    if not repair:
+        arguments, repairs, raw = as_sent(call.arguments), [], None
+    else:
+        arguments, repairs = read_arguments(call.arguments, spec, THOUGHT)
+        raw = str(call.arguments)[:RAW_CHARS] if repairs or arguments is None else None
     if arguments is None:
         problem = (
             f"The arguments of your call to '{call.name}' were not a JSON object. "

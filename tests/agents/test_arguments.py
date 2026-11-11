@@ -6,6 +6,7 @@ The garbage below is what gpt-luna sent in a heads-up Poker match: 14 of its
 
 import asyncio
 import json
+import time
 
 import pytest
 
@@ -22,7 +23,9 @@ from arena.agents.mock_llm import MockLLM, tool_call
 from arena.agents.model import ModelReply, ToolCall
 from arena.agents.runner import ModelAgent
 from arena.engine.match import Match
+from arena.engine.replay import replay
 from arena.engine.types import ToolSpec
+from games.poker.plugin import Poker
 from games.toy.plugin import ToyGame
 from tests.agents.test_model_match import HAND_SIZE, LOWEST, no_pause, of_type
 
@@ -104,11 +107,14 @@ def garbled(card):
     return policy
 
 
-def play(scripts):
-    plugin = ToyGame()
+REPAIR_ON = {"answer_repair": "v1"}
+
+
+def play(scripts, settings=REPAIR_ON, plugin=None):
+    plugin = plugin or ToyGame()
     mocks = {p: MockLLM(*scripts.get(p, [LOWEST] * HAND_SIZE)) for p in ("p1", "p2")}
-    agents = {p: ModelAgent(m, plugin, sleep=no_pause) for p, m in mocks.items()}
-    match = Match(plugin, agents, seed=3)
+    agents = {p: ModelAgent(m, plugin, settings=settings, sleep=no_pause) for p, m in mocks.items()}
+    match = Match(plugin, agents, seed=3, settings=settings)
     asyncio.run(match.run())
     return match, mocks
 
@@ -145,3 +151,64 @@ def test_a_rejected_call_names_exactly_what_the_tool_takes():
     error = of_type(match, "action_rejected", "p1")[0].data["error"]
     assert "'play_card' takes only: card (integer, required)." in error
     assert json.loads(json.dumps(error)) == error
+
+
+# --- answer_repair is a match setting; "off", the default, reads the call as sent -------
+
+
+def test_with_repair_off_a_garbled_move_is_refused_as_before():
+    illegal = ModelReply(tool_calls=(ToolCall("play_card", '(x) {"card": 99} }'),))
+    match, mocks = play({"p1": [garbled(None)] + [illegal] * 20}, settings={})
+
+    assert of_type(match, "action_rejected", "p1")  # the garbled first move is not played
+    offered = [tools for _, tools in mocks["p1"].calls]
+    assert all("thought" in t[0]["function"]["parameters"]["properties"] for t in offered)
+    for decision in of_type(match, "decision", "p1"):
+        assert (decision.data["repairs"], decision.data["raw_arguments"]) == ([], [])
+        assert decision.data["simple_schema"] is False
+
+
+def test_with_repair_off_a_refusal_reads_as_before():
+    wrong = tool_call("play_card", {})
+    match, _ = play({"p1": [wrong] + [LOWEST] * HAND_SIZE}, settings={})
+
+    error = of_type(match, "action_rejected", "p1")[0].data["error"]
+    assert error == "Invalid arguments for 'play_card': 'card' is a required property."
+
+
+def test_the_setting_is_recorded_and_checked_and_games_never_see_it():
+    match, _ = play({}, settings=REPAIR_ON)
+    assert of_type(match, "match_started")[0].data["answer_repair"] == "v1"
+    assert of_type(match, "match_started")[0].data["settings"] == REPAIR_ON
+    assert replay(ToyGame(), match.events) == match.state
+    default, _ = play({}, settings={})
+    assert of_type(default, "match_started")[0].data["answer_repair"] == "off"
+    with pytest.raises(ValueError, match="answer_repair"):
+        Match(ToyGame(), {"p1": None, "p2": None}, seed=1, settings={"answer_repair": "v2"})
+    # Poker refuses any setting it does not know; this one never reaches it.
+    poker = Match(Poker(), {"p1": None, "p2": None}, seed=1, settings=REPAIR_ON)
+    assert poker.settings == REPAIR_ON
+
+
+@pytest.mark.parametrize(
+    "raw", ["{" * 16_000, "{" * 64_000, '{"a":' * 3_000, '"' + "{" * 20_000, "x" * 1_000_000]
+)
+def test_a_wall_of_braces_is_given_up_on_at_once(raw):
+    started = time.perf_counter()
+
+    assert read(raw)[0] is None
+
+    assert time.perf_counter() - started < 0.5
+
+
+def test_garbage_braces_before_the_real_object_do_not_hide_it():
+    raw = "{ {oops} {" + '"amount": 40}'
+
+    assert read("{{{ " * 10 + 'then {"amount": 40}') == ({"amount": 40}, [EXTRACTED_JSON])
+    assert read(raw) == ({"amount": 40}, [EXTRACTED_JSON])
+
+
+def test_a_misspelt_required_key_is_dropped_so_the_engine_still_refuses_the_call():
+    arguments, repairs = read('{"amout": 40}')
+
+    assert (arguments, repairs) == ({}, [IGNORED_EXTRA_KEYS])  # "amount" is missing: refused

@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.rng import derive_rng
 from arena.engine.types import (
+    ANSWER_REPAIR,
+    ANSWER_REPAIR_VERSIONS,
     MESSAGE,
     Action,
     Agent,
@@ -28,6 +30,8 @@ from arena.engine.types import (
     ToolSpec,
     TurnMode,
     TurnRequest,
+    game_settings,
+    repair_of,
 )
 
 MAX_CORRECTIONS = 2  # retries after a rejected action, before the random fallback plays
@@ -83,7 +87,12 @@ class Match[StateT: BaseModel]:
         self.plugin = plugin
         self.seed = seed
         self.settings = dict(settings or {})
-        self.state = plugin.initial_state(players, self.settings)
+        repair = repair_of(self.settings)
+        if repair not in ANSWER_REPAIR_VERSIONS:
+            raise ValueError(
+                f"Unknown {ANSWER_REPAIR} {repair!r}; choose one of {list(ANSWER_REPAIR_VERSIONS)}"
+            )
+        self.state = plugin.initial_state(players, game_settings(self.settings))
         self.events: list[Event] = []
         self._agents = dict(agents)
         self._sink = sink
@@ -120,6 +129,7 @@ class Match[StateT: BaseModel]:
                     "players": list(self._agents),
                     "settings": dict(self.settings),
                     "prompt_version": plugin.prompt_version(self.settings),
+                    ANSWER_REPAIR: repair_of(self.settings),
                     "seed": self.seed,
                 },
                 # Spectators only: a player who knows the seed knows every hidden draw.
@@ -340,7 +350,9 @@ class Match[StateT: BaseModel]:
         try:
             jsonschema.validate(action.arguments, spec.parameters)
         except jsonschema.ValidationError as invalid:
-            return f"Invalid arguments for '{action.tool}': {invalid.message}. {_fields(spec)}"
+            error = f"Invalid arguments for '{action.tool}': {invalid.message}."
+            # With answer_repair on, the correction also names the tool's fields.
+            return error if repair_of(self.settings) == "off" else f"{error} {_fields(spec)}"
         return self.plugin.validate(self.state, player, action)
 
     def _stream(self, *key: str | int) -> random.Random:
