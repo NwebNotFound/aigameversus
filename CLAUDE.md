@@ -11,13 +11,14 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.4. The engine runs complete matches of
+**State of the build:** roadmap step 1.5. The engine runs complete matches of
 any plugin, stores their event logs in Postgres and rebuilds the state from a
 log. A seat is played by a random bot or by the agent runner, which prompts a
-model and reads its answer; in tests and CI that model is the mock LLM. The
-LiteLLM wrapper for real models exists, but nothing starts a match with it yet:
-`config/models.yaml` is empty until the cost caps land (step 1.5). There is one
-playable game, High Card (`games/toy`). The arena API exposes
+model and reads its answer; in tests and CI that model is the mock LLM. Model
+calls are counted against cost caps, and a match pauses at a cap.
+`config/models.yaml` lists the caps and a roster of real models, but nothing
+starts a match with a real model yet (no CLI or match API before step 1.6, no
+API key before phase 2). There is one playable game, High Card (`games/toy`). The arena API exposes
 `GET /health` (it migrates the database at startup) and the Werewolf setup
 endpoints, the worker is a heartbeat placeholder, the web UI (`web/`,
 SvelteKit) has a home page and placeholders for the other pages. Sections below
@@ -60,6 +61,13 @@ their phase lands.
 
 Validation lives in the engine only. Agents never judge an action.
 
+An agent can also raise `MatchPaused` instead of answering: the match cannot
+go on without the user (today: a cost cap, see below). The engine then cancels
+the other players of the turn, drops the turn, logs `match_paused` and lets
+`Match.run()` raise the pause. Calling `run()` again logs `match_resumed` and
+plays that turn from its start, so a paused game continues exactly as it would
+have without the pause.
+
 *Not built yet:* streaming to the UI (step 1.6).
 
 ### Agents
@@ -90,9 +98,11 @@ calls out, `ModelError` on failure. Two things implement it:
   `mock.calls` holds every prompt it was sent. `tests/agents/` shows the
   patterns, including a mock that reads its hand from the prompt.
 - `LiteLLMModel` (`litellm_model.py`) calls a real model. It is the only code
-  that can spend money. Never use it in tests or CI. It imports LiteLLM on
-  first use, in LiteLLM's offline mode, because the import is slow and would
-  otherwise download a price list.
+  that can spend money, and matches get it only through `Budget.model`, which
+  counts every call (see Cost caps). Never use it in tests or CI. It imports
+  LiteLLM on first use, in LiteLLM's offline mode, because the import is slow
+  and would otherwise download a price list, and it switches LiteLLM's own
+  logger off, because that logs whole requests and provider error texts.
 
 Failures:
 
@@ -105,6 +115,43 @@ Failures:
   on its next turn.
 - Logs and events carry only the kind of failure (the error class name), never
   a prompt, a key or a provider message.
+
+### Cost caps
+
+`config/models.yaml` holds the limits (0.50 € per match, 5 € per calendar
+month, token limits per call) and the models with their prices.
+`arena/config.py` loads and checks it.
+
+A match that uses models gets one `Budget` (`arena/agents/budget.py`), and
+every model call of the match is wrapped by it:
+
+```python
+budget = Budget(Ledger(pool), match_id, load_config())
+agent = ModelAgent(budget.model("p1", "deepseek-flash"), plugin)  # a real model
+agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock at its prices
+```
+
+- Before a call is sent, it is booked in the ledger (`arena/db/ledger.py`,
+  table `model_calls`) at the most it can cost: request size in bytes as input
+  tokens, the output limit as output tokens. When the answer reports its
+  tokens, the booking is corrected. A call that reports nothing (error,
+  timeout, crash) keeps the upper bound, so the ledger is never too low.
+  The caps hold as long as a provider bills no more than that bound; if one
+  does, the real cost is booked and the next call pauses.
+- If the booking would take the match or the month past its cap, the call is
+  not sent and the budget raises `MatchPaused("match_cap" | "month_cap")` with
+  the amounts. The match pauses as described under One turn. To continue,
+  whoever runs the match asks the user, sets a higher `budget.match_cap` or
+  `budget.month_cap` and calls `run()` again.
+- Money is an integer: millionths of a euro (`*_micro_eur`), rounded up per
+  call. Prices in the file are US dollars per million tokens; `usd_to_eur`
+  converts.
+- A request that could be longer than `max_input_tokens` is not sent; that
+  seat fails (`PromptTooLong`) and the random bot takes it.
+- Without a database there is no ledger and therefore no model call.
+- The API key comes from the environment (`OPENROUTER_API_KEY` in `.env`,
+  passed on by Compose) and is read by LiteLLM only. It is in no config file,
+  log, event or database row.
 
 ### Prompts
 
@@ -127,15 +174,15 @@ the server's error on a correction).
 
 A match is a list of `Event`s. Engine events (`match_started`, `thought`,
 `action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-`match_finished`) are bookkeeping. Game events come from the plugin through
+`match_paused`, `match_resumed`, `match_finished`) are bookkeeping. Game events come from the plugin through
 `ctx.emit` and are the only thing that changes the game state: `emit` records
 the event and passes it to the plugin's `apply_event` at once. Replaying the
 game events over `initial_state` therefore rebuilds the exact state.
 
 Every event says who may see it: `visible_to=None` is public, a list of
 players is private to them, an empty list is spectators only. The seed,
-thoughts and `agent_failed` are spectators only; a player's attempts are
-visible to that player.
+thoughts, `agent_failed` and pauses are spectators only; a player's attempts
+are visible to that player.
 
 Whatever an agent writes is made storable before it is logged: NUL characters
 and broken Unicode are dropped, NaN and infinity become null.
@@ -185,7 +232,8 @@ shift the game's randomness.
 7. **Content is data.** Roles, units, buildings, variants, events and
    personalities are YAML files validated against a schema at startup.
 8. **No paid calls in development, tests or CI.** Use random bots and the mock
-   LLM. Real model calls stay behind the cost caps.
+   LLM. Real model calls stay behind the cost caps: build a real model only
+   with `Budget.model`.
 9. **No secrets anywhere** except a local `.env`. Not in code, logs, tests,
    screenshots, commits or PR text.
 10. **Original assets only.** No names, characters or art from existing games.
@@ -200,8 +248,9 @@ arena/
   agents/       agent runner, prompts, model calls, mock LLM
   memory/       profiles and the three memory layers
   gamemaster/   match setup, scheduling, narrator
-  db/           connection pool, SQL migrations, event store
+  db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
+  config.py     loader of config/models.yaml (limits, models, prices)
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
@@ -304,6 +353,19 @@ Copy the shape of `games/toy/`, the smallest complete game.
 
 *Not built yet:* the registry that finds games by id (step 1.6), and what the
 UI needs to draw a game (phase 5).
+
+### A model
+
+An entry under `models` in `config/models.yaml`: an id of your choice,
+`provider` (only `openrouter` today), `model` (the provider's name for it) and
+the prices `input_usd_per_mtok` and `output_usd_per_mtok` in US dollars per
+million tokens, as the provider lists them. The cost caps count with these
+numbers, so check them against the provider's price page, and pick models that
+support tool calls. No code.
+
+```bash
+uv run pytest tests/test_config.py   # validates the file
+```
 
 ### A Werewolf role
 

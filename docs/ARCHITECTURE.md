@@ -28,7 +28,7 @@ flowchart LR
 | --- | --- | --- |
 | 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog) | engine built; API for matches, WebSocket planned |
 | 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card and Liar's Deck (`games/liars_deck`, both variants) play full matches; Poker, Werewolf and Throne of Tokens planned |
-| 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built; real models are not wired to matches until the cost caps exist (step 1.5) |
+| 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (step 1.6, key in phase 2) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
 | 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, leaderboard with game tabs, player profiles; New match and Replays are placeholders |
@@ -44,9 +44,12 @@ flowchart LR
   `MAX_CORRECTIONS = 2` retries. Without a legal action in time
   (`turn_timeout`), or for a seat whose agent gave up, it plays the game's
   `random_action` and logs the reason. An optional `sink` receives the events
-  of each turn.
+  of each turn. When an agent raises `MatchPaused`, the turn is dropped,
+  `match_paused` is logged and `run()` raises the pause; `run()` again
+  continues with that turn.
 - `arena/engine/types.py`: `Event`, `Action`, `ToolSpec`, `TurnRequest`,
-  `Reply`, `Placement`, `TurnMode`, the `Agent` protocol, `AgentError`.
+  `Reply`, `Placement`, `TurnMode`, the `Agent` protocol, `AgentError`,
+  `MatchPaused`.
 - `arena/engine/replay.py`: `replay(plugin, events)` rebuilds the state from a
   log or any prefix; it needs no seed.
 - `arena/engine/rng.py`: `derive_rng(seed, *key)`, independent seeded streams.
@@ -86,7 +89,8 @@ A turn without a game event stops the match with a `PluginError`.
 ```mermaid
 flowchart LR
     REQ["TurnRequest"] --> PB["prompt.py<br/>system: role, rules.md, answer format<br/>user: situation, visible events, ask"]
-    PB --> CALL{{"ModelCall"}}
+    PB --> METER["Budget.meter<br/>books the call in the ledger,<br/>pauses the match at a cap"]
+    METER --> CALL{{"ModelCall"}}
     CALL --> MOCK["MockLLM<br/>scripted, tests and CI"]
     CALL --> LITE["LiteLLMModel<br/>real provider, costs money"]
     MOCK --> READ["runner.py reads the answer<br/>text = thought, first tool call = action"]
@@ -102,21 +106,31 @@ flowchart LR
   another player are `message` events and appear as `player p2 says: "..."`.
 - `MockLLM` stands in at the `ModelCall` boundary, so prompt building, answer
   parsing, retries and the engine run for real in tests.
+- `Budget` (`arena/agents/budget.py`) wraps the `ModelCall` of every seat of a
+  match. It books each call in the `model_calls` table before it is sent, at
+  its upper bound, and corrects the booking when the provider reports the
+  tokens. A call that would pass the cap of the match or of the month is not
+  sent: the budget raises `MatchPaused`. Limits and prices come from
+  `config/models.yaml` (`arena/config.py`). `Budget.model` is the only place
+  that builds a `LiteLLMModel`.
 
 ## Events, storage and replay
 
 - A match is a list of `Event`s. Engine events (`match_started`, `thought`,
   `action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-  `match_finished`) are bookkeeping; game events come from the plugin and are
-  the only thing that changes game state.
+  `match_paused`, `match_resumed`, `match_finished`) are bookkeeping; game
+  events come from the plugin and are the only thing that changes game state.
 - Each event has `visible_to`: `None` public, a tuple of players, or an empty
-  tuple for spectators only. The seed in `match_started`, thoughts and
-  `agent_failed` are spectators only.
+  tuple for spectators only. The seed in `match_started`, thoughts,
+  `agent_failed` and pauses are spectators only.
 - Event data must survive a JSON round trip; the engine enforces this at emit.
 - `arena/db/event_store.py`: `EventStore.append(match_id, first_seq, events)` and
   `load(match_id)` on the `match_events` table.
+- `arena/db/ledger.py`: `Ledger.book(...)` and `settle(...)` on the
+  `model_calls` table, one row per model call with its cost.
 - `arena/db/database.py`: `connect(url)` and `migrate(pool)`; numbered SQL files
-  in `arena/db/migrations/` (today `0001_match_events.sql`, `0002_ratings.sql`, `0003_match_placements.sql`),
+  in `arena/db/migrations/` (today `0001_match_events.sql`, `0002_ratings.sql`,
+  `0003_match_placements.sql`, `0004_model_calls.sql`),
   applied at API startup under an advisory lock.
 - `arena/ratings/`: multiplayer Elo (`elo.update_ratings`, `overall_rating`),
   count-based statistics (`stats`), and `RatingStore` on the `player_profiles`,
@@ -142,6 +156,5 @@ Compose project `aigameversus`, host ports bound to `127.0.0.1`:
 
 ## Planned
 
-Model configuration and cost caps (step 1.5), CLI, match API and live
-streaming to the UI (1.6), game registry, memory, rating matches automatically, game master, and all
+CLI, match API and live streaming to the UI (1.6), game registry, memory, rating matches automatically, game master, and all
 real games.

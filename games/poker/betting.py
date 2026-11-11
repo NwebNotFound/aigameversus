@@ -229,7 +229,7 @@ def split(amount: int, winners: Sequence[str]) -> dict[str, int]:
     """Share a pot evenly; odd chips go one each to the first winners in the given order.
 
     The plugin passes winners in seat order starting left of the button, the
-    usual rule for odd chips (D-034).
+    usual rule for odd chips (D-038).
     """
     if not winners:
         raise ValueError("a pot needs at least one winner")
