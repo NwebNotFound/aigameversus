@@ -140,7 +140,7 @@ def test_migrating_twice_applies_nothing_new(database_url):
 
     first, second = asyncio.run(run())
 
-    assert first == ["0001_match_events.sql"]
+    assert first == ["0001_match_events.sql", "0002_model_calls.sql"]
     assert second == []
 
 
