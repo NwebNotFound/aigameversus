@@ -133,7 +133,19 @@ test('pause, speed and abort control the running match', async ({ page, request 
 
 	await controls.getByRole('button', { name: 'Pause' }).click();
 	await expect(page.getByTestId('status')).toHaveText('paused');
-	await page.waitForTimeout(1500); // at most the turn that was being played comes in
+	// At most the turn that was being played comes in: wait until the shown positions stop changing.
+	let previous: number[] = [];
+	await expect
+		.poll(
+			async () => {
+				const now = await shownPositions(page);
+				const settled = JSON.stringify(now) === JSON.stringify(previous);
+				previous = now;
+				return settled;
+			},
+			{ intervals: [1300], timeout: 20_000 }
+		)
+		.toBe(true);
 	const atPause = await shownPositions(page);
 	await page.waitForTimeout(2000);
 	expect(await shownPositions(page)).toEqual(atPause);
@@ -142,8 +154,10 @@ test('pause, speed and abort control the running match', async ({ page, request 
 	await expect(page.getByTestId('status')).toHaveText('running');
 	await controls.getByLabel('Speed').selectOption({ label: 'Slow (3 s)' });
 	await expect(controls.getByLabel('Speed')).toHaveValue('3');
-	const control = await (await request.get(`${ARENA}/matches/${match.id}/control`)).json();
-	expect(control).toEqual({ paused: false, turn_delay: 3 });
+	// The select changes at once, the arena a moment later: wait for the arena, do not assume it.
+	await expect
+		.poll(async () => (await request.get(`${ARENA}/matches/${match.id}/control`)).json())
+		.toEqual({ paused: false, turn_delay: 3 });
 
 	await controls.getByRole('button', { name: 'Abort' }).click();
 	await controls.getByRole('button', { name: 'Yes, abort' }).click();

@@ -1121,6 +1121,7 @@ Each entry: date, decision, why, alternatives considered.
   the numbers up (an old log would change its meaning when a number is
   tuned); one event per city and round.
 
+
 ## D-058 · Match controls: pause between turns, abort as its own status
 
 - **Date:** 2026-11-11
@@ -1287,3 +1288,55 @@ Each entry: date, decision, why, alternatives considered.
   the form only shows what the arena says, so the two cannot disagree.
 - **Alternatives:** checking the rules in the browser; a villager count to set
   by hand; a red light for imbalance (the arena has three verdicts, not a scale).
+
+## D-067 · Game tables are components chosen by the render_spec layout
+
+- **Date:** 2026-11-11
+- **Decision:** The live view's `Board` picks a table component by the `layout`
+  of the plugin's `render_spec` (`card_table` is the Liar's Deck bar table in
+  `web/src/lib/components/LiarsDeckTable.svelte`) and falls back to the generic
+  board when the spec does not have the fields the table needs. `Board` also
+  gets the match log (`events`), so a table can react to what just happened.
+  The Liar's Deck table shows a banner for each call ("Liar!") and each shot
+  ("click" or "BANG") for 1.3 seconds, in order, at most six at a time, and
+  never for the backlog it finds when it appears: replays and reloads do not
+  replay the drama. The art is inline SVG and CSS, no files.
+- **Why:** The spec is a plain dict, so the UI decides the drawing; falling back
+  keeps the live view working for a game without a table. Reading the log
+  keeps the plugin free of animation state.
+- **Alternatives:** an animation field in `render_spec` (puts UI state in the
+  plugin); one component per game chosen by game id (breaks for variants that
+  share a layout).
+
+## D-068 · The Poker spectator spec carries side pots and win chances
+
+- **Date:** 2026-11-11
+- **Decision:** `Poker.render_spec` adds `side_pots` (the main pot and side pots as
+  `{amount, eligible}`, empty when fewer than two players are live) and, per
+  seat, `win_probability`: the player's chance to win if the hand ran to the
+  river now (`win_probabilities` of `games/poker/evaluator.py`, 400 sampled
+  runouts, `None` for folded players). The random stream is fixed by hand number
+  and board size, so a state always gives the same numbers. The Poker table
+  shows the chances only with spoilers on, and `win_probability` joins the
+  fields the UI hides with spoilers off.
+- **Why:** The table must show pot and side pots and, optionally, the chances;
+  the UI cannot evaluate hands. The chances follow from every hole card, so they
+  are spectator information like the hole cards themselves.
+- **Alternatives:** a hand evaluator in TypeScript (a second implementation to
+  keep in step); a separate API endpoint for the chances (a second request per
+  turn); exact enumeration (too slow before the flop).
+
+## D-069 · The Werewolf circle draws votes from the log and shows no model names
+
+- **Date:** 2026-11-11
+- **Decision:** The Werewolf circle (`layout: player_circle`) gets its vote arrows
+  from the match log, not from the plugin: the votes cast since the day began
+  (the last one per voter, an abstention takes a vote back) stay drawn after the
+  result until the next night starts, with the count against each player on
+  their seat. The backdrop follows the plugin phase: night, dusk or day. Roles
+  show only with spoilers on, as a `?` otherwise. Seats show the player id, not
+  a model name, because the spectator spec has none.
+- **Why:** The votes are public events, so the log is the source and the plugin
+  needs no UI state. The spec carries seats and phase only.
+- **Alternatives:** adding the votes to `render_spec`; passing the model names to
+  the board (needs the match record in the board props, a later step).
