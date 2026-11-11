@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { ARENA_API_URL } from '$app/env/private';
 import { createArenaClient } from '#lib/api.js';
+import { publicTranscript } from '#lib/server/redact.js';
 import { viewFrom } from '#lib/viewer.js';
 import type { RequestHandler } from './$types';
 
@@ -18,5 +19,5 @@ export const GET: RequestHandler = async ({ fetch, params, url }) => {
 	);
 	if (result.state === 'not_found') error(404, 'No match with this id');
 	if (result.state === 'unreachable') error(502, `Arena unreachable (${result.reason})`);
-	return json(result.data);
+	return json(spectator ? result.data : publicTranscript(result.data));
 };

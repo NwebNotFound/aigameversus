@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { LiveState, MatchEvent } from '../api.js';
-import { publicBoard, publicEvents, publicState } from './redact.js';
+import {
+	publicBoard,
+	publicEvents,
+	publicSettings,
+	publicState,
+	publicTranscript
+} from './redact.js';
 
 // Board specs as the plugins' render_spec writes them (spectator data included).
 const liars = {
@@ -95,6 +101,47 @@ describe('publicEvents', () => {
 			{ seq: 2, source: 'game', type: 'cards_played', data: { count: 1 }, visible_to: null }
 		];
 		expect(publicEvents(events).map((e) => e.seq)).toEqual([2]);
+	});
+});
+
+describe('publicSettings', () => {
+	it('keeps a secret Werewolf role mix out, and shows a public one', () => {
+		const secret = { language: 'de', template: 'classic', roles: { seer: 1 }, roles_public: false };
+		expect(publicSettings(secret)).toEqual({ language: 'de', roles_public: false });
+		const open = { ...secret, roles_public: true };
+		expect(publicSettings(open)).toEqual(open);
+	});
+
+	it('drops a setting nobody listed as public', () => {
+		expect(publicSettings({ variant: 'devil_card', secret_knob: 3 })).toEqual({
+			variant: 'devil_card'
+		});
+	});
+});
+
+describe('publicTranscript', () => {
+	it('drops a secret role mix from the opening line', () => {
+		const transcript = {
+			game: 'werewolf',
+			lang: 'en' as const,
+			spoilers: false,
+			lines: [
+				{
+					seq: 0,
+					kind: 'heading' as const,
+					actor: null,
+					text: 'Match started',
+					detail: null,
+					importance: 2 as const,
+					raw: {
+						type: 'match_started',
+						data: { players: ['p1'], settings: { language: 'de', template: 'random_balanced' } }
+					}
+				}
+			]
+		};
+		const raw = publicTranscript(transcript).lines[0].raw as { data: Record<string, unknown> };
+		expect(raw.data).toEqual({ players: ['p1'], settings: { language: 'de' } });
 	});
 });
 

@@ -6,7 +6,7 @@
  * and a layout that is not listed gives no board at all. A new secret field in a plugin
  * therefore stays hidden until someone lists it here as public.
  */
-import type { LiveState, MatchEvent } from '../api.js';
+import type { LiveState, MatchEvent, Transcript } from '../api.js';
 
 /** keep: public as it is. cards: hidden, sent as as many placeholders. drop-value: sent as null. */
 type Rule = 'keep' | 'cards' | 'null' | Shape | [Shape];
@@ -78,11 +78,52 @@ export function publicEvents(events: MatchEvent[]): MatchEvent[] {
 	return events.filter((event) => event.visible_to === null);
 }
 
-/** A live-state snapshot for a spoiler-free page: the public board, and no seed. */
+/** Match settings every player knows. Anything else (an unknown key) is dropped. */
+const PUBLIC_SETTINGS = new Set([
+	'language',
+	'variant',
+	'duplicate',
+	'hand_size',
+	'captain',
+	'roles_public'
+]);
+
+/**
+ * The settings a spoiler-free page may see. A Werewolf role mix (`roles`, or the `template`
+ * it was drawn from) is public only when the match made the role list public.
+ */
+export function publicSettings(settings: Record<string, unknown>): Record<string, unknown> {
+	const rolesPublic = settings.roles_public === true;
+	return Object.fromEntries(
+		Object.entries(settings).filter(
+			([key]) =>
+				PUBLIC_SETTINGS.has(key) || (rolesPublic && (key === 'roles' || key === 'template'))
+		)
+	);
+}
+
+/**
+ * A spoiler-free transcript (already asked for with `spoilers=false`) with public settings
+ * only: the opening line's raw event carries the match settings, role mix included.
+ */
+export function publicTranscript(transcript: Transcript): Transcript {
+	return {
+		...transcript,
+		lines: transcript.lines.map((line) => {
+			const data = line.raw?.data as Record<string, unknown> | undefined;
+			const settings = data?.settings;
+			if (!settings || typeof settings !== 'object') return line;
+			const safe = publicSettings(settings as Record<string, unknown>);
+			return { ...line, raw: { ...line.raw, data: { ...data, settings: safe } } };
+		})
+	};
+}
+
+/** A live-state snapshot for a spoiler-free page: the public board and settings, and no seed. */
 export function publicState(state: LiveState): LiveState {
 	return {
 		...state,
-		match: { ...state.match, seed: null },
+		match: { ...state.match, seed: null, settings: publicSettings(state.match.settings) },
 		board: { ...state.board, spec: publicBoard(state.board.spec) }
 	};
 }
