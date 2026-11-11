@@ -3,6 +3,7 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
+from typing import Literal
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import asyncpg
@@ -53,6 +54,7 @@ class MatchResult:
     match_id: UUID
     game_id: str
     rated_at: datetime
+    played_at: datetime  # when the match itself ended (not when its rating was applied)
     rank: int
     players: int
     rating_change: float
@@ -80,16 +82,18 @@ class RatingStore:
         model_id: str,
         personality_id: str | None = None,
         profile_id: UUID | None = None,
+        is_demo: bool = False,
     ) -> UUID:
-        """Add a profile; a random id unless `profile_id` is given."""
+        """Add a profile; a random id unless `profile_id` is given. Demo profiles are hidden."""
         profile_id = profile_id or uuid4()
         await self._pool.execute(
-            "INSERT INTO player_profiles (id, name, model_id, personality_id) "
-            "VALUES ($1, $2, $3, $4)",
+            "INSERT INTO player_profiles (id, name, model_id, personality_id, is_demo) "
+            "VALUES ($1, $2, $3, $4, $5)",
             profile_id,
             name,
             model_id,
             personality_id,
+            is_demo,
         )
         return profile_id
 
@@ -138,6 +142,35 @@ class RatingStore:
             [(profile_id, f"Random Bot {seat}", BOT_MODEL_ID) for seat, profile_id in ids.items()],
         )
         return ids
+
+    async def rate_model_match(
+        self,
+        match_id: UUID,
+        game_id: str,
+        models: Mapping[str, str],
+        placements: Sequence[Placement],
+    ) -> dict[str, UUID] | str:
+        """Rate a finished model match: one profile per model, the same in every match (D-081).
+
+        `models` maps each seat to its model id. Returns the seat to profile mapping, or a
+        sentence when the match is not rated: a profile is rated once per match, so a model
+        in several seats leaves the match unrated. Idempotent by match id.
+        """
+        names = list(models.values())
+        if len(set(names)) != len(names):
+            repeated = sorted({m for m in names if names.count(m) > 1})
+            return (
+                f"Not rated: {', '.join(repeated)} sits in several seats, "
+                "and a model is rated once per match"
+            )
+        profiles = {seat: await self.model_profile(model) for seat, model in models.items()}
+        await self.apply_match_result(
+            match_id,
+            game_id,
+            [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+            seats=profiles,
+        )
+        return profiles
 
     async def ratings(self, profile_id: UUID) -> dict[str, GameRating]:
         """The profile's rating in every game it has played, by game id."""
@@ -279,15 +312,39 @@ class RatingStore:
             )
         return usage
 
-    async def rated_games(self) -> list[str]:
-        """Ids of the games that have at least one rated match, sorted."""
-        rows = await self._pool.fetch("SELECT DISTINCT game_id FROM ratings ORDER BY game_id")
+    async def demo_profiles(self) -> int:
+        """How many rated demo profiles the leaderboard hides by default."""
+        return await self._pool.fetchval(
+            "SELECT count(DISTINCT p.id) FROM player_profiles p "
+            "JOIN ratings r ON r.profile_id = p.id AND r.games_played > 0 WHERE p.is_demo"
+        )
+
+    async def rated_games(
+        self, kind: Literal["models", "bots", "all"] = "all", *, demo: bool = True
+    ) -> list[str]:
+        """Ids of the games with at least one rated match of `kind`, sorted.
+
+        `kind` limits it to real models or to random bots; demo profiles count only if `demo`.
+        """
+        rows = await self._pool.fetch(
+            "SELECT DISTINCT r.game_id FROM ratings r "
+            "JOIN player_profiles p ON p.id = r.profile_id "
+            "WHERE r.games_played > 0 AND ($1 OR NOT p.is_demo) "
+            "AND ($2 = 'all' OR ($2 = 'bots') = (p.model_id = $3)) "
+            "ORDER BY r.game_id",
+            demo,
+            kind,
+            BOT_MODEL_ID,
+        )
         return [row["game_id"] for row in rows]
 
-    async def leaderboard(self, game_id: str | None = None) -> list[Standing]:
+    async def leaderboard(
+        self, game_id: str | None = None, *, demo: bool = False
+    ) -> list[Standing]:
         """Everyone with at least one rated match, best first.
 
-        With `game_id` the rating of that game; without it the overall rating.
+        With `game_id` the rating of that game; without it the overall rating. Demo profiles
+        (`arena.ratings.demo_seed`) are left out unless `demo`.
         """
         rows = await self._pool.fetch(
             "SELECT p.id, p.name, p.model_id, r.game_id, r.rating, r.games_played, "
@@ -297,8 +354,10 @@ class RatingStore:
             f"LEFT JOIN ({_PLACEMENTS_BY_GAME}) mp "
             "  ON mp.profile_id = r.profile_id AND mp.game_id = r.game_id "
             "WHERE r.games_played > 0 AND ($1::text IS NULL OR r.game_id = $1) "
+            "  AND ($2 OR NOT p.is_demo) "
             "GROUP BY p.id, p.name, p.model_id, r.game_id, r.rating, r.games_played",
             game_id,
+            demo,
         )
         by_profile: dict[UUID, list[asyncpg.Record]] = {}
         for row in rows:
@@ -328,9 +387,11 @@ class RatingStore:
         )
         matches = await self._pool.fetch(
             "SELECT rm.match_id, rm.game_id, rm.rated_at, mp.rank, mp.players, "
-            "mp.rating_before, mp.rating_after "
+            "mp.rating_before, mp.rating_after, "
+            "coalesce(m.finished_at, m.started_at, rm.rated_at) AS played_at "
             "FROM match_placements mp JOIN rated_matches rm ON rm.match_id = mp.match_id "
-            "WHERE mp.profile_id = $1 ORDER BY rm.rated_at DESC, rm.match_id LIMIT $2",
+            "LEFT JOIN matches m ON m.id = rm.match_id "
+            "WHERE mp.profile_id = $1 ORDER BY played_at DESC, rm.match_id LIMIT $2",
             profile_id,
             recent,
         )
@@ -346,6 +407,7 @@ class RatingStore:
                     match_id=m["match_id"],
                     game_id=m["game_id"],
                     rated_at=m["rated_at"],
+                    played_at=m["played_at"],
                     rank=m["rank"],
                     players=m["players"],
                     rating_change=m["rating_after"] - m["rating_before"],

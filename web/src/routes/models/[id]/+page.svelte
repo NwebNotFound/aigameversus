@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProvisionalBadge from '#lib/components/ProvisionalBadge.svelte';
 	import { gameName } from '#lib/games.js';
 	import { percent, placement, rating, signed, statLabel, statValue } from '#lib/format.js';
 	import { euros } from '#lib/live.js';
@@ -12,6 +13,8 @@
 		data.stats?.state === 'ok' ? data.stats.data.games.filter((g) => g.stats !== null) : []
 	);
 	const cost = (micro: number | null) => (micro === null ? '–' : euros(micro));
+	// The same text on the server and in the browser: UTC, to the minute.
+	const when = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 </script>
 
 <svelte:head>
@@ -45,7 +48,9 @@
 		<section aria-label="Summary" class="stats" data-testid="summary">
 			<div>
 				<span class="value">{rating(page.overall.rating)}</span><span class="label"
-					>Overall rating</span
+					>Overall rating{#if page.overall.provisional}<ProvisionalBadge
+							limit={page.provisional_games}
+						/>{/if}</span
 				>
 			</div>
 			<div>
@@ -91,7 +96,11 @@
 						{#each page.games as game (game.game_id)}
 							<tr data-game={game.game_id}>
 								<td>{gameName(game.game_id)}</td>
-								<td class="num strong">{rating(game.rating)}</td>
+								<td class="num strong">
+									{rating(game.rating)}{#if game.provisional}<ProvisionalBadge
+											limit={page.provisional_games}
+										/>{/if}
+								</td>
 								<td class="num">{game.games_played}</td>
 								<td class="num">{percent(game.win_rate)}</td>
 								<td class="num">{placement(game.average_placement)}</td>
@@ -110,6 +119,7 @@
 				{#each page.recent_matches as match (match.match_id)}
 					<li>
 						<span>{gameName(match.game_id)}</span>
+						<span class="muted" data-testid="match-date">{when(match.played_at)}</span>
 						<span>place {match.rank} of {match.players}</span>
 						<span class:up={match.rating_change > 0} class:down={match.rating_change < 0}>
 							{signed(match.rating_change)}

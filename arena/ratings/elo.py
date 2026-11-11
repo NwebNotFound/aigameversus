@@ -23,6 +23,7 @@ from arena.engine.types import Placement
 
 START_RATING = 1000.0
 DEFAULT_K = 32.0
+PROVISIONAL_GAMES = 10  # below this many rated games a rating is not reliable yet
 
 
 @dataclass(frozen=True)

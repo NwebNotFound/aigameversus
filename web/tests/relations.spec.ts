@@ -40,7 +40,7 @@ test("a bot's profile lists who it trusts and why", async ({ page, request }) =>
 });
 
 test('a player nobody has met says so', async ({ page }) => {
-	await page.goto('/leaderboard?game=toy');
+	await page.goto('/leaderboard?game=toy&demo=1');
 	await page
 		.getByTestId('leaderboard')
 		.locator('tbody tr')

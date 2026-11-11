@@ -17,6 +17,33 @@ export interface MatchSummary {
 	status: MatchStatus;
 	players: string[];
 	started_at: string;
+	/** Who sits where: set for every match since model seats (D-082). */
+	seats?: Record<string, RecordSeat>;
+	/** The batch it was played in (a league, an experiment stage); null or missing: none. */
+	batch?: MatchBatch | null;
+}
+
+/** A match's batch, as `POST /matches` took it. */
+export interface MatchBatch {
+	id: string;
+	label: string;
+	index: number | null;
+	of: number | null;
+	budget_eur: number | null;
+}
+
+/** `GET /batches/{id}`: how far a batch is and what it cost. */
+export interface BatchSummary {
+	id: string;
+	label: string;
+	of: number | null;
+	budget_eur: number | null;
+	matches: number;
+	statuses: Partial<Record<MatchStatus, number>>;
+	/** null while the ledger cannot be read. */
+	cost_micro_eur: number | null;
+	first_started_at: string;
+	last_started_at: string;
 }
 
 /** A match as `GET /matches/{id}` returns it. */
@@ -26,6 +53,16 @@ export interface MatchRecord extends MatchSummary {
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
+	origin?: 'played' | 'imported';
+}
+
+/** A seat as the match record stores it. */
+export interface RecordSeat {
+	name: string;
+	model_id: string | null;
+	kind: 'model' | 'bot';
+	personality?: string | null;
+	display?: string | null;
 }
 
 /** One event of a match log, as the event stream sends it. */
@@ -60,6 +97,8 @@ export interface ReplaySummary {
 	started_at: string;
 	finished_at: string;
 	cost_micro_eur: number;
+	seats?: Record<string, RecordSeat>;
+	real?: boolean;
 }
 
 /** `GET /matches/{id}/cost`, in millionths of a euro. */
@@ -94,10 +133,19 @@ export interface TranscriptLine {
 	raw: Record<string, unknown>;
 }
 
-/** Who sits in a seat; both null for random bots and unrated matches. */
+/** Who sits in a seat; name and model null for seats nobody named. */
 export interface Seat {
 	name: string | null;
 	model: string | null;
+	/** The name people read: "gpt-luna", "gpt-luna #2", "Bot 1"; never the seat id. */
+	display?: string | null;
+	/** Filled in by the web from the match record and the model roster. */
+	kind?: 'model' | 'bot';
+	/** The provider's company, e.g. "google" from "google/gemini-2.5-flash-lite". */
+	vendor?: string | null;
+	personality?: string | null;
+	/** US dollars per million tokens, from config/models.yaml. */
+	price?: { input: number; output: number } | null;
 }
 
 export interface Transcript {
@@ -258,6 +306,8 @@ export interface Standing {
 	games_played: number;
 	win_rate: number | null;
 	average_placement: number | null;
+	/** Fewer rated games than `provisional_games`: the rating is not reliable yet. */
+	provisional: boolean;
 }
 
 export interface LeaderboardRow extends Standing {
@@ -288,6 +338,12 @@ export interface Leaderboard {
 	fallback: boolean;
 	/** Rows per kind with the other filters applied. */
 	counts: { models: number; bots: number };
+	/** Rated games a rating needs before it counts as reliable. */
+	provisional_games: number;
+	/** Whether the demo profiles are included (the default is no). */
+	show_demo: boolean;
+	/** Demo profiles left out. */
+	demo_hidden: number;
 	rows: LeaderboardRow[];
 }
 
@@ -295,6 +351,8 @@ export interface RecentMatch {
 	match_id: string;
 	game_id: string;
 	rated_at: string;
+	/** When the match itself ended; `rated_at` is when its rating was applied. */
+	played_at: string;
 	rank: number;
 	players: number;
 	rating_change: number;
@@ -331,6 +389,8 @@ export interface ModelPage {
 	/** The profile without a personality; null until the model has played. */
 	profile_id: string | null;
 	overall: Standing | null;
+	/** Rated games a rating needs before it counts as reliable. */
+	provisional_games: number;
 	usage: Usage;
 	games: (Standing & { game_id: string; usage: Usage })[];
 	recent_matches: RecentMatch[];
@@ -363,7 +423,11 @@ export type MatchesResult = { state: 'ok'; matches: MatchSummary[] } | Unreachab
 export interface ArenaClient {
 	health(): Promise<boolean>;
 	listMatches(): Promise<MatchesResult>;
-	leaderboard(game?: string, kind?: LeaderboardKind): Promise<ApiResult<Leaderboard>>;
+	leaderboard(
+		game?: string,
+		kind?: LeaderboardKind,
+		demo?: boolean
+	): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
 	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
@@ -377,6 +441,10 @@ export interface ArenaClient {
 	replays(): Promise<ApiResult<ReplaySummary[]>>;
 	/** The whole stored log of a match. */
 	events(id: string): Promise<ApiResult<MatchEvent[]>>;
+	/** The board after the stored turns, and what the match cost so far. */
+	board(id: string): Promise<ApiResult<Board>>;
+	cost(id: string): Promise<ApiResult<Cost>>;
+	batch(id: string): Promise<ApiResult<BatchSummary>>;
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
 	/** The readable play-by-play; without `spoilers`, only what every player could see. */
@@ -452,10 +520,11 @@ export function createArenaClient(
 			return { state: 'ok', matches: result.data };
 		},
 
-		leaderboard(game, kind) {
+		leaderboard(game, kind, demo) {
 			const params = new URLSearchParams();
 			if (game) params.set('game', game);
 			if (kind) params.set('kind', kind);
+			if (demo) params.set('demo', 'true');
 			const query = params.size ? `?${params}` : '';
 			return getJson<Leaderboard>(
 				`/leaderboard${query}`,
@@ -501,6 +570,29 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}/stats`,
 				(body) => isObject(body) && Array.isArray(body.games),
 				[404, 422]
+			);
+		},
+
+		board(id) {
+			return getJson<Board>(
+				`/matches/${encodeURIComponent(id)}/board`,
+				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
+			);
+		},
+
+		cost(id) {
+			return getJson<Cost>(
+				`/matches/${encodeURIComponent(id)}/cost`,
+				(body) => isObject(body) && isObject(body.players),
+				[404, 422]
+			);
+		},
+
+		batch(id) {
+			return getJson<BatchSummary>(
+				`/batches/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && isObject(body.statuses)
 			);
 		},
 
