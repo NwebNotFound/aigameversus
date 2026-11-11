@@ -8,16 +8,12 @@
 export const DEFAULT_API_URL = 'http://127.0.0.1:8100';
 const TIMEOUT_MS = 3000;
 
-/**
- * A match as the running-matches list shows it. Provisional: `GET /matches`
- * is not on the arena yet (roadmap 1.6); this is the shape the UI expects.
- */
+/** A match as `GET /matches` lists it. */
 export interface MatchSummary {
 	id: string;
 	game: string;
-	status: 'running' | 'paused';
+	status: 'running' | 'finished' | 'failed' | 'interrupted';
 	players: string[];
-	round: number;
 	started_at: string;
 }
 
@@ -127,10 +123,8 @@ export function createArenaClient(
 		},
 
 		async listMatches() {
-			const result = await getJson<MatchSummary[]>('/matches', Array.isArray);
-			// Until the endpoint lands the arena answers 404: reachable, nothing running.
-			if (result.state === 'not_found') return { state: 'ok', matches: [] };
-			if (result.state === 'unreachable') return result;
+			const result = await getJson<MatchSummary[]>('/matches?status=running', Array.isArray, []);
+			if (result.state !== 'ok') return result as Unreachable;
 			return { state: 'ok', matches: result.data };
 		},
 

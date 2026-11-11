@@ -26,9 +26,9 @@ flowchart LR
 
 | Block | Where | State |
 | --- | --- | --- |
-| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog) | engine built; API for matches, WebSocket planned |
+| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog), `arena/api/matches.py` and `live.py` (start, list and stream matches), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats, pause and speed controls planned |
 | 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants) and Poker (`games/poker`, tournament and duplicate mode) play full matches; Werewolf and Throne of Tokens planned |
-| 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (step 1.6, key in phase 2) |
+| 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
 | 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, leaderboard with game tabs, player profiles; New match and Replays are placeholders |
@@ -82,7 +82,9 @@ sequenceDiagram
     M->>S: events of this turn
 ```
 
-A turn without a game event stops the match with a `PluginError`.
+A turn without a game event stops the match with a `PluginError`. So does a
+match that is not over after `max_turns` turns (set per game on the plugin,
+or per match): the log then ends with `turn_limit_reached`.
 
 ## Agent runner
 
@@ -118,7 +120,8 @@ flowchart LR
 
 - A match is a list of `Event`s. Engine events (`match_started`, `thought`,
   `action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-  `match_paused`, `match_resumed`, `match_finished`) are bookkeeping; game
+  `match_paused`, `match_resumed`, `turn_limit_reached`, `match_finished`) are
+  bookkeeping; game
   events come from the plugin and are the only thing that changes game state.
 - Each event has `visible_to`: `None` public, a tuple of players, or an empty
   tuple for spectators only. The seed in `match_started`, thoughts,
@@ -128,9 +131,12 @@ flowchart LR
   `load(match_id)` on the `match_events` table.
 - `arena/db/ledger.py`: `Ledger.book(...)` and `settle(...)` on the
   `model_calls` table, one row per model call with its cost.
+- `arena/db/match_store.py`: `MatchStore` on the `matches` table, one row per
+  match started through the API: game, players, seed, settings, status,
+  placements.
 - `arena/db/database.py`: `connect(url)` and `migrate(pool)`; numbered SQL files
   in `arena/db/migrations/` (today `0001_match_events.sql`, `0002_ratings.sql`,
-  `0003_match_placements.sql`, `0004_model_calls.sql`),
+  `0003_match_placements.sql`, `0004_model_calls.sql`, `0005_matches.sql`),
   applied at API startup under an advisory lock.
 - `arena/ratings/`: multiplayer Elo (`elo.update_ratings`, `overall_rating`),
   count-based statistics (`stats`), and `RatingStore` on the `player_profiles`,
@@ -142,13 +148,47 @@ flowchart LR
   Nothing rates real matches yet; match setup (1.6)
   and profiles with memory (phase 6) will.
 
+## Matches over the API
+
+```mermaid
+sequenceDiagram
+    participant C as Client (UI, curl)
+    participant A as API (arena/api/matches.py)
+    participant L as LiveMatches (arena/api/live.py)
+    participant D as Postgres
+    C->>A: POST /matches {game, players, seed, settings, turn_delay}
+    A->>L: start(...)
+    L->>D: INSERT matches (status running)
+    L-->>C: 201 match record
+    C->>A: WS /matches/{id}/events
+    loop every turn, as a task of the API process
+        L->>D: append the events of the turn
+        L-->>C: the events, one JSON object each, with seq
+    end
+    L->>D: UPDATE matches (finished + placements, or failed)
+    A-->>C: close 1000
+```
+
+- A match is a task of the API process. `LiveMatches` keeps the running ones
+  in memory; a stream reads from there, or from the event store once the match
+  has stopped. A spectator who joins late gets the log from its first event.
+- Only completed turns are shown: the stream follows what the sink has stored.
+- When the server stops, running matches stop with it. The next start marks
+  them `interrupted`; their stored turns stay readable.
+- At most `MAX_RUNNING` (10) matches run at a time; `POST /matches` answers
+  429 beyond that. A match that is not over at its turn limit ends `failed`.
+- `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
+  its own process and prints the events.
+- Games come from `arena/games.py`: one plugin per folder `games/<id>/` with a
+  `plugin.py`.
+
 ## Processes and Compose services
 
 Compose project `aigameversus`, host ports bound to `127.0.0.1`:
 
 | Service | Host port | What it does today |
 | --- | --- | --- |
-| `arena` | 8100 | FastAPI app, `GET /health`, runs migrations at startup |
+| `arena` | 8100 | FastAPI app: runs migrations at startup, starts and runs matches, streams their events |
 | `worker` | none | heartbeat placeholder: pings Redis; `python -m arena.worker --check` is its healthcheck. Does not run matches yet (planned) |
 | `web` | 3100 | SvelteKit app (`node build`); calls the arena at `ARENA_API_URL=http://arena:8000` inside the Compose network |
 | `db` | 5433 | PostgreSQL 18, user and database `arena` |
@@ -156,5 +196,6 @@ Compose project `aigameversus`, host ports bound to `127.0.0.1`:
 
 ## Planned
 
-CLI, match API and live streaming to the UI (1.6), game registry, memory, rating matches automatically, game master, and all
-real games.
+Model seats, pause and speed controls for matches started over the API, the
+live view in the UI, memory, rating matches automatically, game master, and
+all real games.

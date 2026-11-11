@@ -198,3 +198,9 @@ def test_invalid_hand_size_is_refused(settings):
 def test_unknown_setting_is_refused():
     with pytest.raises(ValueError, match=r"Unknown settings for toy: \['jokers'\]"):
         bot_match(SEATS[:2], settings={"jokers": 2})
+
+
+def test_longest_match_takes_exactly_the_turn_limit():
+    match, _ = bot_match(SEATS[:4], settings={"hand_size": 5})
+
+    assert sum(event.type == "card_played" for event in match.events) == ToyGame.max_turns
