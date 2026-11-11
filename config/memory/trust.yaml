@@ -1,0 +1,40 @@
+# How much trust the server adds after a match, per fact, from the observer's
+# point of view (arena/memory/facts.py lists the facts of each game). Trust runs
+# from -100 to +100 and starts at 0. A match adds up its facts per pair, then
+# the result is clamped. `note` is what the observer remembers; {round} is the
+# round (Liar's Deck), hand (Poker) or day (Werewolf) of the fact.
+# Checked at load: `uv run pytest tests/memory`.
+
+limits:
+  min: -100
+  max: 100
+  notes: 10 # notes kept per pair, newest first
+
+facts:
+  liars_deck:
+    caught_lying:
+      trust: -4
+      note: caught lying in round {round}
+    accused_me_falsely:
+      trust: -8
+      note: called me a liar in round {round} when I told the truth
+    honest_when_called:
+      trust: 6
+      note: told the truth in round {round} when I called them out
+  poker:
+    bluff_called:
+      trust: -3
+      note: bet big and lost the showdown in hand {round}
+  werewolf:
+    packmate:
+      trust: 12
+      note: hunted with me in the pack
+    revealed_wolf:
+      trust: -20
+      note: turned out to be a wolf
+    voted_against_me:
+      trust: -6
+      note: voted against me on day {round}
+    lover_voted_against_me:
+      trust: -30
+      note: voted against me on day {round}, though we were lovers

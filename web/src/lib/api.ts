@@ -140,7 +140,6 @@ export interface Profile {
 	overall: Standing | null;
 	ratings: (Standing & { game_id: string })[];
 	recent_matches: RecentMatch[];
-	relations: { available: boolean; note: string };
 	memory: { available: boolean; note: string };
 }
 
@@ -148,6 +147,19 @@ export interface Profile {
 export interface ProfileStats {
 	profile_id: string;
 	games: { game_id: string; matches: number; stats: Record<string, unknown> | null }[];
+}
+
+/** `GET /profiles/{id}/relations`: what a player thinks of the others it has met. */
+export interface Relations {
+	profile_id: string;
+	relations: {
+		profile_id: string;
+		name: string;
+		model_id: string;
+		/** -100 distrust to +100 trust. */
+		trust: number;
+		notes: { match_id: string; game_id: string; text: string }[];
+	}[];
 }
 
 export type Unreachable = { state: 'unreachable'; reason: string };
@@ -160,6 +172,7 @@ export interface ArenaClient {
 	leaderboard(game?: string): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
+	relations(id: string): Promise<ApiResult<Relations>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
 	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
@@ -241,6 +254,14 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}`,
 				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
 				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
+			);
+		},
+
+		relations(id) {
+			return getJson<Relations>(
+				`/profiles/${encodeURIComponent(id)}/relations`,
+				(body) => isObject(body) && Array.isArray(body.relations),
 				[404, 422]
 			);
 		},

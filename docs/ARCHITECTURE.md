@@ -12,7 +12,7 @@ flowchart LR
     PLG["2. Game plugins<br/>games/*<br/>(High Card, Liar's Deck, Poker, Werewolf built)"]
     AGT["3. Agent runner<br/>arena/agents<br/>(random bot, model agent, mock LLM built)"]
     LLM["Model provider<br/>(via LiteLLM; not wired to matches yet)"]
-    MEM["4. Memory and profiles<br/>arena/memory<br/>(planned)"]
+    MEM["4. Memory and profiles<br/>arena/memory<br/>(relationships)"]
     GM["5. Game master<br/>arena/gamemaster<br/>(planned)"]
     DB[("PostgreSQL<br/>match_events")]
     UI -. "WebSocket, planned" .-> SRV
@@ -29,7 +29,7 @@ flowchart LR
 | 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog), `arena/api/setup.py` (`GET /setup`: models, personalities, cost caps), `arena/api/matches.py` and `live.py` (start, list, stream and control matches, board and cost), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats planned |
 | 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation, fog of war and city economy (`games/civ`), no plugin yet |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
-| 4. Memory and profiles | `arena/memory/` | planned (empty package) |
+| 4. Memory and profiles | `arena/memory/`: `facts.py` (what each player saw others do, per game), `trust.py` (rules from `config/memory/trust.yaml`), `store.py` (relationships in Postgres); `GET /profiles/{id}/relations` (`arena/api/memory.py`) | relationships built: the server sets trust after every rated match; match memories, the prompt block and reset planned |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
 | 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, new-match form, live view of a match, leaderboard with game tabs, player profiles; Replays is a placeholder |
 
