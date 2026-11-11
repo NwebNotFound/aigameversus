@@ -1,0 +1,47 @@
+{
+	"game": "poker",
+	"spoilers": false,
+	"events": 265,
+	"situation": {
+		"facts": {
+			"hand": 20,
+			"street": "preflop",
+			"pot": 0,
+			"big_blind": 160,
+			"in_hand": ["p4"],
+			"out": ["p6", "p2", "p3"],
+			"biggest_pot": {
+				"amount": 2870,
+				"to": ["p4"],
+				"hand": 2
+			},
+			"winner": null,
+			"over": true,
+			"stacks": {
+				"p1": 920,
+				"p4": 4888,
+				"p5": 192
+			},
+			"chip_leader": "p4",
+			"all_in": [],
+			"short": ["p1", "p5"]
+		},
+		"lines": {
+			"en": [
+				"Over after hand 20: the hand limit is reached.",
+				"Chip leader: p4 with 4,888.",
+				"Short stack, under 10 big blinds: p1 (920), p5 (192).",
+				"Biggest pot so far: 2,870 to p4 in hand 2."
+			],
+			"de": [
+				"Vorbei nach Hand 20: das Handlimit ist erreicht.",
+				"Chipleader: p4 mit 4.888.",
+				"Kurzer Stack, unter 10 Big Blinds: p1 (920), p5 (192).",
+				"Größter Pot bisher: 2.870 an p4 in Hand 2."
+			]
+		}
+	},
+	"meta": {},
+	"sections": ["situation"],
+	"numbers": false
+}

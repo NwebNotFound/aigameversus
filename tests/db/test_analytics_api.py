@@ -52,3 +52,18 @@ def test_unknown_match_and_game_without_analytics_are_404(client):
     missing = client.get(f"/matches/{toy['id']}/analytics")
     assert missing.status_code == 404
     assert "No analytics for toy yet" in missing.json()["detail"]
+
+
+def test_every_game_with_a_situation_says_how_it_is_going_by_display_name(client):
+    for game, players in (("liars_deck", 3), ("poker", 3), ("werewolf", 8)):
+        match = start(client, game=game, players=players, seed=5)
+        follow(client, match["id"])
+
+        answer = client.get(f"/matches/{match['id']}/analytics")
+
+        assert answer.status_code == 200, game
+        lines = answer.json()["situation"]["lines"]
+        assert lines["en"] and lines["de"]
+        text = " ".join(lines["en"] + lines["de"])
+        assert "p1" not in text and "p2" not in text, text
+        assert answer.json()["meta"]["seats"]["p1"] is None

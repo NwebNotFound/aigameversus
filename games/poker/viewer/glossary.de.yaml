@@ -1,0 +1,25 @@
+terms:
+  - term: Hole Cards
+    meaning: "Die 2 privaten Karten jedes Spielers. Nur der Spieler sieht sie, bis zum Showdown."
+  - term: Flop
+    meaning: "Die ersten 3 gemeinsamen Karten, die nach der ersten Setzrunde zusammen aufgedeckt werden."
+  - term: Turn
+    meaning: "Die vierte gemeinsame Karte."
+  - term: River
+    meaning: "Die fünfte und letzte gemeinsame Karte."
+  - term: Blinds
+    meaning: "Zwangseinsätze, die zwei Spieler vor dem Austeilen setzen, damit es immer etwas zu gewinnen gibt."
+  - term: Topf
+    meaning: "Alle Chips, die in der aktuellen Hand gesetzt wurden. Der Gewinner der Hand bekommt ihn."
+  - term: Nebentopf
+    meaning: "Ein eigener Topf, wenn jemand mit weniger All-in geht. Dieser Spieler kann nur gewinnen, was er mitgehen konnte."
+  - term: All-in
+    meaning: "Alle Chips setzen, die man hat."
+  - term: Fold
+    meaning: "Die Hand aufgeben und die schon gesetzten Chips verlieren."
+  - term: Showdown
+    meaning: "Am Ende werden die Hände gezeigt, und die beste gewinnt."
+  - term: Gewinnchance
+    meaning: "Wie oft eine Hand gewinnen würde, wenn die übrigen Karten sehr oft ausgeteilt würden. Sie ändert sich mit jeder neuen gemeinsamen Karte."
+  - term: VPIP
+    meaning: "Der Anteil der Hände, in denen ein Spieler freiwillig Chips gesetzt hat. Ein hoher Wert heißt: er spielt viele Hände."
