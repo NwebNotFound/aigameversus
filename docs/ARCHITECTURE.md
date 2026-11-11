@@ -130,7 +130,9 @@ flowchart LR
 - `arena/db/event_store.py`: `EventStore.append(match_id, first_seq, events)` and
   `load(match_id)` on the `match_events` table.
 - `arena/db/ledger.py`: `Ledger.book(...)` and `settle(...)` on the
-  `model_calls` table, one row per model call with its cost.
+  `model_calls` table, one row per model call with its cost. The table may
+  live in a database of its own (`LEDGER_DATABASE_URL`); `Ledger.check` runs
+  before every model match ([COSTS.md](COSTS.md)).
 - `arena/db/match_store.py`: `MatchStore` on the `matches` table, one row per
   match started through the API: game, players, seed, settings, status,
   placements.

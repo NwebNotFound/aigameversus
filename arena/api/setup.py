@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from arena.agents.budget import MICRO
 from arena.api.matches import ALLOW_MODEL_SEATS
-from arena.config import CONFIG_PATH, display_name, load_config, missing_keys
+from arena.config import CONFIG_PATH, display_name, load_config, load_keys
 
 PERSONALITIES_DIR = CONFIG_PATH.parent / "personalities"
 
@@ -71,7 +71,7 @@ def load_personalities(directory: Path = PERSONALITIES_DIR) -> list[Personality]
 def setup_options() -> SetupOptions:
     """Models, personalities and cost caps for the new-match form."""
     config = load_config()
-    allowed = os.environ.get(ALLOW_MODEL_SEATS) == "1" and not missing_keys(config, config.models)
+    allowed = os.environ.get(ALLOW_MODEL_SEATS) == "1" and not load_keys(config, config.models)
     return SetupOptions(
         model_seats=allowed,
         models=[
@@ -100,7 +100,10 @@ class MonthSpend(BaseModel):
 
 @router.get("/ledger/month")
 async def month_spend(request: Request) -> MonthSpend:
-    """What model calls have cost this month, and what the month cap still allows."""
+    """What model calls have cost this month, and what the month cap still allows.
+
+    503 when the spend ledger cannot be read: the month is then unknown, not 0.
+    """
     now = datetime.now(UTC)
     # Through the arena's ledger, so a ledger of its own (another database) is read too.
     spent = await request.app.state.live.ledger.month_spent(now)

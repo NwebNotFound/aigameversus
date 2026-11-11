@@ -118,8 +118,10 @@ Three ways:
   With `"models": ["glm-flash", ...]` (one per seat) and `"confirm_spend":
   true` the seats are models behind one `Budget`, as with the command. Model
   seats are refused (403) unless the server runs with
-  `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key; a cap
-  ends the match as `interrupted`. Every match record has `seats` (seat ->
+  `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
+  ledger (see Cost caps); a cap ends the match as `interrupted`. Model
+  matches are not rated yet: the API rates bot matches only, until the model
+  profiles (one per model and personality) reach it. Every match record has `seats` (seat ->
   `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
   the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
   `GET /replays` adds `real`.
@@ -241,10 +243,22 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   converts.
 - A request that could be longer than `max_input_tokens` is not sent; that
   seat fails (`PromptTooLong`) and the random bot takes it.
-- Without a database there is no ledger and therefore no model call.
-- The API key comes from the environment (`OPENROUTER_API_KEY` in `.env`,
-  passed on by Compose) and is read by LiteLLM only. It is in no config file,
-  log, event or database row.
+- The ledger is the table `model_calls` in `LEDGER_DATABASE_URL`, by default
+  the match database (`arena/db/database.py`, `ledger_url`). The stack keeps
+  it in a Postgres of its own that outlives `docker compose down -v`
+  ([docs/COSTS.md](docs/COSTS.md)); `scripts/backup-ledger.sh` dumps it.
+- Without a ledger there is no model call. Before a model match starts, the
+  API and the command call `Ledger.check`: a ledger that does not answer, or
+  is empty while the match database holds finished model matches played
+  here, not imported (the wrong one, or a lost one), refuses the match with `LedgerUnavailable` (503 in the
+  API), and nothing is recorded or booked. The server itself starts without
+  its ledger, so bot matches play on; `/matches/{id}/cost` answers 503 and
+  `/replays` shows the costs as null until the ledger answers.
+- The API key comes from `OPENROUTER_API_KEY`, or from the file that
+  `OPENROUTER_API_KEY_FILE` names (the stack mounts it read-only, see
+  `docker-compose.models.yml`). `load_keys` in `arena/config.py` reads the
+  file at every start of a model match and puts the key into the environment,
+  where LiteLLM reads it. It is in no config file, log, event or database row.
 
 ### Prompts
 
@@ -260,7 +274,8 @@ the server's error on a correction).
   settings=...)` asks the plugin for `rules(settings)` once and for
   `situation_summary(observation, settings)` on every turn; the API and the
   command pass the match settings. `prompt_version(settings)` is recorded in
-  `match_started` and in the `--save` export, so an analysis can tell the
+  `match_started`, in the match record (`prompt_version` in `GET /matches`
+  and `/replays`) and in the `--save` export, so an analysis can tell the
   versions apart. A game without versions inherits `"v1"`, `rules.md` and no
   summary, and its prompt is byte for byte what it was.
 - A summary is built from the player's observation only, so it can never
@@ -404,6 +419,8 @@ uv run pytest                 # all tests
 uv run ruff check .           # lint
 uv run ruff format .          # format
 docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, Redis 6380
+# Real models in the stack: COSTS MONEY. Key file and ledger first: docs/COSTS.md
+docker compose -f docker-compose.yml -f docker-compose.models.yml up -d --build
 docker compose down           # stop it (--volumes also deletes the database)
 uv run arena games            # the games that can be played
 uv run arena run --game toy --bots --seed 7   # a bot match in the terminal

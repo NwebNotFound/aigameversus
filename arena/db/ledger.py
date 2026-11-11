@@ -1,13 +1,34 @@
 """The spend ledger: what model calls have cost, per match and per month."""
 
+import asyncio
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from uuid import UUID
 
 import asyncpg
 
+from arena.db.database import migrate
 from arena.engine.types import MatchPaused, PlayerId
 
 _LEDGER_LOCK = 7_240_002  # advisory lock id: one booking at a time, across processes
+_READ_TIMEOUT = 10  # seconds; a ledger that does not answer by then counts as unreachable
+
+
+class LedgerUnavailable(Exception):
+    """The ledger cannot be read: no model may be called, and no cost can be shown."""
+
+
+@asynccontextmanager
+async def _reading() -> AsyncIterator[None]:
+    try:
+        async with asyncio.timeout(_READ_TIMEOUT):
+            yield
+    except (OSError, TimeoutError, asyncpg.PostgresError, asyncpg.InterfaceError) as error:
+        raise LedgerUnavailable(
+            f"The spend ledger cannot be read ({type(error).__name__}). "
+            "Check LEDGER_DATABASE_URL and that its database runs."
+        ) from error
 
 
 class Ledger:
@@ -21,6 +42,29 @@ class Ledger:
 
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
+
+    async def prepare(self) -> None:
+        """Bring the ledger's schema up to date. Raises LedgerUnavailable."""
+        async with _reading():
+            await migrate(self._pool)
+
+    async def check(self, model_matches: int) -> None:
+        """Raise LedgerUnavailable unless model calls can be booked here.
+
+        `model_matches` is how many finished matches with model seats the match
+        database holds. Each of them booked calls, so an empty ledger beside
+        them is not the one they were booked in (a wrong URL, a lost volume),
+        and its month sum would let the month cap be passed.
+        """
+        await self.prepare()
+        async with _reading():
+            booked = await self._pool.fetchval("SELECT EXISTS (SELECT 1 FROM model_calls)")
+        if not booked and model_matches:
+            raise LedgerUnavailable(
+                f"The spend ledger has no calls, but {model_matches} finished matches with "
+                "models are stored: it is not the ledger they were booked in. "
+                "Check LEDGER_DATABASE_URL."
+            )
 
     async def book(
         self,
@@ -71,22 +115,38 @@ class Ledger:
             )
 
     async def month_spent(self, now: datetime) -> int:
-        """What every call of the calendar month of `now` (UTC) cost, in millionths of a euro."""
+        """What every call of the calendar month of `now` (UTC) cost, in millionths of a euro.
+
+        Raises LedgerUnavailable when the ledger cannot be read: never a 0 that is not true.
+        """
         month = now.astimezone(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return await self._pool.fetchval(
-            "SELECT coalesce(sum(cost_micro_eur), 0)::bigint FROM model_calls "
-            "WHERE called_at >= $1",
-            month,
-        )
+        async with _reading():
+            return await self._pool.fetchval(
+                "SELECT coalesce(sum(cost_micro_eur), 0)::bigint FROM model_calls "
+                "WHERE called_at >= $1",
+                month,
+            )
 
     async def match_costs(self, match_id: UUID) -> dict[PlayerId, int]:
         """What each player of a match has cost so far, in millionths of a euro."""
-        rows = await self._pool.fetch(
-            "SELECT player, sum(cost_micro_eur) AS cost FROM model_calls "
-            "WHERE match_id = $1 GROUP BY player ORDER BY player",
-            match_id,
-        )
+        async with _reading():
+            rows = await self._pool.fetch(
+                "SELECT player, sum(cost_micro_eur) AS cost FROM model_calls "
+                "WHERE match_id = $1 GROUP BY player ORDER BY player",
+                match_id,
+            )
         return {row["player"]: int(row["cost"]) for row in rows}
+
+    async def costs(self, match_ids: Sequence[UUID]) -> dict[UUID, int]:
+        """What each of these matches has cost, in millionths of a euro; 0 without calls."""
+        async with _reading():
+            rows = await self._pool.fetch(
+                "SELECT match_id, sum(cost_micro_eur) AS cost FROM model_calls "
+                "WHERE match_id = ANY($1::uuid[]) GROUP BY match_id",
+                list(match_ids),
+            )
+        spent = {row["match_id"]: int(row["cost"]) for row in rows}
+        return {match_id: spent.get(match_id, 0) for match_id in match_ids}
 
     async def settle(self, call_id: int, input_tokens: int, output_tokens: int, cost: int) -> None:
         """Replace the upper bound of a booked call by what it was billed for."""

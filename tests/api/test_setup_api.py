@@ -13,7 +13,8 @@ from arena.config import load_config
 client = TestClient(app)
 
 
-def test_setup_lists_the_models_personalities_and_caps_of_the_config():
+def test_setup_lists_the_models_personalities_and_caps_of_the_config(monkeypatch):
+    monkeypatch.delenv("ARENA_ALLOW_MODEL_SEATS", raising=False)
     options = client.get("/setup").json()
 
     config = load_config()
