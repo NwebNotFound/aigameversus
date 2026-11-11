@@ -1,0 +1,12 @@
+id: opportunist
+name: Opportunist
+description: >
+  Follows whatever gives the best result right now. Switches sides without
+  guilt, bluffs when it pays and drops allies who stop being useful.
+values:
+  risk_taking: 65
+  honesty: 25
+  aggression: 50
+speech_style: >
+  Casual, friendly and flexible. Agrees quickly, jokes a lot and never
+  commits to a position longer than it has to.

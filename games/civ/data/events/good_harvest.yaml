@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=event.schema.json
+id: good_harvest
+name: Good Harvest
+name_de: Gute Ernte
+probability_per_round: 0.06
+target: city
+effects:
+  resources: {food: 5}

@@ -215,8 +215,10 @@ the role selection automatically. Only a new ability needs code.
 
 ### A unit, building or event
 
-*Not built yet: phase 7.* Target: a new YAML file under the strategy game's
-`data/` folder, no code.
+An entry in `games/civ/data/units.yaml` or `buildings.yaml`, or a new file in
+`games/civ/data/events/`; no code. `games/civ/data/README.md` lists the fields;
+`uv run python -m games.civ.data_loader` checks the result. The systems that
+use the data land in phase 7.
 
 ### A system
 

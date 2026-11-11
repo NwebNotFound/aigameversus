@@ -10,3 +10,5 @@ hooks:
   on_model_death: wild_child_turns_wolf
 description: >
   On night 1 picks a role model. If the model dies, becomes a werewolf. Starts on the village team, may switch to wolves.
+rules_snippet: >
+  On night 1 you choose a role model. If the model dies, you become a werewolf. Until then you play for the village.

@@ -8,3 +8,5 @@ hooks:
   on_night: little_girl_spy
 description: >
   May spy at night: 30% chance to learn a wolf, 15% chance to be caught and eaten instead of the victim.
+rules_snippet: >
+  At night you may spy on the wolves: 30% chance to learn a wolf, 15% chance to be caught and eaten instead of the victim.

@@ -8,3 +8,5 @@ hooks:
   on_night: wolves_choose_victim
 description: >
   Chooses a victim each night together with the other wolves; has a private wolf chat.
+rules_snippet: >
+  Each night you and the other wolves choose one victim by majority and may talk privately (2 messages each). By day, blend in and avoid suspicion.

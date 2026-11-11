@@ -8,3 +8,5 @@ hooks:
   on_night: protector_guard
 description: >
   Protects one player from the wolves each night; never the same player twice in a row.
+rules_snippet: >
+  Each night you protect one player from the wolves. You may never protect the same player two nights in a row.

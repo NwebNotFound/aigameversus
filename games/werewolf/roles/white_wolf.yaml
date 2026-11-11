@@ -8,3 +8,5 @@ hooks:
   on_night: white_wolf_kill_wolf
 description: >
   Hunts with the wolves, and every second night may additionally kill one wolf. Wins only as the last player alive.
+rules_snippet: >
+  You hunt with the wolves, and every second night you may also kill one wolf. You win only as the last player alive.
