@@ -225,3 +225,24 @@ def test_command_prints_the_schedule_and_reports_a_broken_plan(tmp_path, capsys)
     assert main([str(broken)]) == 1
     assert "broken.yaml" in capsys.readouterr().err
     assert main([]) == 2
+
+
+W1 = EXPERIMENTS / "W1_werewolf.yaml"
+
+
+def test_cyclic_stage_puts_every_entry_in_every_seat_once_per_seed():
+    experiment = load_experiment(W1)
+    for stage in experiment.stages:
+        matches = [m for m in schedule(experiment) if m.stage == stage.id]
+        k = len(stage.seats)
+        assert len(matches) == k * stage.seeds
+        for seat in range(k):
+            # Over the k rotations of a seed, seat `seat` holds every entry of the list once.
+            assert sorted(_models(m.seats)[seat] for m in matches) == sorted(stage.seats)
+        assert {m.seed for m in matches} == {stage.seed_base + 1}
+
+
+def test_w1_budget_stays_inside_what_the_owner_approved():
+    experiment = load_experiment(W1)
+    assert sum(stage.budget_eur for stage in experiment.stages) <= 1.50
+    assert experiment.settings["prompt_version"] == "werewolf-p2"

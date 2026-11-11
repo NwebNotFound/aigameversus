@@ -99,7 +99,20 @@ class Guests(_Stage):
     substitutes: list[str] = []
 
 
-Stage = Annotated[League | Mirror | Guests, Field(discriminator="kind")]
+class Cyclic(_Stage):
+    """A fixed list of seats (a model may hold several), each seed in every cyclic rotation.
+
+    With k seats, a seed is played k times: in rotation r the entry of seat i
+    moves to seat i + r. The seed deals the roles or cards to the seats, so
+    every entry plays every seat, and what the seed deals there, once per seed.
+    """
+
+    kind: Literal["cyclic"]
+    seats: list[str] = Field(min_length=2)
+    effort: Effort
+
+
+Stage = Annotated[League | Mirror | Guests | Cyclic, Field(discriminator="kind")]
 
 
 class Budget(_Strict):
@@ -217,7 +230,9 @@ def schedule(experiment: Experiment) -> list[ScheduledMatch]:
     return matches
 
 
-def _stage_models(stage: League | Mirror | Guests) -> list[str]:
+def _stage_models(stage: League | Mirror | Guests | Cyclic) -> list[str]:
+    if isinstance(stage, Cyclic):
+        return stage.seats
     if isinstance(stage, League):
         return stage.models
     if isinstance(stage, Mirror):
@@ -225,11 +240,18 @@ def _stage_models(stage: League | Mirror | Guests) -> list[str]:
     return [*stage.guests, *stage.hosts, *stage.substitutes]
 
 
-def _stage_rows(stage: League | Mirror | Guests) -> list[tuple]:
+def _stage_rows(stage: League | Mirror | Guests | Cyclic) -> list[tuple]:
     """(table, seating, replicate, seed, pilot, seats) for every match of a stage."""
     rows = []
     replicates = range(1, stage.seeds + 1)
-    if isinstance(stage, League):
+    if isinstance(stage, Cyclic):
+        entries = [f"{model}@{stage.effort}" for model in stage.seats]
+        k = len(entries)
+        for replicate in replicates:
+            for shift in range(k):
+                seats = tuple(entries[(i - shift) % k] for i in range(k))
+                rows.append(("R", shift + 1, replicate, stage.seed_base + replicate, False, seats))
+    elif isinstance(stage, League):
         tables = (
             blocks_of_four(stage.models) if len(stage.models) == 8 else all_tables(stage.models)
         )

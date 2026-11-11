@@ -1,0 +1,160 @@
+# Experiment W1: Werewolf with real models, first series (pilot).
+#
+# The pre-registration of the pilot. Written before its first paid match;
+# after approval it changes only through an entry under `amendments`.
+# Checked by arena/research/experiment.py; the matches it fixes are in
+# W1_werewolf_schedule.csv.
+
+id: W1
+title: "Werewolf pilot: eight seats of cheap models, every seat in every role"
+version: 1
+status: approved          # by the owner, passed on by Arena Lead: up to 1.50 EUR for the first series
+registered: "2026-11-12"
+author: Arena Researcher
+amendments: []
+approvals:
+  - stages: [P1, P2]
+    date: "2026-11-11"
+    by: "project owner, passed on by Arena Lead"
+    scope: >
+      Werewolf matches with real models up to 1.50 EUR in total for the first
+      series (a pilot of about ten matches), one match at a time through the
+      arena API, the usual cap of 0.50 EUR per match. P1 starts after the
+      arena rebuild that follows league E1-A2; P2 only after that rebuild
+      contains #106 (the options for qwen-flash and gemini-flash-lite).
+
+question: >
+  Can the cheap models play Werewolf reliably enough for a league, what does a
+  match cost and take, and how do the roles and the two teams fare? A pilot:
+  descriptive, no confirmatory test; it sizes the league that follows.
+
+game: werewolf
+settings: {template: classic, language: en, prompt_version: werewolf-p2}
+
+conditions:
+  seats: 8
+  roles: "template classic for 8 players: 2 werewolves, seer, witch, hunter, 3 villagers; the seed deals the roles to the seats"
+  seat_names: "p1 to p8; no prompt names a model"
+  memory: "off: every match is started with \"memory\": false"
+  prompt_version: "werewolf-p2 (rules for every role and tool, situation summary), passed explicitly; the arena commit of each match is recorded"
+  answer_repair: "off (no repair of malformed tool calls), passed explicitly once the arena has the setting"
+  reasoning_effort: low
+  sampling: "provider defaults"
+  how_matches_run: "through POST /matches on the shared stack, one match at a time (two at most), with the batch field W1-P1 or W1-P2"
+  needs_before_start:
+    P1: "the arena rebuild after league E1-A2"
+    P2: "#106 on the running stack (qwen-flash: 4 000 output tokens, no reasoning effort, tool_choice auto; longer waits after a rate limit)"
+
+# Ids and prices as listed by openrouter.ai/api/v1/models on 2026-11-11 (USD per million tokens).
+models:
+  gpt-luna:          {openrouter: openai/gpt-6-luna,            input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.50,   tier: cheap}
+  claude-haiku:      {openrouter: anthropic/claude-haiku-5.5,   input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.50,   tier: cheap}
+  glm-flash:         {openrouter: z-ai/glm-5.3-flash,           input_usd_per_mtok: 0.0399, output_usd_per_mtok: 0.0784, tier: cheap}
+  deepseek-flash:    {openrouter: deepseek/deepseek-v4.1-flash, input_usd_per_mtok: 0.051,  output_usd_per_mtok: 0.567,  tier: cheap}
+  mistral-small:     {openrouter: mistralai/mistral-small-2603, input_usd_per_mtok: 0.15,   output_usd_per_mtok: 0.60,   tier: cheap}
+  llama-scout:       {openrouter: meta-llama/llama-4-scout,     input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.30,   tier: cheap}
+  qwen-flash:        {openrouter: qwen/qwen3.8-flash,           input_usd_per_mtok: 0.15,   output_usd_per_mtok: 0.47,   tier: cheap}
+  gemini-flash-lite: {openrouter: google/gemini-2.5-flash-lite, input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.40,   tier: cheap}
+
+not_chosen:
+  strong_models: "later: first the cheap ones must play the game reliably"
+  dusterwald_template: "after the classic template; more roles need more matches per role"
+
+stages:
+  - id: P1
+    kind: cyclic
+    title: Six clean models, gpt-luna and claude-haiku in two seats each
+    seats: [gpt-luna, claude-haiku, glm-flash, deepseek-flash, gpt-luna, mistral-small, llama-scout, claude-haiku]
+    effort: low
+    seeds: 1
+    seed_base: 2101000
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 1.00
+    estimate_eur: 0.48
+    notes: >
+      One seed played in all 8 cyclic rotations: every entry sits in every
+      seat once, so every model plays every role the seed deals (both wolf
+      seats, seer, witch, hunter, villagers) once per seat it holds. The two
+      repeated models are the most reliable and among the cheapest of league
+      E1-A2. Estimate: about 0.06 EUR a match (the example match of 8 models
+      cost 0.041 EUR with qwen-flash in it; p2 prompts are longer).
+
+  - id: P2
+    kind: cyclic
+    title: "The two pilot failures of E1 get a second chance in Werewolf"
+    seats: [gpt-luna, qwen-flash, glm-flash, deepseek-flash, gemini-flash-lite, mistral-small, llama-scout, claude-haiku]
+    effort: low
+    seeds: 1
+    seed_base: 2102000
+    turn_timeout_s: 60
+    max_output_tokens: 1500   # qwen-flash takes its own 4 000 from config/models.yaml (#106)
+    budget_eur: 0.50
+    estimate_eur: 0.55
+    notes: >
+      qwen-flash and gemini-flash-lite in the two seats that P1 gave to the
+      repeated models. The run budget will likely stop it after 6 or 7 of its
+      8 matches (qwen-flash cost about 3x a cheap seat in E1); that is enough
+      for the question it answers: does each of them stay under 10 % fallback
+      moves with #106.
+
+hypotheses:
+  - id: D1
+    stage: all
+    kind: descriptive, no test
+    claim: What a Werewolf match costs and takes, and how reliably each model plays each role.
+    test: >
+      Per model and per role: moves, rejected answers per move, fallback share,
+      night actions refused or skipped; per match: cost, duration, days played.
+  - id: D2
+    stage: all
+    kind: descriptive, no test
+    claim: How the teams and roles fare.
+    test: >
+      Village and wolf win shares with Wilson intervals; per model, wins as
+      wolf and as villager; vote accuracy of the village side; days the seer
+      survives; share of nights in which the wolves killed the seer or the
+      witch. With 8 to 16 matches these are sizes for the league, not claims.
+
+metrics:
+  outcome: [team that won, per seat won or lost, days played, survivors]
+  roles: [vote accuracy of the village side, wolf votes on fellow wolves, seer checks on wolves, witch heal and poison use, hunter shot on a wolf, seer survival in days]
+  deception: "a wolf's public claims of a village role and how many village votes went elsewhere that day (from the analytics claims, votes and accusations, when on main)"
+  speech: "words per speech, accusations made and received, and whether a player's accusation was followed by votes (speech influence, descriptive)"
+  reliability: [clean moves, repaired moves, rejected answers per move, fallback moves, failed agents, by role and by tool]
+  cost: [EUR per match, EUR per model and match, seconds per move from the decision events]
+
+analysis:
+  unit: "matches; intervals over matches; a model's two seats in P1 are pooled for that model"
+  power: >
+    None: a pilot. The league W1 that follows is sized from it. With the
+    team win share near one half, 64 matches find a difference of about 0.17
+    from one half (80 % power, alpha 0.05).
+  scripts: "arena/research/ (a Werewolf analysis next to the E1 one, built on Heavy's analytics), written before the pilot's outcomes are read"
+
+rules:
+  valid_match: "status finished and the stored log rebuilds the final state"
+  failed_match: "played once more with the same seed and seating; both attempts are kept"
+  pilot_rule: >
+    For the league: a model with more than 10 % of its moves played by the
+    fallback, or with a failed agent in 2 of its matches, is fixed or left out
+    first; the decision is the owner's.
+  budget_stop: >
+    Each stage stops starting matches at 90 % of its budget, counting every
+    running match at its cost so far or 0.10 EUR, whichever is higher; the
+    series stops at 1.50 EUR in total. No match may pass the 0.50 EUR cap.
+  no_peeking: "while a stage runs, only cost, failures and fallback rates are watched"
+
+budget:
+  month_cap_eur: 25.00
+  spent_before_eur: 3.00          # the month ledger before W1 (E1 pilot and league, other runs)
+  reserve_eur: 5.00
+  other_plans_eur:
+    E1_stage_B: 4.50              # approved, not started
+    E1_stage_C: 7.50              # approved, not started
+
+limitations:
+  - "One template (classic, 8 players), one prompt version (werewolf-p2), low reasoning effort."
+  - "Two models hold two seats each in P1, so they also play against themselves."
+  - "8 or 16 matches: team and role results are sizes for the league, not findings."
+  - "Werewolf outcomes depend on the role dealt; the cyclic design gives every model every seat, but with one seed per stage every seat's role is the same in all its rotations."
