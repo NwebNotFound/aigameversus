@@ -27,7 +27,6 @@ from arena.engine.types import MESSAGE, Event, EventSource
 
 LANGS = ("en", "de")
 
-# Events whose audience is "spectators only" in the log but that tell nothing secret.
 # Settings anyone may read. The role mix (`template`, `roles`) is hidden information in Werewolf
 # unless `roles_public` is on, so it is not in the list.
 PUBLIC_SETTINGS = {
@@ -49,6 +48,7 @@ def public_settings(settings: Mapping[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in settings.items() if k in keep}
 
 
+# Events whose audience is "spectators only" in the log but that tell nothing secret.
 ALWAYS_SHOWN = {"match_started", "match_paused", "match_resumed", "turn_limit_reached"}
 
 KINDS = (

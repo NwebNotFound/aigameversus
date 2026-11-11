@@ -282,6 +282,16 @@ the server's error on a correction).
   rejects any other shape). The prompt shows it as `player p2 says: "..."`,
   the reader's own as `you said: "..."`.
 
+Prompt versions: a game may offer several prompts, `<game>-p1` (its
+`rules.md`, as it was) and `<game>-p2` (`rules_v2.md` plus a situation summary).
+The match setting `prompt_version` chooses one; the plugin answers
+`prompt_version(settings)`, `rules(settings)` and `situation_summary(observation,
+settings)` (None for p1). The runner passes the settings to `ModelAgent`, which
+puts the summary in a `<summary>` block above `<situation>`, and `match_started`
+records `prompt_version`. A summary is a pure function of the player's own
+observation, and `games/<game>/tests/golden/` holds the exact prompt text per
+version (`UPDATE_GOLDEN=1` rewrites it).
+
 ### Events and state
 
 A match is a list of `Event`s. Engine events (`match_started`, `thought`,
