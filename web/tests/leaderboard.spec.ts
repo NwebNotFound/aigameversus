@@ -97,7 +97,8 @@ test('real models are the default and the filter can show bots or all', async ({
 	await page.goto('/leaderboard');
 
 	const filter = page.getByRole('navigation', { name: 'Who' });
-	await expect(filter.getByTestId('kind-models')).toHaveAttribute('aria-current', 'page');
+	// Real models are asked for; none is rated, so the board shows everyone and says so.
+	await expect(filter.getByTestId('kind-all')).toHaveAttribute('aria-current', 'page');
 	await expect(page.getByTestId('kind-fallback')).toContainText('No real model is rated yet');
 	await expect(
 		page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: /DEMO / })
