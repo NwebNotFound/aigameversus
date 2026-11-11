@@ -12,15 +12,26 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from arena.api.live import LiveMatches
+from arena.ratings.store import BOT_MODEL_ID
 from arena.transcript import RENDERERS, TranscriptLine, render_match, to_markdown, to_text
 
 router = APIRouter(tags=["transcript"])
+
+
+class Player(BaseModel):
+    """Who sits in a seat, for avatars and chips; null for a random bot or an unrated match."""
+
+    name: str | None = None
+    model: str | None = None
 
 
 class Transcript(BaseModel):
     game: str
     lang: str
     spoilers: bool
+    players: dict[
+        str, Player
+    ]  # seat to who sits there, in seat order; the same with or without spoilers
     lines: list[TranscriptLine]
 
 
@@ -54,7 +65,16 @@ async def transcript(
     lines = render_match(await live.log(match_id), names, lang, spoilers, game=record.game)
     lines = [line for line in lines if line.importance >= min_importance]
     if format == "json":
-        return Transcript(game=record.game, lang=lang, spoilers=spoilers, lines=lines)
+        profiles = await live.matches.seat_profiles(match_id)
+        players = {
+            seat: Player(name=profiles[seat][0], model=profiles[seat][1])
+            if seat in profiles and profiles[seat][1] != BOT_MODEL_ID
+            else Player()
+            for seat in record.players
+        }
+        return Transcript(
+            game=record.game, lang=lang, spoilers=spoilers, players=players, lines=lines
+        )
     if format == "markdown":
         return PlainTextResponse(to_markdown(lines), media_type="text/markdown; charset=utf-8")
     return PlainTextResponse(to_text(lines), media_type="text/plain; charset=utf-8")
