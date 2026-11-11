@@ -25,7 +25,8 @@ be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard and the
 Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
-(`web/`, SvelteKit) has a home page and placeholders for the other pages.
+(`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
+live view of a match (`/matches/<id>`); New match and Replays are placeholders.
 Sections below marked *not built yet* describe the target from the spec and
 get filled in as their phase lands.
 
@@ -417,7 +418,12 @@ Copy the shape of `games/toy/`, the smallest complete game.
    actions carry a useful message. Add a match with mock-LLM players, as in
    `tests/agents/test_model_match.py`.
 
-*Not built yet:* what the UI needs to draw a game (phase 5).
+What the UI draws comes from the plugin's `render_spec(state)`, a plain JSON
+dict with a `layout` (`card_table`, `poker_table`, `player_circle`) and a list
+of `seats`, each with a `player`. Until a game has its own table in `web/`,
+the generic board shows the other fields as text; it hides the fields `hand`,
+`cards` and `role` when the spectator switches spoilers off. A game without
+`render_spec` shows its events only.
 
 ### A model
 
