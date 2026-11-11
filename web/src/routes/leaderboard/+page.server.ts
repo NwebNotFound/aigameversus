@@ -8,6 +8,7 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 	const game = url.searchParams.get('game') || undefined;
 	const asked = url.searchParams.get('kind');
 	const kind = KINDS.find((k) => k === asked);
-	const board = await createArenaClient(ARENA_API_URL, fetch).leaderboard(game, kind);
-	return { game: game ?? null, board };
+	const demo = url.searchParams.get('demo') === '1';
+	const board = await createArenaClient(ARENA_API_URL, fetch).leaderboard(game, kind, demo);
+	return { game: game ?? null, demo, board };
 };
