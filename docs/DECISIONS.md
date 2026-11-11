@@ -510,7 +510,38 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** counters on `ratings` (no history); computing stats from
   the event logs on each request; a static JSON fixture for the UI.
 
-## D-033 · Money is counted per model call, in a ledger, before the call is sent
+## D-033 · Liar's Deck engine: turns, talk, thoughts and open rules
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - Card ids name the rank (`K1`-`K6`, `Q1`-`Q6`, `A1`-`A6`, `J1`, `J2`); in
+    the devil-card variant the devil joker is `DV` and its holder sees it.
+    Other players never see ids of unrevealed cards.
+  - Each revolver is loaded once per match (live chamber by seed, spectators
+    only) and is not reset between rounds, so the risk keeps rising.
+  - The first round starts with the first seat. After a call, the next round
+    starts with the player who pulled the trigger if alive, otherwise with the
+    other side of that call; after a devil card, with its player.
+  - `table_talk` does not end the turn and is allowed once per turn; every
+    text (talk, claim, call) has at most 40 words. Words go out only as
+    `message` events.
+  - There is no `think` tool: private thoughts are the plain text of a
+    model's answer, which the engine's thoughts channel already logs for
+    spectators only. `rules.md` says so.
+  - "Only one player holds cards" makes that player call automatically. A
+    play that leaves no other holder is checked by the next living player;
+    normal play cannot reach this, it is a safeguard.
+  - `render_spec(state)` exists on the plugin as a plain method (a card-table
+    layout with every hand, never the live chambers) and is not added to the
+    `GamePlugin` interface until the UI defines it (see D-009).
+- **Why:** The spec leaves these open; each choice keeps one action per turn,
+  keeps hidden information out of other players' views and reuses the
+  engine's existing channels instead of adding parallel ones.
+- **Alternatives:** talk as part of every action only; a `think` tool that
+  emits a spectator-only event; reloading revolvers each round; a random
+  first starter.
+
+## D-034 · Money is counted per model call, in a ledger, before the call is sent
 
 - **Date:** 2026-11-11
 - **Decision:** Every model call of a match goes through `Budget.meter`
@@ -545,9 +576,9 @@ Each entry: date, decision, why, alternatives considered.
   that timed out on our side); LiteLLM's built-in cost tracking (prices come
   from a list bundled with the library, in memory only); the cost a provider
   reports per call (provider-specific; can replace the price list later);
-  cost events in the match log (a dropped turn would lose them, D-034).
+  cost events in the match log (a dropped turn would lose them, D-035).
 
-## D-034 · At a cap the match pauses: the turn is dropped and played again later
+## D-035 · At a cap the match pauses: the turn is dropped and played again later
 
 - **Date:** 2026-11-11
 - **Decision:** An agent that cannot go on without the user raises
@@ -571,7 +602,7 @@ Each entry: date, decision, why, alternatives considered.
   waiting inside the model call until the user decides (the engine would not
   know that the match is paused).
 
-## D-035 · `config/models.yaml`: limits and prices next to the roster
+## D-036 · `config/models.yaml`: limits and prices next to the roster
 
 - **Date:** 2026-11-11
 - **Decision:** `config/models.yaml` has two parts. `limits`: the caps in
@@ -593,7 +624,7 @@ Each entry: date, decision, why, alternatives considered.
   API at startup (network at startup, and a silent change of what a cap
   means); caps in environment variables; prices already converted to euros.
 
-## D-036 · LiteLLM's own logger is switched off
+## D-037 · LiteLLM's own logger is switched off
 
 - **Date:** 2026-11-11
 - **Decision:** `LiteLLMModel` disables the `LiteLLM` logger when it loads the
