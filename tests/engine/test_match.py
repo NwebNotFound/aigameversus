@@ -368,3 +368,66 @@ def test_plugin_that_breaks_the_contract_stops_the_match(plugin_class, message):
 
     with pytest.raises(PluginError, match=message):
         play(plugin, agents)
+
+
+class NeverEnds(SequentialCounter):
+    """Plays round after round: every turn makes progress, but the game is never over."""
+
+    max_turns = 12
+
+    def is_over(self, state):
+        return False
+
+
+def test_game_that_never_ends_is_stopped_at_its_turn_limit():
+    plugin, stored = NeverEnds(), []
+
+    async def sink(first_seq, events):
+        stored.extend(events)
+
+    match = Match(plugin, random_bots(plugin, PLAYERS, 1), seed=1, sink=sink)
+
+    with pytest.raises(PluginError, match=r"counter is not over after 12 turns \(max_turns\)"):
+        asyncio.run(match.run())
+
+    # Twelve turns were played, and the log says why there is no thirteenth.
+    assert types(match).count("action_accepted") == 12
+    assert match.state.clock == 6
+    last = match.events[-1]
+    assert (last.source, last.type) == (EventSource.ENGINE, "turn_limit_reached")
+    assert last.data == {"max_turns": 12}
+    assert last.visible_to == ()
+    assert stored == match.events
+    assert "match_finished" not in types(match)
+
+
+@pytest.mark.parametrize(
+    ("plugin_class", "needed"),
+    [(SequentialCounter, 4), (SimultaneousCounter, 2), (TickCounter, 2)],
+)
+def test_turn_limit_can_be_set_for_one_match(plugin_class, needed):
+    plugin = plugin_class()  # two rounds take `needed` turns
+
+    def match(max_turns):
+        return Match(
+            plugin,
+            random_bots(plugin, PLAYERS, 1),
+            seed=1,
+            settings={"rounds": 2},
+            max_turns=max_turns,
+        )
+
+    # A match that needs exactly as many turns as allowed finishes.
+    exact = match(needed)
+    asyncio.run(exact.run())
+    assert types(exact)[-1] == "match_finished"
+
+    short = match(needed - 1)
+    with pytest.raises(PluginError, match=f"not over after {needed - 1} turns"):
+        asyncio.run(short.run())
+    assert short.events[-1].data == {"max_turns": needed - 1}
+    assert short.events[:-1] == exact.events[: len(short.events) - 1]
+
+
+def test_game_without_a_limit_of_its_own_gets_the_default():
+    assert SequentialCounter.max_turns == 10_000

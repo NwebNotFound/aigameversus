@@ -61,7 +61,11 @@ their phase lands.
    default, corrections included), `agent_failed` for a seat whose agent gave
    up (see below).
 5. `apply_actions`, then `step`, let the plugin emit game events.
-6. A turn without a game event is a plugin bug and stops the match.
+6. A turn without a game event is a plugin bug and stops the match. So does a
+   match that is still not over after the game's `max_turns` turns (or the
+   `max_turns` given to this `Match`): the engine logs `turn_limit_reached`
+   and raises `PluginError`, so a game that never ends cannot play, store and
+   bill forever.
 
 Validation lives in the engine only. Agents never judge an action.
 
@@ -201,11 +205,11 @@ the server's error on a correction).
 
 A match is a list of `Event`s. Engine events (`match_started`, `thought`,
 `action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-`match_paused`, `match_resumed`, `match_finished`) are bookkeeping. Game
-events come from the plugin through `ctx.emit` and are the only thing that
-changes the game state: `emit` records the event and passes it to the plugin's
-`apply_event` at once. Replaying the game events over `initial_state`
-therefore rebuilds the exact state.
+`match_paused`, `match_resumed`, `turn_limit_reached`, `match_finished`) are
+bookkeeping. Game events come from the plugin through `ctx.emit` and are the
+only thing that changes the game state: `emit` records the event and passes it
+to the plugin's `apply_event` at once. Replaying the game events over
+`initial_state` therefore rebuilds the exact state.
 
 Every event says who may see it: `visible_to=None` is public, a list of
 players is private to them, an empty list is spectators only. The seed,
@@ -372,10 +376,13 @@ Copy the shape of `games/toy/`, the smallest complete game.
    the text does not need the title.
 2. Define the state as a Pydantic model and subclass `GamePlugin`
    (`arena/engine/plugin.py`), once, in `plugin.py`. Set `id` (the folder
-   name), `name`, `version`, `min_players`, `max_players` and `turn_mode`. The
-   class must be creatable without arguments. That is all the registration
-   there is: `arena games` and `GET /games` then list the game. `name` is the
-   title people and models read, and the only place where it is written.
+   name), `name`, `version`, `min_players`, `max_players`, `turn_mode` and
+   `max_turns`: the most turns a match can take under the rules, with room to
+   spare (the default is 10 000). A turn is one round of asking the active
+   players. The class must be creatable without arguments. That is all the
+   registration there is: `arena games` and `GET /games` then list the game.
+   `name` is the title people and models read, and the only place where it is
+   written.
 3. `initial_state` builds the state before anything happened, without
    randomness, and raises `ValueError` for bad settings. `setup` emits the
    opening events (deal, assign roles).

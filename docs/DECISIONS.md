@@ -637,7 +637,25 @@ Each entry: date, decision, why, alternatives considered.
   (cannot know every secret, and prompts would still be logged); raising the
   logger's level only (any later `setLevel` brings the text back).
 
-## D-038 · A game is found by its folder
+## D-038 · A match has a turn limit
+
+- **Date:** 2026-11-11
+- **Decision:** `GamePlugin.max_turns` is the most turns a match of the game
+  can take; the default is 10 000 and a game sets its own (High Card: one
+  turn per card, 20). `Match(max_turns=...)` overrides it for one match. When
+  a match is still not over after that many completed turns, the engine logs
+  `turn_limit_reached` (spectators only), hands the log to the sink and raises
+  `PluginError`. A turn dropped by a pause does not count.
+- **Why:** The engine already stops a turn without progress, but a plugin bug
+  can also make progress forever: rounds that never end the game. Such a
+  match would fill the event store and, with models, spend up to the cost
+  cap. A limit on the plugin sits next to the rules that justify it.
+- **Alternatives:** A time limit for the whole match (depends on how fast the
+  models answer, and a pause would need an exception); a limit on events
+  (harder to derive from the rules of a game); only a per-match setting (every
+  caller would have to know every game).
+
+## D-039 · A game is found by its folder
 
 - **Date:** 2026-11-11
 - **Decision:** `arena/games.py` lists the games: every package `games/<id>/`
@@ -653,7 +671,7 @@ Each entry: date, decision, why, alternatives considered.
   edit); entry points (packaging for something that lives in this repo);
   skipping broken folders (a game silently missing from the list).
 
-## D-039 · Matches from the API run inside the API process; spectators read the log over WebSocket
+## D-040 · Matches from the API run inside the API process; spectators read the log over WebSocket
 
 - **Date:** 2026-11-11
 - **Decision:** `POST /matches` starts a match as an asyncio task of the API
@@ -680,7 +698,7 @@ Each entry: date, decision, why, alternatives considered.
   continuing interrupted matches from the log (needs agents that can be
   rebuilt; later).
 
-## D-040 · The `arena` command plays in its own process
+## D-041 · The `arena` command plays in its own process
 
 - **Date:** 2026-11-11
 - **Decision:** `arena run --game <id> --bots` runs the engine in the command's
@@ -694,7 +712,7 @@ Each entry: date, decision, why, alternatives considered.
   can be called with curl); storing command-line matches when a database is
   configured (behaviour that depends on the environment).
 
-## D-041 · A game reads nothing from the order of keys in event data
+## D-042 · A game reads nothing from the order of keys in event data
 
 - **Date:** 2026-11-11
 - **Decision:** Event data is JSON whose objects have no order: plugins use a

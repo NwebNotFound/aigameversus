@@ -49,6 +49,7 @@ class ToyGame(GamePlugin[ToyState]):
     min_players = 2
     max_players = 4
     turn_mode = TurnMode.SEQUENTIAL
+    max_turns = max_players * MAX_HAND_SIZE  # every turn plays one card
 
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> ToyState:
         unknown = set(settings) - {"hand_size"}
