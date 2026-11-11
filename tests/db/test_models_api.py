@@ -19,11 +19,12 @@ def client(database_url, monkeypatch):
         yield client
 
 
-def play(database_url):
+def play(database_url, ledger_url=None):
     """Two matches of Liar's Deck and one of Poker between glm-flash and deepseek-flash.
 
     glm-flash sits in seat p1, then in p2; it wins the first Liar's Deck match. Its calls cost
-    6000 in the first match and its engine log has 9 accepted answers and 1 refused one.
+    6000 in the first match (booked in `ledger_url`, default the match database) and its
+    engine log has 9 accepted answers and 1 refused one.
     """
 
     async def go():
@@ -44,11 +45,17 @@ def play(database_url):
                     Placement(player=str(p), rank=1 if p == winner else 2) for p in seats.values()
                 ]
                 await store.apply_match_result(match_id, game, placements, seats=seats)
-            await pool.execute(
-                "INSERT INTO model_calls (match_id, player, model, called_at, cost_micro_eur) "
-                "VALUES ($1, 'p1', 'glm-flash', now(), 6000)",
-                first,
-            )
+            ledger = await connect(ledger_url) if ledger_url else pool
+            try:
+                await migrate(ledger)
+                await ledger.execute(
+                    "INSERT INTO model_calls (match_id, player, model, called_at, cost_micro_eur) "
+                    "VALUES ($1, 'p1', 'glm-flash', now(), 6000)",
+                    first,
+                )
+            finally:
+                if ledger is not pool:
+                    await ledger.close()
             answers = ["action_accepted"] * 9 + ["action_rejected"]
             for seq, kind in enumerate(answers):
                 await pool.execute(

@@ -1,12 +1,13 @@
 """Player profiles and ratings in Postgres."""
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import asyncpg
 
+from arena.db.ledger import Ledger, LedgerUnavailable
 from arena.engine.types import Placement
 from arena.ratings.elo import DEFAULT_K, RatingChange, overall_rating, update_ratings
 from arena.ratings.stats import win_rate
@@ -18,7 +19,7 @@ BOT_MODEL_ID = "random-bot"
 class Usage:
     """What a profile cost and how often the server refused its answers, in rated matches."""
 
-    cost_micro_eur: int = 0
+    cost_micro_eur: int | None = 0  # None while the ledger cannot be read
     accepted: int = 0  # answers the server took
     rejected: int = 0  # answers the server refused (a wrong tool, bad arguments, an illegal move)
 
@@ -230,45 +231,53 @@ class RatingStore:
         return played
 
     async def usage(
-        self, game_id: str | None = None, profile_id: UUID | None = None
+        self, ledger: Ledger, game_id: str | None = None, profile_id: UUID | None = None
     ) -> dict[UUID, Usage]:
         """Cost and answer counts per profile, from the ledger and the stored event logs.
 
         Counts the rated matches of `game_id`, or of every game. Cost is the sum of the booked
-        model calls of the profile's seats; answers are the engine's `action_accepted` and
-        `action_rejected` events of those seats. Profiles without a seat are left out. With
-        `profile_id` only that profile is counted, which makes the query much smaller.
+        model calls of the profile's seats, read from `ledger` (its own database or this one),
+        and None for everyone while the ledger cannot be read; answers are the engine's
+        `action_accepted` and `action_rejected` events of those seats. Profiles without a seat
+        are left out. With `profile_id` only that profile is counted, which makes the query
+        much smaller.
         """
-        rows = await self._pool.fetch(
-            "WITH seats AS ("
-            "  SELECT s.match_id, s.seat, s.profile_id FROM match_seats s "
-            "  JOIN rated_matches rm ON rm.match_id = s.match_id "
-            "  WHERE ($1::text IS NULL OR rm.game_id = $1) "
-            "    AND ($2::uuid IS NULL OR s.profile_id = $2)), "
-            "cost AS ("
-            "  SELECT s.profile_id, sum(c.cost_micro_eur) AS cost FROM seats s "
-            "  JOIN model_calls c ON c.match_id = s.match_id AND c.player = s.seat "
-            "  GROUP BY s.profile_id), "
-            "tools AS ("
-            "  SELECT s.profile_id, "
-            "    count(*) FILTER (WHERE e.type = 'action_accepted') AS accepted, "
-            "    count(*) FILTER (WHERE e.type = 'action_rejected') AS rejected "
-            "  FROM seats s JOIN match_events e ON e.match_id = s.match_id "
-            "    AND e.type IN ('action_accepted', 'action_rejected') "
-            "    AND e.data->>'player' = s.seat "
-            "  GROUP BY s.profile_id) "
-            "SELECT s.profile_id, coalesce(cost.cost, 0) AS cost, "
-            "  coalesce(tools.accepted, 0) AS accepted, coalesce(tools.rejected, 0) AS rejected "
-            "FROM (SELECT DISTINCT profile_id FROM seats) s "
-            "LEFT JOIN cost ON cost.profile_id = s.profile_id "
-            "LEFT JOIN tools ON tools.profile_id = s.profile_id",
+        seats_sql = (
+            "SELECT s.match_id, s.seat, s.profile_id FROM match_seats s "
+            "JOIN rated_matches rm ON rm.match_id = s.match_id "
+            "WHERE ($1::text IS NULL OR rm.game_id = $1) "
+            "  AND ($2::uuid IS NULL OR s.profile_id = $2)"
+        )
+        seats = await self._pool.fetch(seats_sql, game_id, profile_id)
+        answers = await self._pool.fetch(
+            f"WITH seats AS ({seats_sql}) "
+            "SELECT s.profile_id, "
+            "  count(*) FILTER (WHERE e.type = 'action_accepted') AS accepted, "
+            "  count(*) FILTER (WHERE e.type = 'action_rejected') AS rejected "
+            "FROM seats s JOIN match_events e ON e.match_id = s.match_id "
+            "  AND e.type IN ('action_accepted', 'action_rejected') "
+            "  AND e.data->>'player' = s.seat "
+            "GROUP BY s.profile_id",
             game_id,
             profile_id,
         )
-        return {
-            row["profile_id"]: Usage(int(row["cost"]), int(row["accepted"]), int(row["rejected"]))
-            for row in rows
-        }
+        try:
+            booked = await ledger.seat_costs(sorted({seat["match_id"] for seat in seats}))
+        except LedgerUnavailable:
+            booked = None
+        usage = {seat["profile_id"]: Usage(None if booked is None else 0) for seat in seats}
+        for seat in seats:
+            spent = usage[seat["profile_id"]]
+            if booked is not None:
+                cost = spent.cost_micro_eur + booked.get((seat["match_id"], seat["seat"]), 0)
+                usage[seat["profile_id"]] = replace(spent, cost_micro_eur=cost)
+        for row in answers:
+            usage[row["profile_id"]] = replace(
+                usage[row["profile_id"]],
+                accepted=int(row["accepted"]),
+                rejected=int(row["rejected"]),
+            )
+        return usage
 
     async def rated_games(self) -> list[str]:
         """Ids of the games that have at least one rated match, sorted."""
