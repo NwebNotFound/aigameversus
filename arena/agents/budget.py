@@ -1,6 +1,7 @@
 """Cost caps: every model call of a match is counted, and none may pass a cap."""
 
 import json
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import ROUND_CEILING, Decimal
@@ -33,6 +34,7 @@ class Budget:
         config: Config,
         *,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        clock: Callable[[], float] = time.monotonic,
     ):
         self.match_cap = int(config.limits.match_eur * MICRO)
         self.month_cap = int(config.limits.month_eur * MICRO)
@@ -40,6 +42,7 @@ class Budget:
         self._match_id = match_id
         self._config = config
         self._now = now
+        self._clock = clock
 
     def model(self, player: PlayerId, model_id: str) -> ModelCall:
         """The metered call of a model from the config. Nothing else builds a real model."""
@@ -73,13 +76,19 @@ class Budget:
             )
             # If the call fails or is cancelled here, the booking stays as it is:
             # the provider may have billed it anyway.
+            sent = self._clock()
             reply = await call(messages, tools)
-            if reply.usage is not None:
+            latency_ms = round((self._clock() - sent) * 1000)
+            if reply.usage is None:
+                await self._ledger.timed(call_id, latency_ms)
+            else:
                 await self._ledger.settle(
                     call_id,
                     reply.usage.input_tokens,
                     reply.usage.output_tokens,
                     self._cost(model, reply.usage.input_tokens, reply.usage.output_tokens),
+                    latency_ms=latency_ms,
+                    reasoning_tokens=reply.usage.reasoning_tokens,
                 )
             return reply
 

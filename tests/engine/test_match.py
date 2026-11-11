@@ -153,11 +153,12 @@ def test_random_fallback_plays_after_two_failed_corrections():
 
     # First attempt plus two corrections, then the engine stops asking for this turn.
     assert [request.error is None for request in ada.requests] == [True, False, False, True]
-    assert types(match)[1:6] == [
+    assert types(match)[1:7] == [
         "action_rejected",
         "action_rejected",
         "action_rejected",
         "action_fallback",
+        "decision",
         "added",
     ]
     fallback = match.events[4].data
@@ -249,7 +250,7 @@ def test_player_who_runs_out_of_time_gets_a_random_action_for_that_turn():
     match, _ = play(SequentialCounter(), agents, turn_timeout=0.2)
 
     # The time covers the whole turn: the attempt before the timeout stays in the log.
-    assert types(match)[1:4] == ["action_rejected", "action_fallback", "added"]
+    assert types(match)[1:5] == ["action_rejected", "action_fallback", "decision", "added"]
     fallback = match.events[2]
     assert (fallback.data["player"], fallback.data["reason"]) == ("ada", "timeout")
     assert fallback.visible_to == ("ada",)
@@ -263,8 +264,9 @@ def test_slow_player_does_not_change_the_order_of_the_log():
     match, _ = play(SimultaneousCounter(), {"ada": ada, "bo": bo}, turn_timeout=0.2)
 
     # Bo answered long before ada's time ran out, yet the log keeps the seat order.
-    assert types(match)[1:6] == [
+    assert types(match)[1:7] == [
         "action_fallback",
+        "decision",
         "action_accepted",
         "added",
         "added",
@@ -278,7 +280,7 @@ def test_agent_that_gives_up_loses_its_seat_to_random_actions():
 
     match, _ = play(SequentialCounter(), {"ada": ada, "bo": Scripted(add(1), add(2))})
 
-    assert types(match)[1:4] == ["agent_failed", "action_fallback", "added"]
+    assert types(match)[1:5] == ["agent_failed", "action_fallback", "decision", "added"]
     failed = match.events[1]
     assert failed.data == {"player": "ada", "error": "model call failed after 4 tries (Timeout)"}
     assert failed.visible_to == ()
