@@ -1,5 +1,4 @@
-/** Pure helpers of the Liar's Deck table: seating, card faces and the moments worth a pause. */
-import type { MatchEvent } from '../api.js';
+/** Pure helpers of the Liar's Deck table: seating and card faces. */
 
 export type Side = 'bottom' | 'left' | 'top' | 'right';
 
@@ -48,36 +47,4 @@ export function face(id: string): CardFace {
 /** The table card as a word for the middle of the table: "queen" becomes "Queen". */
 export function tableCardName(card: unknown): string {
 	return typeof card === 'string' && card ? card[0].toUpperCase() + card.slice(1) : '–';
-}
-
-export interface Moment {
-	/** The log position it comes from, so one moment is shown once. */
-	seq: number;
-	kind: 'liar' | 'shot';
-	/** The words on the banner. */
-	text: string;
-	/** For a shot: whether the chamber was live. */
-	live?: boolean;
-}
-
-/** The dramatic moments in `events` after position `after`, oldest first. */
-export function moments(events: MatchEvent[], after: number): Moment[] {
-	const found: Moment[] = [];
-	for (const event of events) {
-		if (event.seq <= after) continue;
-		const { data } = event;
-		if (event.type === 'liar_called') {
-			const who = data.automatic ? 'forced to call' : 'calls';
-			found.push({ seq: event.seq, kind: 'liar', text: `${data.caller} ${who}: Liar!` });
-		} else if (event.type === 'trigger_pulled') {
-			const live = data.live === true;
-			found.push({
-				seq: event.seq,
-				kind: 'shot',
-				live,
-				text: live ? `${data.player}: BANG` : `${data.player}: click`
-			});
-		}
-	}
-	return found;
 }
