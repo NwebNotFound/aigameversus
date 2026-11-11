@@ -108,3 +108,4 @@ with `python scripts/decisions.py adopt`.
 - [D-104](decisions/D-104-one-display-name-per-seat-computed-by-the-server-never-the.md) · One display name per seat, computed by the server, never the seat id
 - [D-106](decisions/D-106-match-analytics-a-pure-function-of-the-log-public-events.md) · Match analytics: a pure function of the log, public events only without spoilers
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
+- [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
