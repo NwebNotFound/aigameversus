@@ -49,6 +49,8 @@ def test_shipped_config_has_the_project_caps_and_a_roster():
     assert (config.limits.match_eur, config.limits.month_eur) == (Decimal("0.50"), Decimal("5"))
     # A dollar never counts for less than a euro's worth of cap by default.
     assert config.limits.usd_to_eur >= 1
+    # Reasoning models are kept short: their thinking is billed and can crowd out the move.
+    assert config.limits.reasoning_effort == "low"
     # Enough different models for a Poker table.
     assert len(config.models) >= 6
     assert len({model.model for model in config.models.values()}) == len(config.models)
@@ -71,6 +73,7 @@ def test_prices_are_read_exactly_as_written(tmp_path):
         (changed("limits", max_output_tokens=0), "limits.max_output_tokens"),
         (changed("limits", max_input_tokens=1.5), "limits.max_input_tokens"),
         (changed("limits", day_eur=1), "limits.day_eur"),
+        (changed("limits", reasoning_effort="a lot"), "limits.reasoning_effort"),
         (changed("models", input_usd_per_mtok=-0.1), "models.some-model.input_usd_per_mtok"),
         (changed("models", output_usd_per_mtok=None), "models.some-model.output_usd_per_mtok"),
         (changed("models", provider="some-shop"), "models.some-model.provider"),
@@ -85,6 +88,13 @@ def test_prices_are_read_exactly_as_written(tmp_path):
 def test_broken_config_is_refused_with_the_field_that_is_wrong(tmp_path, data, problem):
     with pytest.raises(ConfigError, match=rf"^models\.yaml: .*{problem}"):
         load(tmp_path, data)
+
+
+def test_reasoning_effort_can_be_left_to_the_model(tmp_path):
+    assert load(tmp_path, VALID).limits.reasoning_effort is None
+    assert load(
+        tmp_path, changed("limits", reasoning_effort="minimal")
+    ).limits.reasoning_effort == ("minimal")
 
 
 def test_missing_file_is_a_config_error(tmp_path):

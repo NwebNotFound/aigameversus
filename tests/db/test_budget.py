@@ -401,9 +401,23 @@ def test_real_model_from_the_config_is_metered(database_url, answer_with):
 
     assert sent["model"] == "openrouter/some-vendor/cheap-model"
     assert sent["max_tokens"] == MAX_OUTPUT
+    assert "reasoning_effort" not in sent  # this config leaves it to the model
     # LiteLLM's mock counts 10 tokens of prompt and 20 of answer.
     assert reply.usage == Usage(10, 20)
     assert [row[1:] for row in rows] == [("p1", "cheap", 10, 20, 10 * 1 + 20 * 2)]
+
+
+def test_real_model_is_asked_with_the_reasoning_effort_of_the_config(database_url, answer_with):
+    sent = answer_with(mock_response="I just talk.")
+    short = config().limits.model_copy(update={"reasoning_effort": "low"})
+    settings = config().model_copy(update={"limits": short})
+
+    async def scenario(pool):
+        await Budget(Ledger(pool), uuid4(), settings).model("p1", "cheap")(MESSAGES, TOOLS)
+
+    with_pool(database_url, scenario)
+
+    assert sent["reasoning_effort"] == "low"
 
 
 def test_no_key_prompt_or_provider_text_reaches_logs_events_or_the_ledger(

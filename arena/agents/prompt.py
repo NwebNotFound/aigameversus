@@ -14,6 +14,7 @@ from arena.agents.model import Message
 from arena.engine.types import MESSAGE, Event, PlayerId, ToolSpec, TurnRequest
 
 HISTORY_LIMIT = 40  # a prompt shows this many of the most recent events
+THOUGHT = "thought"  # the argument of every tool call that holds the player's private thinking
 
 _SYSTEM = """\
 You are player {player} in a match of {game} against other AI players. Play to win.
@@ -24,10 +25,12 @@ You are player {player} in a match of {game} against other AI players. Play to w
 
 # How to answer
 
-- Make your move by calling exactly one of the offered tools. Nothing else \
-counts as a move. If you call several tools, only the first call counts.
-- Whatever you write as plain text is your private thinking. Spectators read \
-it; no other player ever sees it.
+- Answer with exactly one call of one of the offered tools. Nothing else \
+counts as a move: a call written out as text is not a call. If you call \
+several tools, only the first call counts.
+- Every tool takes a `thought`: your private thinking about this move, in one \
+or two sentences. Spectators read it; no other player ever sees it. Write \
+nothing outside the tool call: a long answer is cut off before the move.
 - The server checks every move. If it rejects yours, it says why and you \
 answer again.
 
@@ -66,18 +69,26 @@ def build_messages(game: str, rules: str, request: TurnRequest) -> list[Message]
 
 
 def tool_schemas(tools: Sequence[ToolSpec]) -> list[dict[str, Any]]:
-    """The tools in the function-calling format that models expect."""
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": tool.parameters,
-            },
+    """The tools in the function-calling format that models expect.
+
+    Every tool gets one more argument, `thought`, for the player's private
+    thinking: many models cannot write text and call a tool in one answer.
+    It comes first, so that a model thinks before it fills in its move. The
+    agent runner takes it out again; a game never sees it.
+    """
+    schemas = []
+    for tool in tools:
+        properties = tool.parameters.get("properties", {})
+        if THOUGHT in properties:
+            raise ValueError(f"Tool '{tool.name}' has an argument '{THOUGHT}': that name is taken")
+        thought = {
+            "type": "string",
+            "description": "Your private thinking about this move, in one or two sentences.",
         }
-        for tool in tools
-    ]
+        parameters = {**tool.parameters, "properties": {THOUGHT: thought, **properties}}
+        function = {"name": tool.name, "description": tool.description, "parameters": parameters}
+        schemas.append({"type": "function", "function": function})
+    return schemas
 
 
 def _line(event: Event, reader: PlayerId) -> str:

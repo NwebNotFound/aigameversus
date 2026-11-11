@@ -16,15 +16,16 @@ strategy game).
 > trust between players are built. Everything started from the UI or the API
 > runs with random bots and costs nothing, so no API key is needed. Real models
 > can take seats from the command line only (`arena run --models`), inside hard
-> cost caps. The fourth game is not playable yet.
+> cost caps; the first three matches they played are
+> [below](#real-models-first-matches). The fourth game is not playable yet.
 
 ## Games
 
 | Game | Status | What exists |
 | --- | --- | --- |
-| *Liar's Deck* (2-4 players) | playable | rules engine, both variants (base, devil card), bar-table board, random bot |
-| Poker, No-Limit Hold'em (2-6) | playable | betting rounds, side pots, tournament with duplicate mode, poker-table board with win chances, random bot |
-| Werewolf (6-16) | playable | all sixteen roles, narrator, captain, role selection with templates and balance light, circle board with vote arrows, random bot |
+| *Liar's Deck* (2-4 players) | playable; bots in the UI and API, real models from the command line | rules engine, both variants (base, devil card), bar-table board, random bot |
+| Poker, No-Limit Hold'em (2-6) | playable; bots in the UI and API, real models from the command line | betting rounds, side pots, tournament with duplicate mode, poker-table board with win chances, random bot |
+| Werewolf (6-16) | playable; bots in the UI and API, real models from the command line | all sixteen roles, narrator, captain, role selection with templates and balance light, circle board with vote arrows, random bot |
 | *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, seeded hex map with fog of war, city economy; no match yet |
 
 **Liar's Deck:** bluff with face-down cards, call the lie, pull the trigger of
@@ -68,8 +69,10 @@ spoilers off, no role and no hole card is shown anywhere on the page.
 ![The Chronicle tab of a replay](docs/images/showcase-chronicle.png)
 
 *Every player in these pictures is a random bot, started through the API: no
-model, no cost. Not built yet: memory across matches (the profile says so), real
-models in the UI or the API, and the Throne of Tokens match.* The pictures are
+model, no cost. Real models have played three example matches from the command
+line (see [Real models: first matches](#real-models-first-matches)). Not built
+yet: choosing models in the UI or the API (they start random bots only), memory
+across matches (the profile says so), and the Throne of Tokens match.* The pictures are
 made by `scripts/make_showcase.sh`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for the building blocks and what is planned.
 
@@ -176,6 +179,28 @@ Configuration is optional. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
 and Compose passes the key on to the arena. Only `arena run --models` uses
 the key (see Cost safety).
+
+## Real models: first matches
+
+On 2026-11-11 the cheapest models of the roster played the first real matches,
+started with `arena run --models`. The saved matches are in
+[docs/examples](docs/examples/README.md), thoughts, bluffs and wolf chat
+included.
+
+| Game | Seats | Calls | Time | Cost |
+| --- | --- | --- | --- | --- |
+| Liar's Deck | 4 models | 33 | 2 min 41 s | 0.012 EUR |
+| Poker, 20 hands | 6 models | 138 | 6 min 32 s | 0.054 EUR |
+| Werewolf, 8 players | 8 models | 66 | 8 min 24 s | 0.041 EUR |
+
+Six matches in all, tests included, cost 0.18 EUR. The very first one, the
+same Liar's Deck table, took 21 minutes and 0.068 EUR, and 83 of its 130
+answers were rejected: two models spent their whole answer thinking and never
+made a move. What that changed in the agent runner is in
+[docs/DECISIONS.md](docs/DECISIONS.md) ("One forced tool call carries the
+thought and the move"). Models still make mistakes the server has to reject,
+about one answer in five in the Werewolf match; a rejected answer gets a
+second and third try, then a random legal move is played and the log says so.
 
 ## Cost safety
 
