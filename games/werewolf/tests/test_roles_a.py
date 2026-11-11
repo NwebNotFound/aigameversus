@@ -280,6 +280,10 @@ def test_an_executed_idiot_survives_revealed_and_loses_the_vote():
     voters = [s.player for s in table.state.queue if s.kind == "vote"]
     assert "b" not in voters
     assert table.plugin.get_observation(table.state, "b")["may_vote"] is False
+    seen = table.plugin.get_observation(table.state, "e")
+    assert "b" in seen["alive"]
+    assert all(d["player"] != "b" for d in seen["dead"])  # alive, so not among the dead
+    assert seen["revealed_alive"] == [{"player": "b", "role": "village_idiot"}]
 
 
 # --- Scapegoat ----------------------------------------------------------------------

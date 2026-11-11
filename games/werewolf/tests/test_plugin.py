@@ -448,6 +448,8 @@ PUBLIC_EVENTS = {
     "captain_vote",
     "captain_elected",
     "captain_passed",
+    "idiot_revealed",
+    "powers_lost",
 }
 # Game events that may reach a player privately (their audience is checked below).
 PRIVATE_EVENTS = {
@@ -458,6 +460,12 @@ PRIVATE_EVENTS = {
     "wolf_talked",
     "seer_inspected",
     "witch_acted",
+    "lovers_linked",
+    "love_revealed",
+    "lover_talked",
+    "protected",
+    "spied",
+    "elder_survived",
 }
 
 

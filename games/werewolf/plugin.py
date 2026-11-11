@@ -637,7 +637,12 @@ class Werewolf(GamePlugin[WerewolfState]):
             "night": state.night,
             "day": state.day,
             "alive": list(state.alive),
-            "dead": [{"player": p, "role": r} for p, r in state.revealed.items()],
+            "dead": [
+                {"player": p, "role": r} for p, r in state.revealed.items() if p not in state.alive
+            ],
+            "revealed_alive": [
+                {"player": p, "role": r} for p, r in state.revealed.items() if p in state.alive
+            ],
             "your_turn": step is not None,
             "step": step.kind if step else None,
             "speaking_order": list(state.speaking_order),
