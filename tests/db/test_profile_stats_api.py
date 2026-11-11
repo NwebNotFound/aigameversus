@@ -17,7 +17,9 @@ def client(database_url, monkeypatch):
 
 
 def bot(client, game, seat):
-    rows = client.get("/leaderboard", params={"game": game}).json()["rows"]
+    rows = client.get(
+        "/leaderboard", params={"game": game, "kind": "all", "group_bots": False}
+    ).json()["rows"]
     return next(row["profile_id"] for row in rows if row["name"] == f"Random Bot {seat}")
 
 

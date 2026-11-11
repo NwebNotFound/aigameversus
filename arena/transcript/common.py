@@ -27,6 +27,27 @@ from arena.engine.types import MESSAGE, Event, EventSource
 
 LANGS = ("en", "de")
 
+# Settings anyone may read. The role mix (`template`, `roles`) is hidden information in Werewolf
+# unless `roles_public` is on, so it is not in the list.
+PUBLIC_SETTINGS = {
+    "language",
+    "variant",
+    "duplicate",
+    "hand_size",
+    "captain",
+    "roles_public",
+    "prompt_version",
+}
+
+
+def public_settings(settings: Mapping[str, Any]) -> dict[str, Any]:
+    """The settings of a match as a reader without spoilers may see them."""
+    keep = set(PUBLIC_SETTINGS)
+    if settings.get("roles_public"):
+        keep |= {"template", "roles"}
+    return {k: v for k, v in settings.items() if k in keep}
+
+
 # Events whose audience is "spectators only" in the log but that tell nothing secret.
 ALWAYS_SHOWN = {"match_started", "match_paused", "match_resumed", "turn_limit_reached"}
 
@@ -128,6 +149,8 @@ class Base:
         if not self.spoilers:
             # The seed would give every hidden draw away, so it is not in the raw event either.
             raw["data"] = {k: v for k, v in raw["data"].items() if k != "seed"}
+            if event.type == "match_started":
+                raw["data"]["settings"] = public_settings(raw["data"].get("settings") or {})
         return TranscriptLine(
             seq=seq,
             kind=kind,

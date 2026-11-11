@@ -13,7 +13,9 @@ test("a bot's profile shows its Liar's Deck statistics", async ({ page, request 
 	await expect
 		.poll(async () => (await (await request.get(`${ARENA}/matches/${match.id}`)).json()).status)
 		.toBe('finished');
-	const board = await (await request.get(`${ARENA}/leaderboard?game=liars_deck`)).json();
+	const board = await (
+		await request.get(`${ARENA}/leaderboard?game=liars_deck&kind=all&group_bots=false`)
+	).json();
 	const bot = board.rows.find((row: { name: string }) => row.name === 'Random Bot p1');
 	const stats = await (await request.get(`${ARENA}/profiles/${bot.profile_id}/stats`)).json();
 	const liars = stats.games.find((g: { game_id: string }) => g.game_id === 'liars_deck');
