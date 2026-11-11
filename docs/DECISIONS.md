@@ -1525,3 +1525,20 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** a formatter in TypeScript for the web (a second copy to keep
   in step, and no help for the CLI); text written by the plugins themselves (puts
   words into rules code, and names are a presentation matter).
+
+## D-081 · A model has one rating profile, whatever seat it sits in
+
+- **Date:** 2026-11-11
+- **Decision:** A finished `arena run --models` match is rated. Each model gets
+  one profile per personality (`RatingStore.model_profile`; the id derives from
+  model id and personality, so it is the same in every match and every seat; no
+  personality is chosen from the command line yet). Its rating, statistics and
+  cost therefore add up across matches. A profile is rated once per match, so a
+  match with the same model in several seats is left unrated and the command says
+  so. Random bots keep one profile per seat, as the log needs a seat per profile
+  (D-052); the leaderboard groups them by kind when it shows them.
+- **Why:** The leaderboard compares models, not seats: a model that sat in seat 3
+  yesterday and seat 1 today is the same player. Rating the same profile twice in
+  one match would break the match's placements.
+- **Alternatives:** rating the model's best seat, or splitting its placements
+  (arbitrary); one profile per model and seat (the old way: no comparison).
