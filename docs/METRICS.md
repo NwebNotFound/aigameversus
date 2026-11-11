@@ -74,6 +74,51 @@ reads public events only (`arena/analytics/situation.py`).
   alive** (village, wolves, on their own) only with spoilers: roles are private
   until a player dies.
 
+## Behaviour (`behaviour`), Liar's Deck so far
+
+Per player: `tags` (descriptive style tags with their evidence), `too_early`,
+`compare` and, with spoilers only, `last_thought` (the player's latest thought,
+cut to 200 characters). The thresholds are constants in
+`arena/analytics/behaviour.py`; they are a first proposal, reviewed by the
+Researcher.
+
+Rules for every tag:
+
+- **Minimum sample:** no tag below 10 own decisions of the kind it describes
+  (plays, call opportunities, moves). Fallback moves never count. A player with
+  fewer than 10 own moves gets `too_early: {n, need: 10}` ("too early to tell").
+- **Clear of the threshold:** a rate tag appears only when its whole Wilson 95 %
+  interval lies on the right side: the lower end above the threshold for a
+  "often" tag, the upper end below it for a "rarely" tag. 7 lies in 10 plays is
+  not a Bluffer yet (interval 40-89 %); 25 in 35 is (55-84 %). The tag's `text`
+  states the rate, the interval and n.
+- **Views:** tags from hidden cards (Bluffer, Honest, Sharp eye, Risk-taker) or
+  from private events (Rule-breaker, Often replaced by the bot) appear only with
+  spoilers (`spoilers: true` on the tag).
+
+| Tag | Rule | n |
+| --- | --- | --- |
+| Bluffer | chosen-lie rate (lies when an honest card was in hand) above 0.5 | ≥ 10 such plays |
+| Honest | chosen-lie rate below 0.15 | ≥ 10 such plays |
+| Cautious | call rate below 0.15 of call opportunities | ≥ 10 opportunities |
+| Trigger-happy | call rate above 0.5 | ≥ 10 opportunities |
+| Sharp eye | hit rate at least 0.2 above the false-alarm rate, and their intervals do not overlap | ≥ 10 on each side |
+| Risk-taker | at least 3 lies at a revolver risk of 0.33 or more, and at least half of the plays at that risk were lies; the text names both counts | ≥ 10 plays |
+| Rule-breaker | refused answers per own move above 0.25 | ≥ 10 moves |
+| Often replaced by the bot (`kind: reliability`) | fallback share above 10 % | ≥ 10 moves |
+| Slow / Quick to answer | median response time above 2× / below 0.5× the other seats' median; includes network and provider queue | ≥ 10 moves on both sides |
+
+`compare` puts each rate (`call_rate`, `call_accuracy`, and with spoilers
+`chosen_lie_rate`) against the other seats of the match pooled: `above` when the
+player's interval lies wholly above theirs, `below` wholly below, `about` when
+they overlap, `too few` under 10 on either side. The UI says "clearly above/below" and "about the same",
+never "average". `call_accuracy` depends on how often the others lie, which is
+fine within one match; a cross-match view compares hit and false-alarm rates
+instead.
+
+Speed tags need response times, which come with the per-move `decision` events
+(#94); until then no player gets one.
+
 ## Liar's Deck
 
 ### Moves (`moves`)
