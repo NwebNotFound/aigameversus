@@ -45,6 +45,12 @@ def test_replays_are_the_finished_matches_newest_first(client, database_url):
         "started_at": newer["started_at"],
         "finished_at": newer["finished_at"],
         "cost_micro_eur": 150,
+        "seats": {
+            seat: {"name": f"Random Bot {seat}", "model_id": None, "kind": "bot"}
+            for seat in ("p1", "p2", "p3")
+        },
+        "origin": "played",
+        "real": False,
     }
     assert replays[1]["cost_micro_eur"] == 0
     assert len(top["winners"]) == 1

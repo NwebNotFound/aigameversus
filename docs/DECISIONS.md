@@ -1501,6 +1501,20 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** No monthly cap (one runaway batch could spend without
   limit); a higher cap per match for everyone (a mistake would cost more).
 
+## D-077 · A game card starts a match only when the arena has the game
+
+- **Date:** 2026-11-11
+- **Decision:** A home card links to the new-match form with its game chosen
+  (`/matches/new?game=<id>`) only when `GET /games` lists the game; otherwise
+  it says "Coming soon" and has no link. Throne of Tokens therefore turns
+  active by itself when its plugin is installed. The form reads `?game=`
+  as its first choice.
+- **Why:** A card that leads to a form which cannot start the game is a dead
+  end; the arena's game list is the one source of what can be played.
+- **Alternatives:** a hard-coded "coming soon" flag per card (needs a code
+  change when a plugin lands); hiding the card (the game should still be
+  announced).
+
 ## D-078 · One transcript renders every match for every reader
 
 - **Date:** 2026-11-11
@@ -1545,8 +1559,28 @@ Each entry: date, decision, why, alternatives considered.
   small); a formatter in the browser (a second wording to keep in sync); hide
   thoughts by default (hides the project's main attraction).
 
+## D-082 · Model seats in POST /matches, off by default and confirmed per match
 
-## D-084 · Prompts have versions: a game's rules and summary per `prompt_version`
+- **Date:** 2026-11-11
+- **Decision:** `POST /matches` takes `models` (model ids, one per seat) and
+  then plays those seats behind one `Budget`, like `arena run --models`. The
+  server refuses model seats unless it was started with
+  `ARENA_ALLOW_MODEL_SEATS=1`, the request must carry `confirm_spend: true`,
+  and the provider's key must be set; otherwise nothing is recorded or sent.
+  A cost cap ends the match as `interrupted`. Model matches are not rated yet.
+  Every match records who sat where (`seats`: name, model id, kind) and
+  whether it was played here or imported (`origin`).
+- **Why:** The project owner wants to start and watch real matches from the
+  UI. The API has no login and listens on localhost, so anything on the
+  machine could start paid matches: off by default plus an explicit flag per
+  request keeps a mistake from spending. Seats with names are what viewers
+  read instead of p1..pN.
+- **Alternatives:** Authentication (a bigger change, not needed on loopback
+  yet); model seats always on (any local script could spend); a separate
+  table for seats (the record is read with the match anyway).
+
+
+## D-086 · Prompts have versions: a game's rules and summary per `prompt_version`
 
 - **Date:** 2026-11-11
 - **Decision:** Each game keeps its prompt text next to its plugin
@@ -1566,3 +1600,5 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** one prompt that is edited in place (no comparison, old logs
   mean different things over time); summaries written by a model (costs money,
   varies from run to run).
+
+
