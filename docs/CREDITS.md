@@ -6,5 +6,4 @@ from existing games.
 
 | Asset | Path | Origin | Author / tool |
 | --- | --- | --- | --- |
-
-No assets yet.
+| Liar's Deck table: avatars, card faces and backs, revolver cylinder | `web/src/lib/components/LiarsDeckTable.svelte` | original, inline SVG and CSS | made for this project |

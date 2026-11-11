@@ -1,11 +1,17 @@
 <script lang="ts">
+	import type { MatchEvent } from '#lib/api.js';
 	import { hidden } from '#lib/live.js';
+	import LiarsDeckTable from './LiarsDeckTable.svelte';
 
 	/**
 	 * The generic board: any game's render_spec as a header of fields and one card
 	 * per seat. Game tables with their own drawing replace it per layout later.
 	 */
-	let { spec, spoilers }: { spec: Record<string, unknown> | null; spoilers: boolean } = $props();
+	let {
+		spec,
+		spoilers,
+		events = []
+	}: { spec: Record<string, unknown> | null; spoilers: boolean; events?: MatchEvent[] } = $props();
 
 	type Seat = Record<string, unknown> & { player: string };
 
@@ -17,6 +23,20 @@
 	const header = $derived(
 		spec ? Object.entries(spec).filter(([key]) => !['layout', 'seats', 'turn'].includes(key)) : []
 	);
+	/** The Liar's Deck table needs seats with hands and revolvers; anything else gets the generic board. */
+	function isCardTable(spec: Record<string, unknown>): boolean {
+		return (
+			Array.isArray(spec.seats) &&
+			spec.seats.every(
+				(s) =>
+					typeof s?.player === 'string' &&
+					Array.isArray(s.hand) &&
+					typeof s.trigger_pulls === 'number' &&
+					typeof s.chambers === 'number'
+			)
+		);
+	}
+
 	const SEAT_FLAGS = ['player', 'alive', 'folded'];
 
 	const label = (key: string) => key.replaceAll('_', ' ');
@@ -38,6 +58,8 @@
 		<strong>No board for this game yet</strong>
 		<span>The events in the other columns show the whole match.</span>
 	</div>
+{:else if spec.layout === 'card_table' && isCardTable(spec)}
+	<LiarsDeckTable {spec} {spoilers} {events} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}
