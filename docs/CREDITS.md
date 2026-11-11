@@ -21,6 +21,7 @@ script from the running UI; no image file was downloaded or copied.
 | Screenshots | `docs/images/*.png` | README and docs | taken from this UI with Playwright; every player is a random bot |
 | UI screenshots (before and after) | `docs/images/ui/*.png` | `docs/UI-DESIGN.md`, UI pull requests | taken from this UI with Playwright; the players are random bots or the models of `docs/examples/` |
 | Player avatars on the watch screen (a lit disc with an initial and a small mark, coloured by model) | `web/src/lib/components/Avatar.svelte` | the cast, the commentary | original, inline SVG |
+| Result card (podium, team banner) | `web/src/lib/components/ResultCard.svelte` | the end of a match on the watch screen | original, CSS |
 | Stage beats (call-out, light rings, night tint) and the revolver hammer | `web/src/lib/components/Beats.svelte`, `LiarsDeckTable.svelte` | the watch screen | original, CSS and inline SVG |
 | View switch and thought icons (eye, crossed eye, lock) | `web/src/lib/components/ViewSwitch.svelte`, `Commentary.svelte` | the watch screen | original, inline SVG |
 | GIFs | `docs/images/showcase-*.gif` | README | recorded from this UI by `scripts/make_showcase.sh` (Playwright frames, assembled with Pillow); random bots only |

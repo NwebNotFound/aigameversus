@@ -16,7 +16,15 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from arena.engine.types import Event
-from arena.transcript.common import KINDS, LANGS, Base, TranscriptLine, labels, names_from
+from arena.transcript.common import (
+    KINDS,
+    LANGS,
+    Base,
+    TranscriptLine,
+    display_names,
+    labels,
+    names_from,
+)
 from arena.transcript.liars_deck import LiarsDeck
 from arena.transcript.poker import Poker
 from arena.transcript.toy import Toy
@@ -31,6 +39,7 @@ __all__ = [
     "TranscriptLine",
     "from_export",
     "known_event_types",
+    "display_names",
     "labels",
     "render_event",
     "render_match",

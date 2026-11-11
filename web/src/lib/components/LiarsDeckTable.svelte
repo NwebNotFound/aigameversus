@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { face, sides, tableCardName } from '#lib/boards/liarsDeck.js';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import SeatTag from '#lib/components/SeatTag.svelte';
 	import { hidden } from '#lib/live.js';
 
 	/**
@@ -12,12 +13,14 @@
 		spec,
 		spoilers,
 		names = {},
-		colours = {}
+		colours = {},
+		subs = {}
 	}: {
 		spec: Record<string, unknown>;
 		spoilers: boolean;
 		names?: Record<string, string>;
 		colours?: Record<string, string>;
+		subs?: Record<string, string | null>;
 	} = $props();
 	const label = (seat: string) => names[seat] ?? seat;
 
@@ -81,6 +84,7 @@
 			class:out={!seat.alive}
 			class:turn={seat.player === spec.turn}
 			data-testid="seat"
+			data-seat={seat.player}
 			aria-label={label(seat.player)}
 		>
 			<header>
@@ -91,7 +95,7 @@
 					active={seat.player === spec.turn}
 					out={!seat.alive}
 				/>
-				<strong>{label(seat.player)}</strong>
+				<SeatTag seat={seat.player} name={label(seat.player)} sub={subs[seat.player]} />
 				{#if seat.player === spec.turn}<span class="tag act">to act</span>{/if}
 				{#if !seat.alive}<span class="tag">out</span>{/if}
 			</header>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statLabel, statValue } from './format.js';
+import { statLabel, statValue, footerLine } from './format.js';
 
 describe('statValue', () => {
 	it.each([
@@ -18,5 +18,18 @@ describe('statValue', () => {
 describe('statLabel', () => {
 	it('turns a field name into a label', () => {
 		expect(statLabel('call_success_rate')).toBe('Call success rate');
+	});
+});
+
+describe('footerLine', () => {
+	it('says what the server plays with, and the month when the ledger answers', () => {
+		expect(footerLine(null, null)).toBe('AI models play, humans watch.');
+		expect(footerLine(false, null)).toBe(
+			'AI models play, humans watch. Bots only: real models are off on this server.'
+		);
+		expect(footerLine(true, null)).toBe('AI models play, humans watch. Real models enabled.');
+		expect(footerLine(true, { spent_micro_eur: 301_000, cap_micro_eur: 25_000_000 })).toBe(
+			'AI models play, humans watch. Real models enabled · EUR 0.30 of 25.00 this month.'
+		);
 	});
 });
