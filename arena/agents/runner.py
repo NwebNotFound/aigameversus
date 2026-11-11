@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import random
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
@@ -15,6 +16,10 @@ log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3  # further tries after a failed model call
 BACKOFF_SECONDS = 1.0  # pause before the first retry; doubles with every retry
+RATE_LIMITED = "RateLimitError"  # the provider said "too many requests"
+RATE_LIMIT_BACKOFF_SECONDS = 3.0  # it needs longer: 3, 6, 12 s (and the jitter)
+RATE_LIMIT_RETRIES_PER_MATCH = 12  # after these, a rate limit is no longer waited out
+JITTER = 0.5  # each pause is up to this share longer, so seats do not retry in step
 
 
 class ModelAgent:
@@ -26,6 +31,9 @@ class ModelAgent:
 
     A failed call is tried again after a growing pause. If that does not help,
     or cannot help, the agent raises AgentError and the engine takes the seat.
+    A rate limit gets longer pauses, and only RATE_LIMIT_RETRIES_PER_MATCH of
+    them in a match: a model that is throttled all the time loses its seat
+    instead of stretching every turn to its time limit.
     """
 
     def __init__(
@@ -36,6 +44,7 @@ class ModelAgent:
         settings: Mapping[str, Any] | None = None,
         memory: str | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        jitter: Callable[[], float] = random.random,
     ):
         """`memory`: what this player remembers of the opponents (`arena/memory/block.py`)."""
         self._call = call
@@ -44,6 +53,8 @@ class ModelAgent:
         self._settings = settings
         self._rules = plugin.rules(settings)
         self._sleep = sleep
+        self._jitter = jitter  # 0 to 1; the pauses only, never the game's randomness
+        self._rate_limit_retries = RATE_LIMIT_RETRIES_PER_MATCH
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
@@ -57,11 +68,17 @@ class ModelAgent:
             try:
                 return await self._call(messages, tools)
             except ModelError as error:
-                if not error.retryable or tries > MAX_RETRIES:
+                rate_limited = error.reason == RATE_LIMITED
+                used_up = rate_limited and self._rate_limit_retries == 0
+                if not error.retryable or tries > MAX_RETRIES or used_up:
+                    why = "; the rate-limit retries of this match are used up" if used_up else ""
                     raise AgentError(
-                        f"model call failed after {tries} tries ({error.reason})"
+                        f"model call failed after {tries} tries ({error.reason}){why}"
                     ) from error
-                delay = BACKOFF_SECONDS * 2 ** (tries - 1)
+                if rate_limited:
+                    self._rate_limit_retries -= 1
+                base = RATE_LIMIT_BACKOFF_SECONDS if rate_limited else BACKOFF_SECONDS
+                delay = base * 2 ** (tries - 1) * (1 + JITTER * self._jitter())
                 # Only the kind of failure is logged: never the prompt or a provider message.
                 log.warning("Model call failed (%s), next try in %g s", error.reason, delay)
                 await self._sleep(delay)

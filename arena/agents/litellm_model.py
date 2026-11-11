@@ -24,15 +24,24 @@ class LiteLLMModel:
     that set for which a provider may bill.
     """
 
-    def __init__(self, model: str, *, max_output_tokens: int, reasoning_effort: str | None = None):
+    def __init__(
+        self,
+        model: str,
+        *,
+        max_output_tokens: int,
+        reasoning_effort: str | None = None,
+        tool_choice: str = "required",
+    ):
         self._model = model
         self._max_output_tokens = max_output_tokens
+        self._tool_choice = tool_choice
         # Reasoning is billed as output and counts against the output limit.
         self._options = {} if reasoning_effort is None else {"reasoning_effort": reasoning_effort}
 
     async def __call__(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
-        # A turn is one tool call: left free, some models answer in prose instead.
-        extras = {**({"tool_choice": "required"} if tools else {}), **self._options}
+        # A turn is one tool call: left free, some models answer in prose instead. A model
+        # that cannot think and be forced at once gets "auto" (config/models.yaml).
+        extras = {**({"tool_choice": self._tool_choice} if tools else {}), **self._options}
         try:
             try:
                 response = await self._send(messages, tools, extras)

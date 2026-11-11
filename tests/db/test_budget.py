@@ -57,6 +57,14 @@ def config(*, usd_to_eur="1", max_input_tokens=5000):
                 input_usd_per_mtok=Decimal("0.051"),
                 output_usd_per_mtok=Decimal("0.567"),
             ),
+            # Like "cheap", but it may answer at length.
+            "long": Model(
+                provider="openrouter",
+                model="some-vendor/long-model",
+                input_usd_per_mtok=Decimal("1"),
+                output_usd_per_mtok=Decimal("2"),
+                max_output_tokens=4 * MAX_OUTPUT,
+            ),
         },
     )
 
@@ -458,3 +466,16 @@ def test_no_key_prompt_or_provider_text_reaches_logs_events_or_the_ledger(
     assert "Incorrect API key" not in everything
     # Prompts hold what a player may see and nobody else: they do not belong in logs either.
     assert "You are player" not in caplog.text + printed.out + printed.err
+
+
+def test_a_model_with_its_own_output_limit_is_booked_at_that_limit(database_url):
+    async def scenario(pool):
+        for model_id in ("cheap", "long"):
+            call = budget_of(pool).meter("p1", model_id, MockLLM(ModelReply(text="no usage")))
+            await call(MESSAGES, TOOLS)
+        rows = await pool.fetch("SELECT model, cost_micro_eur FROM model_calls ORDER BY id")
+        return {row["model"]: row["cost_micro_eur"] for row in rows}
+
+    costs = with_pool(database_url, scenario)
+
+    assert costs == {"cheap": UPPER_BOUND, "long": UPPER_BOUND + 3 * MAX_OUTPUT * 2}

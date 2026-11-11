@@ -9,7 +9,7 @@ from uuid import UUID
 
 from arena.agents.litellm_model import LiteLLMModel
 from arena.agents.model import Message, ModelCall, ModelError, ModelReply
-from arena.config import Config, Model
+from arena.config import Config, Model, call_options
 from arena.db.ledger import Ledger
 from arena.engine.types import PlayerId
 
@@ -44,10 +44,12 @@ class Budget:
     def model(self, player: PlayerId, model_id: str) -> ModelCall:
         """The metered call of a model from the config. Nothing else builds a real model."""
         model = self._config.models[model_id]
+        options = call_options(self._config, model_id)
         real = LiteLLMModel(
             f"{model.provider}/{model.model}",
-            max_output_tokens=self._config.limits.max_output_tokens,
-            reasoning_effort=self._config.limits.reasoning_effort,
+            max_output_tokens=options.max_output_tokens,
+            reasoning_effort=options.reasoning_effort,
+            tool_choice=options.tool_choice,
         )
         return self.meter(player, model_id, real)
 
@@ -66,7 +68,10 @@ class Budget:
                 self._match_id,
                 player,
                 model_id,
-                self._cost(model, input_bound, limits.max_output_tokens),
+                # The most it can cost: this model's own output limit, if it has one.
+                self._cost(
+                    model, input_bound, call_options(self._config, model_id).max_output_tokens
+                ),
                 match_cap=self.match_cap,
                 month_cap=self.month_cap,
                 now=self._now(),
