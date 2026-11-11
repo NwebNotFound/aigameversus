@@ -152,3 +152,29 @@ test('the replay player fits the viewport', async ({ page, request }) => {
 	);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('a key moment gets its beat when watched, a seek stays quiet', async ({ page, request }) => {
+	const { record } = await finishedMatch(request, { game: 'liars_deck', seed: 32 });
+	const transcript = await (
+		await request.get(`${ARENA}/matches/${record.id}/transcript?spoilers=true`)
+	).json();
+	const call = (transcript.lines as { seq: number; raw: { type: string } }[]).find(
+		(l) => l.raw.type === 'liar_called'
+	)!;
+
+	// Opening a replay in the middle shows no beat.
+	await page.goto(`/replays/${record.id}?step=${call.seq}`);
+	await expect(page.getByTestId('position')).toContainText(`Step ${call.seq} of`);
+	await expect(page.getByTestId('banner')).toHaveCount(0);
+
+	// Watching the call happen does: the call-out says what the transcript says.
+	await page.getByRole('button', { name: 'Next moment' }).click();
+	await expect(page.getByTestId('banner')).toHaveAttribute('data-beat', 'call');
+	await expect(page.getByTestId('banner')).toContainText('LIAR');
+
+	// Jumping to the end is a seek, not watching.
+	await page.getByRole('button', { name: 'To the start' }).click();
+	await page.getByRole('button', { name: 'To the end' }).click();
+	await page.waitForTimeout(1600);
+	await expect(page.getByTestId('banner')).toHaveCount(0);
+});
