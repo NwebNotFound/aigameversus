@@ -29,8 +29,10 @@ class ModelInfo(BaseModel):
 
 
 class UsageOut(BaseModel):
-    cost_total_micro_eur: int
-    cost_per_game_micro_eur: int | None = Field(description="null without a booked call")
+    cost_total_micro_eur: int | None = Field(description="null while the ledger cannot be read")
+    cost_per_game_micro_eur: int | None = Field(
+        description="null without a booked call, or while the ledger cannot be read"
+    )
     answers: int = Field(description="Answers the server took or refused")
     tool_error_rate: float | None = Field(description="Refused answers over all answers")
 
@@ -72,7 +74,7 @@ class ModelPage(BaseModel):
 
 
 @router.get("/models/{model_id}")
-async def model_page(model_id: str, store: Store) -> ModelPage:
+async def model_page(model_id: str, store: Store, request: Request) -> ModelPage:
     """One model across all its matches and seats: rating per game, cost and tool errors.
 
     The id is the model's id in `config/models.yaml`. The profile it describes is the one
@@ -88,9 +90,10 @@ async def model_page(model_id: str, store: Store) -> ModelPage:
     games: list[GameOut] = []
     usage_total = Usage()
     if found is not None:
-        usage_total = (await store.usage(None, profile_id)).get(profile_id, Usage())
+        ledger = request.app.state.live.ledger
+        usage_total = (await store.usage(ledger, None, profile_id)).get(profile_id, Usage())
         for game_id, standing in found.per_game.items():
-            used = (await store.usage(game_id, profile_id)).get(profile_id, Usage())
+            used = (await store.usage(ledger, game_id, profile_id)).get(profile_id, Usage())
             games.append(
                 GameOut(
                     game_id=game_id,
