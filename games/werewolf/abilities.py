@@ -133,12 +133,224 @@ class WolvesChooseVictim(NightAbility):
         return False
 
 
+class CupidLinkLovers(NightAbility):
+    """Night 1 only (role file): two players fall in love; each learns the other."""
+
+    handler = "cupid_link_lovers"
+
+    def tools(self, state, player):
+        living = list(state.alive)
+        return [
+            tool(
+                "link_lovers",
+                "Make two living players lovers (you may pick yourself). If one dies, "
+                "the other dies of grief. Only they and you learn it.",
+                {
+                    "a": target_schema(living, "The first lover."),
+                    "b": target_schema(living, "The second lover."),
+                },
+                required=["a", "b"],
+            )
+        ]
+
+    def validate(self, state, player, action):
+        if action.arguments["a"] == action.arguments["b"]:
+            return "Pick two different players as lovers."
+        return None
+
+    def apply(self, state, player, action, ctx):
+        lovers = [action.arguments["a"], action.arguments["b"]]
+        ctx.emit("lovers_linked", {"player": player, "lovers": lovers}, visible_to=[player])
+        ctx.emit("love_revealed", {"lovers": lovers}, visible_to=lovers)
+
+
+class ProtectorGuard(NightAbility):
+    """Protects one player from the wolves; never the same player two nights in a row."""
+
+    handler = "protector_guard"
+
+    def tools(self, state, player):
+        choices = [p for p in state.alive if p != state.last_protected]
+        return [
+            tool(
+                "protect",
+                "Protect one living player from the wolves tonight (yourself allowed, "
+                "not the same player as last night).",
+                {"target": target_schema(choices, "The player to protect.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        target = action.arguments["target"]
+        ctx.emit("protected", {"player": player, "target": target}, visible_to=[player])
+
+
+SPY_FIND_CHANCE = 0.30
+SPY_CAUGHT_CHANCE = 0.15
+
+
+class LittleGirlSpy(NightAbility):
+    """May spy on the wolves: 30 % to learn one wolf, 15 % to be caught and eaten instead."""
+
+    handler = "little_girl_spy"
+
+    def tools(self, state, player):
+        return [
+            tool(
+                "spy",
+                "Peek at the wolves: 30 % chance to learn one of them, but 15 % chance "
+                "they catch you and eat you instead of their victim.",
+                {},
+            ),
+            tool("stay_in_bed", "Do not spy tonight.", {}),
+        ]
+
+    def apply(self, state, player, action, ctx):
+        if action.tool != "spy":
+            return
+        rng = ctx.rng("spy", state.night)
+        found = rng.random() < SPY_FIND_CHANCE
+        caught = rng.random() < SPY_CAUGHT_CHANCE
+        wolves = sorted(p for p in state.alive if p in state.pack)
+        wolf = rng.choice(wolves) if found and wolves else None
+        ctx.emit("spied", {"player": player, "wolf": wolf}, visible_to=[player])
+        if caught:
+            ctx.emit("girl_caught", {"player": player}, visible_to=[])
+
+
+class RavenMark(NightAbility):
+    """Marks one player, who starts the next day's vote with 2 votes against them."""
+
+    handler = "raven_mark"
+
+    def tools(self, state, player):
+        return [
+            tool(
+                "mark",
+                "Mark a living player: tomorrow they start the vote with 2 extra votes "
+                "against them. The village hears who is marked, not who marked. Or null.",
+                {"target": target_schema([None, *state.alive], "The player to mark, or null.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        target = action.arguments["target"]
+        if target is not None:
+            ctx.emit("raven_chose", {"player": player, "target": target}, visible_to=[player])
+
+
+class WildChildPickModel(NightAbility):
+    """Night 1 only (role file): picks a role model; if the model dies, the child joins the pack."""
+
+    handler = "wild_child_pick_model"
+
+    def tools(self, state, player):
+        others = [p for p in state.alive if p != player]
+        return [
+            tool(
+                "choose_model",
+                "Pick your role model. While they live you play for the village; if they "
+                "die, you become a werewolf.",
+                {"target": target_schema(others, "Your role model.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        ctx.emit(
+            "model_chosen",
+            {"player": player, "model": action.arguments["target"]},
+            visible_to=[player],
+        )
+
+
+class PrimeWolfInfect(NightAbility):
+    """Once per match, after the pack's vote: turn the victim into a werewolf instead."""
+
+    handler = "prime_wolf_infect"
+    sub_order = 1  # after the wolves' votes in the same night slot
+
+    def acts_tonight(self, state, player):
+        return not state.infection_used
+
+    def tools(self, state, player):
+        victim = state.wolf_victim()
+        tools = [tool("let_them_die", "Do not infect; the victim dies as usual.", {})]
+        if victim is not None and victim not in state.pack:
+            tools.insert(
+                0,
+                tool(
+                    "infect",
+                    f"Once per match: turn tonight's victim, {victim}, into a werewolf instead "
+                    "of killing them. If they are saved tonight, nothing happens.",
+                    {},
+                ),
+            )
+        return tools
+
+    def apply(self, state, player, action, ctx):
+        if action.tool == "infect":
+            ctx.emit(
+                "infection_chosen",
+                {"player": player, "target": state.wolf_victim()},
+                visible_to=list(state.pack),
+            )
+
+
+class WhiteWolfKillWolf(NightAbility):
+    """Every second night: may kill one other wolf. Wins only as the last player alive."""
+
+    handler = "white_wolf_kill_wolf"
+
+    def acts_tonight(self, state, player):
+        return state.night % 2 == 0
+
+    def tools(self, state, player):
+        wolves = [p for p in state.alive if p in state.pack and p != player]
+        return [
+            tool(
+                "white_wolf_kill",
+                "Kill one of the other wolves tonight, or null to spare them.",
+                {"target": target_schema([None, *wolves], "The wolf to kill, or null.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        target = action.arguments["target"]
+        if target is not None:
+            ctx.emit("white_wolf_chose", {"player": player, "target": target}, visible_to=[player])
+
+
 NIGHT: dict[str, NightAbility] = {
-    ability.handler: ability for ability in (SeerInspect(), WitchPotions(), WolvesChooseVictim())
+    ability.handler: ability
+    for ability in (
+        SeerInspect(),
+        WitchPotions(),
+        WolvesChooseVictim(),
+        CupidLinkLovers(),
+        ProtectorGuard(),
+        LittleGirlSpy(),
+        RavenMark(),
+        WildChildPickModel(),
+        PrimeWolfInfect(),
+        WhiteWolfKillWolf(),
+    )
 }
 
 # Passive hooks the plugin implements by name.
-PASSIVE = {"hunter_shoot"}
+PASSIVE = {
+    "hunter_shoot",
+    "lover_dies_of_grief",
+    "elder_survives_first",
+    "elder_strips_powers",
+    "idiot_survives",
+    "scapegoat_dies",
+    "wild_child_turns_wolf",
+    "bear_growl",
+}
 
 
 def implemented(handler: str) -> bool:

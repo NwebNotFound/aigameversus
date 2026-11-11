@@ -56,6 +56,7 @@ def cycle_turns(players: int) -> int:
 
 
 WOLF_NIGHT_ORDER = 6
+RAVEN_VOTES = 2
 OPTIONS = yaml.safe_load((ROOT / "options.yaml").read_text(encoding="utf-8"))
 
 Phase = Literal["setup", "night", "morning", "day", "dusk", "over"]
@@ -96,9 +97,28 @@ class WerewolfState(BaseModel):
     successor_on_death: bool = True
     captain: PlayerId | None = None
     captain_votes: dict[PlayerId, PlayerId] = {}
+    lovers: list[PlayerId] = []
+    lover_talked: bool = False  # a lover used lover_chat in the current step
+    protected: PlayerId | None = None
+    last_protected: PlayerId | None = None
+    caught_girl: PlayerId | None = None  # the Little Girl caught spying tonight
+    elder_hit: list[PlayerId] = []  # Elders who already survived a wolf attack
+    powers_lost: bool = False  # the village executed its Elder
+    no_vote: list[PlayerId] = []  # revealed Village Idiots
+    marked: PlayerId | None = None  # the Raven's mark for the coming day
+    mark_announced: bool = False
+    wild_models: dict[PlayerId, PlayerId] = {}  # Wild Child -> role model
+    infection_used: bool = False
+    infect_target: PlayerId | None = None
+    white_target: PlayerId | None = None
 
     def wolf_victim(self) -> PlayerId | None:
-        """The pack's choice: most votes; on a tie, the first of the tied targets voted for."""
+        """The pack's choice: most votes; on a tie, the first of the tied targets voted for.
+
+        A Little Girl caught spying is eaten instead.
+        """
+        if self.caught_girl is not None:
+            return self.caught_girl
         if not self.wolf_votes:
             return None
         counts = Counter(self.wolf_votes.values())
@@ -210,6 +230,24 @@ class Werewolf(GamePlugin[WerewolfState]):
             return []
         step = state.queue[0]
         others = [p for p in state.alive if p != player]
+        return self._step_tools(state, player, step, others) + self._lover_tools(state, player)
+
+    def _lover_tools(self, state: WerewolfState, player: PlayerId) -> list[ToolSpec]:
+        if player not in state.lovers or state.lover_talked:
+            return []
+        return [
+            tool(
+                "lover_chat",
+                f"Whisper to your lover only (at most {MAX_SHORT_WORDS} words). Once per turn; "
+                "it does not end your turn.",
+                {"text": _text("What you tell your lover.", MAX_SHORT_WORDS)},
+                required=["text"],
+            )
+        ]
+
+    def _step_tools(
+        self, state: WerewolfState, player: PlayerId, step: Step, others: list[PlayerId]
+    ) -> list[ToolSpec]:
         if step.kind == "night":
             return NIGHT[step.ability].tools(state, player)
         if step.kind == "wolf":
@@ -285,14 +323,19 @@ class Werewolf(GamePlugin[WerewolfState]):
 
     def validate(self, state: WerewolfState, player: PlayerId, action: Action) -> str | None:
         args = action.arguments
-        limits = {"speak": MAX_SPEECH_WORDS, "wolf_chat": MAX_SHORT_WORDS, "vote": MAX_SHORT_WORDS}
+        limits = {
+            "speak": MAX_SPEECH_WORDS,
+            "wolf_chat": MAX_SHORT_WORDS,
+            "lover_chat": MAX_SHORT_WORDS,
+            "vote": MAX_SHORT_WORDS,
+        }
         text = args.get("reason") if action.tool == "vote" else args.get("text")
         if action.tool in limits and text is not None and word_count(text) > limits[action.tool]:
             return (
                 f"Your text has {word_count(text)} words; say it in at most {limits[action.tool]}."
             )
         step = state.queue[0]
-        if step.kind == "night":
+        if step.kind == "night" and action.tool != "lover_chat":
             return NIGHT[step.ability].validate(state, player, action)
         return None
 
@@ -306,6 +349,10 @@ class Werewolf(GamePlugin[WerewolfState]):
                 ctx.emit(MESSAGE, {"player": player, "text": args["text"]}, visible_to=state.pack)
                 ctx.emit("wolf_talked", {"player": player}, visible_to=state.pack)
                 continue  # the wolf still has to vote
+            if action.tool == "lover_chat":
+                ctx.emit(MESSAGE, {"player": player, "text": args["text"]}, visible_to=state.lovers)
+                ctx.emit("lover_talked", {"player": player}, visible_to=state.lovers)
+                continue  # the turn goes on
             if step.kind == "night":
                 NIGHT[step.ability].apply(state, player, action, ctx)
             elif action.tool == "wolf_kill":
@@ -367,7 +414,8 @@ class Werewolf(GamePlugin[WerewolfState]):
                 continue
             role = self._roles[state.roles[player]]
             handler = role.hooks.get("on_night")
-            if handler and role.night_order is not None:
+            stripped = state.powers_lost and role.team == "village"
+            if handler and role.night_order is not None and not stripped:
                 ability = NIGHT[handler]
                 if (not role.first_night_only or state.night == 1) and ability.acts_tonight(
                     state, player
@@ -387,17 +435,58 @@ class Werewolf(GamePlugin[WerewolfState]):
     def _end_night(self, state: WerewolfState, ctx: TurnContext) -> None:
         deaths = []
         victim = state.wolf_victim()
-        if victim is not None and victim != state.healed:
-            deaths.append((victim, "wolves"))
-        if state.poisoned and all(state.poisoned != p for p, _ in deaths):
-            deaths.append((state.poisoned, "poison"))
+        saved = victim in (state.healed, state.protected)
+        if victim is not None and not saved and self._elder_survives(state, ctx, victim):
+            saved = True
+        infected = None
+        if victim is not None and not saved and victim == state.infect_target:
+            infected = victim
+        elif victim is not None and not saved:
+            cause = "caught_spying" if victim == state.caught_girl else "wolves"
+            deaths.append((victim, cause))
+        for target, cause in ((state.white_target, "white_wolf"), (state.poisoned, "poison")):
+            if target and target in state.alive and all(target != p for p, _ in deaths):
+                deaths.append((target, cause))
         ctx.emit("morning_started", {"night": state.night, "deaths": [p for p, _ in deaths]})
         if deaths:
             dead = [{"player": p, "role": state.roles[p]} for p, _ in deaths]
             self._narrate(state, ctx, "morning_deaths", {"deaths": dead})
         else:
             self._narrate(state, ctx, "morning_quiet", {})
+        if infected is not None:
+            ctx.emit("infected", {"player": infected}, visible_to=[*state.pack, infected])
+        self._bear_growl(state, ctx, dead={p for p, _ in deaths})
+        if state.marked is not None and state.marked not in {p for p, _ in deaths}:
+            ctx.emit("raven_mark_announced", {"target": state.marked})
+            self._narrate(state, ctx, "raven_mark", {"player": state.marked})
         self._kill(state, ctx, deaths)
+
+    def _bear_growl(self, state: WerewolfState, ctx: TurnContext, dead: set) -> None:
+        """The bear growls if a living wolf sits next to its tamer (the dead are skipped)."""
+        living = [p for p in state.players if p in state.alive and p not in dead]
+        for tamer in living:
+            if not self._has(state, tamer, "on_morning", "bear_growl") or len(living) < 2:
+                continue
+            seat = living.index(tamer)
+            neighbours = {living[seat - 1], living[(seat + 1) % len(living)]} - {tamer}
+            if neighbours & set(state.pack):
+                ctx.emit("bear_growled", {})
+                self._narrate(state, ctx, "bear_growl", {})
+
+    def _has(self, state: WerewolfState, player: PlayerId, hook: str, handler: str) -> bool:
+        """Whether the player's role has this passive hook (village powers can be lost)."""
+        role = self._roles[state.roles[player]]
+        if state.powers_lost and role.team == "village" and handler != "lover_dies_of_grief":
+            return False
+        return role.hooks.get(hook) == handler
+
+    def _elder_survives(self, state: WerewolfState, ctx: TurnContext, victim: PlayerId) -> bool:
+        if victim in state.elder_hit or not self._has(
+            state, victim, "on_wolf_attack", "elder_survives_first"
+        ):
+            return False
+        ctx.emit("elder_survived", {"player": victim}, visible_to=[victim])
+        return True
 
     def _elect_captain(self, state: WerewolfState, ctx: TurnContext) -> None:
         """Most votes win; a tie is broken by the match seed."""
@@ -413,36 +502,81 @@ class Werewolf(GamePlugin[WerewolfState]):
         for voter, target in state.day_votes.items():
             if target is not None:
                 counts[target] += state.captain_weight if voter == state.captain else 1
+        if state.marked in state.alive and state.mark_announced:
+            counts[state.marked] += RAVEN_VOTES
         top = max(counts.values(), default=0)
         leaders = [p for p, n in counts.items() if n == top]
         executed = leaders[0] if top > 0 and len(leaders) == 1 else None
+        cause = "executed"
+        if top > 0 and len(leaders) > 1:
+            scapegoat = next(
+                (p for p in state.alive if self._has(state, p, "on_vote_tie", "scapegoat_dies")),
+                None,
+            )
+            if scapegoat is not None:
+                executed, cause = scapegoat, "scapegoat"
         ctx.emit("vote_result", {"day": state.day, "counts": dict(counts), "executed": executed})
-        if executed:
-            role = state.roles[executed]
-            self._narrate(state, ctx, "execution", {"player": executed, "role": role})
-            self._kill(state, ctx, [(executed, "executed")])
-        else:
+        if executed is None:
             self._narrate(state, ctx, "no_execution", {})
+            return
+        role = state.roles[executed]
+        if cause == "executed" and self._has(state, executed, "on_execution", "idiot_survives"):
+            ctx.emit("idiot_revealed", {"player": executed, "role": role})
+            self._narrate(state, ctx, "idiot_spared", {"player": executed})
+            return
+        key = "scapegoat" if cause == "scapegoat" else "execution"
+        self._narrate(state, ctx, key, {"player": executed, "role": role})
+        self._kill(state, ctx, [(executed, cause)])
+        if cause == "executed" and self._has(
+            state, executed, "on_execution", "elder_strips_powers"
+        ):
+            ctx.emit("powers_lost", {"elder": executed})
+            self._narrate(state, ctx, "powers_lost", {"player": executed})
 
     def _kill(
         self, state: WerewolfState, ctx: TurnContext, deaths: list[tuple[PlayerId, str]]
     ) -> None:
         """Announce deaths; their effects (the Hunter's shot) are queued by apply_event."""
-        for player, cause in deaths:
-            if player in state.alive:
-                ctx.emit(
-                    "player_died", {"player": player, "cause": cause, "role": state.roles[player]}
-                )
+        pending = list(deaths)
+        while pending:
+            player, cause = pending.pop(0)
+            if player not in state.alive:
+                continue
+            ctx.emit("player_died", {"player": player, "cause": cause, "role": state.roles[player]})
+            for child, model in state.wild_models.items():
+                turns = self._has(state, child, "on_model_death", "wild_child_turns_wolf")
+                if model == player and child in state.alive and child not in state.pack and turns:
+                    ctx.emit("joined_pack", {"player": child}, visible_to=[*state.pack, child])
+            if player in state.lovers:
+                partner = next(p for p in state.lovers if p != player)
+                if partner in state.alive:
+                    pending.insert(0, (partner, "grief"))
+                    self._narrate(state, ctx, "grief", {"player": partner, "lover": player})
 
     def _check_winner(self, state: WerewolfState, ctx: TurnContext) -> bool:
-        pack = [p for p in state.alive if p in state.pack]
-        others = [p for p in state.alive if p not in state.pack]
+        # The White Werewolf hunts with the pack but plays alone.
+        loners = [p for p in state.players if self._roles[state.roles[p]].team == "solo"]
+        pack = [p for p in state.alive if p in state.pack and p not in loners]
+        others = [p for p in state.alive if p not in pack]
+        hunters = [p for p in state.alive if p in state.pack]
+        # Lovers across the teams (a wolf and a non-wolf) play for themselves.
+        mixed = state.lovers if len({p in state.pack for p in state.lovers}) == 2 else []
         if not state.alive:
             outcome = ("nobody", [])
-        elif not pack:
-            outcome = ("village", [p for p in state.players if p not in state.pack])
-        elif len(pack) >= len(others):
-            outcome = ("wolves", [p for p in state.players if p in state.pack])
+        elif mixed and set(state.alive) == set(mixed):
+            outcome = ("lovers", list(mixed))
+        elif len(state.alive) == 1 and state.alive[0] in loners:
+            outcome = ("white_wolf", list(state.alive))
+        elif not hunters:
+            outcome = (
+                "village",
+                [p for p in state.players if p not in state.pack and p not in mixed],
+            )
+        elif pack and len(pack) >= len(others):
+            outcome = (
+                "wolves",
+                [p for p in state.players if p in state.pack and p not in mixed + loners],
+            )
         else:
             return False
         ctx.emit("game_over", {"winner": outcome[0], "winners": outcome[1]})
@@ -471,6 +605,10 @@ class Werewolf(GamePlugin[WerewolfState]):
                 state.wolf_votes = {}
                 state.healed = None
                 state.poisoned = None
+                state.protected = None
+                state.caught_girl = None
+                state.infect_target = None
+                state.white_target = None
                 state.queue = self._night_queue(state)
             case "wolf_talked":
                 state.wolf_messages[data["player"]] = state.wolf_messages.get(data["player"], 0) + 1
@@ -489,6 +627,7 @@ class Werewolf(GamePlugin[WerewolfState]):
                 if not state.queue or state.queue[0].player != data["player"]:
                     raise ValueError(f"step_done for {data['player']} out of turn")
                 state.queue.pop(0)
+                state.lover_talked = False
             case "morning_started":
                 state.phase = "morning"
             case "player_died":
@@ -500,13 +639,43 @@ class Werewolf(GamePlugin[WerewolfState]):
                         state.queue.insert(0, Step(kind="pass_captaincy", player=player))
                     else:
                         state.captain = None
-                if (
-                    self._roles[data["role"]].hooks.get("on_death") == "hunter_shoot"
-                    and state.alive
-                ):
+                if self._has(state, player, "on_death", "hunter_shoot") and state.alive:
                     state.queue.insert(0, Step(kind="hunter", player=player))
-            case "hunter_shot" | "narration":
+            case "hunter_shot" | "narration" | "lovers_linked" | "spied":
                 pass
+            case "love_revealed":
+                state.lovers = list(data["lovers"])
+            case "lover_talked":
+                state.lover_talked = True
+            case "protected":
+                state.protected = data["target"]
+                state.last_protected = data["target"]
+            case "raven_chose":
+                state.marked = data["target"]
+                state.mark_announced = False
+            case "raven_mark_announced":
+                state.mark_announced = True
+            case "model_chosen":
+                state.wild_models[data["player"]] = data["model"]
+            case "infection_chosen":
+                state.infection_used = True
+                state.infect_target = data["target"]
+            case "white_wolf_chose":
+                state.white_target = data["target"]
+            case "infected" | "joined_pack":
+                if data["player"] not in state.pack:
+                    state.pack.append(data["player"])
+            case "bear_growled":
+                pass
+            case "girl_caught":
+                state.caught_girl = data["player"]
+            case "elder_survived":
+                state.elder_hit.append(data["player"])
+            case "idiot_revealed":
+                state.revealed[data["player"]] = data["role"]
+                state.no_vote.append(data["player"])
+            case "powers_lost":
+                state.powers_lost = True
             case "captain_vote":
                 state.captain_votes[data["player"]] = data["target"]
             case "captain_elected":
@@ -520,7 +689,7 @@ class Werewolf(GamePlugin[WerewolfState]):
                 state.speaking_order = list(data["order"])
                 speeches = [Step(kind="speak", player=p) for p in data["order"]] * DISCUSSION_ROUNDS
                 living = [p for p in state.players if p in state.alive]
-                votes = [Step(kind="vote", player=p) for p in living]
+                votes = [Step(kind="vote", player=p) for p in living if p not in state.no_vote]
                 election = []
                 if state.captain_enabled and data["day"] == 1:
                     election = [Step(kind="captain_vote", player=p) for p in living]
@@ -529,6 +698,8 @@ class Werewolf(GamePlugin[WerewolfState]):
                 state.day_votes[data["player"]] = data["target"]
             case "vote_result":
                 state.phase = "dusk"
+                state.marked = None
+                state.mark_announced = False
             case "game_over":
                 state.phase = "over"
                 state.winner = data["winner"]
@@ -553,7 +724,12 @@ class Werewolf(GamePlugin[WerewolfState]):
             "night": state.night,
             "day": state.day,
             "alive": list(state.alive),
-            "dead": [{"player": p, "role": r} for p, r in state.revealed.items()],
+            "dead": [
+                {"player": p, "role": r} for p, r in state.revealed.items() if p not in state.alive
+            ],
+            "revealed_alive": [
+                {"player": p, "role": r} for p, r in state.revealed.items() if p in state.alive
+            ],
             "your_turn": step is not None,
             "step": step.kind if step else None,
             "speaking_order": list(state.speaking_order),
@@ -570,6 +746,20 @@ class Werewolf(GamePlugin[WerewolfState]):
             observation["potions"] = dict(state.potions)
             if step is not None and step.kind == "night":
                 observation["wolf_victim"] = state.wolf_victim()
+        if player in state.lovers:
+            observation["lovers"] = list(state.lovers)
+        if role and role.hooks.get("on_night") == "protector_guard":
+            observation["protected_last_night"] = state.last_protected
+        if player in state.no_vote:
+            observation["may_vote"] = False
+        if state.powers_lost:
+            observation["village_powers_lost"] = True
+        if state.mark_announced and state.marked:
+            observation["raven_mark"] = state.marked
+        if player in state.wild_models:
+            observation["role_model"] = state.wild_models[player]
+        if role and role.hooks.get("on_night") == "prime_wolf_infect":
+            observation["infection_used"] = state.infection_used
         if state.roles_public:
             observation["roles_in_play"] = dict(state.selection)
         return observation
@@ -608,7 +798,7 @@ class Werewolf(GamePlugin[WerewolfState]):
         self, observation: Mapping[str, Any], tools: Sequence[ToolSpec], rng: random.Random
     ) -> Action:
         """Any final action (chat only sometimes) with random allowed arguments."""
-        final = [t for t in tools if t.name != "wolf_chat"]
+        final = [t for t in tools if t.name not in ("wolf_chat", "lover_chat")]
         chosen = rng.choice(tools) if not final or rng.random() < 0.1 else rng.choice(final)
         arguments = {}
         for name, schema in chosen.parameters["properties"].items():

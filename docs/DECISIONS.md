@@ -915,6 +915,63 @@ Each entry: date, decision, why, alternatives considered.
   their way); line of sight (more rules for models to hold in mind, little
   gain on a map this small).
 
+## D-050 · Werewolf roles batch A: lovers, Protector, Little Girl, Elder, Idiot, Scapegoat
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - Cupid links two different living players on night 1 (himself allowed).
+    Only Cupid sees the link event; the lovers learn each other. A lover's
+    death kills the other at once ("grief"), through every death path.
+    Lovers may `lover_chat` (40 words, lovers only) once in any of their
+    turns without ending it. Lovers from both sides (one in the pack, one
+    not) win alone when they are the last two alive, and count for neither
+    side's win.
+  - The Protector protects one living player a night (himself allowed), never
+    the same one twice in a row. Protection stops the wolves' kill, not the
+    Witch's poison.
+  - The Little Girl may `spy` or `stay_in_bed`. Spying rolls twice from the
+    match seed: 30 % she learns one random living wolf (private), 15 % she is
+    caught (spectators only) and then becomes the wolves' victim in place of
+    theirs. The Protector and the Witch can still save her.
+  - The Elder survives the first wolf attack (he alone learns it). If the
+    village executes him, every village-team role loses its powers for the
+    rest of the match: their night steps and passive hooks stop, except a
+    lover's grief.
+  - An executed Village Idiot survives, is revealed, and no longer votes.
+  - On a real tie (two or more top targets with votes) a living Scapegoat
+    dies instead of nobody; no votes at all is not a tie.
+- **Why:** The spec's role texts leave these open; each rule keeps one clear
+  answer per case and fits the existing step queue and death chain.
+- **Alternatives:** lovers win with their teams; protection against poison;
+  wolves informed when they catch the girl; the Elder surviving poison.
+
+## D-051 · Werewolf roles batch B: Raven, Wild Child, Prime Wolf, White Werewolf, Bear
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The Raven marks a living player (or nobody) at night. If the marked
+    player is alive in the morning, the mark is announced publicly (not who
+    made it) and adds 2 votes against them in that day's tally.
+  - The Wild Child picks a role model on night 1 (not himself). When the
+    model dies, by any cause, the child joins the pack: the pack and the child
+    learn it, and the child hunts with the wolves from the next night.
+  - The Prime Wolf decides after the pack's votes, once per match, whether to
+    infect tonight's victim. The choice uses the one infection even if the
+    victim is then saved (healed, protected, Elder); a saved victim is not
+    infected. An infected player keeps their role and joins the pack.
+  - The White Werewolf hunts with the pack, and on even nights may kill one
+    other wolf (or nobody). He wins only as the last player alive. The pack's
+    win and its winners leave him out; the village needs every pack member,
+    him included, dead.
+  - The bear growls publicly in the morning if a living pack member is the
+    nearest living player on either side of the Bear Tamer in seat order
+    (the night's dead are skipped). The growl comes before Hunter and lover
+    effects.
+- **Why:** The spec's role texts leave these details open; the choices keep
+  each effect visible to exactly the players who would know it.
+- **Alternatives:** a secret Raven mark; the infection kept for a later night
+  when the victim is saved; the White Werewolf counted for the pack's win.
+
 ## D-052 · Throne of Tokens economy: one stock per nation, and what the spec leaves open about cities
 
 - **Date:** 2026-11-11
