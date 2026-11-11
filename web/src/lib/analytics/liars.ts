@@ -95,6 +95,10 @@ export function hasNumbers(body: unknown): body is LiarsAnalytics {
 	if (!body || typeof body !== 'object') return false;
 	const b = body as Record<string, unknown>;
 	if (b.numbers === false || b.game !== 'liars_deck') return false;
+	// `sections` lists the parts present: other games have numbers, but not these tables.
+	const sections = b.sections;
+	if (Array.isArray(sections) && !['moves', 'totals'].every((k) => sections.includes(k)))
+		return false;
 	return (
 		['players', 'moves', 'pulls', 'rounds', 'by_round'].every((key) => Array.isArray(b[key])) &&
 		!!b.totals &&

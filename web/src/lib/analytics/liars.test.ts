@@ -85,6 +85,15 @@ describe('hasNumbers', () => {
 		expect(hasNumbers(pokerSituation)).toBe(false);
 		const { numbers: _, ...unmarked } = pokerSituation;
 		expect(hasNumbers(unmarked)).toBe(false); // an arena without the marker
+		// Werewolf (#108) and Poker with its report (#109): numbers, but no Liar's Deck tables.
+		const werewolf = {
+			game: 'werewolf',
+			numbers: true,
+			sections: ['situation', 'players', 'votes', 'claims', 'phases'],
+			players: ['p1', 'p2']
+		};
+		expect(hasNumbers(werewolf)).toBe(false);
+		expect(hasNumbers({ ...spectator, sections: ['situation', 'players'] })).toBe(false);
 		for (const body of [null, undefined, 'x', 3, {}, { game: 'liars_deck' }])
 			expect(hasNumbers(body)).toBe(false);
 	});
