@@ -108,6 +108,8 @@ export function parseForm(form: FormData, games: GameInfo[], models: string[] = 
 			...(seed === undefined ? {} : { seed }),
 			settings,
 			turn_delay: turnDelay,
+			// The box says "without memory", so a form that leaves it out keeps memory on.
+			memory: form.get('no_memory') === null,
 			...(seatModels ? { models: seatModels, confirm_spend: true } : {})
 		}
 	};
