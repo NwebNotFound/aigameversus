@@ -17,9 +17,18 @@ class ToolCall:
 
 
 @dataclass(frozen=True)
+class Usage:
+    """The tokens a call was billed for, as the provider counted them."""
+
+    input_tokens: int
+    output_tokens: int
+
+
+@dataclass(frozen=True)
 class ModelReply:
     text: str | None = None
     tool_calls: tuple[ToolCall, ...] = ()
+    usage: Usage | None = None  # None: the provider did not say
 
 
 class ModelError(Exception):
