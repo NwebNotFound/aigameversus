@@ -309,6 +309,7 @@ class Runner:
             "seed": match.seed,
             "settings": self.settings,
             "turn_delay": self.turn_delay,
+            "memory": False,  # experiments are played without memory: nothing read, nothing written
         }
         if self.bots:
             body["players"] = len(models)

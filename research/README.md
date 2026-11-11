@@ -75,11 +75,12 @@ the cap stays unplanned.
 | Line | Matches | Estimate | Budget |
 | --- | --- | --- | --- |
 | Spent before | 6 | | 0.18 |
-| E1 stage A: league of the 8 cheap models, Liar's Deck (approved; pilot of 8 matches up to 0.30, stop at 90 %) | 112 | 2.20 | 3.00 |
+| E1 stage A: pilot of the 8 cheap models (played: 6 matches, 0.23 EUR, stopped by the budget rule; league dropped in version 2) | 6 | 0.30 | 0.30 |
+| E1 stage A2: league of the 6 models that passed the pilot (approved) | 120 | 2.40 | 3.00 |
 | E1 stage B: one model at high and low reasoning effort (approved, after A) | 96 | 4.20 | 4.50 |
 | E1 stage C: 4 stronger models as guests among cheap hosts (approved, after A) | 96 | 7.20 | 7.50 |
 | Poker in duplicate mode, cheap roster (own plan, later; not approved) | 48 | 2.60 | 2.80 |
-| Not assigned | | | 2.02 |
+| Not assigned | | | 1.72 |
 | Reserve, 20 % | | | 5.00 |
 | **Sum** | | | **25.00** |
 

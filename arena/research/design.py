@@ -37,6 +37,16 @@ def blocks_of_four(entries: Sequence[str]) -> list[tuple[str, ...]]:
     return blocks
 
 
+def all_tables(entries: Sequence[str]) -> list[tuple[str, ...]]:
+    """Every table of four of six entries: 15 tables.
+
+    Every entry sits at 10 tables and every pair of entries meets at 6.
+    """
+    if len(entries) != 6 or len(set(entries)) != 6:
+        raise ValueError("this design needs exactly 6 different entries")
+    return list(combinations(entries, SEATS))
+
+
 def rotations(table: Sequence[str]) -> list[tuple[str, ...]]:
     """Four seatings of four entries: each entry in each seat once (Williams design)."""
     _need_four(table)

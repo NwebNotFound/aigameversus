@@ -90,6 +90,7 @@ def test_pilot_plays_the_eight_pilot_matches_with_model_seats_and_logs_them(tmp_
     assert all(b["confirm_spend"] is True and len(b["models"]) == 4 for b in arena.started)
     assert {body["seed"] for body in arena.started} == {1101011, 1101021}
     assert all(body["settings"]["variant"] == "base" for body in arena.started)
+    assert all(body["memory"] is False for body in arena.started)
     assert len(_lines(tmp_path)) == 8
     assert json.loads(_lines(tmp_path)[0])["prompt_version"] == "liars_deck-p1"
     assert (tmp_path / "001.json").exists()
@@ -239,3 +240,21 @@ def test_command_needs_a_seat_choice_and_reports_a_bad_stage(tmp_path, capsys):
         main([str(E1), "--stage", "A", "--out", str(tmp_path)])
     assert main([str(E1), "--stage", "Z", "--out", str(tmp_path), "--bots"]) == 2
     assert "no stage" in capsys.readouterr().err
+
+
+def test_the_six_model_league_starts_without_a_pilot_and_plays_its_tables(tmp_path):
+    arena = FakeArena(cost=1_000)
+
+    reports = Runner(
+        load_experiment(E1), "A2", tmp_path, arena, sleep=lambda _: None, say=lambda _: None
+    ).run()
+
+    assert len(reports) == 120
+    assert {model for body in arena.started for model in body["models"]} == {
+        "gpt-luna",
+        "claude-haiku",
+        "glm-flash",
+        "deepseek-flash",
+        "mistral-small",
+        "llama-scout",
+    }
