@@ -17,3 +17,5 @@ More, next to the code they describe:
 - [../CLAUDE.md](../CLAUDE.md): conventions and "how to add a game, a role, a variant, a personality" for contributors, human or AI.
 - [../games/werewolf/roles/README.md](../games/werewolf/roles/README.md): how to add a Werewolf role.
 - [../games/civ/data/README.md](../games/civ/data/README.md): the Throne of Tokens data files.
+- [../research/README.md](../research/README.md): how the models are evaluated: state, budget, build steps.
+- [../experiments/README.md](../experiments/README.md): experiment plans, written before their first paid match, and their schedules.
