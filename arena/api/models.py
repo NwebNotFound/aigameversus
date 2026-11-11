@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from arena.api.ratings import RecentMatch, StandingOut, vendor_of
 from arena.catalog import load
 from arena.config import load_config
+from arena.ratings.elo import PROVISIONAL_GAMES
 from arena.ratings.store import RatingStore, Usage
 
 router = APIRouter(tags=["models"])
@@ -67,6 +68,9 @@ class ModelPage(BaseModel):
         description="The profile without a personality; null until played"
     )
     overall: StandingOut | None
+    provisional_games: int = Field(
+        PROVISIONAL_GAMES, description="Rated games a rating needs before it counts as reliable"
+    )
     usage: UsageOut
     games: list[GameOut]
     recent_matches: list[RecentMatch]

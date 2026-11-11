@@ -161,3 +161,37 @@ test('a model named like its id shows the name once, then the vendor', async ({
 	expect(text.split(row.model_id).length - 1).toBe(1);
 	if (row.vendor) expect(text).toContain(row.vendor);
 });
+
+// The demo stack has both kinds of rows: the demo players have played a few games each, and the
+// grouped Random Bot row adds up every bot seat of every spec. Other specs finish matches
+// meanwhile, so read the API and the page together until they agree.
+test('a rating from fewer than 10 games carries a provisional badge, one from 10 or more none', async ({
+	page,
+	request
+}) => {
+	await expect(async () => {
+		const board = await (await request.get(`${ARENA}/leaderboard?kind=all&demo=true`)).json();
+		type Row = { provisional: boolean; games_played: number };
+		const provisional = board.rows.filter((row: Row) => row.provisional);
+		const established = board.rows.filter((row: Row) => !row.provisional);
+		// Without both kinds of row this spec would pass with the badge removed.
+		expect(provisional.length, 'a row with fewer than 10 games').toBeGreaterThan(0);
+		expect(established.length, 'a row with 10 or more games').toBeGreaterThan(0);
+		expect(
+			board.rows.every((row: Row) => row.provisional === row.games_played < board.provisional_games)
+		).toBe(true);
+
+		await page.goto('/leaderboard?kind=all&demo=1');
+
+		const rows = page.getByTestId('leaderboard').locator('tbody tr');
+		await expect(rows).toHaveCount(board.rows.length, { timeout: 2000 });
+		for (let i = 0; i < board.rows.length; i++) {
+			const badge = rows.nth(i).getByTestId('provisional');
+			await expect(badge).toHaveCount(board.rows[i].provisional ? 1 : 0, { timeout: 2000 });
+		}
+		await expect(page.getByTestId('provisional').first()).toHaveAttribute(
+			'title',
+			`fewer than ${board.provisional_games} rated games: the rating is not reliable yet`
+		);
+	}).toPass({ timeout: 30_000 });
+});

@@ -30,6 +30,11 @@ models:
     model: qwen/qwen3.8-flash
     input_usd_per_mtok: 0.15
     output_usd_per_mtok: 0.47
+    # It thinks long before every move, cannot be sent a reasoning effort, and often
+    # gave no tool call when forced: room for its thinking, and the call left to it.
+    max_output_tokens: 4000
+    reasoning_effort: "off"
+    tool_choice: auto
   glm-flash:
     provider: openrouter
     model: z-ai/glm-5.3-flash
