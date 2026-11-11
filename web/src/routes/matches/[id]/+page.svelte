@@ -139,7 +139,11 @@
 		spec={live.board.spec}
 		{view}
 		events={log}
-		lines={namedLines(transcript?.lines ?? [], players)}
+		lines={namedLines(
+			transcript?.lines ?? [],
+			players,
+			Object.values(transcript?.players ?? {}).some((p) => p.display)
+		)}
 		seats={live.match.players}
 		{players}
 		costs={live.cost.players}

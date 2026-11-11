@@ -72,6 +72,8 @@ export interface ReplaySummary {
 	started_at: string;
 	finished_at: string;
 	cost_micro_eur: number;
+	seats?: Record<string, RecordSeat>;
+	real?: boolean;
 }
 
 /** `GET /matches/{id}/cost`, in millionths of a euro. */
