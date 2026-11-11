@@ -1949,3 +1949,63 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** A results page apart from the replay (the viewer leaves
   the board at the climax); asking the transcript for a result sentence per
   game (still a paragraph).
+
+## D-103 · A seat's identity comes from the match record first; a model seat never reads as a bot
+
+- **Date:** 2026-11-11
+- **Decision:** The web builds each seat from all the sources it has
+  (`mergeSeats` in `web/src/lib/viewer.ts`):
+  - the match record's `seats` (name, model id, kind), which exists for
+    running and finished matches;
+  - then the transcript's `players`, whose name wins when it gives a profile
+    name;
+  - then the model roster of `GET /setup`, for the vendor (the provider path
+    before "/") and the price per million tokens.
+  Every chip, avatar, commentary line, board seat and result card reads this
+  one map. A chip shows:
+  - the name and a kind badge (model or bot);
+  - the model id when the name does not already say it, and the vendor;
+  - a personality when the record has one, and the cost so far.
+  The tooltip adds the price per million tokens. Avatar colours follow the
+  vendor.
+- **Why:** On the first real-model match, the chips read "random bot" for
+  every seat. The transcript's `players` was empty for a running match while
+  the record already knew each seat. A seat's identity must not depend on one
+  endpoint being complete.
+- **Display names:** every visible name is a display name, computed once per
+  match (`withDisplayNames`) unless the API sends `display`:
+  - a model is its short name (the profile name, else the model id), with
+    "#2" for its second seat;
+  - bots are "Bot 1", "Bot 2", in seat order, with "Random Bot" as the small
+    line under the name;
+  - the seat id appears only as a small number badge on the board
+    (`SeatTag`).
+  Until the transcript names players itself, the web swaps seat ids in its
+  sentences for display names (`namedText`, `namedLines`, applied once where
+  the page reads the transcript). This changes names only, never wording.
+  Player-written words (speech, thoughts) are shown as written.
+- **Alternatives:** Waiting for the transcript to fill `players` for every
+  match (the fix belongs there too, and Arena Coder has it); a colour per
+  model (the same company's models then look unrelated).
+
+## D-104 · One display name per seat, computed by the server, never the seat id
+
+- **Date:** 2026-11-11
+- **Decision:** The name shown for a seat is made once, in `display_names`
+  (`arena/transcript/common.py`), and used in every line of the transcript (English and
+  German), in `arena transcript`, in `arena run`, and handed to the UI as
+  `players[seat].display`. A model is shown by its short name (`name` in
+  `config/models.yaml`, else its id), numbered `gpt-luna #1`, `gpt-luna #2` when the same
+  model sits more than once; a bot is `Bot 3`, with the number of its seat. The names are
+  unique within a match. The seat id (`p3`) is a separate field `players[seat].seat`, for a
+  small badge. The names come from the match record's seats (known from the first turn of
+  a running match); a match recorded before seats were kept falls back to its profile
+  labels, else the seat id.
+- **Why:** People could not tell which seat was which model: the board said `p3`, the
+  commentary `p1 plays 1 card`, the bubbles `p2`. A name made in one place cannot differ
+  between the board, the commentary and the bubbles.
+- **Alternatives:** each page building its own label (they drifted apart); the seat id as
+  the name with the model in brackets (`p1 (glm-flash)`, what the lines said before: long,
+  and still led with the number); suffixing only the second seat of a repeated model (the
+  first and the second then look different for no reason).
+

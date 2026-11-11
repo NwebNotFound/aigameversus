@@ -234,6 +234,17 @@ def test_models_need_a_database(answer_with, capsys, monkeypatch):
     assert sent == {}
 
 
+def sql(database_url, statement):
+    async def run():
+        pool = await connect(database_url)
+        try:
+            await pool.execute(statement)
+        finally:
+            await pool.close()
+
+    asyncio.run(run())
+
+
 def ratings_of(database_url):
     """(profile name, model id, game, games played) of every rating, by profile name."""
 
@@ -278,27 +289,45 @@ def test_a_stored_model_match_is_told_with_the_names_of_its_models(database, ans
     assert "glm-flash (glm-flash)" not in out and "Random Bot" not in out
 
 
-def test_a_profile_named_unlike_its_model_is_told_as_name_and_model(database, answer_with, capsys):
+def test_a_profile_named_unlike_its_model_does_not_change_the_display_name(
+    database, answer_with, capsys
+):
     answer_with(**PLAY_3)
     arena(capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash", "--seed", "7")
     (match,), _, _ = stored(database)
 
-    async def rename():
-        pool = await connect(database)
-        try:
-            await pool.execute(
-                "UPDATE player_profiles SET name = 'Knight' WHERE model_id = 'glm-flash'"
-            )
-        finally:
-            await pool.close()
-
-    asyncio.run(rename())
-    code = cli.main(["transcript", str(match.id)])
+    sql(database, "UPDATE player_profiles SET name = 'Knight' WHERE model_id = 'glm-flash'")
+    cli.main(["transcript", str(match.id)])
 
     out = capsys.readouterr().out
-    assert code == 0
+    assert "glm-flash" in out and "Knight" not in out and "p1" not in out
+
+
+def test_a_match_recorded_before_seats_falls_back_to_its_profile_labels(
+    database, answer_with, capsys
+):
+    answer_with(**PLAY_3)
+    arena(capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash", "--seed", "7")
+    (match,), _, _ = stored(database)
+
+    sql(database, "UPDATE player_profiles SET name = 'Knight' WHERE model_id = 'glm-flash'")
+    sql(database, "UPDATE matches SET seats = NULL")
+    cli.main(["transcript", str(match.id)])
+
+    out = capsys.readouterr().out
     assert "Knight (glm-flash)" in out
     assert "deepseek-flash (deepseek-flash)" not in out and "deepseek-flash" in out
+
+
+def test_the_same_model_in_two_seats_is_numbered(database, answer_with, capsys):
+    answer_with(**PLAY_3)
+    arena(capsys, "run", "--game", "toy", "--models", "glm-flash,glm-flash", "--seed", "7")
+    (match,), _, _ = stored(database)
+
+    cli.main(["transcript", str(match.id)])
+
+    out = capsys.readouterr().out
+    assert "glm-flash #1" in out and "glm-flash #2" in out and "p1" not in out
 
 
 def test_the_same_model_in_the_other_seat_is_still_the_same_profile(database, answer_with, capsys):

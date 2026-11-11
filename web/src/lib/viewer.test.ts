@@ -5,6 +5,9 @@ import {
 	chapterLabel,
 	commentary,
 	langOf,
+	mergeSeats,
+	namedText,
+	withDisplayNames,
 	linesUpTo,
 	marks,
 	newBeats,
@@ -224,5 +227,98 @@ describe('results', () => {
 			{ player: 'p3', cards: ['6s', 'Kd'], hand: 'one pair', won: 0 },
 			{ player: 'p4', cards: ['Qs', '4s'], hand: 'two pair', won: 1000 }
 		]);
+	});
+});
+
+describe('mergeSeats', () => {
+	const roster = [
+		{
+			id: 'gemini-flash-lite',
+			model: 'google/gemini-2.5-flash-lite',
+			name: 'Gemini Flash Lite',
+			input_usd_per_mtok: 0.1,
+			output_usd_per_mtok: 0.4
+		}
+	];
+
+	it('takes a running model match from the record, though the transcript knows nothing', () => {
+		const seats = mergeSeats(
+			['p1', 'p2'],
+			{
+				p1: { name: 'gemini-flash-lite', model_id: 'gemini-flash-lite', kind: 'model' },
+				p2: { name: 'Random Bot p2', model_id: null, kind: 'bot' }
+			},
+			{ p1: { name: null, model: null }, p2: { name: null, model: null } },
+			roster
+		);
+		expect(seats.p1).toEqual({
+			display: 'gemini-flash-lite',
+			name: 'gemini-flash-lite',
+			model: 'gemini-flash-lite',
+			kind: 'model',
+			vendor: 'google',
+			personality: null,
+			price: { input: 0.1, output: 0.4 }
+		});
+		expect(seats.p2).toMatchObject({ name: 'Random Bot p2', model: null, kind: 'bot' });
+	});
+
+	it("prefers the transcript's player name (a profile name) over the record's", () => {
+		const seats = mergeSeats(
+			['p1'],
+			{ p1: { name: 'glm-flash', model_id: 'glm-flash', kind: 'model' } },
+			{ p1: { name: 'Juniper', model: 'glm-flash' } }
+		);
+		expect(seats.p1).toMatchObject({
+			name: 'Juniper',
+			model: 'glm-flash',
+			kind: 'model',
+			vendor: null
+		});
+	});
+
+	it('keeps an old match without seats as it was', () => {
+		expect(mergeSeats(['p1'], undefined, undefined).p1).toMatchObject({
+			name: null,
+			kind: undefined
+		});
+	});
+});
+
+describe('display names', () => {
+	it('names models by short name, a repeat with #2, bots Bot 1, Bot 2', () => {
+		const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p2: { name: 'Random Bot p2', model: null, kind: 'bot' },
+			p3: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p4: { name: 'Random Bot p4', model: null, kind: 'bot' }
+		});
+		expect(['p1', 'p2', 'p3', 'p4'].map((s) => seatName(s, seats))).toEqual([
+			'gpt-luna',
+			'Bot 1',
+			'gpt-luna #2',
+			'Bot 2'
+		]);
+	});
+
+	it('keeps a display name the API gave, and a profile name over the model id', () => {
+		const seats = withDisplayNames(['p1', 'p2'], {
+			p1: { name: 'Juniper', model: 'glm-flash', kind: 'model' },
+			p2: { name: 'x', model: 'x', kind: 'model', display: 'Server name' }
+		});
+		expect(seatName('p1', seats)).toBe('Juniper');
+		expect(seatName('p2', seats)).toBe('Server name');
+	});
+
+	it('replaces seat ids in transcript text, also inside the old bot label', () => {
+		const seats = withDisplayNames(['p1', 'p2'], {
+			p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+			p2: { name: 'Random Bot p2', model: null, kind: 'bot' }
+		});
+		expect(namedText('p1 calls LIAR on Random Bot p2 (random-bot)', seats)).toBe(
+			'gpt-luna calls LIAR on Bot 1'
+		);
+		expect(namedText('Ergebnis: 1. p2  2. p1', seats)).toBe('Ergebnis: 1. Bot 1  2. gpt-luna');
+		expect(namedText('top10 and p9 stay', seats)).toBe('top10 and p9 stay');
 	});
 });

@@ -139,29 +139,29 @@ docker compose exec arena arena run --game liars_deck --players 3 --bots --seed 
 
 ```
 Liar's Deck (liars_deck), players p1 p2 p3, seed 7
-Match started: p1, p2 and p3 (seed 7)
+Match started: Bot 1, Bot 2 and Bot 3 (seed 7)
 
 Round 1, table card: Queen
-    p1 starts; players: p1, p2 and p3
-p1 plays 1 card and claims: a queen
-p2 plays 2 cards and claims: two queens
-p3 plays 3 cards and claims: three queens
-p1 calls LIAR on p3
-The cards show: a queen, two aces. p3 was lying
+    Bot 1 starts; players: Bot 1, Bot 2 and Bot 3
+Bot 1 plays 1 card and claims: a queen
+Bot 2 plays 2 cards and claims: two queens
+Bot 3 plays 3 cards and claims: three queens
+Bot 1 calls LIAR on Bot 3
+The cards show: a queen, two aces. Bot 3 was lying
     Queen 5, Ace 2, Ace 6
-p3 must pull the trigger (caught lying)
-p3 pulls the trigger (pull 1): BANG
-p3 is out of the game
+Bot 3 must pull the trigger (caught lying)
+Bot 3 pulls the trigger (pull 1): BANG
+Bot 3 is out of the game
 ...
-Match over: p2 is the last one standing
-Result: 1. p2  2. p1  3. p3
+Match over: Bot 2 is the last one standing
+Result: 1. Bot 2  2. Bot 1  3. Bot 3
 ```
 
 The same lines are everywhere a match is shown: `GET /matches/<id>/transcript`
 (`?lang=de&spoilers=true&format=json|text|markdown`), the live view, replays and
 their exports. Hidden cards, roles, thoughts and whispers appear only with
 spoilers on (`arena run` shows them unless you pass `--no-spoilers`). With real
-models the seats read "p1 (glm-flash)". `--all` adds bookkeeping lines and
+models the seats read "glm-flash" ("glm-flash #1", "glm-flash #2" when a model sits twice); bots are "Bot 1", "Bot 2". `--all` adds bookkeeping lines and
 `--raw` prints the raw events as stored. A stored or saved match is printed
 with `arena transcript <match-id | file.json> [--lang de] [--spoilers] [--follow]`.
 

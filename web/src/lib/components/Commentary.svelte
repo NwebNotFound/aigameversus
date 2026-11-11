@@ -4,6 +4,7 @@
 	import { card } from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import {
+		colourKey,
 		commentary,
 		ordinal,
 		seatModel,
@@ -60,7 +61,7 @@
 		[...(((line.raw?.data as { placements?: Placement[] })?.placements ?? []) as Placement[])].sort(
 			(a, b) => a.rank - b.rank
 		);
-	const colour = (seat: string) => seatModel(seat, players) ?? seat;
+	const colour = (seat: string) => colourKey(seat, players);
 </script>
 
 <section class="commentary" aria-labelledby="commentary-title">
