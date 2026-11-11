@@ -7,6 +7,7 @@ from typing import Any
 from arena.agents.model import Message, ModelError, ModelReply, ToolCall, Usage
 
 _RETRYABLE_STATUS = {408, 409, 429}  # besides every 5xx and failures without a status
+_REFUSED_STATUS = {400, 404, 422}  # the provider does not take the request as it is
 
 
 class LiteLLMModel:
@@ -24,18 +25,17 @@ class LiteLLMModel:
         self._options = {} if reasoning_effort is None else {"reasoning_effort": reasoning_effort}
 
     async def __call__(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
-        litellm = _litellm()
+        # A turn is one tool call: left free, some models answer in prose instead.
+        extras = {**({"tool_choice": "required"} if tools else {}), **self._options}
         try:
-            response = await litellm.acompletion(
-                model=self._model,
-                messages=messages,
-                tools=tools,
-                max_tokens=self._max_output_tokens,
-                num_retries=0,  # the agent runner retries, with its own backoff
-                # A turn is one tool call: left free, some models answer in prose instead.
-                **({"tool_choice": "required"} if tools else {}),
-                **self._options,
-            )
+            try:
+                response = await self._send(messages, tools, extras)
+            except Exception as error:
+                # One model name can stand for several providers, and not all of them take
+                # every option. A request refused with the extras goes out once more without.
+                if not extras or getattr(error, "status_code", None) not in _REFUSED_STATUS:
+                    raise
+                response = await self._send(messages, tools, {})
             choice = response.choices[0]
             message = choice.message
             usage = getattr(response, "usage", None)
@@ -59,6 +59,18 @@ class LiteLLMModel:
             status = getattr(error, "status_code", None)
             retryable = not isinstance(status, int) or status in _RETRYABLE_STATUS or status >= 500
             raise ModelError(type(error).__name__, retryable=retryable) from None
+
+    async def _send(
+        self, messages: list[Message], tools: list[dict[str, Any]], extras: dict[str, Any]
+    ) -> Any:
+        return await _litellm().acompletion(
+            model=self._model,
+            messages=messages,
+            tools=tools,
+            max_tokens=self._max_output_tokens,
+            num_retries=0,  # the agent runner retries, with its own backoff
+            **extras,
+        )
 
 
 def _litellm() -> Any:

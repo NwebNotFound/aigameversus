@@ -177,6 +177,11 @@ in the first, 83 of 130 answers were rejected):
   If it has no tool call, the player is told that it was cut off and to be
   brief, not just that the tool call is missing.
 - A model that only reasoned has its reasoning as its text.
+- One model name can stand for several providers, and not every provider
+  takes every option: the same model answered one match and refused the next
+  request (400). A request refused with the options (`tool_choice`,
+  `reasoning_effort`) is sent once more without them before the seat is
+  given up; a refused request is not billed.
 
 Failures:
 

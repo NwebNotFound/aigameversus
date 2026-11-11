@@ -1325,6 +1325,11 @@ Each entry: date, decision, why, alternatives considered.
   - A reply knows whether it ran into the output limit (`ModelReply.cut_off`);
     such a reply without a tool call is told that it was cut off and to be
     brief. The output limit stays at 1500 tokens.
+  - A request that a provider refuses (400, 404 or 422) while it carries
+    these options is sent once more without them. Only if that is refused
+    too does the seat lose its model. In a test of all eight roster models
+    one refused the options outright, and another, served by several
+    providers, took them in one match and refused them in the next.
 - **Why:** Two real matches with the cheapest models of the roster. In the
   first (Liar's Deck, four models) 83 of 130 answers were rejected and 18
   turns went to the random fallback: two reasoning models spent the whole
