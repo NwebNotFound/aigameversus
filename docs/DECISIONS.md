@@ -637,7 +637,28 @@ Each entry: date, decision, why, alternatives considered.
   (cannot know every secret, and prompts would still be logged); raising the
   logger's level only (any later `setLevel` brings the text back).
 
-## D-038 · A match has a turn limit
+## D-038 · Poker betting: minimum raise, short all-ins, side pots, odd chips
+
+- **Date:** 2026-11-11
+- **Decision:** `games/poker/betting.py` implements No-Limit betting rules as
+  pure code. `raise(amount)` names the total bet for the round ("raise to").
+  The minimum raise is the current bet plus the size of the last full raise,
+  and at least the big blind; before the flop that is double the big blind, as
+  the spec's "double the last bet". An all-in below a full raise does not
+  reopen raising for players who already acted: they may only call or fold,
+  and going all-in is refused for them when it would put in more than a call.
+  A big blind posted short does not lower the bet: the others still owe the
+  full big blind (the short blind is all-in, side pots sort out the rest).
+  Side pots come from each player's total contribution in the hand; folded
+  chips stay in the pots, and a pot that only one player can win returns an
+  uncalled bet. Odd chips of a split pot go one each to the winners in seat
+  order starting left of the button.
+- **Why:** These are the standard tournament rules; they keep every chip
+  accounted for and are what poker players and models expect.
+- **Alternatives:** the spec's literal "double the last bet" for every raise;
+  odd chips to the best hand by suit; letting short all-ins reopen raising.
+
+## D-039 · A match has a turn limit
 
 - **Date:** 2026-11-11
 - **Decision:** `GamePlugin.max_turns` is the most turns a match of the game
@@ -655,7 +676,7 @@ Each entry: date, decision, why, alternatives considered.
   (harder to derive from the rules of a game); only a per-match setting (every
   caller would have to know every game).
 
-## D-039 · A game is found by its folder
+## D-040 · A game is found by its folder
 
 - **Date:** 2026-11-11
 - **Decision:** `arena/games.py` lists the games: every package `games/<id>/`
@@ -671,7 +692,7 @@ Each entry: date, decision, why, alternatives considered.
   edit); entry points (packaging for something that lives in this repo);
   skipping broken folders (a game silently missing from the list).
 
-## D-040 · Matches from the API run inside the API process; spectators read the log over WebSocket
+## D-041 · Matches from the API run inside the API process; spectators read the log over WebSocket
 
 - **Date:** 2026-11-11
 - **Decision:** `POST /matches` starts a match as an asyncio task of the API
@@ -698,7 +719,7 @@ Each entry: date, decision, why, alternatives considered.
   continuing interrupted matches from the log (needs agents that can be
   rebuilt; later).
 
-## D-041 · The `arena` command plays in its own process
+## D-042 · The `arena` command plays in its own process
 
 - **Date:** 2026-11-11
 - **Decision:** `arena run --game <id> --bots` runs the engine in the command's
@@ -712,7 +733,7 @@ Each entry: date, decision, why, alternatives considered.
   can be called with curl); storing command-line matches when a database is
   configured (behaviour that depends on the environment).
 
-## D-042 · A game reads nothing from the order of keys in event data
+## D-043 · A game reads nothing from the order of keys in event data
 
 - **Date:** 2026-11-11
 - **Decision:** Event data is JSON whose objects have no order: plugins use a
