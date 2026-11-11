@@ -6,12 +6,13 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	const arena = createArenaClient(ARENA_API_URL, fetch);
-	const [games, setup, werewolfRoles] = await Promise.all([
+	const [games, setup, werewolfRoles, month] = await Promise.all([
 		arena.games(),
 		arena.setup(),
-		arena.werewolfRoles()
+		arena.werewolfRoles(),
+		arena.monthSpend()
 	]);
-	return { games, setup, werewolfRoles };
+	return { games, setup, werewolfRoles, month };
 };
 
 export const actions: Actions = {
@@ -27,7 +28,11 @@ export const actions: Actions = {
 			const reason = games.state === 'unreachable' ? games.reason : 'no game list';
 			return fail(502, { values, errors: { form: `Arena unreachable (${reason}).` } });
 		}
-		const parsed = parseForm(form, games.data);
+		// The models a seat may take: none unless the server allows paid matches.
+		const setup = await arena.setup();
+		const models =
+			setup.state === 'ok' && setup.data.model_seats ? setup.data.models.map((m) => m.id) : [];
+		const parsed = parseForm(form, games.data, models);
 		if (!parsed.ok) return fail(400, { values, errors: parsed.errors });
 
 		const roles = parsed.match.settings.roles as Record<string, number> | undefined;
