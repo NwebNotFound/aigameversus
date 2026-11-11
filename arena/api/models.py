@@ -88,9 +88,9 @@ async def model_page(model_id: str, store: Store) -> ModelPage:
     games: list[GameOut] = []
     usage_total = Usage()
     if found is not None:
-        usage_total = (await store.usage(None)).get(profile_id, Usage())
+        usage_total = (await store.usage(None, profile_id)).get(profile_id, Usage())
         for game_id, standing in found.per_game.items():
-            used = (await store.usage(game_id)).get(profile_id, Usage())
+            used = (await store.usage(game_id, profile_id)).get(profile_id, Usage())
             games.append(
                 GameOut(
                     game_id=game_id,

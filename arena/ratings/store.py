@@ -229,18 +229,22 @@ class RatingStore:
             played.setdefault(row["game_id"], []).append((row["match_id"], row["seat"]))
         return played
 
-    async def usage(self, game_id: str | None = None) -> dict[UUID, Usage]:
+    async def usage(
+        self, game_id: str | None = None, profile_id: UUID | None = None
+    ) -> dict[UUID, Usage]:
         """Cost and answer counts per profile, from the ledger and the stored event logs.
 
         Counts the rated matches of `game_id`, or of every game. Cost is the sum of the booked
         model calls of the profile's seats; answers are the engine's `action_accepted` and
-        `action_rejected` events of those seats. Profiles without a seat are left out.
+        `action_rejected` events of those seats. Profiles without a seat are left out. With
+        `profile_id` only that profile is counted, which makes the query much smaller.
         """
         rows = await self._pool.fetch(
             "WITH seats AS ("
             "  SELECT s.match_id, s.seat, s.profile_id FROM match_seats s "
             "  JOIN rated_matches rm ON rm.match_id = s.match_id "
-            "  WHERE $1::text IS NULL OR rm.game_id = $1), "
+            "  WHERE ($1::text IS NULL OR rm.game_id = $1) "
+            "    AND ($2::uuid IS NULL OR s.profile_id = $2)), "
             "cost AS ("
             "  SELECT s.profile_id, sum(c.cost_micro_eur) AS cost FROM seats s "
             "  JOIN model_calls c ON c.match_id = s.match_id AND c.player = s.seat "
@@ -259,6 +263,7 @@ class RatingStore:
             "LEFT JOIN cost ON cost.profile_id = s.profile_id "
             "LEFT JOIN tools ON tools.profile_id = s.profile_id",
             game_id,
+            profile_id,
         )
         return {
             row["profile_id"]: Usage(int(row["cost"]), int(row["accepted"]), int(row["rejected"]))
