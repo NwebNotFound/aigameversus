@@ -78,6 +78,7 @@ class _Hand:
         self.vpip: set[PlayerId] = set()
         self.aggressive: set[PlayerId] = set()
         self.shown: list[dict] = []
+        self.big_blind = big_blind
         self.street_high = big_blind  # highest bet on the current street so far
 
 
@@ -102,7 +103,8 @@ def match_stats(events: Iterable[Event]) -> dict[PlayerId, PokerMatchStats]:
             hand.invested[data["player"]] += data["amount"]
         elif event.type == "street_started":
             hand.board += data["cards"]
-            hand.street_high = 0
+            # Before the flop the big blind is the bet to match; later streets start at 0.
+            hand.street_high = hand.big_blind if data["street"] == "preflop" else 0
         elif event.type == "bet_action":
             _bet(hand, stats[data["player"]], data)
         elif event.type == "showdown":

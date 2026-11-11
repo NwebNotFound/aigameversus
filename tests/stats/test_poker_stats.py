@@ -139,6 +139,35 @@ def test_a_raise_that_loses_at_the_showdown_is_a_bluff_hand():
     assert match_stats(events)["p3"].bluff_hands == 1
 
 
+def preflop_all_in(to):
+    return [
+        start(["p1", "p2"]),
+        hand_started(["p1", "p2"]),
+        hole("p1", "7c", "2d"),
+        hole("p2", "Ah", "Ad"),
+        blind("p2", 10),
+        blind("p1", 20),
+        street("preflop"),
+        act("p2", "all_in", "preflop", to, to - 10),
+        act("p1", "fold", "preflop", 20, 0),
+        award(30, p2=30),
+        ended(),
+    ]
+
+
+@pytest.mark.parametrize("to", [15, 20])
+def test_a_preflop_all_in_for_the_big_blind_or_less_is_a_call(to):
+    me = match_stats(preflop_all_in(to))["p2"]
+
+    assert (me.calls, me.aggressive_actions, me.vpip_hands) == (1, 0, 1)
+
+
+def test_a_preflop_all_in_above_the_big_blind_is_aggressive():
+    me = match_stats(preflop_all_in(100))["p2"]
+
+    assert (me.calls, me.aggressive_actions, me.aggressive_hands) == (0, 1, 1)
+
+
 def test_a_log_of_another_game_is_refused():
     event = Event(
         source=EventSource.ENGINE, type="match_started", data={"game": "toy", "players": []}
