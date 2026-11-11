@@ -119,9 +119,9 @@ Three ways:
   true` the seats are models behind one `Budget`, as with the command. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
-  ledger (see Cost caps); a cap ends the match as `interrupted`. Model
-  matches are not rated yet: the API rates bot matches only, until the model
-  profiles (one per model and personality) reach it. Every match record has `seats` (seat ->
+  ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
+  model match is rated like a bot match: one profile per model (D-081), and
+  `arena ratings backfill` rates the earlier ones. Every match record has `seats` (seat ->
   `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
   the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
   `GET /replays` adds `real`.
@@ -422,7 +422,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
-docs/           DESIGN.md, DECISIONS.md, CREDITS.md
+docs/           DESIGN.md, DECISIONS.md (the index) and decisions/ (one file each), CREDITS.md
 experiments/    one plan per experiment (YAML) and the schedule it fixes (CSV)
 research/       research plan and reports
 tests/          tests for the arena core
@@ -441,6 +441,7 @@ docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, 
 docker compose -f docker-compose.yml -f docker-compose.models.yml up -d --build
 docker compose down           # stop it (--volumes also deletes the database)
 uv run arena games            # the games that can be played
+uv run arena ratings backfill  # rate finished model matches no rating has counted (idempotent)
 uv run arena run --game toy --bots --seed 7   # a bot match in the terminal
 # Real models: COSTS MONEY (inside the caps). Needs DATABASE_URL and OPENROUTER_API_KEY.
 uv run arena run --game liars_deck --models glm-flash,deepseek-flash --save match.json
@@ -491,11 +492,16 @@ commit `pyproject.toml` together with `uv.lock`.
   bots, mock-LLM error paths, and a replay rebuild where they apply.
 - Arena tests live in `tests/`; a game's tests live in `games/<id>/tests/`.
 - No dead code and no abstraction without a second user.
-- Where the spec is open, decide, and record it in `docs/DECISIONS.md`
-  (date, decision, why, alternatives).
+- Where the spec is open, decide, and record it (date, decision, why, alternatives)
+  as its own file in `docs/decisions/`: `python scripts/decisions.py new D-0NN
+  "Title"` makes the file and its line in the index `docs/DECISIONS.md`. Claim the
+  number first (see the team's number list). Never write a decision into the
+  index itself: that is what used to conflict. An old-style `## D-0NN · Title`
+  block that a merge brings into the index is moved with `python
+  scripts/decisions.py adopt`.
 - One roadmap step is one branch and one pull request. Update a branch by
   merging `main` into it; do not rebase or force-push. Keep `README.md`, this
-  file and `docs/DECISIONS.md` current in the same pull request.
+  file and the decision files current in the same pull request.
 
 ## How to add things
 

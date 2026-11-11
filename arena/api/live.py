@@ -182,18 +182,21 @@ class LiveMatches:
         except BaseException:
             del self._running[match_id]
             raise
-        task = asyncio.create_task(self._play(match_id, running, rated=models is None))
+        task = asyncio.create_task(self._play(match_id, running, models=models))
         running.task = task
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return record
 
-    async def _play(self, match_id: UUID, running: _Running, *, rated: bool) -> None:
+    async def _play(
+        self, match_id: UUID, running: _Running, *, models: Mapping[str, str] | None
+    ) -> None:
         try:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
-            if rated:  # bots only until model profiles reach the API (D-082)
-                await self._rate(match_id, running.match, placements, memory=running.memory)
+            await self._rate(
+                match_id, running.match, placements, memory=running.memory, models=models
+            )
         except MatchPaused as pause:
             # Nobody here can allow more money: a cap ends the match. Its log says why.
             log.warning("Match %s stopped at a cost cap (%s)", match_id, pause.reason)
@@ -248,21 +251,36 @@ class LiveMatches:
         await asyncio.gather(running.task, return_exceptions=True)
 
     async def _rate(
-        self, match_id: UUID, match: Match, placements: Sequence[Placement], *, memory: bool
+        self,
+        match_id: UUID,
+        match: Match,
+        placements: Sequence[Placement],
+        *,
+        memory: bool,
+        models: Mapping[str, str] | None,
     ) -> None:
-        """Rate the bots of a finished match and, unless memory is off, remember it.
+        """Rate a finished match and, unless memory is off, remember it (D-081).
 
-        A rating or memory problem never fails the match.
+        Bot seats get one profile per seat; model seats one profile per model, the same in
+        every match. A match with a model in several seats stays unrated. A rating or memory
+        problem never fails the match.
         """
         game_id = match.plugin.id
         try:
-            profiles = await self._ratings.bot_profiles([p.player for p in placements])
-            await self._ratings.apply_match_result(
-                match_id,
-                game_id,
-                [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
-                seats=profiles,
-            )
+            if models is None:
+                profiles = await self._ratings.bot_profiles([p.player for p in placements])
+                await self._ratings.apply_match_result(
+                    match_id,
+                    game_id,
+                    [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+                    seats=profiles,
+                )
+            else:
+                rated = await self._ratings.rate_model_match(match_id, game_id, models, placements)
+                if isinstance(rated, str):
+                    log.info("Match %s: %s", match_id, rated)
+                    return
+                profiles = rated
         except Exception:
             log.exception("Rating of match %s failed", match_id)
             return
