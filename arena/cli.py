@@ -365,7 +365,10 @@ async def _transcript(args: argparse.Namespace) -> int:
         if not args.follow:
             _print_transcript(record.game, await log.load(match_id), names, args)
             return 0
-        printer = _printer(record.game, names, args)
+        shown_as = argparse.Namespace(
+            raw=False, lang=args.lang, no_spoilers=not args.spoilers, all=args.all
+        )
+        printer = _printer(record.game, names, shown_as)
         shown = 0
         while True:
             events = await log.load(match_id)
