@@ -139,6 +139,8 @@
 		players={transcript?.players}
 		costs={live.cost.players}
 		active={typeof turn === 'string' ? turn : null}
+		placements={live.match.placements}
+		ended={live.match.status === 'finished'}
 	>
 		{#snippet controls()}
 			{#if live.control}

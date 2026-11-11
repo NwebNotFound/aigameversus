@@ -178,3 +178,60 @@ test('a key moment gets its beat when watched, a seek stays quiet', async ({ pag
 	await page.waitForTimeout(1600);
 	await expect(page.getByTestId('banner')).toHaveCount(0);
 });
+
+test('the end of a ranked match is a result card with a podium, not a paragraph', async ({
+	page,
+	request
+}) => {
+	const { record, log } = await finishedMatch(request, {
+		game: 'liars_deck',
+		seed: 41,
+		players: 4
+	});
+	const winner = record.placements.find((p: { rank: number }) => p.rank === 1).player;
+
+	await page.goto(`/replays/${record.id}`);
+
+	const card = page.getByTestId('result');
+	await expect(card).toHaveAttribute('data-kind', 'ranks');
+	await expect(card.getByTestId('podium').locator('[data-rank="1"]')).toContainText(winner);
+	// The caption tells the last moment, never the run-on ranking line.
+	await expect(page.getByTestId('caption')).not.toContainText('Result:');
+	await expect(page.getByTestId('final-ranks').locator('li')).toHaveCount(4);
+
+	// The viewer can look at the board, and stepping back leaves the end.
+	await page.getByTestId('result-close').click();
+	await expect(card).toHaveCount(0);
+	await page.getByRole('button', { name: 'To the start' }).click();
+	await page.getByRole('button', { name: 'To the end' }).click();
+	await expect(page.getByTestId('result')).toBeVisible();
+	expect(log.length).toBeGreaterThan(0);
+});
+
+test('a team game ends with the winning side and its players', async ({ page, request }) => {
+	const { record, log } = await finishedMatch(request, { game: 'werewolf', seed: 42, players: 8 });
+	const end = log.find((e) => e.type === 'game_over') as unknown as {
+		data: { winners: string[] };
+	};
+
+	await page.goto(`/replays/${record.id}`);
+
+	const card = page.getByTestId('result');
+	await expect(card).toHaveAttribute('data-kind', 'team');
+	await expect(card.getByTestId('winners').locator('li')).toHaveCount(end.data.winners.length);
+});
+
+test('a poker showdown is one row per hand', async ({ page, request }) => {
+	const { record, log } = await finishedMatch(request, { game: 'poker', seed: 35, players: 3 });
+	const showdown = log.find((e) => e.type === 'showdown') as unknown as {
+		seq: number;
+		data: { hands: unknown[] };
+	};
+	test.skip(!showdown, 'this seed has no showdown');
+
+	await page.goto(`/replays/${record.id}?step=${showdown.seq + 1}`);
+
+	await expect(page.getByTestId('showdown').last().locator('.hand-row')).toHaveCount(
+		showdown.data.hands.length
+	);
+});

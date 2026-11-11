@@ -39,8 +39,11 @@
 	const timeline = $derived(marks(log, lines));
 	const moments = $derived(stops(log, lines, 2));
 	const highlights = $derived(stops(log, lines, 3));
+	// The caption tells the latest moment; the final ranking is the result card's.
 	const caption = $derived(
-		shownLines.findLast((line) => line.importance > 1 && line.kind !== 'info')
+		shownLines.findLast(
+			(line) => line.importance > 1 && line.kind !== 'info' && line.raw?.type !== 'match_finished'
+		)
 	);
 	const link = $derived(shareLink(page.url.origin, params.id, step, view));
 
@@ -238,6 +241,8 @@
 			{players}
 			costs={match.cost.players}
 			active={typeof spec?.turn === 'string' ? spec.turn : null}
+			placements={match.match.placements}
+			ended={match.match.status === 'finished' && step === log.length}
 		>
 			{#snippet controls()}
 				<div class="player" role="group" aria-label="Replay controls">
@@ -423,13 +428,13 @@
 		border: 1px solid var(--border);
 	}
 
+	/* Room for two lines; a longer moment wraps and is never cut off. */
 	.caption {
 		margin: 0;
-		min-height: 1.5em;
+		min-height: 3em;
 		font-size: 0.95rem;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		line-height: 1.5;
+		overflow-wrap: anywhere;
 	}
 
 	.buttons {
