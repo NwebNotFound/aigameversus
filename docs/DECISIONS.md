@@ -108,6 +108,7 @@ with `python scripts/decisions.py adopt`.
 - [D-102](decisions/D-102-any-openrouter-model-that-can-call-tools-may-take-a-seat.md) · Any OpenRouter model that can call tools may take a seat
 - [D-103](decisions/D-103-a-seat-s-identity-comes-from-the-match-record-first-a-model.md) · A seat's identity comes from the match record first; a model seat never reads as a bot
 - [D-104](decisions/D-104-one-display-name-per-seat-computed-by-the-server-never-the.md) · One display name per seat, computed by the server, never the seat id
+- [D-105](decisions/D-105-the-launch-form-picks-a-model-per-seat-from-the-whole.md) · The launch form picks a model per seat from the whole catalog
 - [D-106](decisions/D-106-match-analytics-a-pure-function-of-the-log-public-events.md) · Match analytics: a pure function of the log, public events only without spoilers
 - [D-107](decisions/D-107-the-analytics-tab-draws-the-arena-s-numbers-with-its-own.md) · The Analytics tab draws the arena's numbers with its own small SVG charts
 - [D-108](decisions/D-108-every-model-move-says-what-it-took-in-a-spectators-only.md) · Every model move says what it took, in a spectators-only event
