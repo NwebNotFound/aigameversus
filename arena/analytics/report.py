@@ -508,12 +508,14 @@ def _werewolf_awards(numbers: dict, players: list[str], name: Callable[[str], st
             _award(
                 "most_deceptive",
                 seat,
-                f"Most deceptive: {name(seat)}, {lies[seat]} false role claim(s)",
-                f"Am trügerischsten: {name(seat)}, {lies[seat]} falsche Rollenbehauptung(en)",
+                f"Most deceptive: {name(seat)}, {lies[seat]} false role claim{'' if lies[seat] == 1 else 's'}",
+                f"Am trügerischsten: {name(seat)}, {lies[seat]} falsche Rollenbehauptung{'' if lies[seat] == 1 else 'en'}",
                 count=lies[seat],
             )
         )
-    accuracy = {p: r for p, r in (numbers["votes"]["accuracy"] or {}).items() if r["of"] >= 2}
+    accuracy = {
+        p: r for p, r in (numbers["votes"]["accuracy"] or {}).items() if r["of"] >= 2 and r["n"] > 0
+    }
     if accuracy:
         seat = max(
             accuracy, key=lambda p: (accuracy[p]["value"], accuracy[p]["of"], -players.index(p))

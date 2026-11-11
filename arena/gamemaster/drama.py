@@ -55,7 +55,7 @@ LINES: dict[str, dict[str, list[str]]] = {
             "Morning light falls on {deaths}. The night took its toll.",
         ],
         "de": [
-            "Der Morgen bringt schlechte Nachricht: {deaths} haben die Nacht nicht überlebt.",
+            "Der Morgen bringt schlechte Nachricht. Tot aufgefunden: {deaths}.",
             "Das Dorf erwacht vor einem schrecklichen Anblick. {deaths}: tot.",
             "Das Morgenlicht fällt auf {deaths}. Die Nacht hat ihren Preis gefordert.",
         ],
@@ -214,12 +214,15 @@ def narration(
     voice = voice or TemplateVoice()
     name = lambda seat: names.get(seat, seat)  # noqa: E731
     out = []
+    seen: dict[str, int] = {}
     for seq, event in log:
         if event.type != "narration":
             continue
         key, data = event.data["key"], event.data.get("data") or {}
-        # The variant follows the moment and its place in the log: the same match reads the same.
-        pick = zlib.crc32(f"{key}:{seq}".encode())
+        # The variant follows the moment and how often it came before: the same match reads the
+        # same, and the second night does not open like the first.
+        pick = zlib.crc32(key.encode()) + seen.get(key, 0)
+        seen[key] = seen.get(key, 0) + 1
         texts = {
             lang: voice.speak(key, data, lang, name, pick) or event.data.get("text", "")
             for lang in ("en", "de")
