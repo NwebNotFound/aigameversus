@@ -81,7 +81,7 @@ def test_players_are_named_after_their_profile_and_model_when_the_match_was_rate
 
     text = client.get(f"/matches/{match_id}/transcript", params={"format": "text"}).text
 
-    assert "Random Bot p1 (random-bot)" in text
+    assert "Random Bot p1" in text and "(random-bot)" not in text
 
 
 def test_unknown_match_game_and_options_are_refused(client):
