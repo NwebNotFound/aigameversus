@@ -40,6 +40,7 @@ from arena.transcript import (
     RENDERERS,
     Transcriber,
     TranscriptError,
+    display_names,
     from_export,
     labels,
     render_match,
@@ -199,7 +200,10 @@ def _play_bots(
     players = [f"p{seat}" for seat in range(1, (count or plugin.min_players) + 1)]
     seed = options["seed"]
     match = _match(
-        plugin, random_bots(plugin, players, seed), options, _printer(plugin.id, players, args)
+        plugin,
+        random_bots(plugin, players, seed),
+        options,
+        _printer(plugin.id, display_names({p: ("bot", p) for p in players}), args),
     )
     print(f"{plugin.name} ({plugin.id}), players {' '.join(players)}, seed {seed}")
     placements = asyncio.run(match.run())
@@ -445,7 +449,7 @@ async def _transcript(args: argparse.Namespace) -> int:
             raise _WrongCall(f"no match {match_id} in the database")
         if record.game not in RENDERERS:
             raise _WrongCall(f"no transcript for {record.game}")
-        names = {**{p: p for p in record.players}, **await matches.seat_names(match_id)}
+        names = await matches.display_names(record)
         if not args.follow:
             _print_transcript(record.game, await log.load(match_id), names, args)
             return 0
