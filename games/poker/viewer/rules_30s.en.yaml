@@ -1,0 +1,10 @@
+title: Poker in 30 seconds
+lines:
+  - "This is Texas Hold'em for 2 to 6 players. Everyone starts with 1,000 chips. The goal: win all the chips, or have the most when the hand limit is reached."
+  - "In each hand every player gets 2 private cards. Five shared cards are then turned up: 3 (the flop), 1 (the turn) and 1 (the river)."
+  - "Everyone still in the hand bets before the first shared card and after each new one: fold (give up), check (pass for free), call (match the bet), raise (bet more) or go all-in."
+  - "The best five-card hand made from your 2 cards and the 5 shared cards wins the pot. If everyone else folds, the last player wins without showing any cards."
+  - "From weak to strong: high card, pair, two pair, three of a kind, straight, flush, full house, four of a kind, straight flush."
+  - "Two players post forced bets, the blinds, in every hand. The blinds double every 10 hands, so small stacks come under pressure."
+  - "A player who is all-in for less than the others bet can only win the part of the pot they could match. The rest forms a side pot."
+  - "A player with no chips is out. Watch the stacks, the size of the pot, and who bets big."

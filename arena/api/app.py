@@ -17,6 +17,7 @@ from arena.api import (
     ratings,
     setup,
     transcript,
+    viewer_help,
     werewolf,
 )
 from arena.api.live import LiveMatches
@@ -72,6 +73,7 @@ app.include_router(chronicle.router)
 app.include_router(models.router)
 app.include_router(transcript.router)
 app.include_router(analytics.router)
+app.include_router(viewer_help.router)
 
 
 @app.exception_handler(LedgerUnavailable)
