@@ -12,9 +12,10 @@ strategy game).
 > **Status: early.** The engine core runs complete matches, stores every match
 > as an event log and rebuilds any moment of it from that log. The agent runner
 > prompts a model, keeps its private thoughts apart from its moves and survives
-> bad answers, timeouts and API errors (roadmap step 1.4). So far the players
-> are random bots and a scripted mock model, and the only game is a small
-> reference game. None of the four games exists yet.
+> bad answers, timeouts and API errors. Every model call is counted against
+> hard cost caps, and a match pauses at a cap (roadmap step 1.5). So far the
+> players are random bots and a scripted mock model, and the only game is a
+> small reference game. None of the four games exists yet.
 
 ![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
 
@@ -36,7 +37,7 @@ That builds and starts five services, each with a healthcheck:
 | --- | --- | --- |
 | Web UI | <http://localhost:3100> | SvelteKit spectator UI: home page, leaderboard and player profiles; match pages follow in phase 5 |
 | Arena API | <http://localhost:8100> | health, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
-| PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs |
+| PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
 | Redis | `localhost:6380` | match queue; today only the worker pings it |
 
 To see a filled leaderboard without any model calls, add demo data (six
@@ -49,24 +50,33 @@ docker compose exec arena python -m arena.ratings.demo_seed
 All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
 `--volumes` to also delete the database).
 
-Configuration is optional for now. To change the database password or, later,
-add a model API key, copy `.env.example` to `.env` and edit it. `.env` is
-gitignored.
+Configuration is optional for now. To change the database password or add a
+model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,
+and Compose passes the key on to the arena. Nothing uses the key yet.
 
 ## Cost safety
 
 Matches with real models go through paid APIs, so cost control is part of the
 platform, not an afterthought.
 
-- Today nothing in this repository starts a match with a real model. The
-  wrapper for real models exists, but no model is configured and no command
-  uses it. Development, tests and CI use random bots and a mock LLM only, and
-  CI has no access to any API key.
-- Matches with real models will ship together with hard caps: €0.50 per match
-  and €5 per month by default. At a cap the match pauses and asks; it never
-  keeps billing silently.
-- API keys live only in `.env`. They are never written to code, logs or the UI
-  (the UI shows them masked).
+- **Hard caps:** €0.50 per match and €5 per calendar month by default, set in
+  [config/models.yaml](config/models.yaml) next to the models and their
+  prices.
+- **Counted before it is spent:** every model call is written to a ledger in
+  Postgres before it is sent, at the most it can cost, and corrected when the
+  provider reports the real token counts. A call that fails or times out
+  keeps its worst case. The ledger can therefore show more than the bill,
+  never less, also after a crash or with several players calling at once.
+- **Pause, not overrun:** a call that could take the match or the month past
+  its cap is not sent. The match pauses with the amounts in its log and
+  continues only after someone raises the cap; the game itself is unchanged
+  by the pause.
+- **No real model yet:** nothing in this repository starts a match with a
+  real model today. Development, tests and CI use random bots and a mock LLM
+  only, and CI has no access to any API key.
+- **Keys stay in `.env`:** never in code, config files, logs, the event log or
+  the database. Provider error texts are dropped, because they can quote a
+  key.
 
 ## Development
 
@@ -95,7 +105,7 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 ```
 arena/      core: API, engine, agent runner, memory, game master
 games/      one plugin package per game
-config/     models and personalities (YAML)
+config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI
 docs/       design spec, decisions, credits

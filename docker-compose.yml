@@ -20,6 +20,8 @@ services:
       - "127.0.0.1:8100:8000"
     environment:
       DATABASE_URL: postgresql://arena:${POSTGRES_PASSWORD:-arena_dev}@db:5432/arena
+      # From .env; empty means no match can use a real model.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

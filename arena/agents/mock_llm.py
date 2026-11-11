@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from arena.agents.model import Message, ModelError, ModelReply, ToolCall
+from arena.agents.model import Message, ModelError, ModelReply, ToolCall, Usage
 
 
 class _Hangs:
@@ -51,6 +51,8 @@ class MockLLM:
         return step(messages, tools)
 
 
-def tool_call(name: str, arguments: dict[str, Any], *, text: str | None = None) -> ModelReply:
+def tool_call(
+    name: str, arguments: dict[str, Any], *, text: str | None = None, usage: Usage | None = None
+) -> ModelReply:
     """The answer of a well-behaved model: one tool call, with thinking text if given."""
-    return ModelReply(text=text, tool_calls=(ToolCall(name, json.dumps(arguments)),))
+    return ModelReply(text=text, tool_calls=(ToolCall(name, json.dumps(arguments)),), usage=usage)

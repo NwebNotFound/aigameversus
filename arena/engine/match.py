@@ -20,6 +20,7 @@ from arena.engine.types import (
     AgentError,
     Event,
     EventSource,
+    MatchPaused,
     Placement,
     PlayerId,
     Reply,
@@ -43,7 +44,7 @@ class PluginError(Exception):
 
 
 class Match[StateT: BaseModel]:
-    """One match of one game. Create it, `await run()` once, then read `events` and `state`.
+    """One match of one game. Create it, `await run()`, then read `events` and `state`.
 
     With a `sink`, the events of each turn are handed over together when the
     turn is complete, so a stored log never ends in the middle of a turn.
@@ -77,30 +78,51 @@ class Match[StateT: BaseModel]:
         self._sink = sink
         self._turn_timeout = turn_timeout
         self._failed: set[PlayerId] = set()  # seats whose agent gave up for good
+        self._paused = False
         self._flushed = 0
         self._game_events = 0
         self._used_streams: set[tuple[str | int, ...]] = set()
         self._ctx = TurnContext(self._stream, self._record_game_event)
 
     async def run(self) -> list[Placement]:
+        """Play the match to its end and return the final standings.
+
+        Raises MatchPaused when an agent cannot go on without the user. The log
+        then ends with `match_paused`, and the turn that was being played is
+        not in it. Calling `run()` again continues with that turn.
+        """
         plugin = self.plugin
-        self._record_engine_event(
-            "match_started",
-            {
-                "game": plugin.id,
-                "version": plugin.version,
-                "players": list(self._agents),
-                "settings": dict(self.settings),
-                "seed": self.seed,
-            },
-            # Spectators only: a player who knows the seed knows every hidden draw.
-            visible_to=(),
-        )
-        plugin.setup(self.state, self._ctx)
-        await self._flush()
-        while not plugin.is_over(self.state):
-            await self._advance()
+        if self._paused:
+            self._paused = False
+            self._record_engine_event("match_resumed", {}, visible_to=())
+        elif self.events:
+            raise RuntimeError("This match has already been played")
+        else:
+            self._record_engine_event(
+                "match_started",
+                {
+                    "game": plugin.id,
+                    "version": plugin.version,
+                    "players": list(self._agents),
+                    "settings": dict(self.settings),
+                    "seed": self.seed,
+                },
+                # Spectators only: a player who knows the seed knows every hidden draw.
+                visible_to=(),
+            )
+            plugin.setup(self.state, self._ctx)
             await self._flush()
+        try:
+            while not plugin.is_over(self.state):
+                await self._advance()
+                await self._flush()
+        except MatchPaused as pause:
+            self._paused = True
+            self._record_engine_event(
+                "match_paused", {"reason": pause.reason, **pause.data}, visible_to=()
+            )
+            await self._flush()
+            raise
         placements = plugin.results(self.state)
         self._record_engine_event(
             "match_finished", {"placements": [p.model_dump() for p in placements]}
@@ -122,7 +144,7 @@ class Match[StateT: BaseModel]:
         if active:
             # Everyone decides on the same state. Trails are appended in player
             # order afterwards, so the log does not depend on who answered first.
-            decisions = await asyncio.gather(*(self._decide(player) for player in active))
+            decisions = await self._decide_all(active)
             actions = {}
             for player, (action, trail) in zip(active, decisions, strict=True):
                 self.events.extend(trail)
@@ -132,6 +154,22 @@ class Match[StateT: BaseModel]:
             plugin.step(self.state, self._ctx)
         if self._game_events == progress:
             raise PluginError(f"{plugin.id} made no progress: a turn passed without a game event")
+
+    async def _decide_all(self, players: list[PlayerId]) -> list[tuple[Action, list[Event]]]:
+        """Let the players decide side by side. All of them succeed, or the turn did not happen."""
+        failed_before = set(self._failed)
+        deciding = [asyncio.ensure_future(self._decide(player)) for player in players]
+        try:
+            return await asyncio.gather(*deciding)
+        except BaseException:
+            # One player stopped the turn, with a pause or a plugin bug. Nobody
+            # keeps a model busy for a turn that is dropped, and a seat that
+            # failed in it is asked again when the turn is played.
+            for decision in deciding:
+                decision.cancel()
+            await asyncio.gather(*deciding, return_exceptions=True)
+            self._failed = failed_before
+            raise
 
     async def _decide(self, player: PlayerId) -> tuple[Action, list[Event]]:
         """Get a legal action for a player, with the events that led to it.

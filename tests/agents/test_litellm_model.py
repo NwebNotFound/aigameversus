@@ -6,13 +6,12 @@ response objects and error classes are the real ones.
 """
 
 import asyncio
-import socket
 import traceback
 
 import pytest
 
 from arena.agents.litellm_model import LiteLLMModel
-from arena.agents.model import ModelError, ModelReply, ToolCall
+from arena.agents.model import ModelError, ModelReply, ToolCall, Usage
 
 MODEL = "openrouter/some-vendor/some-model"
 MESSAGES = [{"role": "user", "content": "It is your turn."}]
@@ -28,48 +27,9 @@ PROVIDER_TEXT = "PROVIDER-TEXT-THAT-QUOTES-THE-REQUEST"
 def call(model=MODEL):
     """Call a model through the wrapper. Returns its reply or the ModelError."""
     try:
-        return asyncio.run(LiteLLMModel(model)(MESSAGES, TOOLS))
+        return asyncio.run(LiteLLMModel(model, max_output_tokens=300)(MESSAGES, TOOLS))
     except ModelError as error:
         return error
-
-
-@pytest.fixture(scope="module")
-def litellm():
-    """LiteLLM, loaded the way the wrapper loads it, with every name lookup refused.
-
-    No test of this module may reach the network: not the import, not a call.
-    """
-    lookups = []
-
-    def refuse(host, *args, **kwargs):
-        lookups.append(host)
-        raise OSError("These tests must not use the network")
-
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(socket, "getaddrinfo", refuse)
-        # The first call through the wrapper imports LiteLLM.
-        assert isinstance(call("no-such-provider/model"), ModelError)
-        import litellm
-
-        yield litellm
-    assert lookups == []
-
-
-@pytest.fixture
-def answer_with(litellm, monkeypatch):
-    """Make LiteLLM answer the next calls with a mock response. Returns what it was sent."""
-    real = litellm.acompletion
-    sent = {}
-
-    def install(**mock):
-        async def acompletion(**arguments):
-            sent.update(arguments)
-            return await real(**arguments, **mock)
-
-        monkeypatch.setattr(litellm, "acompletion", acompletion)
-        return sent
-
-    return install
 
 
 def test_text_and_tool_calls_come_back_as_a_model_reply(answer_with):
@@ -86,17 +46,47 @@ def test_text_and_tool_calls_come_back_as_a_model_reply(answer_with):
 
     reply = call()
 
-    assert reply == ModelReply(
-        text="The 3 is enough.", tool_calls=(ToolCall("play_card", '{"card": 3}'),)
+    assert (reply.text, reply.tool_calls) == (
+        "The 3 is enough.",
+        (ToolCall("play_card", '{"card": 3}'),),
     )
-    # LiteLLM's own retries are off: the agent runner is the only one that retries.
-    assert sent == {"model": MODEL, "messages": MESSAGES, "tools": TOOLS, "num_retries": 0}
+    # The answer is limited in length, and LiteLLM's own retries are off: the
+    # agent runner is the only one that retries.
+    assert sent == {
+        "model": MODEL,
+        "messages": MESSAGES,
+        "tools": TOOLS,
+        "max_tokens": 300,
+        "num_retries": 0,
+    }
+
+
+def test_reply_carries_the_tokens_the_provider_counted(answer_with):
+    answer_with(mock_response="I just talk.")
+
+    # LiteLLM's mock counts 10 tokens of prompt and 20 of answer.
+    assert call().usage == Usage(input_tokens=10, output_tokens=20)
+
+
+def test_reply_without_usage_says_so(litellm, monkeypatch):
+    real = litellm.acompletion
+
+    async def acompletion(**arguments):
+        response = await real(**arguments, mock_response="I just talk.")
+        del response.usage
+        return response
+
+    monkeypatch.setattr(litellm, "acompletion", acompletion)
+
+    assert call() == ModelReply(text="I just talk.", usage=None)
 
 
 def test_answer_without_a_tool_call_has_none(answer_with):
     answer_with(mock_response="I just talk.")
 
-    assert call() == ModelReply(text="I just talk.", tool_calls=())
+    reply = call()
+
+    assert (reply.text, reply.tool_calls) == ("I just talk.", ())
 
 
 @pytest.mark.parametrize(
