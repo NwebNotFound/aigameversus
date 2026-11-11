@@ -97,6 +97,8 @@ export interface ReplaySummary {
 	started_at: string;
 	finished_at: string;
 	cost_micro_eur: number;
+	seats?: Record<string, RecordSeat>;
+	real?: boolean;
 }
 
 /** `GET /matches/{id}/cost`, in millionths of a euro. */
@@ -317,6 +319,8 @@ export interface RecentMatch {
 	match_id: string;
 	game_id: string;
 	rated_at: string;
+	/** When the match itself ended; `rated_at` is when its rating was applied. */
+	played_at: string;
 	rank: number;
 	players: number;
 	rating_change: number;
