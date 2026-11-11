@@ -1,0 +1,119 @@
+Match started: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout), p4 (gemini-flash-lite), p5 (gpt-luna), p6 (claude-haiku), p7 (qwen-flash) and p8 (mistral-small)
+
+Night 1
+Night 1 falls. The village sleeps.
+Morning: found dead in the night: p6 (claude-haiku)
+Dawn breaks. Found dead: p6 (claude-haiku) (Hexe).
+p6 (claude-haiku) dies (torn apart by the wolves); role: witch
+
+Day 1
+    Speaking order: p3 (llama-scout), p4 (gemini-flash-lite), p5 (gpt-luna), p7 (qwen-flash), p8 (mistral-small), p1 (glm-flash) and p2 (deepseek-flash)
+p1 (glm-flash) votes for p3 (llama-scout) as captain
+p2 (deepseek-flash) votes for p4 (gemini-flash-lite) as captain
+p3 (llama-scout) votes for p4 (gemini-flash-lite) as captain
+p4 (gemini-flash-lite) votes for p4 (gemini-flash-lite) as captain
+p5 (gpt-luna) votes for p4 (gemini-flash-lite) as captain
+p7 (qwen-flash) votes for p3 (llama-scout) as captain
+p8 (mistral-small) votes for p4 (gemini-flash-lite) as captain
+p4 (gemini-flash-lite) is elected captain
+    p3 (llama-scout) 2, p4 (gemini-flash-lite) 5
+p4 (gemini-flash-lite) is now the village captain.
+p3 (llama-scout): "Let's start by getting to know each other. I'm p3, a villager. What's everyone's plan for finding the werewolves?"
+p4 (gemini-flash-lite): "It is a terrible start to lose the witch so early. I am p4, and I was elected captain last night. My priority is to protect the village. We need to discuss who might have been acting suspiciously last night or who could have targeted the witch. I will be voting based on evidence and who seems to be pushing an agenda rather than helping us find the truth."
+p5 (gpt-luna): "Losing the witch is rough, but we have no evidence yet about who targeted her. I don't think we should treat captain-election votes as proof either. Let's hear specific suspicions and reasoning from everyone; for now I'll watch for anyone pushing a confident vote without a basis or trying to shut down discussion."
+p7 (qwen-flash): "No real evidence yet — the witch's death only tells us the wolves opened on a power role. I'd rather not execute blindly today, but if a vote is forced it should fall on the most content-free person here.
+
+p3: your whole speech was "I'm a villager, what's everyone's plan?" That's exactly what a wolf says to stay clean. Give me something specific: who did you read as dangerous, and why did you vote yourself for captain instead of backing p4?
+
+p4, p5 — agreed, substance over vibes.
+
+One last thing: I won't name my role, but if I die tonight it will not be a free kill. Wolves should factor that in."
+p8 (mistral-small): "We lost the witch last night—that’s a major blow. Instead of broad accusations, let’s focus on who had the opportunity or motive to target her. p3, you asked for a plan: I’d like to hear specific roles or behaviors you find suspicious, not just generic statements. p7, your skepticism is healthy, but we need more than ‘content-free’ claims. If anyone has concrete evidence or a reasoned suspicion, now is the time to share it. The captain’s role is to guide us, but we all share responsibility for finding the truth."
+p1 (glm-flash): "I'm p1, a simple villager with no night actions, so I'll be judged on reads. I voted p3 for captain; p4 winning with that self-vote bloc is noted but not damning on day one. Right now p7 is the most aggressive: demanding specifics from p3 while dodging role questions himself and dropping that vague "if I die tonight" warning. Wolves often build that kind of cover early. No hard evidence yet, so I won't push a lynch today — but I want everyone to answer p7's question back at him: p7, what's your concrete read on who killed the witch?"
+p2 (deepseek-flash): "No hard evidence yet, so I'll give reads rather than push a lynch. The witch death tells us little — any pack targets a power role night one.
+
+Reads: p3's opener was thin, but day-one nerves look like that. p7 stands out: heavy interrogation of p3, a vague "it won't be a free kill" threat, and refusing to name a role while demanding others account for theirs. That reads like building cover — though it could equally be a real power role drawing wolves off.
+
+p1, what makes p7 a wolf rather than just loud? I won't vote without more. For now I want p7 to name an actual suspect."
+p3 (llama-scout): "I understand that my initial message may have seemed light, but I'm trying to gather information and not jump to conclusions. p7, I find your aggressive questioning of me suspicious, and your vague threat if you die tonight is unsettling. I'd like to hear more about your role and why you're so quick to suspect me. p1 and p2, I appreciate your insights, and I'll consider your points. Let's focus on sharing information and finding the werewolves."
+p4 (gemini-flash-lite): "p7, your aggression towards p3 and your vague threat if you die tonight are concerning. While I appreciate your call for concrete evidence, your own behavior is raising questions. You demand others reveal themselves while staying hidden yourself. As captain, I need to consider all angles, but I will be watching players who seem to be deflecting or building alibis. We need to discuss who might have had the means or motive to kill the witch, and right now, your defensiveness is what stands out."
+p5 (gpt-luna): "p7’s warning could be a bluff, but it could also be a real role with a death trigger, so I’d be cautious about making that the whole case. p7, please answer directly: who do you suspect and what behavior points there? p1 and p4 have both turned the discussion toward p7; that may be justified, but let’s hear whether either has a better-supported alternative before we settle."
+p7 (qwen-flash): "Answering p5 directly: my concrete suspect is still p3, and here is the behavior, not vibes. Two speeches in, p3 has named nobody. His entire content was asking others to name someone. That is a wolf's safest posture on day one.
+
+p1 calls me aggressive for asking questions; that is the cheapest possible attack. p1 voted p3 for captain, then pivoted to the loudest voice at him. Note it, don't convict it.
+
+To the table: my read is p3 > p1 > everyone else. If you want a lynch, take p3. If you lynch me instead, I will pick who dies with me, and I will not pick p3 on a wolf's advice."
+p8 (mistral-small): "p7 raises valid points about p3’s lack of concrete information. If p3 truly believes in their suspicions, they should name a role or behavior, not just deflect. p3, instead of questioning p7’s motives, answer directly: who do you suspect *based on what*?
+
+p7, your warning about a death trigger is unusual—if you’re not a wolf, clarify your role to build trust. The village needs specifics, not posturing. Let’s hear from p1 and p2: do you have any *actual* reads beyond today’s opening speeches?"
+p1 (glm-flash): "Answering p8 directly: my read is p3 > p7, but I'm not confident in either. p3 has now had two full rounds and still named nobody — that's the real problem, not p7's tone. p7, you claim you have a death trigger: name it or at least the team. A real Hunter or such gains nothing from hiding it when half the table wants to lynch you; a wolf invents exactly this kind of threat to look valuable alive. p2, you quickly echoed my p7 suspicion without adding anything of your own — I'm noting that too. If the vote comes, I lean p3: content-free across both rounds beats vague threats. But I'd genuinely rather hear one concrete claim first."
+p2 (deepseek-flash): "You're right, p1 — my p7 read leaned on your framing, and I'll own that. Here's my own read, independent of it.
+
+p3 has spoken twice and still hasn't named a single suspect or a concrete observation. When pressed, p3's answer was to question the questioner. That's the safest possible wolf posture, and it's the only real pattern I can point to.
+
+p7's death-trigger claim is unverifiable, but lynching it is a bad trade: if real, we lose a village role and likely still lynch p3 tomorrow. So my lean is p3, not p7. I'll vote p3 unless someone brings a concrete counter-claim."
+p1 (glm-flash) votes for p3 (llama-scout)
+p1 (glm-flash): "Two rounds of speech and p3 has named no suspect and no observation — the safest wolf posture at the table. I'll take that over p7's unverifiable threat."
+p2 (deepseek-flash) votes for p3 (llama-scout)
+p2 (deepseek-flash): "Two rounds, no suspect, no observation — the safest wolf posture. Following my stated lean."
+p3 (llama-scout) votes for p7 (qwen-flash)
+p3 (llama-scout): "p7's aggressive questioning and vague threat if they die tonight are unsettling and raise suspicions about their role."
+p4 (gemini-flash-lite) votes for p3 (llama-scout)
+p4 (gemini-flash-lite): "p3 has offered no concrete information or suspicions across two rounds of discussion, which is a suspicious posture for a villager, especially after the witch died."
+p5 (gpt-luna) votes for p3 (llama-scout)
+p5 (gpt-luna): "Two rounds without naming a concrete suspect; p3's own vote on p7 doesn't outweigh the consistent concern."
+p7 (qwen-flash) votes for p3 (llama-scout)
+p7 (qwen-flash): "Consistent with my stated read: p3 spoke twice, named no suspect or observation, and only questioned the questioners. That's the safest wolf posture at the table."
+p8 (mistral-small) votes for p3 (llama-scout)
+p8 (mistral-small): "p3 has provided no concrete information or suspects despite multiple rounds, which is suspicious for a villager."
+Day 1 vote: 7 votes against p3 (llama-scout), p3 (llama-scout) is executed
+    p3 (llama-scout) 7, p7 (qwen-flash) 1
+The village has decided: p3 (llama-scout) is executed. p3 (llama-scout) was Dorfbewohner.
+p3 (llama-scout) dies (executed by the village); role: villager
+
+Night 2
+Night 2 falls. The village sleeps.
+Morning: found dead in the night: p1 (glm-flash)
+Dawn breaks. Found dead: p1 (glm-flash) (Dorfbewohner).
+p1 (glm-flash) dies (torn apart by the wolves); role: villager
+
+Day 2
+    Speaking order: p7 (qwen-flash), p8 (mistral-small), p2 (deepseek-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p7 (qwen-flash): "Correction first: p3 was a plain villager. Our "names no suspect = wolf" heuristic misfired, and p1 paid for it. Nobody should reuse that argument — including me.
+
+I'll claim openly: I am the Hunter. Lynch or wolf me and I shoot. After p3 I won't waste that bullet, so it goes to my real best read.
+
+That read: look at who engineered the p3 lynch. p1 built the case, p2 echoed it within one turn, p8 amplified it. A clean-looking village mislynch is exactly what the pack wanted.
+
+So p2 and p8: justify the p3 push, or take the bullet slot. p4, as captain, name a target instead of managing tone."
+p8 (mistral-small): "p7, claiming to be the Hunter now is convenient after the wolves’ night kill. As the Seer, I’ve already inspected p7 and confirmed their role as Hunter—so your threat to shoot is noted, but it doesn’t erase the fact that *you* pushed for p3’s lynch despite p3 being a villager. p2 and I acted on the evidence available: p3 provided zero concrete information or suspects, which is the textbook wolf posture. If you’re truly the Hunter, use that bullet wisely—but don’t twist the village’s justified caution into a wolf-engineered plot. p4, as captain, what’s our next move? Do we trust p7’s sudden reveal, or focus on the remaining players?"
+p2 (deepseek-flash): "Hold on. p8, you say you're the Seer — but a real Seer who checked p7 night one would have died last night or hidden, not outed themselves to confirm a Hunter claim. That's an awfully convenient mutual back-scratch: p7 claims Hunter as a shield, p8 vouches for him as the only "proof." If we buy it, you two are untouchable and run the rest of the game.\n\nI'll own the p3 mistake — the whole table made it, p1 included, and p1 was a villager. But p7's threat to shoot p2 or p8 for a *village-wide* lynch decision is exactly the pressure a wolf uses.\n\nI'm not voting p5 on nothing. My suspicion sits on p7/p8. p4, weigh in."
+p4 (gemini-flash-lite): "p7, your Hunter claim after p1 died is convenient. You demand trust without proof and threaten us. p8 claiming Seer to vouch for you is also suspect; a Seer wouldn't wait this long. Wolves killed p1, and now you two vouch for each other. This mutual confirmation is suspicious, likely a wolf tactic to control the narrative. Explain your delayed reveals."
+p5 (gpt-luna): "P3’s execution was a village mistake, but that alone doesn’t tell us who engineered it: nearly everyone voted there, and p1’s death could be meant to make us blame whichever side they criticized. P8’s Seer claim is the only concrete information offered; if genuine, the check on p7 is plausible, though outing now is risky. P7’s Hunter claim is likewise unverified. I’m wary of p2’s attempt to frame this as a sealed p7/p8 alliance without independent evidence. p2, what is your strongest specific reason to suspect either one beyond their claims and timing? We need compare explanations, not punish someone for the mislynch."
+p7 (qwen-flash): "I have nothing to add."
+p8 (mistral-small): "p7’s Hunter claim and my Seer confirmation are a coordinated shield after the wolves’ kill. A real Seer would not out themselves now, and a real Hunter wouldn’t threaten the table *before* acting. p2 and p4 are right to question this mutual back-scratch—it reek of wolf-engineered chaos to protect the pack.
+
+p7, if you’re the Hunter, act like it: name a *real* suspect or prepare to die. p8, as Seer, your late reveal is reckless—wolves *want* you exposed. p4, as captain, we’ve wasted enough time. Vote p7 or p8 *now* before the wolves pick another villager."
+p2 (deepseek-flash): "p8 just torpedoed himself. First he's the Seer confirming p7 as Hunter. Minutes later he calls "my Seer confirmation" a coordinated wolf shield and tells p8 — himself — that his reveal was reckless. You can't be the confirmed Seer and also admit the confirmation was a ploy. That's not a village slip; that's a wolf tangled in his own lie.
+
+p7 is likely just the Hunter caught in it. My vote goes to p8: a fake Seer claim is exactly what the pack needs to make two players untouchable. p4, p5, tell me that contradiction isn't the tell."
+p4 (gemini-flash-lite): "p8's logic is completely contradictory. He claims to be the Seer who confirmed p7, then immediately pivots to calling his own confirmation a "coordinated wolf shield" and his reveal "reckless." This isn't a village slip-up; it's a wolf trying to manage a failed narrative. The wolves killed p1, and now p7 and p8 are trying to create an untouchable alliance. My vote is for p8. He's the fake Seer who is creating chaos to protect the pack. p5, this is the tell we need."
+p5 (gpt-luna): "The decisive point is p8’s own contradiction: first claiming to be Seer and confirming p7 as Hunter, then describing “my Seer confirmation” as a coordinated wolf shield and saying “p8, as Seer” as if addressing someone else. That reads much more like a false claim unraveling than a genuine check. p7’s Hunter claim remains unverified, but p8 is the clearest vote today. I’ll vote p8; if p7 is real, their shot should be aimed carefully at the remaining suspect after we see the result."
+p2 (deepseek-flash) votes for p8 (mistral-small)
+p2 (deepseek-flash): "Fake Seer claim that contradicts itself: confirms p7, then calls his own confirmation a wolf shield. Clear wolf tell; p4, p5 agree."
+p4 (gemini-flash-lite) votes for p8 (mistral-small)
+p4 (gemini-flash-lite): "p8 makes contradictory claims, first vouching for p7 as a Seer and then calling his own confirmation a wolf shield. This is a clear wolf tell to create chaos and protect the pack."
+p5 (gpt-luna) votes for p8 (mistral-small)
+p5 (gpt-luna): "P8 contradicted their Seer claim and its supposed confirmation of p7."
+p7 (qwen-flash) votes for p8 (mistral-small)
+p7 (qwen-flash): "p8 claimed Seer and "confirmed" me, then denounced his own confirmation as a coordinated wolf shield and addressed himself in third person. A fake Seer claim is the pack's tool. I back the lynch."
+p8 (mistral-small) votes for p7 (qwen-flash)
+p8 (mistral-small): "p7’s unverified Hunter claim and aggressive pressure after the wolves’ kill are suspicious."
+Day 2 vote: 5 votes against p8 (mistral-small), p8 (mistral-small) is executed
+    p8 (mistral-small) 5, p7 (qwen-flash) 1
+The village has decided: p8 (mistral-small) is executed. p8 (mistral-small) was Seherin.
+p8 (mistral-small) dies (executed by the village); role: seer
+Game over: the werewolves win
+    p2 (deepseek-flash) and p4 (gemini-flash-lite)
+The game is over. The werewolves win.
+Result: 1. p2 (deepseek-flash)  1. p4 (gemini-flash-lite)  3. p1 (glm-flash)  3. p3 (llama-scout)  3. p5 (gpt-luna)  3. p6 (claude-haiku)  3. p7 (qwen-flash)  3. p8 (mistral-small)

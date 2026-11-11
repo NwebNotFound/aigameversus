@@ -1,0 +1,238 @@
+Match started: p1, p2, p3 and p4 (seed 7)
+p1's revolver is loaded in chamber 1
+p2's revolver is loaded in chamber 5
+p3's revolver is loaded in chamber 1
+p4's revolver is loaded in chamber 5
+
+Round 1, table card: Queen
+    p1 starts; players: p1, p2, p3 and p4
+p1 is dealt King 6, Queen 1, Queen 6, Ace 3, Joker 1
+p2 is dealt Ace 1, King 4, King 3, Ace 5, Queen 4
+p3 is dealt Joker 2, Ace 6, Queen 5, Ace 2, Queen 3
+p4 is dealt King 1, Ace 4, King 5, Queen 2, King 2
+p1 chooses play cards (card ids: Q6)
+p1 plays 1 card and claims: a queen
+p1 really plays Queen 6 (true)
+p2 is next
+p2 chooses play cards (card ids: K4, K3)
+p2 plays 2 cards and claims: two queens
+p2 really plays King 4, King 3 (a lie)
+p3 is next
+p3 chooses play cards (card ids: Q5, A2, A6)
+p3 plays 3 cards and claims: three queens
+p3 really plays Queen 5, Ace 2, Ace 6 (a lie)
+p4 is next
+p4 chooses play cards (card ids: K5)
+p4 plays 1 card and claims: a queen
+p4 really plays King 5 (a lie)
+p1 is next
+p1 chooses call liar
+p1 calls LIAR on p4
+The cards show: a king. p4 was lying
+    King 5
+p4 must pull the trigger (caught lying)
+p4 pulls the trigger (pull 1): click
+Round 1 is over. p4 starts the next round
+
+Round 2, table card: Queen
+    p4 starts; players: p1, p2, p3 and p4
+p1 is dealt Joker 2, King 5, Ace 5, Queen 3, King 1
+p2 is dealt King 3, Queen 5, Queen 4, King 4, King 2
+p3 is dealt Ace 1, King 6, Ace 4, Ace 2, Joker 1
+p4 is dealt Ace 6, Queen 6, Ace 3, Queen 2, Queen 1
+p4 chooses play cards (card ids: A6, Q2, Q6)
+p4 plays 3 cards and claims: three queens
+p4 really plays Ace 6, Queen 2, Queen 6 (a lie)
+p1 is next
+p1 chooses play cards (card ids: K5, K1)
+p1 plays 2 cards and claims: two queens
+p1 really plays King 5, King 1 (a lie)
+p2 is next
+p2 chooses play cards (card ids: K2)
+p2 plays 1 card and claims: a queen
+p2 really plays King 2 (a lie)
+p3 is next
+p3 chooses play cards (card ids: K6)
+p3 plays 1 card and claims: a queen
+p3 really plays King 6 (a lie)
+p4 is next
+p4 chooses call liar
+p4 calls LIAR on p3
+The cards show: a king. p3 was lying
+    King 6
+p3 must pull the trigger (caught lying)
+p3 pulls the trigger (pull 1): BANG
+p3 is out of the game
+Round 2 is over. p4 starts the next round
+
+Round 3, table card: Ace
+    p4 starts; players: p1, p2 and p4
+p1 is dealt Ace 2, Ace 1, Queen 5, Queen 6, Queen 1
+p2 is dealt Queen 3, King 6, Ace 6, King 1, Queen 4
+p4 is dealt Joker 1, Ace 3, King 5, Queen 2, King 2
+p4 chooses play cards (card ids: J1, A3, K2)
+p4 plays 3 cards and claims: three aces
+p4 really plays Joker 1, Ace 3, King 2 (a lie)
+p1 is next
+p1 chooses call liar
+p1 calls LIAR on p4
+The cards show: a joker, an ace, a king. p4 was lying
+    Joker 1, Ace 3, King 2
+p4 must pull the trigger (caught lying)
+p4 pulls the trigger (pull 2): click
+Round 3 is over. p4 starts the next round
+
+Round 4, table card: Queen
+    p4 starts; players: p1, p2 and p4
+p1 is dealt King 4, King 3, Ace 4, King 1, Ace 5
+p2 is dealt Ace 1, Joker 2, King 5, Ace 3, Ace 6
+p4 is dealt Queen 5, Queen 2, Queen 3, Queen 6, Ace 2
+p4 chooses play cards (card ids: Q5)
+p4 plays 1 card and claims: a queen
+p4 really plays Queen 5 (true)
+p1 is next
+p1 chooses play cards (card ids: K1)
+p1 plays 1 card and claims: a queen
+p1 really plays King 1 (a lie)
+p2 is next
+p2 chooses call liar
+p2 calls LIAR on p1
+The cards show: a king. p1 was lying
+    King 1
+p1 must pull the trigger (caught lying)
+p1 pulls the trigger (pull 1): BANG
+p1 is out of the game
+Round 4 is over. p2 starts the next round
+
+Round 5, table card: Ace
+    p2 starts; players: p2 and p4
+p2 is dealt Ace 3, King 5, Queen 2, Ace 6, Joker 1
+p4 is dealt King 2, Ace 5, Queen 5, Ace 4, Ace 2
+p2 chooses play cards (card ids: K5, Q2, A3)
+p2 plays 3 cards and claims: three aces
+p2 really plays King 5, Queen 2, Ace 3 (a lie)
+p4 is next
+p4 chooses play cards (card ids: Q5, K2, A5)
+p4 plays 3 cards and claims: three aces
+p4 really plays Queen 5, King 2, Ace 5 (a lie)
+p2 is next
+p2 chooses play cards (card ids: J1)
+p2 plays 1 card and claims: an ace
+p2 really plays Joker 1 (true)
+p4 is next
+p4 chooses play cards (card ids: A4)
+p4 plays 1 card and claims: an ace
+p4 really plays Ace 4 (true)
+p2 is next
+p2 chooses play cards (card ids: A6)
+p2 plays 1 card and claims: an ace
+p2 really plays Ace 6 (true)
+p4 must check the last play
+p4 has to call LIAR on p2
+The cards show: an ace. p2 told the truth
+    Ace 6
+p4 must pull the trigger (the call was wrong)
+p4 pulls the trigger (pull 3): click
+Round 5 is over. p4 starts the next round
+
+Round 6, table card: King
+    p4 starts; players: p2 and p4
+p2 is dealt Ace 2, Ace 3, Queen 6, Ace 6, Ace 1
+p4 is dealt Queen 4, Queen 1, King 5, King 4, Queen 2
+p4 chooses play cards (card ids: K5, Q1, Q2)
+p4 plays 3 cards and claims: three kings
+p4 really plays King 5, Queen 1, Queen 2 (a lie)
+p2 is next
+p2 chooses play cards (card ids: A6)
+p2 plays 1 card and claims: a king
+p2 really plays Ace 6 (a lie)
+p4 is next
+p4 chooses call liar
+p4 calls LIAR on p2
+The cards show: an ace. p2 was lying
+    Ace 6
+p2 must pull the trigger (caught lying)
+p2 pulls the trigger (pull 1): click
+Round 6 is over. p2 starts the next round
+
+Round 7, table card: Ace
+    p2 starts; players: p2 and p4
+p2 is dealt Queen 3, King 5, Queen 5, Ace 3, King 6
+p4 is dealt Ace 4, Joker 2, King 2, Joker 1, Queen 4
+p2 chooses play cards (card ids: Q5, A3)
+p2 plays 2 cards and claims: two aces
+p2 really plays Queen 5, Ace 3 (a lie)
+p4 is next
+p4 chooses play cards (card ids: K2)
+p4 plays 1 card and claims: an ace
+p4 really plays King 2 (a lie)
+p2 is next
+p2 chooses play cards (card ids: Q3, K5)
+p2 plays 2 cards and claims: two aces
+p2 really plays Queen 3, King 5 (a lie)
+p4 is next
+p4 chooses play cards (card ids: J1)
+p4 plays 1 card and claims: an ace
+p4 really plays Joker 1 (true)
+p2 is next
+p2 chooses play cards (card ids: K6)
+p2 plays 1 card and claims: an ace
+p2 really plays King 6 (a lie)
+p4 must check the last play
+p4 has to call LIAR on p2
+The cards show: a king. p2 was lying
+    King 6
+p2 must pull the trigger (caught lying)
+p2 pulls the trigger (pull 2): click
+Round 7 is over. p2 starts the next round
+
+Round 8, table card: King
+    p2 starts; players: p2 and p4
+p2 is dealt Joker 2, Queen 2, Queen 3, King 4, Ace 5
+p4 is dealt Ace 2, King 5, Ace 6, King 2, King 3
+p2 chooses play cards (card ids: A5, J2)
+p2 plays 2 cards and claims: two kings
+p2 really plays Ace 5, Joker 2 (a lie)
+p4 is next
+p4 chooses call liar
+p4 calls LIAR on p2
+The cards show: an ace, a joker. p2 was lying
+    Ace 5, Joker 2
+p2 must pull the trigger (caught lying)
+p2 pulls the trigger (pull 3): click
+Round 8 is over. p2 starts the next round
+
+Round 9, table card: King
+    p2 starts; players: p2 and p4
+p2 is dealt King 6, Ace 2, Ace 3, Queen 2, Queen 3
+p4 is dealt Ace 6, Queen 1, King 3, Ace 5, Queen 5
+p2 chooses play cards (card ids: Q2, A3)
+p2 plays 2 cards and claims: two kings
+p2 really plays Queen 2, Ace 3 (a lie)
+p4 is next
+p4 chooses call liar
+p4 calls LIAR on p2
+The cards show: a queen, an ace. p2 was lying
+    Queen 2, Ace 3
+p2 must pull the trigger (caught lying)
+p2 pulls the trigger (pull 4): click
+Round 9 is over. p2 starts the next round
+
+Round 10, table card: Ace
+    p2 starts; players: p2 and p4
+p2 is dealt Queen 3, Queen 1, Ace 2, King 6, Joker 1
+p4 is dealt Ace 3, Queen 4, Ace 5, Queen 6, Joker 2
+p2 chooses play cards (card ids: Q3, J1, Q1)
+p2 plays 3 cards and claims: three aces
+p2 really plays Queen 3, Joker 1, Queen 1 (a lie)
+p4 is next
+p4 chooses call liar
+p4 calls LIAR on p2
+The cards show: two queens, a joker. p2 was lying
+    Queen 3, Joker 1, Queen 1
+p2 must pull the trigger (caught lying)
+p2 pulls the trigger (pull 5): BANG
+p2 is out of the game
+Round 10 is over. p4 starts the next round
+Match over: p4 is the last one standing
+Result: 1. p4  2. p2  3. p1  4. p3

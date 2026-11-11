@@ -59,7 +59,15 @@ def test_models_play_a_match_that_is_stored_metered_and_rebuilt(database, answer
     sent = answer_with(**PLAY_3)
 
     code, output, complaints = arena(
-        capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash", "--seed", "7"
+        capsys,
+        "run",
+        "--game",
+        "toy",
+        "--models",
+        "glm-flash,deepseek-flash",
+        "--seed",
+        "7",
+        "--raw",  # this test reads the events as stored
     )
 
     assert (code, complaints) == (0, "")
