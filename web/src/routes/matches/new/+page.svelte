@@ -212,7 +212,7 @@
 			<p class="hint">
 				{GAMES_WITH_LANGUAGE.has(game.id)
 					? 'The language of the narrator and of the players.'
-					: 'This game has no game text yet; the setting matters once models play.'}
+					: 'This game plays in English for now: only Werewolf takes a language (its narrator and the table talk).'}
 			</p>
 			{#if errors.language}<p class="field-error">{errors.language}</p>{/if}
 

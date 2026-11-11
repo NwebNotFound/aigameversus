@@ -15,8 +15,9 @@ strategy game).
 > the spectator UI shows them live and as replays, and ratings, statistics and
 > trust between players are built. Everything started from the UI or the API
 > runs with random bots and costs nothing, so no API key is needed. Real models
-> can take seats from the command line only (`arena run --models`), inside hard
-> cost caps; the first three matches they played are
+> can take seats from the command line (`arena run --models`) and, if the
+> server is started with `ARENA_ALLOW_MODEL_SEATS=1`, through `POST /matches`,
+> inside hard cost caps; the first three matches they played are
 > [below](#real-models-first-matches). The fourth game is not playable yet.
 
 ## Games
@@ -40,25 +41,41 @@ player's chance to win.
 
 ![Live view of a Poker match](docs/images/showcase-poker.gif)
 
-**Werewolf:** hidden roles in a circle, night and day, vote arrows. With
-spoilers off, no role and no hole card is shown anywhere on the page.
+**Werewolf:** hidden roles in a circle, night and day, vote arrows. In the
+spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
 
 ![Live view of a Werewolf match](docs/images/showcase-werewolf.gif)
 
 ## What is built
 
-- **Live view** (`/matches/<id>`): board, public events and the behind-the-scenes
-  column (thoughts, private messages), a spoiler switch, pause, resume, speed
-  and abort, and the cost of the match.
+- **Watch screen**, the same for a live match (`/matches/<id>`) and a replay: the
+  players with name, model and cost, the board as the stage, and a commentary
+  column read from the transcript, where thoughts look different from speech.
+  Two views: **Spectator view** (thoughts, hands and roles) and **Spoiler-free**
+  (`?view=spoiler-free`: the web server sends public data only). Live: pause,
+  resume, speed and abort.
 - **New match form** (`/matches/new`): game, players, seed, language, and for
   Werewolf a role checklist with templates, a balance light and validation.
-- **Replays** (`/replays`): a timeline you can step through or play, a share
-  link, a JSON export of the whole spectator log, and a **Chronicle** tab that
+- **Replays** (`/replays`): a timeline with rounds, hands, nights and days to
+  jump to and a marker for every highlight; play and step go from moment to
+  moment and skip bookkeeping (or play highlights only). A share link, a JSON
+  export of the whole spectator log (spectator view only), and a **Chronicle** tab that
   tells the match as a story in four styles and two languages, with a Markdown
   download.
 - **Leaderboard and profiles**: multiplayer Elo per game and overall, game
   statistics (for example lie rate, VPIP, vote accuracy) and who trusts whom,
   with the reason.
+- **A readable play-by-play** of every match (`arena/transcript`): one renderer
+  per game, in German and English, shared by the API, the `arena` command, the
+  live view, replays and exports; with spoilers off it shows no hidden card or
+  role.
+- **Prompt versions:** Poker and Werewolf have a second prompt (`poker-p2`,
+  `werewolf-p2`): crisper rules, a "how to play well" section and a situation
+  summary computed from what the player sees, shown in a `<summary>` block above
+  the game data. The `prompt_version` setting chooses it (default `-p1`, the
+  prompt as before; for models, `arena run ... --setting prompt_version=poker-p2`)
+  and is recorded in the match's `match_started` event and in `--save`. Liar's
+  Deck gets its second prompt in a pending change.
 - **Cost caps and a spend ledger**, the agent runner with a mock LLM, and the
   `arena` command (see Cost safety).
 
@@ -71,8 +88,9 @@ spoilers off, no role and no hole card is shown anywhere on the page.
 *Every player in these pictures is a random bot, started through the API: no
 model, no cost. Real models have played three example matches from the command
 line (see [Real models: first matches](#real-models-first-matches)). Not built
-yet: choosing models in the UI or the API (they start random bots only), memory
-across matches (the profile says so), and the Throne of Tokens match.* The pictures are
+yet: choosing models in the new-match form (it starts random bots only; models
+are seated by the command or the API), memory across matches (the profile says
+so), and the Throne of Tokens match.* The pictures are
 made by `scripts/make_showcase.sh`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for the building blocks and what is planned.
 
@@ -97,7 +115,8 @@ The stack has five services, each with a healthcheck:
 | Worker | none | heartbeat placeholder: pings Redis, runs no matches yet |
 
 **What you see at <http://127.0.0.1:3100>:** the home page with the four game
-cards and the running matches, the new-match form, the live view, replays, the
+cards and the running matches (a card of a game the arena does not have yet says
+"Coming soon"), the new-match form, the live view, replays, the
 leaderboard and player profiles. Step 2 fills the leaderboard with six
 "DEMO ..." random-bot players; it is refused once real profiles exist. Any
 bot match you start (step 3 or the New match form) adds "Random Bot p1, p2, ..."
