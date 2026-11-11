@@ -7,7 +7,17 @@
 	 * position), the five community cards, the pot and any side pots. With spoilers on, hole
 	 * cards are face up and each player shows a chance to win; with spoilers off, only backs.
 	 */
-	let { spec, spoilers }: { spec: Record<string, unknown>; spoilers: boolean } = $props();
+	let {
+		spec,
+		spoilers,
+		names = {},
+		active = []
+	}: {
+		spec: Record<string, unknown>;
+		spoilers: boolean;
+		names?: Record<string, string>;
+		active?: string[];
+	} = $props();
 
 	interface Seat {
 		player: string;
@@ -66,9 +76,11 @@
 			class="seat"
 			class:folded={seat.folded}
 			class:broke={seat.stack === 0}
+			class:active={active.includes(seat.player)}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
-			aria-label={seat.player}
+			data-seat={seat.player}
+			aria-label={names[seat.player] ?? seat.player}
 		>
 			<header>
 				<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
@@ -84,7 +96,7 @@
 						{seat.player.slice(-1).toUpperCase()}
 					</text>
 				</svg>
-				<strong>{seat.player}</strong>
+				<strong>{names[seat.player] ?? seat.player}</strong>
 				{#if tag}<span class="tag" class:dealer={tag === 'D'} data-testid="position">{tag}</span
 					>{/if}
 				{#if seat.folded}<span class="tag">folded</span>{/if}
@@ -331,5 +343,13 @@
 			height: 1.8rem;
 			font-size: 0.7rem;
 		}
+	}
+
+	/* The player of the event just shown. */
+	.active {
+		box-shadow:
+			0 0 0 2px var(--accent),
+			0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+		transition: box-shadow 0.3s;
 	}
 </style>

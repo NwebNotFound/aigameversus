@@ -1,6 +1,6 @@
 """Stores which matches exist and how they ended. Their events are in the event store."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
@@ -12,7 +12,20 @@ from arena.engine.types import Placement, PlayerId
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 
-_COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements"
+_COLUMNS = (
+    "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, origin"
+)
+
+
+class SeatInfo(BaseModel):
+    """Who sits on a seat, for people to read."""
+
+    name: str
+    model_id: str | None = None  # key in config/models.yaml; None for a bot
+    kind: Literal["model", "bot"]
+
+
+Origin = Literal["played", "imported"]
 
 
 class MatchRecord(BaseModel):
@@ -25,6 +38,8 @@ class MatchRecord(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     placements: list[Placement] | None
+    seats: dict[PlayerId, SeatInfo] | None = None  # None for matches recorded without it
+    origin: Origin = "played"
 
 
 class MatchStore:
@@ -38,16 +53,21 @@ class MatchStore:
         players: Sequence[PlayerId],
         seed: int,
         settings: dict[str, Any],
+        *,
+        seats: Mapping[PlayerId, SeatInfo] | None = None,
+        origin: Origin = "played",
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
-            "INSERT INTO matches (id, game, status, players, seed, settings) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5) RETURNING {_COLUMNS}",
+            "INSERT INTO matches (id, game, status, players, seed, settings, seats, origin) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
             seed,
             settings,
+            None if seats is None else {s: info.model_dump() for s, info in seats.items()},
+            origin,
         )
         return MatchRecord(**row)
 

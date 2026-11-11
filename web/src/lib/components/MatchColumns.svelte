@@ -3,6 +3,8 @@
 	import Board from '#lib/components/Board.svelte';
 	import type { Lang } from '#lib/event-text.js';
 	import { columnOf, describe, playersOf } from '#lib/live.js';
+	import { playerName, type Seats } from '#lib/players.js';
+	import { isImportant } from '#lib/replay.js';
 
 	/**
 	 * The three columns of a match: the board, the public events and what
@@ -15,7 +17,9 @@
 		events,
 		players,
 		game,
-		lang
+		lang,
+		seats = null,
+		active = []
 	}: {
 		spec: Record<string, unknown> | null;
 		spoilers: boolean;
@@ -24,7 +28,14 @@
 		/** Game id, for the sentences of its events. */
 		game: string;
 		lang: Lang;
+		/** Who sits where (name, model); without it the seat ids are shown. */
+		seats?: Seats;
+		/** Players of the event just shown, highlighted on the board. */
+		active?: string[];
 	} = $props();
+
+	// Short names on the board, where seats are small; the feed says "Name (model)".
+	const names = $derived(Object.fromEntries(players.map((s) => [s, playerName(s, seats)])));
 
 	let player = $state('all');
 	/** Show every event as stored (type and data) instead of a sentence. */
@@ -34,6 +45,8 @@
 	const behindLines = $derived(
 		events
 			.filter((e) => columnOf(e) === 'behind')
+			// Bookkeeping ("action accepted") only in the raw view.
+			.filter((e) => raw || isImportant(e, true))
 			.filter((e) => player === 'all' || playersOf(e).includes(player))
 			.toReversed()
 	);
@@ -42,7 +55,7 @@
 <div class="columns">
 	<section aria-labelledby="board-title">
 		<h2 id="board-title">Board</h2>
-		<Board {spec} {spoilers} {events} />
+		<Board {spec} {spoilers} {events} {names} {active} />
 	</section>
 
 	<section aria-labelledby="public-title">
@@ -90,7 +103,7 @@
 </div>
 
 {#snippet line(event: MatchEvent)}
-	{@const shown = describe(event, game, lang)}
+	{@const shown = describe(event, game, lang, seats)}
 	<li
 		data-seq={event.seq}
 		data-kind={shown.kind}
@@ -98,11 +111,12 @@
 		data-raw={shown.kind === 'event' && !shown.sentence}
 	>
 		{#if shown.kind === 'message'}
-			<strong>{shown.player}</strong>
-			<q>{shown.text}</q>
+			<strong class="speaker">{shown.player}</strong>
+			<q class="bubble">{shown.text}</q>
 		{:else if shown.kind === 'thought'}
-			<strong>{shown.player}</strong> <span class="muted">thinks</span>
-			<em>{shown.text}</em>
+			<strong class="speaker">{shown.player}</strong>
+			<span class="muted">thinks</span>
+			<em class="bubble thinking">{shown.text}</em>
 		{:else if shown.kind === 'narration'}
 			<span class="narration">{shown.text}</span>
 		{:else if shown.sentence && !raw}
@@ -168,12 +182,31 @@
 		overflow-wrap: anywhere;
 	}
 
-	.feed li[data-kind='message'] {
-		border-left: 3px solid var(--accent-2);
+	.feed li[data-kind='message'],
+	.feed li[data-kind='thought'] {
+		background: transparent;
+		padding-inline: 0;
 	}
 
-	.feed li[data-kind='thought'] {
-		border-left: 3px solid var(--accent);
+	.speaker {
+		flex-basis: 100%;
+		font-size: 0.85rem;
+	}
+
+	/* Speech: a bubble. Thoughts: dashed and italic, clearly not said aloud. */
+	.bubble {
+		display: block;
+		flex-basis: 100%;
+		padding: 0.5rem 0.75rem;
+		border-radius: 12px 12px 12px 4px;
+		background: color-mix(in srgb, var(--accent-2) 18%, var(--surface-raised));
+		border: 1px solid color-mix(in srgb, var(--accent-2) 45%, transparent);
+	}
+
+	.bubble.thinking {
+		background: var(--surface-raised);
+		border: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+		color: var(--muted);
 	}
 
 	.feed small {

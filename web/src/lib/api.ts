@@ -1,3 +1,5 @@
+import type { Seats } from './players.js';
+
 /**
  * Typed client for the arena API.
  *
@@ -25,6 +27,10 @@ export interface MatchRecord extends MatchSummary {
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
+	/** Who sat where: name, model and kind per seat; null for matches without that info. */
+	seats?: Seats;
+	/** "played" on this server, or "imported" from a replay file. */
+	origin?: 'played' | 'imported';
 }
 
 /** One event of a match log, as the event stream sends it. */
@@ -59,6 +65,8 @@ export interface ReplaySummary {
 	started_at: string;
 	finished_at: string;
 	cost_micro_eur: number;
+	seats?: Seats;
+	origin?: 'played' | 'imported';
 }
 
 /** `GET /matches/{id}/cost`, in millionths of a euro. */

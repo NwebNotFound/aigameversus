@@ -12,8 +12,16 @@
 	let {
 		spec,
 		spoilers,
-		events = []
-	}: { spec: Record<string, unknown>; spoilers: boolean; events?: MatchEvent[] } = $props();
+		events = [],
+		names = {},
+		active = []
+	}: {
+		spec: Record<string, unknown>;
+		spoilers: boolean;
+		events?: MatchEvent[];
+		names?: Record<string, string>;
+		active?: string[];
+	} = $props();
 
 	interface Seat {
 		player: string;
@@ -110,8 +118,10 @@
 			class="seat {places[index]}"
 			class:out={!seat.alive}
 			class:turn={seat.player === spec.turn}
+			class:active={active.includes(seat.player)}
 			data-testid="seat"
-			aria-label={seat.player}
+			data-seat={seat.player}
+			aria-label={names[seat.player] ?? seat.player}
 		>
 			<header>
 				<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
@@ -127,7 +137,7 @@
 						{seat.player.slice(-1).toUpperCase()}
 					</text>
 				</svg>
-				<strong>{seat.player}</strong>
+				<strong>{names[seat.player] ?? seat.player}</strong>
 				{#if seat.player === spec.turn}<span class="tag act">to act</span>{/if}
 				{#if !seat.alive}<span class="tag">out</span>{/if}
 			</header>
@@ -458,5 +468,13 @@
 			width: 1.2rem;
 			height: 1.7rem;
 		}
+	}
+
+	/* The player of the event just shown. */
+	.active {
+		box-shadow:
+			0 0 0 2px var(--accent),
+			0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+		transition: box-shadow 0.3s;
 	}
 </style>

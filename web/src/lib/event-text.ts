@@ -2,9 +2,10 @@
  * Match events as sentences people read, in English or German.
  *
  * `eventText` returns null for an event it does not know; the feed then shows
- * the raw line. Player ids are shown as they are (p1, p2, ...).
+ * the raw line. Players are named from the match's seats, or shown by seat id.
  */
 import type { MatchEvent } from './api.js';
+import { playerName, renamed, type Seats } from './players.js';
 
 export type Lang = 'en' | 'de';
 
@@ -469,11 +470,20 @@ const GAMES: Record<string, Record<string, Phrase>> = {
 };
 
 /** The event as a sentence, or null when there is none for it (the feed then shows it raw). */
-export function eventText(game: string, event: MatchEvent, lang: Lang): string | null {
+export function eventText(
+	game: string,
+	event: MatchEvent,
+	lang: Lang,
+	seats?: Seats
+): string | null {
 	const phrase = event.source === 'engine' ? ENGINE[event.type] : GAMES[game]?.[event.type];
 	if (!phrase) return null;
+	// With player info, sentences name the players ("Gemini raises"), not the seats.
+	const data = seats
+		? renamed(event.data, (seat) => playerName(seat, seats), new Set(Object.keys(seats)))
+		: event.data;
 	try {
-		const text = phrase(event.data, lang);
+		const text = phrase(data, lang);
 		return text || null;
 	} catch {
 		return null; // data of an unexpected shape: the raw line is better than nothing

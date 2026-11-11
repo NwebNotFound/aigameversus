@@ -14,7 +14,7 @@ import asyncpg
 from arena.agents.random_bot import random_bots
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
-from arena.db.match_store import MatchRecord, MatchStore
+from arena.db.match_store import MatchRecord, MatchStore, SeatInfo
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import Event, Placement
@@ -138,7 +138,10 @@ class LiveMatches:
         # The place is taken before the first await, so two requests cannot share the last one.
         self._running[match_id] = running
         try:
-            record = await self.matches.create(match_id, plugin.id, players, seed, match.settings)
+            bots = {seat: SeatInfo(name=f"Random Bot {seat}", kind="bot") for seat in players}
+            record = await self.matches.create(
+                match_id, plugin.id, players, seed, match.settings, seats=bots
+            )
         except BaseException:
             del self._running[match_id]
             raise

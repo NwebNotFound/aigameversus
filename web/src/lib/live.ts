@@ -4,6 +4,7 @@
  */
 import type { MatchEvent } from './api.js';
 import { eventText, type Lang } from './event-text.js';
+import { playerLabel, type Seats } from './players.js';
 
 /** Middle column: what every player sees. Right column: thoughts and private events. */
 export type Column = 'public' | 'behind';
@@ -40,9 +41,10 @@ export type Line =
  * One event as the live view shows it. Player text stays text: it is never
  * rendered as HTML. `game` and `lang` choose the sentence of other events.
  */
-export function describe(event: MatchEvent, game = '', lang: Lang = 'en'): Line {
+export function describe(event: MatchEvent, game = '', lang: Lang = 'en', seats?: Seats): Line {
 	const { type, data } = event;
-	const player = typeof data.player === 'string' ? data.player : null;
+	const seat = typeof data.player === 'string' ? data.player : null;
+	const player = seat === null ? null : playerLabel(seat, seats);
 	const text = typeof data.text === 'string' ? data.text : null;
 	if (type === 'message' && player && text !== null) return { kind: 'message', player, text };
 	if (type === 'thought' && player && text !== null) return { kind: 'thought', player, text };
@@ -51,7 +53,7 @@ export function describe(event: MatchEvent, game = '', lang: Lang = 'en'): Line 
 	return {
 		kind: 'event',
 		player,
-		sentence: eventText(game, event, lang),
+		sentence: eventText(game, event, lang, seats),
 		title: type.replaceAll('_', ' '),
 		details: rest.map(([key, value]) => `${key.replaceAll('_', ' ')}: ${show(value)}`).join(' · ')
 	};

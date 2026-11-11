@@ -12,8 +12,18 @@
 	let {
 		spec,
 		spoilers,
-		events = []
-	}: { spec: Record<string, unknown> | null; spoilers: boolean; events?: MatchEvent[] } = $props();
+		events = [],
+		names = {},
+		active = []
+	}: {
+		spec: Record<string, unknown> | null;
+		spoilers: boolean;
+		events?: MatchEvent[];
+		/** Seat id -> label, "Name (model)". */
+		names?: Record<string, string>;
+		/** Players of the event just shown, highlighted. */
+		active?: string[];
+	} = $props();
 
 	type Seat = Record<string, unknown> & { player: string };
 
@@ -81,11 +91,11 @@
 		<span>The events in the other columns show the whole match.</span>
 	</div>
 {:else if spec.layout === 'card_table' && isCardTable(spec)}
-	<LiarsDeckTable {spec} {spoilers} {events} />
+	<LiarsDeckTable {spec} {spoilers} {events} {names} {active} />
 {:else if spec.layout === 'poker_table' && isPokerTable(spec)}
-	<PokerTable {spec} {spoilers} />
+	<PokerTable {spec} {spoilers} {names} {active} />
 {:else if spec.layout === 'player_circle' && isPlayerCircle(spec)}
-	<WerewolfCircle {spec} {spoilers} {events} />
+	<WerewolfCircle {spec} {spoilers} {events} {names} {active} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}
@@ -107,7 +117,7 @@
 						class:out={seat.alive === false || seat.folded === true}
 						class:turn={seat.player === spec.turn}
 					>
-						<strong>{seat.player}</strong>
+						<strong>{names[seat.player] ?? seat.player}</strong>
 						{#if seat.player === spec.turn}<span class="tag act">to act</span>{/if}
 						{#if seat.alive === false}<span class="tag">out</span>{/if}
 						{#if seat.folded === true}<span class="tag">folded</span>{/if}

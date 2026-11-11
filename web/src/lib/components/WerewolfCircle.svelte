@@ -18,8 +18,16 @@
 	let {
 		spec,
 		spoilers,
-		events = []
-	}: { spec: Record<string, unknown>; spoilers: boolean; events?: MatchEvent[] } = $props();
+		events = [],
+		names = {},
+		active = []
+	}: {
+		spec: Record<string, unknown>;
+		spoilers: boolean;
+		events?: MatchEvent[];
+		names?: Record<string, string>;
+		active?: string[];
+	} = $props();
 
 	interface Seat {
 		player: string;
@@ -118,9 +126,11 @@
 			class="seat"
 			class:dead={!seat.alive}
 			class:turn={seat.player === spec.turn}
+			class:active={active.includes(seat.player)}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
-			aria-label={seat.player}
+			data-seat={seat.player}
+			aria-label={names[seat.player] ?? seat.player}
 		>
 			<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
 				<circle
@@ -138,7 +148,7 @@
 					<path d="M10 10 L30 30 M30 10 L10 30" stroke="var(--danger)" stroke-width="2.5" />
 				{/if}
 			</svg>
-			<span class="name">{seat.player}</span>
+			<span class="name">{names[seat.player] ?? seat.player}</span>
 			{#if hideRoles}
 				<span class="role" data-testid="secret">?</span>
 			{:else}
@@ -287,5 +297,13 @@
 		.role {
 			font-size: 0.6rem;
 		}
+	}
+
+	/* The player of the event just shown. */
+	.active {
+		box-shadow:
+			0 0 0 2px var(--accent),
+			0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+		transition: box-shadow 0.3s;
 	}
 </style>

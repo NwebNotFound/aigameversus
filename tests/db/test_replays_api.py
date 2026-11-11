@@ -69,3 +69,46 @@ def test_board_before_the_first_event_is_empty_and_past_the_end_is_the_whole_log
     assert client.get(url, params={"events": 0}).json()["spec"] is None
     assert client.get(url, params={"events": 10_000}).json() == client.get(url).json()
     assert client.get(url, params={"events": -1}).status_code == 422
+
+
+def test_a_bot_match_says_who_sat_where(client):
+    match = finished(client, game="toy", seed=7)
+
+    (replay,) = [r for r in client.get("/replays").json() if r["id"] == match["id"]]
+
+    assert match["seats"] == {
+        "p1": {"name": "Random Bot p1", "model_id": None, "kind": "bot"},
+        "p2": {"name": "Random Bot p2", "model_id": None, "kind": "bot"},
+    }
+    assert match["origin"] == "played"
+    assert (replay["seats"], replay["origin"]) == (match["seats"], "played")
+
+
+def test_a_recorded_match_keeps_its_model_seats_and_origin(database_url):
+    import asyncio
+
+    from arena.db.database import connect, migrate
+    from arena.db.match_store import MatchStore, SeatInfo
+
+    seats = {
+        "p1": SeatInfo(name="Gemini", model_id="gemini-flash", kind="model"),
+        "p2": SeatInfo(name="Random Bot p2", kind="bot"),
+    }
+
+    async def run():
+        pool = await connect(database_url)
+        try:
+            await migrate(pool)
+            store = MatchStore(pool)
+            created = await store.create(
+                uuid4(), "toy", ["p1", "p2"], 1, {}, seats=seats, origin="imported"
+            )
+            return created, await store.get(created.id)
+        finally:
+            await pool.close()
+
+    created, stored = asyncio.run(run())
+
+    assert stored == created
+    assert stored.origin == "imported"
+    assert stored.seats["p1"] == seats["p1"]

@@ -4,13 +4,16 @@
 	import type { Board } from '#lib/api.js';
 	import ChroniclePanel from '#lib/components/ChroniclePanel.svelte';
 	import MatchColumns from '#lib/components/MatchColumns.svelte';
+	import ResultCard from '#lib/components/ResultCard.svelte';
 	import { matchLang } from '#lib/event-text.js';
 	import { gameName } from '#lib/games.js';
-	import { euros } from '#lib/live.js';
+	import { describe, euros, playersOf } from '#lib/live.js';
+	import { playerLabel } from '#lib/players.js';
 	import {
 		DEFAULT_PLAY_MS,
 		PLAY_SPEEDS,
 		clampStep,
+		nextStep,
 		shareLink,
 		stepFromQuery
 	} from '#lib/replay.js';
@@ -34,6 +37,19 @@
 
 	const shown = $derived(log.slice(0, step));
 	const current = $derived(step > 0 ? log[step - 1] : null);
+	const seats = $derived(match?.match.seats ?? null);
+	const lang = $derived(matchLang(match?.match.settings));
+	// What just happened, as one line under the timeline, and who did it (lit up on the board).
+	const now = $derived.by(() => {
+		if (!current || !match) return null;
+		const line = describe(current, match.match.game, lang, seats);
+		if (line.kind === 'message') return `${line.player}: “${line.text}”`;
+		if (line.kind === 'thought') return spoilers ? `${line.player} thinks: ${line.text}` : null;
+		if (line.kind === 'narration') return line.text;
+		return line.sentence;
+	});
+	const active = $derived(current ? playersOf(current) : []);
+	const atEnd = $derived(step >= log.length);
 	const link = $derived(shareLink(page.url.origin, params.id, step));
 
 	// The board of each step, fetched once and kept; the last one stays up while the next loads.
@@ -68,12 +84,12 @@
 		};
 	});
 
-	// Playback: one step per tick, stopping at the end.
+	// Playback: one important event per tick (bookkeeping is skipped), stopping at the end.
 	$effect(() => {
 		if (!playing) return;
 		const timer = setInterval(() => {
 			if (step >= log.length) playing = false;
-			else step += 1;
+			else step = nextStep(log, step, 1, spoilers);
 		}, playMs);
 		return () => clearInterval(timer);
 	});
@@ -126,8 +142,9 @@
 			<h1>{gameName(match.match.game)}</h1>
 			<span class="pill" data-status={match.match.status}>{match.match.status}</span>
 		</div>
-		<p class="muted">
-			{match.match.players.join(' · ')} · seed {match.match.seed} · cost
+		<p class="muted" data-testid="players">
+			{match.match.players.map((seat) => playerLabel(seat, seats)).join(' · ')} · seed
+			{match.match.seed} · cost
 			{euros(match.cost.total_micro_eur)}
 		</p>
 
@@ -166,16 +183,18 @@
 				/>
 				<div class="buttons">
 					<button onclick={() => go(0)} aria-label="To the start">⏮</button>
-					<button onclick={() => go(step - 1)} disabled={step === 0} aria-label="Step back"
-						>◀</button
+					<button
+						onclick={() => go(nextStep(log, step, -1, spoilers))}
+						disabled={step === 0}
+						aria-label="Previous move">◀</button
 					>
 					<button onclick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
 						{playing ? '❚❚' : '▶'}
 					</button>
 					<button
-						onclick={() => go(step + 1)}
+						onclick={() => go(nextStep(log, step, 1, spoilers))}
 						disabled={step >= log.length}
-						aria-label="Step forward"
+						aria-label="Next move"
 					>
 						▶|
 					</button>
@@ -192,6 +211,7 @@
 				<p class="position" data-testid="position">
 					Step {step} of {log.length}{#if current}: {current.type.replaceAll('_', ' ')}{/if}
 				</p>
+				{#if now}<p class="now" data-testid="now" aria-live="polite">{now}</p>{/if}
 			</div>
 
 			<div class="bar">
@@ -221,13 +241,18 @@
 	</section>
 
 	{#if tab === 'replay'}
+		{#if atEnd && match.match.placements}
+			<ResultCard placements={match.match.placements} {seats} costs={match.cost.players} />
+		{/if}
 		<MatchColumns
 			{spec}
 			{spoilers}
 			events={shown}
 			players={match.match.players}
 			game={match.match.game}
-			lang={matchLang(match.match.settings)}
+			{lang}
+			{seats}
+			{active}
 		/>
 	{:else}
 		<ChroniclePanel id={params.id} {spoilers} onreveal={() => (spoilers = true)} />
@@ -368,5 +393,14 @@
 	.problem {
 		margin: 0;
 		color: var(--danger);
+	}
+
+	.now {
+		margin: 0;
+		padding: 0.5rem 0.75rem;
+		border-radius: 8px;
+		background: var(--surface-raised);
+		border-left: 3px solid var(--accent);
+		font-size: 1.05rem;
 	}
 </style>

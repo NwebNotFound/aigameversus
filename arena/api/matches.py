@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
-from arena.db.match_store import MatchRecord, Status
+from arena.db.match_store import MatchRecord, Origin, SeatInfo, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 
@@ -152,6 +152,10 @@ class Replay(BaseModel):
     started_at: datetime
     finished_at: datetime
     cost_micro_eur: int = Field(description="What its model calls cost; 0 for bots")
+    seats: dict[str, SeatInfo] | None = Field(
+        description="Name, model and kind per seat; null for matches recorded without it"
+    )
+    origin: Origin = Field(description="played on this server, or imported from a replay file")
 
 
 class Cost(BaseModel):
@@ -256,6 +260,8 @@ async def list_replays(live: Live) -> list[Replay]:
             started_at=record.started_at,
             finished_at=record.finished_at,
             cost_micro_eur=cost,
+            seats=record.seats,
+            origin=record.origin,
         )
         for record, cost in await live.matches.finished_with_cost()
     ]
