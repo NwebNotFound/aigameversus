@@ -669,7 +669,7 @@ class Werewolf(GamePlugin[WerewolfState]):
     def render_spec(self, state: WerewolfState) -> dict[str, Any]:
         """What a spectator view draws: the circle with every role (spectators may see all).
 
-        Not part of the plugin interface yet (D-036); the UI will define it in phase 5.
+        Not part of the plugin interface yet (D-040); the UI will define it in phase 5.
         """
         return {
             "layout": "player_circle",

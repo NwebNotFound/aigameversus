@@ -510,7 +510,134 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** counters on `ratings` (no history); computing stats from
   the event logs on each request; a static JSON fixture for the UI.
 
-## D-036 · Werewolf engine: step queue, night order, deaths and wins
+## D-033 · Liar's Deck engine: turns, talk, thoughts and open rules
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - Card ids name the rank (`K1`-`K6`, `Q1`-`Q6`, `A1`-`A6`, `J1`, `J2`); in
+    the devil-card variant the devil joker is `DV` and its holder sees it.
+    Other players never see ids of unrevealed cards.
+  - Each revolver is loaded once per match (live chamber by seed, spectators
+    only) and is not reset between rounds, so the risk keeps rising.
+  - The first round starts with the first seat. After a call, the next round
+    starts with the player who pulled the trigger if alive, otherwise with the
+    other side of that call; after a devil card, with its player.
+  - `table_talk` does not end the turn and is allowed once per turn; every
+    text (talk, claim, call) has at most 40 words. Words go out only as
+    `message` events.
+  - There is no `think` tool: private thoughts are the plain text of a
+    model's answer, which the engine's thoughts channel already logs for
+    spectators only. `rules.md` says so.
+  - "Only one player holds cards" makes that player call automatically. A
+    play that leaves no other holder is checked by the next living player;
+    normal play cannot reach this, it is a safeguard.
+  - `render_spec(state)` exists on the plugin as a plain method (a card-table
+    layout with every hand, never the live chambers) and is not added to the
+    `GamePlugin` interface until the UI defines it (see D-009).
+- **Why:** The spec leaves these open; each choice keeps one action per turn,
+  keeps hidden information out of other players' views and reuses the
+  engine's existing channels instead of adding parallel ones.
+- **Alternatives:** talk as part of every action only; a `think` tool that
+  emits a spectator-only event; reloading revolvers each round; a random
+  first starter.
+
+## D-034 · Money is counted per model call, in a ledger, before the call is sent
+
+- **Date:** 2026-11-11
+- **Decision:** Every model call of a match goes through `Budget.meter`
+  (`arena/agents/budget.py`). Before the call is sent it is booked in the
+  `model_calls` table at the most it can cost: the size of the request in
+  bytes as its input tokens, the output limit as its output tokens. If that
+  booking would take the match or the calendar month (UTC) past its cap, the
+  call is not sent. When the provider reports the tokens, the booking is
+  corrected to the real cost. A call that reports nothing (an error, a
+  timeout, an answer without usage, a crash) keeps its upper bound. Should a
+  provider report more than the bound, the real cost is booked all the same:
+  the cap is then passed by that difference, and the next call pauses. Check and
+  booking are one transaction under an advisory lock. Money is an integer of
+  millionths of a euro, rounded up per call. A prompt whose upper bound is
+  above `max_input_tokens` is not sent; that seat goes to the random bot.
+  `Budget.model` is the only place that builds a real model, already metered.
+- **Why:** "Hard cap" has to hold in the cases where counting afterwards
+  fails: several players calling at once, a turn that times out while the
+  provider still answers and bills, a process that dies between call and
+  bookkeeping, two processes running matches. Booking the worst case first
+  covers all of them with one rule, and every error is on the safe side: the
+  ledger can show more than was billed, never less. No tokenizer produces
+  more tokens than its text has bytes, so the bound needs no tokenizer and
+  holds for every model, as long as the provider keeps to the output limit it
+  was sent. If one does not, a ledger that tells the truth is worth more than
+  a cap that looks kept. Integers keep sums exact and identical in any order.
+  The input limit also keeps prompts below the sizes at which some providers
+  charge a higher price per token.
+- **Alternatives:** Adding up the cost after each call (a cap can be passed
+  by as many calls as are in flight, and a cancelled call is never counted);
+  charging nothing for failed calls (wrong when the provider billed a call
+  that timed out on our side); LiteLLM's built-in cost tracking (prices come
+  from a list bundled with the library, in memory only); the cost a provider
+  reports per call (provider-specific; can replace the price list later);
+  cost events in the match log (a dropped turn would lose them, D-035).
+
+## D-035 · At a cap the match pauses: the turn is dropped and played again later
+
+- **Date:** 2026-11-11
+- **Decision:** An agent that cannot go on without the user raises
+  `MatchPaused(reason, **data)`; the budget does so with `match_cap` or
+  `month_cap` and the amounts. The engine cancels the other players of that
+  turn, drops everything the turn produced, logs `match_paused` (spectators
+  only), hands the log to the sink and lets `Match.run()` raise the pause.
+  Whoever started the match asks the user. `run()` again logs `match_resumed`
+  and plays the dropped turn from its start. The budget's caps are plain
+  attributes that the caller raises after the user agreed.
+- **Why:** A match that stops costing money must also stop its turn clock,
+  otherwise waiting for the user would turn into random moves. Dropping the
+  whole turn keeps the rule that a stored log never ends inside a turn, so a
+  paused log replays like any other, and the game goes on exactly as if there
+  had been no pause. An exception cannot be overlooked by a caller the way a
+  special return value can. The price is that a turn interrupted by a pause
+  asks its players again; that happens once per pause.
+- **Alternatives:** Letting the random bot play at the cap (silently changes
+  who plays); ending the match; keeping the answers already given in the
+  paused turn (a second kind of half-finished turn in the log and in replay);
+  waiting inside the model call until the user decides (the engine would not
+  know that the match is paused).
+
+## D-036 · `config/models.yaml`: limits and prices next to the roster
+
+- **Date:** 2026-11-11
+- **Decision:** `config/models.yaml` has two parts. `limits`: the caps in
+  euros (0.50 per match, 5.00 per month, D-001), the dollar-to-euro rate, and
+  the token limits of one call (50 000 in, 1 500 out). `models`: id,
+  `provider`, the provider's model name and the two prices in US dollars per
+  million tokens. The default roster is eight cheap OpenRouter models from
+  eight vendors that support tool calls, with the prices openrouter.ai listed
+  on 2026-11-11. The rate is 1.0: a dollar counts as a full euro. `provider`
+  accepts only `openrouter` for now. `arena/config.py` validates the file;
+  unknown fields are errors. `tier` and `base_url` from the spec are left out
+  until something reads them (tool sets per model size, local models).
+- **Why:** The caps are only as good as the prices, so prices sit in a file
+  that people review, next to the model they belong to, in the unit the
+  provider publishes. A rate of 1.0 errs on the safe side while a dollar is
+  worth less than a euro and needs no exchange-rate service. Refusing unknown
+  fields catches typos and a key pasted into the wrong file.
+- **Alternatives:** Prices from LiteLLM's bundled list or from the provider's
+  API at startup (network at startup, and a silent change of what a cap
+  means); caps in environment variables; prices already converted to euros.
+
+## D-037 · LiteLLM's own logger is switched off
+
+- **Date:** 2026-11-11
+- **Decision:** `LiteLLMModel` disables the `LiteLLM` logger when it loads the
+  library. The arena logs only the kind of a failure (D-026).
+- **Why:** At debug level LiteLLM logs every request and every provider error
+  text. Such a text can quote a key, and a request holds a player's private
+  view of the game. A test runs a match at debug level with a provider error
+  that quotes the key and finds neither in logs, output, events or the ledger.
+- **Alternatives:** A filter that redacts known secrets from all log records
+  (cannot know every secret, and prompts would still be logged); raising the
+  logger's level only (any later `setLevel` brings the text back).
+
+## D-040 · Werewolf engine: step queue, night order, deaths and wins
 
 - **Date:** 2026-11-11
 - **Decision:**
@@ -543,7 +670,7 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** simultaneous night actions; a strict-majority day vote;
   hidden roles after death; a random tie-break for the pack.
 
-## D-037 · Werewolf day: captain, narrator and language
+## D-041 · Werewolf day: captain, narrator and language
 
 - **Date:** 2026-11-11
 - **Decision:**
