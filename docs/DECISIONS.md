@@ -1579,8 +1579,26 @@ Each entry: date, decision, why, alternatives considered.
   yet); model seats always on (any local script could spend); a separate
   table for seats (the record is read with the match anyway).
 
+## D-083 · The prompt names the player's own seat where the model reads it
 
-## D-086 · Prompts have versions: a game's rules and summary per `prompt_version`
+- **Date:** 2026-11-11
+- **Decision:** Besides the first line of the system message, the prompt now
+  says once more that every mention of the seat is the player, ends the ask
+  with "You are p8.", and starts every event line that the player did (its
+  `player`, `caller` or `from` is the reader) with `[you]`. Events that only name the reader in
+  another field (a vote against them) are not marked: the player did not do
+  them. Other players' words stay as they were written.
+- **Why:** In the first real Werewolf match the seer (seat p8) wrote about
+  "p7 and p8" as if they were others, attacked its own seer claim in public
+  and tried to vote for itself; another model called its own seat suspicious
+  in its thought. Both had read their seat once, at the top of a long
+  prompt, and then met it many times as a plain id among other ids.
+- **Alternatives:** Names instead of seat ids (needs player info in every
+  game's events, planned for the UI); rewriting other players' words to say
+  "you" (would change what was said); marking every event that names the
+  reader anywhere (marks votes against the player as theirs).
+
+## D-087 · Prompts have versions: a game's rules and summary per `prompt_version`
 
 - **Date:** 2026-11-11
 - **Decision:** Each game keeps its prompt text next to its plugin
@@ -1593,12 +1611,11 @@ Each entry: date, decision, why, alternatives considered.
   would otherwise have to work out) and a short situation summary built from the
   observation alone (`situation_summary`), shown above the full data. Version p1
   is unchanged, so experiments can compare the two. The default stays p1 until a
-  comparison says otherwise.
+  comparison says otherwise. The rules texts state the default stacks, blinds and
+  similar numbers, so a match with other settings reads wrong numbers there.
 - **Why:** A change of prompt changes how every model plays; without a version in
   the log nobody can tell which prompt produced a result. The summary only
   restates and computes from what the player already sees, so it cannot leak.
 - **Alternatives:** one prompt that is edited in place (no comparison, old logs
   mean different things over time); summaries written by a model (costs money,
   varies from run to run).
-
-
