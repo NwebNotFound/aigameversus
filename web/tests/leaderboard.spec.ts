@@ -144,6 +144,24 @@ test('the table shows model, cost per game and tool errors, and bot seats are on
 	await expect(seatRows).toHaveCount(0);
 });
 
+// Needs a rated real model whose name is its model id (every configured model without a
+// personality); skipped on a stack without one.
+test('a model named like its id shows the name once, then the vendor', async ({
+	page,
+	request
+}) => {
+	const board = await (await request.get(`${ARENA}/leaderboard?kind=models`)).json();
+	const row = board.rows.find((r: { name: string; model_id: string }) => r.name === r.model_id);
+	test.skip(!row, 'no rated real model in this stack');
+
+	await page.goto('/leaderboard?kind=models');
+
+	const line = page.getByTestId('leaderboard').locator('tbody tr').filter({ hasText: row.name });
+	const text = await line.first().innerText(); // hidden columns are not part of the text
+	expect(text.split(row.model_id).length - 1).toBe(1);
+	if (row.vendor) expect(text).toContain(row.vendor);
+});
+
 // The demo stack has both kinds of rows: the demo players have played a few games each, and the
 // grouped Random Bot row adds up every bot seat of every spec. Other specs finish matches
 // meanwhile, so read the API and the page together until they agree.

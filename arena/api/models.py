@@ -126,6 +126,7 @@ async def model_page(model_id: str, store: Store, request: Request) -> ModelPage
                 match_id=m.match_id,
                 game_id=m.game_id,
                 rated_at=m.rated_at,
+                played_at=m.played_at,
                 rank=m.rank,
                 players=m.players,
                 rating_change=round(m.rating_change, 1),
