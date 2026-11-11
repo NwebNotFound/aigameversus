@@ -145,10 +145,18 @@ def test_power_numbers_quoted_in_the_plan_are_the_computed_ones():
 
 def test_budgets_above_the_monthly_cap_are_refused(tmp_path):
     def raise_stage_budget(data):
-        data["stages"][0]["budget_eur"] = 5.00
+        data["stages"][0]["budget_eur"] = 30.00
 
     with pytest.raises(PlanError, match="above the monthly cap"):
         load_experiment(_changed(tmp_path, raise_stage_budget))
+
+
+def test_a_pilot_budget_above_its_stage_budget_is_refused(tmp_path):
+    def raise_pilot_budget(data):
+        data["stages"][0]["pilot_budget_eur"] = 3.50
+
+    with pytest.raises(PlanError, match="pilot budget"):
+        load_experiment(_changed(tmp_path, raise_pilot_budget))
 
 
 def test_a_stage_with_a_model_the_plan_does_not_list_is_refused(tmp_path):
