@@ -19,10 +19,24 @@
 	<h2 id="games-title">Games</h2>
 	<ul class="games">
 		{#each GAMES as game (game.id)}
-			<li class="card" style:--card-accent={game.accent} data-testid="game-card">
+			{@const playable = data.playable.includes(game.id)}
+			<li
+				class="card"
+				class:soon={!playable}
+				style:--card-accent={game.accent}
+				data-testid="game-card"
+				data-game={game.id}
+			>
 				<h3>{game.name}</h3>
 				<p>{game.tagline}</p>
-				<span class="players">{game.players}</span>
+				<div class="foot">
+					<span class="players">{game.players}</span>
+					{#if playable}
+						<a class="start" href="/matches/new?game={game.id}">Start a match</a>
+					{:else}
+						<span class="badge">Coming soon</span>
+					{/if}
+				</div>
 			</li>
 		{/each}
 	</ul>
@@ -156,5 +170,30 @@
 
 	.muted {
 		color: var(--muted);
+	}
+
+	.foot {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.start {
+		font-weight: 600;
+		color: var(--card-accent);
+	}
+
+	.badge {
+		font-size: 0.8rem;
+		padding: 0.15rem 0.6rem;
+		border-radius: 999px;
+		color: var(--muted);
+		border: 1px solid var(--border);
+	}
+
+	.card.soon {
+		opacity: 0.75;
 	}
 </style>
