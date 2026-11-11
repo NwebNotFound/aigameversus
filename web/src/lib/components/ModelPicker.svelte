@@ -67,7 +67,7 @@
 		{#if chosen}
 			<strong>{chosen.name}</strong>
 			<small>{chosen.openrouter_id} · {priceLabel(chosen)} per 1M</small>
-			{#if !chosen.verified}<span class="tag warn">unverified</span>{/if}
+			{#if !chosen.verified}<span class="tag warn">price not checked, budgeted +25%</span>{/if}
 			{#if chosen.high_price}<span class="tag danger">high price</span>{/if}
 		{:else}
 			<strong>Random bot</strong>
@@ -123,7 +123,7 @@
 							</small>
 							<span class="tags">
 								{#if model.verified}<span class="tag ok">verified</span>
-								{:else}<span class="tag warn">unverified</span>{/if}
+								{:else}<span class="tag warn">price not checked, budgeted +25%</span>{/if}
 								{#if model.reasoning}<span class="tag">reasoning</span>{/if}
 								{#if model.free}<span class="tag">free</span>{/if}
 								{#if model.high_price}<span class="tag danger">high price</span>{/if}

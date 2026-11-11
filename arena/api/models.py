@@ -87,6 +87,10 @@ class CatalogModel(BaseModel):
     moderated: bool
     free: bool
     verified: bool = Field(description="In config/models.yaml: prices and behaviour checked")
+    price_source: str = Field(
+        description='"config/models.yaml" (checked by hand) or "openrouter list" (not checked; '
+        "booked at the listed price x 1.25)"
+    )
     high_price: bool = Field(description="Output costs more than 10 USD per million tokens")
 
 
@@ -120,6 +124,7 @@ async def model_catalog() -> CatalogOut:
                 moderated=e.moderated,
                 free=e.free,
                 verified=e.verified,
+                price_source=e.price_source,
                 high_price=e.high_price,
             )
             for e in catalog.entries

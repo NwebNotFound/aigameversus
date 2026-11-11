@@ -114,7 +114,10 @@ test('shortcuts fill the seats, and an expensive or unverified model is called o
 		await expect(page.getByLabel(`Player of ${seat}`)).toHaveAttribute('data-value', pricey.id);
 	}
 	await expect(page.getByTestId('high-price')).toContainText(pricey.name);
-	if (!pricey.verified) await expect(page.getByTestId('unverified')).toContainText(pricey.name);
+	if (!pricey.verified) {
+		await expect(page.getByTestId('unverified')).toContainText(pricey.name);
+		await expect(page.getByTestId('unverified')).toContainText('Price not checked, budgeted +25%');
+	}
 });
 
 test('a favourite stays a favourite after a reload', async ({ page, request }) => {

@@ -23,6 +23,7 @@ function model(id: string, changes: Partial<CatalogModel> = {}): CatalogModel {
 		free: false,
 		verified: false,
 		high_price: false,
+		price_source: 'openrouter list',
 		...changes
 	};
 }

@@ -57,7 +57,8 @@
 					moderated: false,
 					free: false,
 					verified: true,
-					high_price: m.output_usd_per_mtok > 10
+					high_price: m.output_usd_per_mtok > 10,
+					price_source: 'config/models.yaml'
 				}))
 	);
 	const seatIds = $derived(Array.from({ length: seatCount }, (_, i) => choices[i] ?? BOT));
@@ -232,8 +233,8 @@
 			{/if}
 			{#if unverified.length}
 				<p class="hint" data-testid="unverified">
-					Not checked by us yet: {unverified.join(', ')}. They play at OpenRouter's prices and may
-					handle the tools less well.
+					Price not checked, budgeted +25%: {unverified.join(', ')}. The caps count OpenRouter's
+					listed price plus 25%, and these models may handle the tools less well.
 				</p>
 			{/if}
 			<p class="hint">
@@ -300,6 +301,20 @@
 			</label>
 			<p class="hint">The same seed with the same players plays the same match.</p>
 			{#if errors.seed}<p class="field-error">{errors.seed}</p>{/if}
+
+			<label class="row">
+				<input
+					type="checkbox"
+					name="no_memory"
+					checked={form?.values?.no_memory === 'on'}
+					aria-describedby="memory-hint"
+				/>
+				<span>Play without memory (fair benchmark)</span>
+			</label>
+			<p class="hint" id="memory-hint">
+				With memory, players remember this match: trust in the others and a short summary, and they
+				bring it to later matches. Without it, nothing is read or written.
+			</p>
 
 			{#if usesModels}
 				<div class="spend" data-testid="spend" role="group" aria-label="Spending">

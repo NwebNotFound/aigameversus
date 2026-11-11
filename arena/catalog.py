@@ -33,6 +33,11 @@ CATALOG_URL = "https://openrouter.ai/api/v1/models"
 MAX_AGE = 3600  # seconds a downloaded list is used before it is fetched again
 DOWNLOAD_TIMEOUT = 10
 HIGH_OUTPUT_USD_PER_MTOK = Decimal(10)  # above this, the launch form warns
+MAX_USD_PER_MTOK = Decimal(10_000)  # a listed price above this is a mistake, not a model
+# An unverified model is booked at its listed price times this: nobody checked the price,
+# and OpenRouter may route a call to a dearer provider, so the caps stop it early, not late.
+UNVERIFIED_PRICE_MARGIN = Decimal("1.25")
+MAX_DOWNLOAD_BYTES = 20_000_000  # today's list is under 1 MB
 _PER_MTOK = Decimal(1_000_000)
 
 
@@ -56,6 +61,10 @@ class Entry:
     verified: bool
 
     @property
+    def price_source(self) -> str:
+        return "config/models.yaml" if self.verified else "openrouter list"
+
+    @property
     def high_price(self) -> bool:
         return self.output_usd_per_mtok > HIGH_OUTPUT_USD_PER_MTOK
 
@@ -70,7 +79,10 @@ class Catalog:
 def _download() -> bytes:
     request = urllib.request.Request(CATALOG_URL, headers={"User-Agent": "aigameversus"})
     with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT) as response:
-        return response.read()
+        data = response.read(MAX_DOWNLOAD_BYTES + 1)
+    if len(data) > MAX_DOWNLOAD_BYTES:
+        raise ValueError("the model list is larger than any real one")
+    return data
 
 
 async def load(config: Config, *, now: float | None = None) -> Catalog:
@@ -109,8 +121,8 @@ def entries(config: Config, data: list[dict[str, Any]]) -> list[Entry]:
 def with_models(config: Config, catalog: Catalog, model_ids: Iterable[str]) -> Config:
     """`config` with those of `model_ids` that are unverified catalog models added to it.
 
-    Their Model has OpenRouter's prices; ids that are neither in the config nor in the
-    catalog stay unknown, so whoever checks the ids still refuses them.
+    Their Model has OpenRouter's prices times UNVERIFIED_PRICE_MARGIN; ids that are neither
+    in the config nor in the catalog stay unknown, so whoever checks the ids still refuses them.
     """
     wanted = set(model_ids) - set(config.models)
     extra = {
@@ -118,8 +130,8 @@ def with_models(config: Config, catalog: Catalog, model_ids: Iterable[str]) -> C
             provider="openrouter",
             model=entry.openrouter_id,
             name=entry.name,
-            input_usd_per_mtok=entry.input_usd_per_mtok,
-            output_usd_per_mtok=entry.output_usd_per_mtok,
+            input_usd_per_mtok=entry.input_usd_per_mtok * UNVERIFIED_PRICE_MARGIN,
+            output_usd_per_mtok=entry.output_usd_per_mtok * UNVERIFIED_PRICE_MARGIN,
         )
         for entry in catalog.entries
         if entry.id in wanted and not entry.verified
@@ -140,6 +152,9 @@ async def resolve(config: Config, model_ids: Iterable[str]) -> Config:
 def _entry(item: Any) -> Entry | None:
     if not isinstance(item, dict) or not isinstance(item.get("id"), str):
         return None
+    model_id = item["id"]
+    if ":" in model_id and not model_id.endswith(":free"):  # :batch and other ways to call it
+        return None
     parameters = item.get("supported_parameters") or []
     outputs = (item.get("architecture") or {}).get("output_modalities") or []
     if "tools" not in parameters or "tool_choice" not in parameters or "text" not in outputs:
@@ -149,9 +164,10 @@ def _entry(item: Any) -> Entry | None:
         prices = [Decimal(str(pricing[key])) * _PER_MTOK for key in ("prompt", "completion")]
     except (KeyError, InvalidOperation):
         return None
-    if any(price < 0 for price in prices):  # "-1": a router whose price depends on the model
+    # "-1" is a router whose price depends on the model; NaN, infinity and absurd numbers
+    # are mistakes. None of them can be counted against a cap.
+    if not all(price.is_finite() and 0 <= price <= MAX_USD_PER_MTOK for price in prices):
         return None
-    model_id = item["id"]
     return Entry(
         id=model_id,
         openrouter_id=model_id,

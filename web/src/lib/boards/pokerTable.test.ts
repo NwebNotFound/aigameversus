@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { card, coins, percent, positionTag, seatPoint } from './pokerTable.js';
+import { actionChips, card, coins, percent, positionTag, seatPoint } from './pokerTable.js';
 
 describe('seatPoint', () => {
 	it('puts the first seat at the bottom and spreads the rest around the oval', () => {
@@ -57,5 +57,40 @@ describe('percent and positionTag', () => {
 		expect(positionTag('big_blind')).toBe('BB');
 		expect(positionTag('seat_3')).toBeNull();
 		expect(positionTag(null)).toBeNull();
+	});
+});
+
+describe('actionChips', () => {
+	const bet = (seq: number, player: string, kind: string, to = 0) => ({
+		seq,
+		source: 'game' as const,
+		type: 'bet_action',
+		data: { player, kind, to, added: to, street: 'preflop' },
+		visible_to: null
+	});
+	const street = (seq: number) => ({
+		seq,
+		source: 'game' as const,
+		type: 'street_started',
+		data: { street: 'flop', cards: [], order: [] },
+		visible_to: null
+	});
+
+	it('keeps the last action per player on the current street', () => {
+		const chips = actionChips([
+			bet(0, 'p1', 'raise', 60),
+			bet(1, 'p2', 'call', 60),
+			bet(2, 'p1', 'all_in', 990)
+		]);
+		expect(chips).toEqual({
+			p1: { kind: 'all_in', label: 'all-in 990' },
+			p2: { kind: 'call', label: 'call' }
+		});
+	});
+
+	it('clears the chips when a new street begins', () => {
+		expect(actionChips([bet(0, 'p1', 'raise', 60), street(1), bet(2, 'p2', 'check')])).toEqual({
+			p2: { kind: 'check', label: 'check' }
+		});
 	});
 });

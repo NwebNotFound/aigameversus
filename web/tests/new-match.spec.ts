@@ -167,3 +167,13 @@ test('a form post from a foreign origin is refused', async ({ request }) => {
 
 	expect(response.status()).toBe(403);
 });
+
+test('a match can be played without memory', async ({ page, request }) => {
+	await page.goto('/matches/new');
+	await page.getByText('Poker', { exact: true }).click();
+	await page.getByLabel('Play without memory (fair benchmark)').check();
+	const id = await submit(page);
+
+	const record = await (await request.get(`${ARENA}/matches/${id}`)).json();
+	expect(record.memory).toBe(false);
+});
