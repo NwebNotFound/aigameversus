@@ -22,7 +22,7 @@ from arena.engine.rng import derive_rng
 from arena.engine.types import MESSAGE, Action, Event, Placement, PlayerId, ToolSpec, TurnMode
 from games.poker.betting import Street, side_pots, split
 from games.poker.cards import Card, Deck
-from games.poker.evaluator import best_hand
+from games.poker.evaluator import best_hand, win_probabilities
 
 STREETS = ("preflop", "flop", "turn", "river")
 BOARD_CARDS = {"flop": 3, "turn": 1, "river": 1}
@@ -544,12 +544,14 @@ class Poker(GamePlugin[PokerState]):
 
         Not part of the plugin interface yet (D-039); the UI will define it in phase 5.
         """
+        chances = self._win_chances(state)
         return {
             "layout": "poker_table",
             "hand": state.hand_no,
             "street": state.street_name,
             "board": list(state.board),
             "pot": sum(state.contributions.values()),
+            "side_pots": self._pots(state),
             "button": state.button,
             "seats": [
                 {
@@ -558,10 +560,34 @@ class Poker(GamePlugin[PokerState]):
                     "cards": list(state.hole.get(p, [])),
                     "folded": p in state.folded,
                     "position": self._position(state, p),
+                    "win_probability": chances.get(p),
                 }
                 for p in state.seats
             ],
         }
+
+    def _pots(self, state: PokerState) -> list[dict[str, Any]]:
+        """The main pot and side pots as they stand: the chips and who can win them."""
+        live = [p for p in state.in_hand if p not in state.folded]
+        if len(live) < 2 or not state.contributions:
+            return []
+        pots = side_pots(dict(state.contributions), list(state.folded))
+        return [{"amount": pot.amount, "eligible": list(pot.eligible)} for pot in pots]
+
+    def _win_chances(self, state: PokerState) -> dict[PlayerId, float]:
+        """Each player's chance to win if the hand ran to the river now, for the spectator view.
+
+        Spectator information only (it follows from every hole card). The random
+        runouts use a stream fixed by the hand and the board, so the same state
+        always gives the same numbers.
+        """
+        live = [p for p in state.in_hand if p not in state.folded and state.hole.get(p)]
+        if len(live) < 2:
+            return {}
+        holes = {p: [Card.parse(c) for c in state.hole[p]] for p in live}
+        board = [Card.parse(c) for c in state.board]
+        rng = random.Random(f"win-chances/{state.hand_no}/{len(board)}")
+        return win_probabilities(holes, board, rng, samples=400)
 
     # --- end ---------------------------------------------------------------
 

@@ -548,6 +548,39 @@ def test_render_spec_shows_every_hole_card_to_spectators():
     assert [s["cards"] for s in spec["seats"]] == [["2c", "3d"], ["4c", "5d"]]
 
 
+def test_render_spec_gives_pots_and_win_chances_for_the_spectator_view():
+    plugin = Poker()
+    match = Match(plugin, random_bots(plugin, SEATS[:4], 11), seed=11)
+    asyncio.run(match.run())
+    checked = 0
+
+    for length in range(1, len(match.events), 9):
+        state = replay(plugin, match.events[:length])
+        spec = plugin.render_spec(state)
+        chances = {s["player"]: s["win_probability"] for s in spec["seats"]}
+        live = {p: c for p, c in chances.items() if c is not None}
+
+        assert spec == plugin.render_spec(state)  # the same state gives the same numbers
+        assert all(chances[s["player"]] is None for s in spec["seats"] if s["folded"])
+        if live:
+            assert sum(live.values()) == pytest.approx(1.0)
+            assert sum(pot["amount"] for pot in spec["side_pots"]) == spec["pot"]
+            assert all(len(pot["eligible"]) >= 1 for pot in spec["side_pots"])
+            checked += 1
+    assert checked > 5
+
+
+def test_render_spec_win_chance_is_exact_for_a_finished_board():
+    table = Table({"a": 1000, "b": 1000}, ["Ac Ad", "2c 3d"], "Kh Qs 9d 8c 4h")
+    table.state.board = ["Kh", "Qs", "9d", "8c", "4h"]
+
+    chances = {
+        s["player"]: s["win_probability"] for s in table.plugin.render_spec(table.state)["seats"]
+    }
+
+    assert chances == {"a": 1.0, "b": 0.0}
+
+
 # --- turn limit -------------------------------------------------------------------
 
 

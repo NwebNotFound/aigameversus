@@ -96,8 +96,8 @@ describe('merge', () => {
 });
 
 describe('hidden', () => {
-	it('hides hands, hole cards and roles only with spoilers off', () => {
-		for (const field of ['hand', 'cards', 'role']) {
+	it('hides hands, hole cards, roles and win chances only with spoilers off', () => {
+		for (const field of ['hand', 'cards', 'role', 'win_probability']) {
 			expect(hidden(field, false)).toBe(true);
 			expect(hidden(field, true)).toBe(false);
 		}
