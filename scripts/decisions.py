@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One file per decision: docs/decisions/D-0NN-slug.md, listed in docs/DECISIONS.md.
 
-    python scripts/decisions.py new D-107 "Title of the decision"   # a new entry to fill in
+    python scripts/decisions.py new D-0NN "Title of the decision"   # a new entry to fill in
     python scripts/decisions.py index                               # rewrite the index, sorted
     python scripts/decisions.py adopt                               # old-style `## D-0NN · Title`
                                                                     # blocks in DECISIONS.md
@@ -147,7 +147,7 @@ def adopt_from(ref: str) -> list[str]:
 
 def new(number: str, title: str) -> Path:
     if not re.fullmatch(r"D-\d{3}", number):
-        sys.exit(f"{number!r} is not a decision number like D-107")
+        sys.exit(f"{number!r} is not a decision number like D-0NN")
     if number in entries():
         sys.exit(f"{number} already exists: take the next free number")
     DIR.mkdir(exist_ok=True)
