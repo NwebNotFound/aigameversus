@@ -206,7 +206,7 @@ async def _play_models(
 
         show = _printer(plugin.id, labels(seats), args)
         agents = {
-            player: ModelAgent(budget.model(player, model_id), plugin)
+            player: ModelAgent(budget.model(player, model_id), plugin, settings=options["settings"])
             for player, model_id in seats.items()
         }
         match = _match(plugin, agents, options, store_and_print)
@@ -260,6 +260,7 @@ async def _play_models(
                 "version": plugin.version,
                 "seed": match.seed,
                 "settings": match.settings,
+                "prompt_version": plugin.prompt_version(match.settings),
                 "seats": seats,
                 "status": "finished" if placements is not None else "stopped_at_cost_cap",
                 "placements": [placement.model_dump() for placement in placements or []],

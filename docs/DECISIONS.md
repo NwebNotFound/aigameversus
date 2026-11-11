@@ -1501,6 +1501,20 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** No monthly cap (one runaway batch could spend without
   limit); a higher cap per match for everyone (a mistake would cost more).
 
+## D-077 · A game card starts a match only when the arena has the game
+
+- **Date:** 2026-11-11
+- **Decision:** A home card links to the new-match form with its game chosen
+  (`/matches/new?game=<id>`) only when `GET /games` lists the game; otherwise
+  it says "Coming soon" and has no link. Throne of Tokens therefore turns
+  active by itself when its plugin is installed. The form reads `?game=`
+  as its first choice.
+- **Why:** A card that leads to a form which cannot start the game is a dead
+  end; the arena's game list is the one source of what can be played.
+- **Alternatives:** a hard-coded "coming soon" flag per card (needs a code
+  change when a plugin lands); hiding the card (the game should still be
+  announced).
+
 ## D-078 · One transcript renders every match for every reader
 
 - **Date:** 2026-11-11
@@ -1565,6 +1579,25 @@ Each entry: date, decision, why, alternatives considered.
   yet); model seats always on (any local script could spend); a separate
   table for seats (the record is read with the match anyway).
 
+## D-083 · The prompt names the player's own seat where the model reads it
+
+- **Date:** 2026-11-11
+- **Decision:** Besides the first line of the system message, the prompt now
+  says once more that every mention of the seat is the player, ends the ask
+  with "You are p8.", and starts every event line that the player did (its
+  `player`, `caller` or `from` is the reader) with `[you]`. Events that only name the reader in
+  another field (a vote against them) are not marked: the player did not do
+  them. Other players' words stay as they were written.
+- **Why:** In the first real Werewolf match the seer (seat p8) wrote about
+  "p7 and p8" as if they were others, attacked its own seer claim in public
+  and tried to vote for itself; another model called its own seat suspicious
+  in its thought. Both had read their seat once, at the top of a long
+  prompt, and then met it many times as a plain id among other ids.
+- **Alternatives:** Names instead of seat ids (needs player info in every
+  game's events, planned for the UI); rewriting other players' words to say
+  "you" (would change what was said); marking every event that names the
+  reader anywhere (marks votes against the player as theirs).
+
 ## D-091 · The launch form seats models: all or none, a spend box, the month in view
 
 - **Date:** 2026-11-11
@@ -1588,3 +1621,24 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** mixed tables of bots and models (not in the API yet); an
   estimate computed in the browser from token guesses (the arena's endpoint
   will know the prompt sizes).
+
+## D-093 · The runner takes the prompt version from the match settings
+
+- **Date:** 2026-11-11
+- **Decision:** `ModelAgent` gets the match settings. It asks the game for
+  `rules(settings)` once and for `situation_summary(observation, settings)`
+  every turn, and puts the summary in a `<summary>` block above
+  `<situation>`; the system message then names that block too. The match
+  records `prompt_version(settings)` in `match_started`, and `arena run
+  --save` writes it into the export. Without a summary the prompt is the one
+  from before, byte for byte (the p1 golden files check it).
+- **Why:** Poker and Werewolf have a second prompt version (new rules, a
+  summary of the turn), and an A/B comparison needs every match to say which
+  one its models read. The summary comes first because models read the top
+  and the end of a prompt most closely; it is built from the observation, so
+  it cannot leak what the player may not see.
+- **Alternatives:** The summary inside `<situation>` (mixes text with the
+  JSON a mock model parses); the version only in the settings (a default
+  would not show up in the log, and the default may change); a summary in
+  the system message (that one is meant to be the server's words, not game
+  data).

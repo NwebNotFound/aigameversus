@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 from arena.agents.budget import MICRO
 from arena.api.matches import ALLOW_MODEL_SEATS
 from arena.config import CONFIG_PATH, display_name, load_config, missing_keys
-from arena.db.ledger import Ledger
 
 PERSONALITIES_DIR = CONFIG_PATH.parent / "personalities"
 
@@ -103,7 +102,8 @@ class MonthSpend(BaseModel):
 async def month_spend(request: Request) -> MonthSpend:
     """What model calls have cost this month, and what the month cap still allows."""
     now = datetime.now(UTC)
-    spent = await Ledger(request.app.state.pool).month_spent(now)
+    # Through the arena's ledger, so a ledger of its own (another database) is read too.
+    spent = await request.app.state.live.ledger.month_spent(now)
     cap = int(load_config().limits.month_eur * MICRO)
     return MonthSpend(
         month=now.strftime("%Y-%m"),

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import WerewolfRoles from '#lib/components/WerewolfRoles.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS } from '#lib/live.js';
@@ -20,7 +21,7 @@
 
 	// What was entered before a refused submit, else the defaults.
 	// svelte-ignore state_referenced_locally
-	let gameId = $state(form?.values?.game || 'liars_deck');
+	let gameId = $state(form?.values?.game || page.url.searchParams.get('game') || 'liars_deck');
 	const game = $derived(games.find((g) => g.id === gameId) ?? games[0]);
 	// svelte-ignore state_referenced_locally
 	let players = $state(Number(form?.values?.players) || 0);
@@ -36,7 +37,9 @@
 	);
 	const month = $derived(data.month.state === 'ok' ? data.month.data : null);
 	const matchCap = $derived(setup ? Math.round(setup.caps.match_eur * 1_000_000) : 0);
+	// A match of models cannot start when the month is used up, or when its spend is unknown.
 	const monthEmpty = $derived(usesModels && month !== null && month.remaining_micro_eur <= 0);
+	const blocked = $derived(usesModels && (month === null || month.remaining_micro_eur <= 0));
 	const euro = (micro: number) => `${(micro / 1_000_000).toFixed(2)} €`;
 	const price = (usd: number) => `$${usd < 1 ? usd.toFixed(3) : usd.toFixed(2)}`;
 
@@ -260,7 +263,9 @@
 							</p>
 						{/if}
 					{:else}
-						<p class="field-error">The spending of this month could not be read.</p>
+						<p class="field-error" role="alert" data-testid="month-unknown">
+							The spending of this month is unknown: a match of models cannot start.
+						</p>
 					{/if}
 					<label class="row confirm">
 						<input type="checkbox" name="confirm_spend" />
@@ -273,7 +278,7 @@
 			{/if}
 		</fieldset>
 
-		<button type="submit" disabled={submitting || monthEmpty}>
+		<button type="submit" disabled={submitting || blocked}>
 			{submitting ? 'Starting…' : usesModels ? 'Start match (spends money)' : 'Start match'}
 		</button>
 	</form>
