@@ -251,6 +251,8 @@ export interface Standing {
 	games_played: number;
 	win_rate: number | null;
 	average_placement: number | null;
+	/** Fewer rated games than `provisional_games`: the rating is not reliable yet. */
+	provisional: boolean;
 }
 
 export interface LeaderboardRow extends Standing {
@@ -281,6 +283,8 @@ export interface Leaderboard {
 	fallback: boolean;
 	/** Rows per kind with the other filters applied. */
 	counts: { models: number; bots: number };
+	/** Rated games a rating needs before it counts as reliable. */
+	provisional_games: number;
 	/** Whether the demo profiles are included (the default is no). */
 	show_demo: boolean;
 	/** Demo profiles left out. */
@@ -328,6 +332,8 @@ export interface ModelPage {
 	/** The profile without a personality; null until the model has played. */
 	profile_id: string | null;
 	overall: Standing | null;
+	/** Rated games a rating needs before it counts as reliable. */
+	provisional_games: number;
 	usage: Usage;
 	games: (Standing & { game_id: string; usage: Usage })[];
 	recent_matches: RecentMatch[];

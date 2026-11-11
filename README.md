@@ -67,7 +67,7 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
   with the reason. A model has one rating profile whatever seat it sits in, and
   model matches, from the command or the API, are rated (`arena ratings backfill` rates earlier ones). Demo data is hidden until "Show demo data" is switched on. The leaderboard lists real
   models first (vendor, cost per game, share of refused answers) and groups the
-  random-bot seats; each model has a page (`/models/<id>`) with its rating, cost
+  random-bot seats; a rating from fewer than 10 rated games (`PROVISIONAL_GAMES`) carries a "provisional" badge, and a provisional player does not stand above an established one less than 25 points behind; each model has a page (`/models/<id>`) with its rating, cost
   and tool errors per game, its personalities and recent matches.
 - **A readable play-by-play** of every match (`arena/transcript`): one renderer
   per game, in German and English, shared by the API, the `arena` command, the

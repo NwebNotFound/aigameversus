@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from arena.api.app import app
-from arena.api.ratings import group_seat_bots
+from arena.api.ratings import established_first, group_seat_bots
 from arena.db.database import connect, migrate
 from arena.engine.types import Placement
 from arena.ratings.store import BOT_MODEL_ID, RatingStore, Standing, Usage
@@ -48,6 +48,7 @@ def test_empty_leaderboard(client):
         "kind": "all",
         "fallback": True,
         "counts": {"models": 0, "bots": 0},
+        "provisional_games": 10,
         "show_demo": False,
         "demo_hidden": 0,
         "rows": [],
@@ -71,6 +72,7 @@ def test_leaderboard_per_game(database_url, client):
         "games_played": 2,
         "win_rate": 1.0,
         "average_placement": 1.0,
+        "provisional": True,
         "kind": "model",
         "vendor": None,  # "model-0" is not in config/models.yaml
         "members": 1,
@@ -273,3 +275,59 @@ def test_demo_profiles_are_hidden_unless_asked_for(database_url, client):
     assert hidden["demo_hidden"] == 6
     assert shown["show_demo"] is True and shown["demo_hidden"] == 0
     assert {row["name"].startswith("DEMO ") for row in shown["rows"]} == {True}
+
+
+def standing(name, rating, games):
+    return Standing(
+        profile_id=uuid4(),
+        name=name,
+        model_id=f"model-{name}",
+        rating=rating,
+        games_played=games,
+        win_rate=None,
+        average_placement=None,
+    )
+
+
+def order(standings):
+    return [s.name for s, _, _ in established_first([(s, "model", 1) for s in standings])]
+
+
+def test_a_provisional_player_does_not_stand_above_an_established_one_close_behind():
+    # sorted by rating already: new (3 games) 1020, old (12 games) 1000: a gap of 20 < 25
+    assert order([standing("new", 1020, 3), standing("old", 1000, 12)]) == ["old", "new"]
+
+
+def test_a_provisional_player_far_ahead_keeps_the_place_and_established_ones_stay_in_order():
+    assert order([standing("new", 1040, 3), standing("old", 1000, 12)]) == ["new", "old"]
+    assert order([standing("a", 1030, 20), standing("b", 1010, 15)]) == ["a", "b"]
+    assert order([standing("p", 1030, 2), standing("q", 1010, 4)]) == ["p", "q"]  # both provisional
+
+
+def test_the_provisional_rule_ends_with_several_players():
+    shuffled = [
+        standing("n1", 1024, 1),
+        standing("n2", 1020, 2),
+        standing("e1", 1010, 30),
+        standing("e2", 1005, 11),
+    ]
+    assert order(shuffled) == ["e1", "e2", "n1", "n2"]
+
+
+def test_the_leaderboard_marks_provisional_ratings_at_the_threshold(database_url, client):
+    from arena.ratings.elo import PROVISIONAL_GAMES
+
+    seed(database_url, [("poker", [1, 2])] * PROVISIONAL_GAMES + [("werewolf", [1, 2])])
+
+    rows = client.get("/leaderboard").json()["rows"]
+    overall = {row["name"]: row for row in rows}
+    poker = {
+        row["name"]: row
+        for row in client.get("/leaderboard", params={"game": "poker"}).json()["rows"]
+    }
+    werewolf = client.get("/leaderboard", params={"game": "werewolf"}).json()
+
+    assert werewolf["provisional_games"] == PROVISIONAL_GAMES
+    assert {row["provisional"] for row in werewolf["rows"]} == {True}  # 1 game
+    assert {row["provisional"] for row in poker.values()} == {False}  # exactly 10 games
+    assert {row["provisional"] for row in overall.values()} == {False}  # 11 games overall

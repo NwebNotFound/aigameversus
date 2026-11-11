@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
+
 // Needs demo data: `docker compose exec arena python -m arena.ratings.demo_seed`
 // (CI does this after starting the stack). Demo profiles play High Card (`toy`).
 
@@ -140,4 +142,26 @@ test('the table shows model, cost per game and tool errors, and bot seats are on
 		.locator('tbody tr')
 		.filter({ hasText: /Random Bot p\d/ });
 	await expect(seatRows).toHaveCount(0);
+});
+
+// Other specs finish matches meanwhile, so read the API and the page together until they agree.
+test('a rating from fewer than 10 games carries a provisional badge with its explanation', async ({
+	page,
+	request
+}) => {
+	await expect(async () => {
+		const board = await (await request.get(`${ARENA}/leaderboard?kind=all&demo=true`)).json();
+		const provisional = board.rows.filter((row: { provisional: boolean }) => row.provisional);
+
+		await page.goto('/leaderboard?kind=all&demo=1');
+
+		const badges = page.getByTestId('leaderboard').getByTestId('provisional');
+		await expect(badges).toHaveCount(provisional.length, { timeout: 2000 });
+		if (provisional.length > 0) {
+			await expect(badges.first()).toHaveAttribute(
+				'title',
+				`fewer than ${board.provisional_games} rated games: the rating is not reliable yet`
+			);
+		}
+	}).toPass({ timeout: 30_000 });
 });
