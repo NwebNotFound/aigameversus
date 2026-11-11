@@ -533,3 +533,22 @@ def test_render_spec_shows_every_hand_to_spectators():
     assert spec["layout"] == "card_table"
     assert [seat["hand"] for seat in spec["seats"]] == [["K1", "Q1"], ["A2"]]
     assert "live" not in keys(spec)
+
+
+# --- turn limit -------------------------------------------------------------------
+
+
+def test_max_turns_follows_from_the_variants():
+    # 4 players x 6 chambers = 24 rounds at most; a round has at most 20 plays and a
+    # call, each of them may come with table talk.
+    assert LiarsDeck.max_turns == 4 * 6 * (4 * 5 + 1) * 2 == 1008
+
+
+def test_random_matches_stay_below_the_turn_limit():
+    longest = 0
+    for seed in range(40):
+        match, _ = bot_match(SEATS, seed=seed, variant=["base", "devil_card"][seed % 2])
+        turns = sum(e.type in ("action_accepted", "action_fallback") for e in match.events)
+        longest = max(longest, turns)
+
+    assert 0 < longest < LiarsDeck.max_turns

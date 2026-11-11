@@ -32,6 +32,26 @@ DEFAULTS = {"starting_stack": 1000, "small_blind": 10, "double_every": 10, "hand
 BetKind = Literal["fold", "check", "call", "raise", "all_in"]
 
 
+def turn_bound(
+    players: int, starting_stack: int, small_blind: int, double_every: int, hand_limit: int
+) -> int:
+    """The most turns a tournament with these settings can take (D-045).
+
+    Per hand, every street starts with at most one action per player, and every
+    raise lets at most all others act again. A full raise lifts the bet by at
+    least the big blind, so a hand has at most chips / big blind of them, plus
+    one short all-in per player. Each action may come with one table_talk turn.
+    """
+    chips = players * starting_stack
+    total = 0
+    for hand in range(1, hand_limit + 1):
+        big_blind = 2 * small_blind * 2 ** ((hand - 1) // double_every)
+        raises = chips // big_blind + players
+        actions = len(STREETS) * players + raises * (players - 1)
+        total += 2 * actions
+    return total
+
+
 class Stats(BaseModel):
     """What every player can know about an opponent's play so far."""
 
@@ -125,6 +145,7 @@ class Poker(GamePlugin[PokerState]):
     version = "1"
     min_players = 2
     max_players = 6
+    max_turns = turn_bound(6, **DEFAULTS)
     turn_mode = TurnMode.SEQUENTIAL
 
     # --- setup -------------------------------------------------------------
@@ -139,6 +160,12 @@ class Poker(GamePlugin[PokerState]):
                 raise ValueError(f"{key} must be a whole number of at least 1, got {value!r}")
         if values["starting_stack"] < 2 * values["small_blind"]:
             raise ValueError("starting_stack must cover at least one big blind")
+        bound = turn_bound(len(players), **values)
+        if bound > self.max_turns:
+            raise ValueError(
+                f"These settings allow up to {bound} turns, more than Poker's limit of "
+                f"{self.max_turns}; use fewer hands, smaller stacks or bigger blinds"
+            )
         seats, deck_seed = list(players), None
         duplicate = settings.get("duplicate")
         if duplicate is not None:

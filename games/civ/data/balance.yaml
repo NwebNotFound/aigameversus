@@ -2,9 +2,24 @@
 # Tuning numbers that are not tied to one unit, building or terrain.
 # Modifiers are relative: 0.25 = +25 %, -0.2 = -20 %.
 map:
-  tiles: {min: 60, max: 80}
+  tiles: {min: 60, max: 80} # grows with the number of nations, in full rows
   nations: {min: 4, max: 6}
+  width: 10 # tiles per row
   fog_vision_radius: 2 # around own cities and armies
+  terrain_weights: # how often a terrain is drawn for a tile outside the start regions
+    plains: 34
+    forest: 22
+    hills: 14
+    river: 10
+    mountains: 10
+    water: 10
+  rare_tiles: {iron_deposit: 2, gold_vein: 2} # per map, placed between the nations
+  capital_terrain: plains
+  start_regions: # the tiles around a capital, by the resource that nation is short of
+    food: [forest, forest, hills, hills, river, river]
+    wood: [plains, plains, hills, hills, river, river]
+    iron: [plains, plains, forest, forest, river, river]
+    gold: [plains, plains, forest, forest, hills, hills]
 
 start: # each nation also starts with a capital
   resources: {food: 5, wood: 5, iron: 0, gold: 5}

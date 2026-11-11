@@ -781,6 +781,26 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** Storing events as `json` instead of `jsonb` (keeps the
   order in Postgres only, not in other stores or exports).
 
+## D-045 · Turn limits of Poker and Liar's Deck are upper bounds from the rules
+
+- **Date:** 2026-11-11
+- **Decision:** Each game's `max_turns` (D-040) is what its rules allow at most,
+  computed, not guessed. **Liar's Deck:** every round ends with at least one
+  trigger pull and a revolver has 6 chambers, so at most players × chambers
+  rounds; a round has at most one play per dealt card plus the call; every
+  action may carry one `table_talk` turn: 4 × 6 × 21 × 2 = 1,008.
+  **Poker:** `turn_bound()` sums over the hands: 4 streets × players, plus at
+  most (players − 1) more actions per raise; a full raise lifts the bet by at
+  least the big blind, so a hand holds at most all chips ÷ big blind full raises
+  plus one short all-in per player; each action may carry one `table_talk`
+  turn. With the defaults and 6 players that is 70,400. Settings whose bound is
+  higher (bigger stacks, more hands, smaller blinds) are refused.
+- **Why:** A bound from the rules can never stop a legal match, and still stops
+  a looping one.
+- **Alternatives:** a measured maximum with a safety factor; one large limit for
+  every game; letting the bound grow with the settings by overriding
+  `Match(max_turns=...)` per match.
+
 ## D-046 · Werewolf engine: step queue, night order, deaths and wins
 
 - **Date:** 2026-11-11
@@ -844,7 +864,58 @@ Each entry: date, decision, why, alternatives considered.
   election when the captain dies without successor; the narrator inside the
   plugin with a model call.
 
-## D-048 · Werewolf roles batch A: lovers, Protector, Little Girl, Elder, Idiot, Scapegoat
+## D-048 · Throne of Tokens map: rows of hexes, start regions from data, land in one piece
+
+- **Date:** 2026-11-11
+- **Decision:** The map is a rectangle of hex tiles, ten per row, with six,
+  seven or eight rows for four, five or six nations (60 to 80 tiles, mountains
+  and water included). A tile is `(col, row)` and odd rows sit half a tile to
+  the right. The map is stored as rows of terrain ids plus one start per
+  nation. The spec asks for fair starts and for every nation to be short of
+  one resource; the generator does it like this:
+  - Capitals are picked greedily, each as far as possible from those before
+    it, and the most widely spread of 20 such picks is used. Start regions
+    (the six tiles a capital works) never share a tile and are never cut off
+    by the rim. Which seat gets which capital is shuffled.
+  - The tiles around a capital come from `map.start_regions` in
+    `balance.yaml`: one list per scarce resource, all with the same total
+    yield (12), laid out in random order. The four shortages are dealt out in
+    turn, so with four nations each is short of something different.
+  - Every other tile is drawn from `map.terrain_weights`. A draw whose land is
+    not one piece is thrown away and drawn again.
+  - The two iron deposits and two gold veins go outside the start regions,
+    where the nearest capital has the smallest lead over the second nearest
+    and that one is close, and never side by side.
+- **Why:** A rectangle in rows is what a browser draws and a model reads most
+  easily, and rows of ids pass through JSON without depending on key order
+  (D-044). Equal start regions make fairness something a test can check, not
+  a matter of luck with the seed. Land in one piece means no nation is locked
+  in and no tile is unreachable. Rare tiles between nations give them
+  something to fight or trade over, which is what the spec wants iron for.
+- **Alternatives:** A hexagon-shaped map (its sizes jump from 61 to 91
+  tiles); mirrored maps (fair, but every match looks alike and the shortages
+  could not differ); judging random starts by a score and redrawing (fairness
+  only on average); rivers along tile edges (the spec lists river as a
+  terrain with its own yield).
+
+## D-049 · Fog of war: a nation sees what is in range now, by distance alone
+
+- **Date:** 2026-11-11
+- **Decision:** A nation sees the tiles within the radius of each of its
+  viewpoints (cities and armies; 2 by default, more with a watchtower or a
+  scout). Sight is plain distance: mountains and forests do not block it.
+  `map_view` gives the terrain of those tiles and `None` for all others. No
+  memory of tiles seen earlier is kept.
+- **Why:** This is the rule as the spec states it, and it is the smallest
+  one: the view is a function of the current state, so nothing about it has
+  to be stored or replayed. The systems that own cities and armies pass their
+  viewpoints with the radius each has.
+- **Alternatives:** Remembering explored terrain (needs state per nation;
+  can be added in the turn flow, step 7.6, if matches show that models lose
+  their way); line of sight (more rules for models to hold in mind, little
+  gain on a map this small).
+
+## D-050 · Werewolf roles batch A: lovers, Protector, Little Girl, Elder, Idiot, Scapegoat
 
 - **Date:** 2026-11-11
 - **Decision:**
