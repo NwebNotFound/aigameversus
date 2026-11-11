@@ -50,6 +50,7 @@ The stack has five services, each with a healthcheck:
 | Arena API | <http://127.0.0.1:8100> | health, matches, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
 | PostgreSQL | `127.0.0.1:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
 | Redis | `127.0.0.1:6380` | match queue; today only the worker pings it |
+| Worker | none | heartbeat placeholder: pings Redis, runs no matches yet |
 
 **What you see at <http://127.0.0.1:3100>:** the home page with the four game
 cards and the list of running matches (or "No matches running"), and the
@@ -146,9 +147,10 @@ platform, not an afterthought.
   keeps its worst case. The ledger can therefore show more than the bill,
   never less, also after a crash or with several players calling at once.
 - **Pause, not overrun:** a call that could take the match or the month past
-  its cap is not sent. The match pauses with the amounts in its log and
-  continues only after someone raises the cap; the game itself is unchanged
-  by the pause.
+  its cap is not sent. The engine pauses the match with the amounts in its log
+  and can resume it later from the same turn, unchanged. Today nothing asks you
+  to raise a cap or resume: no command or API call does it yet, and no real
+  model can start a match.
 - **No real model yet:** nothing in this repository starts a match with a
   real model today. Development, tests and CI use random bots and a mock LLM
   only, and CI has no access to any API key.
