@@ -1,0 +1,12 @@
+id: wild_child
+name: Wildes Kind
+team: village
+unique: true
+weight: 1
+night_order: 2
+first_night_only: true
+hooks:
+  on_night: wild_child_pick_model
+  on_model_death: wild_child_turns_wolf
+description: >
+  On night 1 picks a role model. If the model dies, becomes a werewolf. Starts on the village team, may switch to wolves.

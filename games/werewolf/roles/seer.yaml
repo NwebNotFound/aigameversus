@@ -1,0 +1,10 @@
+id: seer
+name: Seherin
+team: village
+unique: true
+weight: 7
+night_order: 4
+hooks:
+  on_night: seer_inspect
+description: >
+  Inspects one player's role each night.

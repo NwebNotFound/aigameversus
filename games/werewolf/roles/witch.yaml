@@ -1,0 +1,10 @@
+id: witch
+name: Hexe
+team: village
+unique: true
+weight: 4
+night_order: 8
+hooks:
+  on_night: witch_potions
+description: >
+  Sees the wolves' victim. Has one healing potion and one poison potion per game.

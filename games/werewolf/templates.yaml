@@ -1,0 +1,19 @@
+# Role templates for the "new match" dialog. Counts are per role id; "fill" = fill free seats.
+templates:
+  - id: classic
+    name: Klassisch
+    min_players: 6
+    roles: {werewolf: 2, seer: 1, witch: 1, hunter: 1, villager: fill}
+  - id: duesterwald
+    name: Düsterwald-Mix
+    min_players: 8
+    roles: {werewolf: 2, seer: 1, witch: 1, hunter: 1, cupid: 1, bear_tamer: 1, little_girl: 1, villager: fill}
+  - id: chaos
+    name: Chaos
+    min_players: 10
+    roles: {werewolf: 2, prime_wolf: 1, white_wolf: 1, seer: 1, witch: 1, hunter: 1, cupid: 1, protector: 1, raven: 1, scapegoat: 1, wild_child: 1, village_idiot: 1, elder: 1, villager: fill}
+  - id: random_balanced
+    name: Zufällig ausgewogen
+    min_players: 6
+    random: true
+    target_balance: 0  # Game Master picks a mix whose summed weight is near 0
