@@ -328,9 +328,24 @@ and `games/<game>/tests/golden/` holds the exact prompt text per version
 ### Events and state
 
 A match is a list of `Event`s. Engine events (`match_started`, `thought`,
-`action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-`match_paused`, `match_resumed`, `turn_limit_reached`, `match_finished`) are
-bookkeeping. Game events come from the plugin through `ctx.emit` and are the
+`action_accepted`, `action_rejected`, `action_fallback`, `decision`,
+`agent_failed`, `match_paused`, `match_resumed`, `turn_limit_reached`,
+`match_finished`) are bookkeeping.
+
+`decision` (spectators only) closes every move of a model and every move that
+ended in a random one: `{player, answers, latency_ms, tokens_in, tokens_out,
+reasoning_tokens, retries, fallback}`. `answers` counts the replies of the
+move (corrections included), the token counts add up what they reported
+(`null` when none did), `retries` counts failed calls tried again, `fallback`
+is the reason of a random move or `null`. `latency_ms` is the wall time of the
+whole move, network and corrections included, measured only when the `Match`
+gets a `clock` (the API and `arena run --models` pass `time.monotonic`);
+without one it is `null`, so a test's log is the same every time. Tokens come
+from the agent (`Reply.stats`, an `AnswerStats`); a bot reports none and its
+moves leave no `decision`. The ledger keeps `latency_ms` and
+`reasoning_tokens` per call too.
+
+Game events come from the plugin through `ctx.emit` and are the
 only thing that changes the game state: `emit` records the event and passes it
 to the plugin's `apply_event` at once. Replaying the game events over
 `initial_state` therefore rebuilds the exact state.
