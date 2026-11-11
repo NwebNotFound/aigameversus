@@ -1,0 +1,325 @@
+Match started: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout), p4 (gemini-flash-lite), p5 (gpt-luna) and p6 (claude-haiku)
+
+Hand 1: p1 (glm-flash) has the button, blinds 10/20
+    In the hand: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout), p4 (gemini-flash-lite), p5 (gpt-luna) and p6 (claude-haiku)
+p2 (deepseek-flash) posts the small blind (10)
+p3 (llama-scout) posts the big blind (20)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) raises to 50
+Pre-flop: p6 (claude-haiku) calls 50
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p2 (deepseek-flash) folds
+Pre-flop: p3 (llama-scout) calls 30
+Flop: 8♠ 8♦ Q♣
+Flop: p3 (llama-scout) raises to 48
+Flop: p5 (gpt-luna) calls 48
+Flop: p6 (claude-haiku) folds
+Turn: 2♦ (board: 8♠ 8♦ Q♣ 2♦)
+Turn: p3 (llama-scout) goes all-in (902)
+Turn: p5 (gpt-luna) folds
+Pot 1158 goes to p3 (llama-scout) (everyone else folded)
+Hand 1 is over
+
+Hand 2: p2 (deepseek-flash) has the button, blinds 10/20
+    In the hand: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout), p4 (gemini-flash-lite), p5 (gpt-luna) and p6 (claude-haiku)
+p3 (llama-scout) posts the small blind (10)
+p4 (gemini-flash-lite) posts the big blind (20)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) folds
+Pre-flop: p6 (claude-haiku) calls 20
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p2 (deepseek-flash) calls 20
+Pre-flop: p3 (llama-scout) calls 10
+Pre-flop: p4 (gemini-flash-lite) checks
+Flop: K♠ 3♠ 4♦
+Flop: p3 (llama-scout) goes all-in (1138)
+Flop: p4 (gemini-flash-lite) goes all-in (980)
+Flop: p6 (claude-haiku) calls 930
+Flop: p2 (deepseek-flash) folds
+Turn: Q♦ (board: K♠ 3♠ 4♦ Q♦)
+River: A♦ (board: K♠ 3♠ 4♦ Q♦ A♦)
+Showdown: p3 (llama-scout): 6♠ K♦ (a pair of kings); p4 (gemini-flash-lite): Q♠ 4♠ (two pair, queens and fours); p6 (claude-haiku): K♥ 10♦ (a pair of kings)
+Pot 2870 goes to p4 (gemini-flash-lite) (with two pair, queens and fours, showdown)
+Pot 100 goes to p4 (gemini-flash-lite) (with two pair, queens and fours, showdown)
+Pot 158 goes to p3 (llama-scout) (with a pair of kings, showdown)
+Hand 2 is over
+p6 (claude-haiku) is out of chips
+
+Hand 3: p3 (llama-scout) has the button, blinds 10/20
+    In the hand: p1 (glm-flash), p2 (deepseek-flash), p3 (llama-scout), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p4 (gemini-flash-lite) posts the small blind (10)
+p5 (gpt-luna) posts the big blind (20)
+
+Pre-flop: p1 (glm-flash) acts first
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p2 (deepseek-flash) raises to 60
+Pre-flop: p3 (llama-scout) calls 60
+Pre-flop: p4 (gemini-flash-lite) calls 50
+Pre-flop: p5 (gpt-luna) folds
+Flop: A♣ K♦ 8♦
+Flop: p4 (gemini-flash-lite) goes all-in (2910)
+Flop: p2 (deepseek-flash) calls 910
+Flop: p3 (llama-scout) calls 98
+Turn: 10♥ (board: A♣ K♦ 8♦ 10♥)
+River: 6♦ (board: A♣ K♦ 8♦ 10♥ 6♦)
+Showdown: p2 (deepseek-flash): A♠ K♠ (two pair, aces and kings); p3 (llama-scout): 5♣ J♠ (ace high); p4 (gemini-flash-lite): A♦ 7♦ (a flush, ace high)
+Pot 494 goes to p4 (gemini-flash-lite) (with a flush, ace high, showdown)
+Pot 1624 goes to p4 (gemini-flash-lite) (with a flush, ace high, showdown)
+Pot 2000 goes to p4 (gemini-flash-lite) (with a flush, ace high, showdown)
+Hand 3 is over
+p2 (deepseek-flash) and p3 (llama-scout) is out of chips
+
+Hand 4: p4 (gemini-flash-lite) has the button, blinds 10/20
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p5 (gpt-luna) posts the small blind (10)
+p1 (glm-flash) posts the big blind (20)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) calls 10
+Pre-flop: p1 (glm-flash) raises to 70
+Pre-flop: p5 (gpt-luna) calls 50
+Flop: 2♦ 3♣ A♥
+Flop: p5 (gpt-luna) checks
+Flop: p1 (glm-flash) raises to 60
+Flop: p5 (gpt-luna) folds
+Pot 200 goes to p1 (glm-flash) (everyone else folded)
+Hand 4 is over
+
+Hand 5: p5 (gpt-luna) has the button, blinds 10/20
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p1 (glm-flash) posts the small blind (10)
+p4 (gemini-flash-lite) posts the big blind (20)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) folds
+Pre-flop: p1 (glm-flash) folds
+Pot 30 goes to p4 (gemini-flash-lite) (everyone else folded)
+Hand 5 is over
+
+Hand 6: p1 (glm-flash) has the button, blinds 20/40
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p4 (gemini-flash-lite) posts the small blind (20)
+p5 (gpt-luna) posts the big blind (40)
+
+Pre-flop: p1 (glm-flash) acts first
+Pre-flop: p1 (glm-flash) raises to 120
+Pre-flop: p4 (gemini-flash-lite) calls 100
+Pre-flop: p5 (gpt-luna) calls 80
+Flop: 8♠ 5♠ K♦
+Flop: p4 (gemini-flash-lite) checks
+Flop: p5 (gpt-luna) checks
+Flop: p1 (glm-flash) raises to 180
+Flop: p4 (gemini-flash-lite) calls 180
+Flop: p5 (gpt-luna) folds
+Turn: 3♠ (board: 8♠ 5♠ K♦ 3♠)
+Turn: p4 (gemini-flash-lite) checks
+Turn: p1 (glm-flash) raises to 400
+Turn: p4 (gemini-flash-lite) calls 400
+River: 9♦ (board: 8♠ 5♠ K♦ 3♠ 9♦)
+River: p4 (gemini-flash-lite) checks
+River: p1 (glm-flash) checks
+Showdown: p1 (glm-flash): A♣ J♣ (ace high); p4 (gemini-flash-lite): 4♥ K♣ (a pair of kings)
+Pot 1520 goes to p4 (gemini-flash-lite) (with a pair of kings, showdown)
+Hand 6 is over
+
+Hand 7: p4 (gemini-flash-lite) has the button, blinds 20/40
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p5 (gpt-luna) posts the small blind (20)
+p1 (glm-flash) posts the big blind (40)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) raises to 120
+Pre-flop: p5 (gpt-luna) folds
+Pre-flop: p1 (glm-flash) folds
+Pot 180 goes to p4 (gemini-flash-lite) (everyone else folded)
+Hand 7 is over
+
+Hand 8: p5 (gpt-luna) has the button, blinds 20/40
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p1 (glm-flash) posts the small blind (20)
+p4 (gemini-flash-lite) posts the big blind (40)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) raises to 120
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p4 (gemini-flash-lite) folds
+Pot 180 goes to p5 (gpt-luna) (everyone else folded)
+Hand 8 is over
+
+Hand 9: p1 (glm-flash) has the button, blinds 20/40
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p4 (gemini-flash-lite) posts the small blind (20)
+p5 (gpt-luna) posts the big blind (40)
+
+Pre-flop: p1 (glm-flash) acts first
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p4 (gemini-flash-lite) calls 20
+Pre-flop: p5 (gpt-luna) checks
+Flop: 2♥ A♦ 3♠
+Flop: p4 (gemini-flash-lite) checks
+Flop: p5 (gpt-luna) checks
+Turn: 7♥ (board: 2♥ A♦ 3♠ 7♥)
+Turn: p4 (gemini-flash-lite) raises to 120
+Turn: p5 (gpt-luna) calls 120
+River: 4♠ (board: 2♥ A♦ 3♠ 7♥ 4♠)
+River: p4 (gemini-flash-lite) raises to 320
+River: p5 (gpt-luna) folds
+Pot 640 goes to p4 (gemini-flash-lite) (everyone else folded)
+Hand 9 is over
+
+Hand 10: p4 (gemini-flash-lite) has the button, blinds 20/40
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p5 (gpt-luna) posts the small blind (20)
+p1 (glm-flash) posts the big blind (40)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) calls 20
+Pre-flop: p1 (glm-flash) checks
+Flop: J♦ K♦ 10♥
+Flop: p5 (gpt-luna) raises to 40
+Flop: p1 (glm-flash) folds
+Pot 120 goes to p5 (gpt-luna) (everyone else folded)
+Hand 10 is over
+
+Hand 11: p5 (gpt-luna) has the button, blinds 40/80
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p1 (glm-flash) posts the small blind (40)
+p4 (gemini-flash-lite) posts the big blind (80)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) calls 80
+Pre-flop: p1 (glm-flash) calls 40
+Pre-flop: p4 (gemini-flash-lite) checks
+Flop: 10♣ 9♠ 10♥
+Flop: p1 (glm-flash) goes all-in (180)
+Flop: p4 (gemini-flash-lite) folds
+Flop: p5 (gpt-luna) calls 180
+Turn: 9♣ (board: 10♣ 9♠ 10♥ 9♣)
+River: 5♥ (board: 10♣ 9♠ 10♥ 9♣ 5♥)
+Showdown: p1 (glm-flash): Q♠ 9♥ (a full house, nines over tens); p5 (gpt-luna): 5♣ Q♥ (two pair, tens and nines)
+Pot 600 goes to p1 (glm-flash) (with a full house, nines over tens, showdown)
+Hand 11 is over
+
+Hand 12: p1 (glm-flash) has the button, blinds 40/80
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p4 (gemini-flash-lite) posts the small blind (40)
+p5 (gpt-luna) posts the big blind (80)
+
+Pre-flop: p1 (glm-flash) acts first
+Pre-flop: p1 (glm-flash) raises to 240
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) folds
+Pot 360 goes to p1 (glm-flash) (everyone else folded)
+Hand 12 is over
+
+Hand 13: p4 (gemini-flash-lite) has the button, blinds 40/80
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p5 (gpt-luna) posts the small blind (40)
+p1 (glm-flash) posts the big blind (80)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) raises to 240
+Pre-flop: p5 (gpt-luna) raises to 272
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p4 (gemini-flash-lite) folds
+Pot 592 goes to p5 (gpt-luna) (everyone else folded)
+Hand 13 is over
+
+Hand 14: p5 (gpt-luna) has the button, blinds 40/80
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p1 (glm-flash) posts the small blind (40)
+p4 (gemini-flash-lite) posts the big blind (80)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) folds
+Pre-flop: p1 (glm-flash) calls 40
+Pre-flop: p4 (gemini-flash-lite) raises to 240
+Pre-flop: p1 (glm-flash) folds
+Pot 320 goes to p4 (gemini-flash-lite) (everyone else folded)
+Hand 14 is over
+
+Hand 15: p1 (glm-flash) has the button, blinds 40/80
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p4 (gemini-flash-lite) posts the small blind (40)
+p5 (gpt-luna) posts the big blind (80)
+
+Pre-flop: p1 (glm-flash) acts first
+Pre-flop: p1 (glm-flash) raises to 240
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) folds
+Pot 360 goes to p1 (glm-flash) (everyone else folded)
+Hand 15 is over
+
+Hand 16: p4 (gemini-flash-lite) has the button, blinds 80/160
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p5 (gpt-luna) posts the small blind (80)
+p1 (glm-flash) posts the big blind (160)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) calls 80
+Pre-flop: p1 (glm-flash) checks
+Flop: 5♦ 4♥ K♥
+Flop: p5 (gpt-luna) checks
+Flop: p1 (glm-flash) raises to 240
+Flop: p5 (gpt-luna) folds
+Pot 560 goes to p1 (glm-flash) (everyone else folded)
+Hand 16 is over
+
+Hand 17: p5 (gpt-luna) has the button, blinds 80/160
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p1 (glm-flash) posts the small blind (80)
+p4 (gemini-flash-lite) posts the big blind (160)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) goes all-in (352)
+Pre-flop: p1 (glm-flash) folds
+Pre-flop: p4 (gemini-flash-lite) folds
+Pot 592 goes to p5 (gpt-luna) (everyone else folded)
+Hand 17 is over
+
+Hand 18: p1 (glm-flash) has the button, blinds 80/160
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p4 (gemini-flash-lite) posts the small blind (80)
+p5 (gpt-luna) posts the big blind (160)
+
+Pre-flop: p1 (glm-flash) acts first
+Pre-flop: p1 (glm-flash) raises to 320
+Pre-flop: p4 (gemini-flash-lite) folds
+Pre-flop: p5 (gpt-luna) calls 160
+Flop: 6♠ J♦ 2♣
+Flop: p5 (gpt-luna) checks
+Flop: p1 (glm-flash) goes all-in (440)
+Flop: p5 (gpt-luna) folds
+Pot 1160 goes to p1 (glm-flash) (everyone else folded)
+Hand 18 is over
+
+Hand 19: p4 (gemini-flash-lite) has the button, blinds 80/160
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p5 (gpt-luna) posts the small blind (80)
+p1 (glm-flash) posts the big blind (160)
+
+Pre-flop: p4 (gemini-flash-lite) acts first
+Pre-flop: p4 (gemini-flash-lite) raises to 480
+Pre-flop: p5 (gpt-luna) folds
+Pre-flop: p1 (glm-flash) folds
+Pot 720 goes to p4 (gemini-flash-lite) (everyone else folded)
+Hand 19 is over
+
+Hand 20: p5 (gpt-luna) has the button, blinds 80/160
+    In the hand: p1 (glm-flash), p4 (gemini-flash-lite) and p5 (gpt-luna)
+p1 (glm-flash) posts the small blind (80)
+p4 (gemini-flash-lite) posts the big blind (160)
+
+Pre-flop: p5 (gpt-luna) acts first
+Pre-flop: p5 (gpt-luna) folds
+Pre-flop: p1 (glm-flash) folds
+Pot 240 goes to p4 (gemini-flash-lite) (everyone else folded)
+Hand 20 is over
+Match over: the hand limit is reached
+Result: 1. p4 (gemini-flash-lite)  2. p1 (glm-flash)  3. p5 (gpt-luna)  4. p2 (deepseek-flash)  5. p3 (llama-scout)  6. p6 (claude-haiku)

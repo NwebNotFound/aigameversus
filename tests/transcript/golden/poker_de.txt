@@ -1,0 +1,142 @@
+Das Spiel beginnt: p1, p2 und p3 (Seed 7)
+
+Hand 1: p1 hat den Button, Blinds 10/20
+    In der Hand: p1, p2 und p3
+Das Deck wird gemischt
+p1 bekommt 3♠ 6♦
+p2 bekommt 6♣ J♦
+p3 bekommt J♠ 3♦
+p2 setzt den kleinen Blind (10)
+p3 setzt den großen Blind (20)
+
+Pre-Flop: p1 beginnt
+p1 wählt raise (amount: 40)
+Pre-Flop: p1 erhöht auf 40
+p2 wählt fold
+Pre-Flop: p2 passt
+p3 wählt call
+Pre-Flop: p3 geht mit (20)
+Flop: 8♥ Q♥ 9♦
+p3 wählt check
+Flop: p3 checkt
+p1 wählt check
+Flop: p1 checkt
+Turn: 2♦ (Board: 8♥ Q♥ 9♦ 2♦)
+p3 wählt check
+Turn: p3 checkt
+p1 wählt check
+Turn: p1 checkt
+River: 8♠ (Board: 8♥ Q♥ 9♦ 2♦ 8♠)
+p3 wählt check
+River: p3 checkt
+p1 wählt raise (amount: 30)
+River: p1 erhöht auf 30
+p3 wählt call
+River: p3 geht mit (30)
+Showdown: p1: 3♠ 6♦ (ein Paar Achter); p3: J♠ 3♦ (ein Paar Achter)
+Pot 150 geht an p3 (mit ein Paar Achter, Showdown)
+Hand 1 ist vorbei
+
+Hand 2: p2 hat den Button, Blinds 10/20
+    In der Hand: p1, p2 und p3
+Das Deck wird gemischt
+p1 bekommt 2♠ 8♠
+p2 bekommt Q♦ 7♠
+p3 bekommt A♥ 4♦
+p3 setzt den kleinen Blind (10)
+p1 setzt den großen Blind (20)
+
+Pre-Flop: p2 beginnt
+p2 wählt call
+Pre-Flop: p2 geht mit (20)
+p3 wählt raise (amount: 64)
+Pre-Flop: p3 erhöht auf 64
+p1 wählt call
+Pre-Flop: p1 geht mit (44)
+p2 wählt fold
+Pre-Flop: p2 passt
+Flop: A♠ K♠ 3♣
+p3 wählt check
+Flop: p3 checkt
+p1 wählt raise (amount: 49)
+Flop: p1 erhöht auf 49
+p3 wählt call
+Flop: p3 geht mit (49)
+Turn: 9♠ (Board: A♠ K♠ 3♣ 9♠)
+p3 wählt check
+Turn: p3 checkt
+p1 wählt raise (amount: 21)
+Turn: p1 erhöht auf 21
+p3 wählt raise (amount: 114)
+Turn: p3 erhöht auf 114
+p1 wählt raise (amount: 594)
+Turn: p1 erhöht auf 594
+p3 wählt fold
+Turn: p3 passt
+Pot 954 geht an p1 (alle anderen haben gepasst)
+Hand 2 ist vorbei
+
+Hand 3: p3 hat den Button, Blinds 10/20
+    In der Hand: p1, p2 und p3
+Das Deck wird gemischt
+p1 bekommt 10♣ 2♠
+p2 bekommt 6♥ 2♥
+p3 bekommt 3♥ 4♦
+p1 setzt den kleinen Blind (10)
+p2 setzt den großen Blind (20)
+
+Pre-Flop: p3 beginnt
+p3 wählt call
+Pre-Flop: p3 geht mit (20)
+p1 wählt call
+Pre-Flop: p1 geht mit (10)
+p2 wählt check
+Pre-Flop: p2 checkt
+Flop: 9♣ 10♠ 7♦
+p1 wählt raise (amount: 27)
+Flop: p1 erhöht auf 27
+p2 wählt fold
+Flop: p2 passt
+p3 wählt call
+Flop: p3 geht mit (27)
+Turn: Q♦ (Board: 9♣ 10♠ 7♦ Q♦)
+p1 wählt check
+Turn: p1 checkt
+p3 wählt check
+Turn: p3 checkt
+River: 7♠ (Board: 9♣ 10♠ 7♦ Q♦ 7♠)
+p1 wählt raise (amount: 47)
+River: p1 erhöht auf 47
+p3 wählt call
+River: p3 geht mit (47)
+Showdown: p1: 10♣ 2♠ (zwei Paare, Zehner und Siebener); p3: 3♥ 4♦ (ein Paar Siebener)
+Pot 208 geht an p1 (mit zwei Paare, Zehner und Siebener, Showdown)
+Hand 3 ist vorbei
+
+Hand 4: p1 hat den Button, Blinds 10/20
+    In der Hand: p1, p2 und p3
+Das Deck wird gemischt
+p1 bekommt 5♣ 10♦
+p2 bekommt A♠ J♥
+p3 bekommt 2♣ 4♦
+p2 setzt den kleinen Blind (10)
+p3 setzt den großen Blind (20)
+
+Pre-Flop: p1 beginnt
+p1 wählt call
+Pre-Flop: p1 geht mit (20)
+p2 wählt call
+Pre-Flop: p2 geht mit (10)
+p3 wählt check
+Pre-Flop: p3 checkt
+Flop: Q♣ 9♥ 8♥
+p2 wählt raise (amount: 31)
+Flop: p2 erhöht auf 31
+p3 wählt fold
+Flop: p3 passt
+p1 wählt fold
+Flop: p1 passt
+Pot 91 geht an p2 (alle anderen haben gepasst)
+Hand 4 ist vorbei
+Das Spiel ist aus: das Handlimit ist erreicht
+Ergebnis: 1. p1  2. p2  3. p3

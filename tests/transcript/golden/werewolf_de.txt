@@ -1,0 +1,193 @@
+Das Spiel beginnt: p1, p2, p3, p4, p5, p6, p7 und p8 (Seed 7)
+Rollen verteilt: 2× Werwolf, 1× Seherin, 1× Hexe, 1× Jäger, 3× Dorfbewohner
+p1 ist Werwolf
+p2 ist Hexe
+p3 ist Dorfbewohner
+p4 ist Seherin
+p5 ist Jäger
+p6 ist Dorfbewohner
+p7 ist Dorfbewohner
+p8 ist Werwolf
+Das Rudel kennt sich: p1 und p8
+
+Nacht 1
+Nacht 1 bricht herein. Das Dorf schläft.
+p4 wählt seer check (target: p3)
+p4, die Seherin, prüft p3: Dorfbewohner
+p4 ist fertig
+p1 wählt wolf kill (target: p7)
+Nacht 1: p1 will p7 angreifen
+p1 ist fertig
+p8 wählt wolf kill (target: p5)
+Nacht 1: p8 will p5 angreifen
+p8 ist fertig
+p2 wählt witch act (heal: False, poison target: p5)
+p2, die Hexe, vergiftet p5
+p2 ist fertig
+Morgen: in der Nacht gestorben: p7 und p5
+Der Morgen graut. Tot aufgefunden: p7 (Dorfbewohner), p5 (Jäger).
+p7 stirbt (von den Wölfen gerissen); Rolle: Dorfbewohner
+p5 stirbt (vergiftet); Rolle: Jäger
+p5 wählt hunter shoot (target: p3)
+p5, der Jäger, erschießt p3
+p5 ist fertig
+p3 stirbt (vom Jäger erschossen); Rolle: Dorfbewohner
+
+Tag 1
+    Redereihenfolge: p8, p1, p2, p4 und p6
+p1 wählt elect captain (target: p2)
+p1 wählt p2 zum Hauptmann
+p1 ist fertig
+p2 wählt elect captain (target: p8)
+p2 wählt p8 zum Hauptmann
+p2 ist fertig
+p4 wählt elect captain (target: p6)
+p4 wählt p6 zum Hauptmann
+p4 ist fertig
+p6 wählt elect captain (target: p8)
+p6 wählt p8 zum Hauptmann
+p6 ist fertig
+p8 wählt elect captain (target: p4)
+p8 wählt p4 zum Hauptmann
+p8 ist fertig
+p8 wird zum Hauptmann gewählt
+    p2 1, p8 2, p6 1, p4 1
+p8 ist jetzt Hauptmann des Dorfes.
+p8 wählt speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 ist fertig
+p1 wählt speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 ist fertig
+p2 wählt speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 ist fertig
+p4 wählt speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 ist fertig
+p6 wählt speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 ist fertig
+p8 wählt speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 ist fertig
+p1 wählt speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 ist fertig
+p2 wählt speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 ist fertig
+p4 wählt speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 ist fertig
+p6 wählt speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 ist fertig
+p1 wählt vote (target: None)
+p1 enthält sich
+p1 ist fertig
+p2 wählt vote (target: p8)
+p2 stimmt gegen p8
+p2 ist fertig
+p4 wählt vote (target: p1)
+p4 stimmt gegen p1
+p4 ist fertig
+p6 wählt vote (target: None)
+p6 enthält sich
+p6 ist fertig
+p8 wählt vote (target: None)
+p8 enthält sich
+p8 ist fertig
+Abstimmung Tag 1: keine Mehrheit, niemand wird hingerichtet
+    p8 1, p1 1
+Das Dorf ist sich nicht einig. Heute stirbt niemand.
+
+Nacht 2
+Nacht 2 bricht herein. Das Dorf schläft.
+p4 wählt seer check (target: p1)
+p4, die Seherin, prüft p1: Werwolf
+p4 ist fertig
+p1 wählt wolf kill (target: p6)
+Nacht 2: p1 will p6 angreifen
+p1 ist fertig
+p8 wählt wolf kill (target: p6)
+Nacht 2: p8 will p6 angreifen
+p8 ist fertig
+p2 wählt witch act (heal: True, poison target: None)
+p2, die Hexe, heilt p6
+p2 ist fertig
+Morgen: niemand ist in der Nacht gestorben
+Der Morgen graut. Niemand ist in dieser Nacht gestorben.
+
+Tag 2
+    Redereihenfolge: p8, p1, p2, p4 und p6
+p8 wählt speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 ist fertig
+p1 wählt speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 ist fertig
+p2 wählt speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 ist fertig
+p4 wählt speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 ist fertig
+p6 wählt speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 ist fertig
+p8 wählt speak (text: I have nothing to add.)
+p8: "I have nothing to add."
+p8 ist fertig
+p1 wählt speak (text: I have nothing to add.)
+p1: "I have nothing to add."
+p1 ist fertig
+p2 wählt speak (text: I have nothing to add.)
+p2: "I have nothing to add."
+p2 ist fertig
+p4 wählt speak (text: I have nothing to add.)
+p4: "I have nothing to add."
+p4 ist fertig
+p6 wählt speak (text: I have nothing to add.)
+p6: "I have nothing to add."
+p6 ist fertig
+p1 wählt vote (target: p2)
+p1 stimmt gegen p2
+p1 ist fertig
+p2 wählt vote (target: None)
+p2 enthält sich
+p2 ist fertig
+p4 wählt vote (target: p8)
+p4 stimmt gegen p8
+p4 ist fertig
+p6 wählt vote (target: p4)
+p6 stimmt gegen p4
+p6 ist fertig
+p8 wählt vote (target: None)
+p8 enthält sich
+p8 ist fertig
+Abstimmung Tag 2: keine Mehrheit, niemand wird hingerichtet
+    p2 1, p8 1, p4 1
+Das Dorf ist sich nicht einig. Heute stirbt niemand.
+
+Nacht 3
+Nacht 3 bricht herein. Das Dorf schläft.
+p4 wählt seer check (target: p2)
+p4, die Seherin, prüft p2: Hexe
+p4 ist fertig
+p1 wählt wolf kill (target: p2)
+Nacht 3: p1 will p2 angreifen
+p1 ist fertig
+p8 wählt wolf kill (target: p6)
+Nacht 3: p8 will p6 angreifen
+p8 ist fertig
+p2 wählt witch act (heal: False, poison target: None)
+p2, die Hexe, tut nichts
+p2 ist fertig
+Morgen: in der Nacht gestorben: p2
+Der Morgen graut. Tot aufgefunden: p2 (Hexe).
+p2 stirbt (von den Wölfen gerissen); Rolle: Hexe
+Spiel aus: die Werwölfe gewinnen
+    p1 und p8
+Das Spiel ist aus. Die Werwölfe haben gewonnen.
+Ergebnis: 1. p1  1. p8  3. p2  3. p3  3. p4  3. p5  3. p6  3. p7
