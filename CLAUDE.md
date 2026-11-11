@@ -89,7 +89,9 @@ Three ways. The first and the last seat random bots only:
   Every call goes through one `Budget` (see Cost caps), so the command needs
   `DATABASE_URL` for the ledger; it applies the migrations, records the match
   in `matches` and stores its events like the API does. The provider's key
-  comes from the environment. After the events it prints the result, what
+  comes from the environment (`KEY_VARIABLES` in `arena/config.py` names the
+  variable per provider); without it the command refuses to start, before
+  anything is booked. After the events it prints the result, what
   each seat cost, and whether the stored log rebuilds the final state;
   `--save FILE` writes seats, result, cost and all events as JSON. Nobody is
   there to allow more money, so a cost cap ends the match: it is closed as

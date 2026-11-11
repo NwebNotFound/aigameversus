@@ -23,7 +23,7 @@ from uuid import uuid4
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
-from arena.config import load_config
+from arena.config import KEY_VARIABLES, load_config
 from arena.db.database import connect, migrate
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
@@ -131,6 +131,15 @@ async def _play_models(
         raise _WrongCall(
             f"unknown model {', '.join(unknown)}; config/models.yaml has: "
             f"{', '.join(config.models)}"
+        )
+    # Without its key every seat would fail at its first call, after that call was booked,
+    # and random bots would play on under the models' names.
+    needed = {KEY_VARIABLES[config.models[model_id].provider] for model_id in model_ids}
+    missing = sorted(name for name in needed if not os.environ.get(name))
+    if missing:
+        raise _WrongCall(
+            f"--models needs {', '.join(missing)} in the environment, the provider's API key. "
+            "Nothing was sent or booked"
         )
     url = os.environ.get("DATABASE_URL")
     if not url:

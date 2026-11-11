@@ -192,8 +192,29 @@ def test_wrong_call_is_explained_and_nothing_is_played_or_stored(
     assert stored(database) == ([], {}, [])
 
 
+@pytest.mark.parametrize("key", [None, ""])
+def test_models_need_the_key_of_their_provider_before_anything_is_booked(
+    database, answer_with, capsys, monkeypatch, key
+):
+    sent = answer_with(**PLAY_3)
+    if key is None:
+        monkeypatch.delenv("OPENROUTER_API_KEY")
+    else:
+        monkeypatch.setenv("OPENROUTER_API_KEY", key)
+
+    code, output, complaints = arena(
+        capsys, "run", "--game", "toy", "--models", "glm-flash,deepseek-flash"
+    )
+
+    assert (code, output) == (2, "")
+    assert "--models needs OPENROUTER_API_KEY in the environment" in complaints
+    assert sent == {}
+    assert stored(database) == ([], {}, [])
+
+
 def test_models_need_a_database(answer_with, capsys, monkeypatch):
     sent = answer_with(**PLAY_3)
+    monkeypatch.setenv("OPENROUTER_API_KEY", KEY)
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     code, output, complaints = arena(
