@@ -175,3 +175,90 @@ export function newBeats(
 		return beat ? [{ line, beat }] : [];
 	});
 }
+
+export interface Placement {
+	player: string;
+	rank: number;
+}
+
+/** How a match ended, for the result card. The words come from the transcript's lines. */
+export type Result =
+	| {
+			kind: 'team';
+			/** The transcript's line about the end, e.g. "Game over: the werewolves win". */
+			headline: string;
+			winners: string[];
+			others: string[];
+	  }
+	| { kind: 'ranks'; headline: string; ranks: { rank: number; seats: string[] }[] };
+
+/**
+ * The result of a finished match from its placements and the transcript. A game whose end
+ * names a winning side (Werewolf's `game_over`) is a team result; every other game is ranked.
+ */
+export function resultOf(placements: Placement[] | null, lines: TranscriptLine[]): Result | null {
+	if (!placements || placements.length === 0) return null;
+	const end = lines.findLast((line) =>
+		['game_over', 'match_over'].includes(String(line.raw?.type))
+	);
+	const data = (end?.raw?.data ?? {}) as { winner?: unknown; winners?: unknown };
+	const headline = end?.text ?? '';
+	if (typeof data.winner === 'string' && Array.isArray(data.winners)) {
+		const winners = data.winners.filter((p): p is string => typeof p === 'string');
+		const others = placements.map((p) => p.player).filter((p) => !winners.includes(p));
+		return { kind: 'team', headline, winners, others };
+	}
+	const byRank = new Map<number, string[]>();
+	for (const { player, rank } of [...placements].sort((a, b) => a.rank - b.rank)) {
+		byRank.set(rank, [...(byRank.get(rank) ?? []), player]);
+	}
+	return {
+		kind: 'ranks',
+		headline,
+		ranks: [...byRank].map(([rank, seats]) => ({ rank, seats }))
+	};
+}
+
+/** "1st", "2nd", "3rd", "4th" … for ranks on the card. */
+export function ordinal(rank: number): string {
+	const tens = rank % 100;
+	if (tens >= 11 && tens <= 13) return `${rank}th`;
+	return `${rank}${['th', 'st', 'nd', 'rd'][rank % 10] ?? 'th'}`;
+}
+
+export interface ShownHand {
+	player: string;
+	cards: string[];
+	/** The hand's kind as the game names it: "two_pair" reads "two pair". */
+	hand: string;
+	/** Chips this player won from the pots that follow the showdown. */
+	won: number;
+}
+
+/**
+ * The hands of a showdown line and what each won, from the pot lines right after it, for
+ * a row per player instead of one long sentence.
+ */
+export function showdownHands(lines: TranscriptLine[], index: number): ShownHand[] {
+	const data = lines[index]?.raw?.data as { hands?: unknown } | undefined;
+	if (!Array.isArray(data?.hands)) return [];
+	const won = new Map<string, number>();
+	for (const line of lines.slice(index + 1)) {
+		if (line.raw?.type !== 'pot_awarded') break;
+		const shares = (line.raw.data as { shares?: Record<string, number> }).shares ?? {};
+		for (const [player, amount] of Object.entries(shares))
+			won.set(player, (won.get(player) ?? 0) + amount);
+	}
+	return data.hands.flatMap((entry) => {
+		const { player, cards, hand } = entry as { player?: unknown; cards?: unknown; hand?: unknown };
+		if (typeof player !== 'string' || !Array.isArray(cards)) return [];
+		return [
+			{
+				player,
+				cards: cards.map(String),
+				hand: typeof hand === 'string' ? hand.replaceAll('_', ' ') : '',
+				won: won.get(player) ?? 0
+			}
+		];
+	});
+}

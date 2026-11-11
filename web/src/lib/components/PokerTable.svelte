@@ -84,7 +84,9 @@
 		{#if pots.length > 1}
 			<ul class="pots" data-testid="side-pots">
 				{#each pots as pot, i (i)}
-					<li>{i === 0 ? 'Main' : `Side ${i}`}: {pot.amount} ({pot.eligible.join(', ')})</li>
+					<li>
+						{i === 0 ? 'Main' : `Side ${i}`}: {pot.amount} ({pot.eligible.map(label).join(', ')})
+					</li>
 				{/each}
 			</ul>
 		{/if}
