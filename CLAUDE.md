@@ -206,8 +206,11 @@ in the first, 83 of 130 answers were rejected):
 
 Failures:
 
-- A failed model call is retried 3 times, after 1, 2 and 4 seconds. Errors
-  that a retry cannot fix (bad key, bad request) are not retried.
+- A failed model call is retried 3 times, after 1, 2 and 4 seconds; a rate
+  limit after 3, 6 and 12 seconds, and a seat waits out at most 12 rate
+  limits in a match. Every pause is up to half longer at random, so seats do
+  not retry in step. Errors that a retry cannot fix (bad key, bad request)
+  are not retried.
 - When the retries are used up, `ModelAgent` raises `AgentError`. The engine
   logs `agent_failed` (spectators only) and plays random legal actions for
   that seat until the match ends; the agent is not asked again.
@@ -236,7 +239,9 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   table `model_calls`) at the most it can cost: request size in bytes as input
   tokens, the output limit as output tokens. When the answer reports its
   tokens, the booking is corrected. A call that reports nothing (error,
-  timeout, crash) keeps the upper bound, so the ledger is never too low.
+  timeout, crash) keeps the upper bound, so the ledger is never too low;
+  only a call refused with a rate limit (429, refused before anything is
+  generated) is booked at 0.
   The caps hold as long as a provider bills no more than that bound; if one
   does, the real cost is booked and the next call pauses.
 - If the booking would take the match or the month past its cap, the call is
@@ -604,7 +609,10 @@ A model you checked yourself is *verified*: an entry under `models` in
 `config/models.yaml`, under an id of your choice that the catalog then uses,
 `provider` (only `openrouter` today), `model` (the provider's name for it) and
 the prices `input_usd_per_mtok` and `output_usd_per_mtok` in US dollars per
-million tokens, as the provider lists them. The cost caps count with these
+million tokens, as the provider lists them. A model that needs it may also set
+`max_output_tokens`, `reasoning_effort` (`off`: not sent) and `tool_choice`
+(`auto` instead of `required`); the rest comes from `limits` (`call_options`),
+and the budget books its calls at its own output limit. The cost caps count with these
 numbers, so check them against the provider's price page, and pick models that
 support tool calls. No code.
 
