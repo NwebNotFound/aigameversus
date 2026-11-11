@@ -245,9 +245,20 @@ class Range(_Model):
         return self
 
 
+class IntRange(_Model):
+    min: Annotated[int, Field(ge=1, strict=True)]
+    max: Annotated[int, Field(ge=1, strict=True)]
+
+    @model_validator(mode="after")
+    def _check(self) -> IntRange:
+        if self.min > self.max:
+            raise ValueError("min must not exceed max")
+        return self
+
+
 class MapBalance(_Model):
-    tiles: Range
-    nations: Range
+    tiles: IntRange
+    nations: IntRange
     fog_vision_radius: Annotated[int, Field(ge=0)]
 
 

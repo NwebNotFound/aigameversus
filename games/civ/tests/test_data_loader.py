@@ -47,6 +47,59 @@ def test_shipped_data_loads_with_all_content_from_the_spec():
     assert set(data.treaties) == {"peace", "non_aggression", "alliance", "open_borders", "tribute"}
 
 
+# The tables of DESIGN.md "Spiel 3", copied by hand: (cost, strength, movement, upkeep).
+SPEC_UNITS = {
+    "spearman": ({"wood": 2, "food": 1}, 3, 1, {"food": 1}),
+    "swordsman": ({"iron": 3, "food": 1}, 4, 1, {"food": 1}),
+    "horseman": ({"iron": 3, "food": 2, "gold": 2}, 4, 3, {"food": 2}),
+    "archer": ({"wood": 3, "iron": 1}, 2, 1, {"food": 1}),
+    "siege_engine": ({"wood": 6, "iron": 3}, 2, 1, {"food": 1, "gold": 1}),
+    "settler": ({"food": 6, "wood": 2}, 0, 1, {"food": 1}),
+    "scout": ({"food": 2, "gold": 1}, 1, 3, {}),
+}
+SPEC_BUILDING_COSTS = {
+    "farm": {"wood": 4},
+    "sawmill": {"wood": 3, "gold": 1},
+    "mine": {"wood": 5},
+    "market": {"wood": 4, "gold": 3},
+    "barracks": {"wood": 5, "iron": 2},
+    "wall": {"wood": 6, "iron": 3},
+    "forge": {"iron": 4, "gold": 3},
+    "granary": {"wood": 5},
+    "watchtower": {"wood": 3, "iron": 1},
+}
+# (yields, movement cost, defense)
+SPEC_TERRAIN = {
+    "plains": ({"food": 2}, 1, 0.0),
+    "forest": ({"wood": 2}, 2, 0.25),
+    "hills": ({"iron": 1, "food": 1}, 2, 0.5),
+    "iron_deposit": ({"iron": 3}, 2, 0.25),
+    "gold_vein": ({"gold": 3}, 2, 0.0),
+    "river": ({"food": 1, "gold": 1}, 1, 0.0),
+    "mountains": ({}, None, 0.0),
+    "water": ({}, None, 0.0),
+}
+
+
+@pytest.mark.parametrize("unit_id", SPEC_UNITS)
+def test_every_unit_matches_the_spec_table(unit_id: str):
+    unit = load_civ_data().units[unit_id]
+
+    assert (unit.cost, unit.strength, unit.movement, unit.upkeep) == SPEC_UNITS[unit_id]
+
+
+@pytest.mark.parametrize("building_id", SPEC_BUILDING_COSTS)
+def test_every_building_cost_matches_the_spec_table(building_id: str):
+    assert load_civ_data().buildings[building_id].cost == SPEC_BUILDING_COSTS[building_id]
+
+
+@pytest.mark.parametrize("terrain_id", SPEC_TERRAIN)
+def test_every_terrain_matches_the_spec_table(terrain_id: str):
+    terrain = load_civ_data().terrain[terrain_id]
+
+    assert (terrain.yields, terrain.movement_cost, terrain.defense) == SPEC_TERRAIN[terrain_id]
+
+
 def test_spot_check_numbers_against_the_spec():
     data = load_civ_data()
 
@@ -224,3 +277,64 @@ def test_rules_summary_mentions_every_unit_building_and_treaty():
 
     for entry_id in [*data.units, *data.buildings, *data.treaties, *data.terrain]:
         assert entry_id in rules, f"rules.md does not mention '{entry_id}'"
+
+
+def rules_table(first_header: str) -> dict[str, list[str]]:
+    """Rows of the rules.md table whose header starts with ``first_header``, keyed by id."""
+    lines = (DATA_DIR.parent / "rules.md").read_text(encoding="utf-8").splitlines()
+    start = lines.index(next(line for line in lines if line.startswith(f"| {first_header} |")))
+    rows: dict[str, list[str]] = {}
+    for line in lines[start + 2 :]:
+        if not line.startswith("|"):
+            break
+        first, *cells = [cell.strip() for cell in line.strip("|").split("|")]
+        for entry_id in first.removesuffix(" (rare)").split(", "):
+            rows[entry_id] = cells
+    return rows
+
+
+def amounts(text: str) -> dict[str, int]:
+    """``"3 iron, 2 food"`` -> ``{"iron": 3, "food": 2}``; ``"—"`` -> ``{}``."""
+    if text == "—":
+        return {}
+    return {name: int(count) for count, name in (part.split() for part in text.split(", "))}
+
+
+def test_rules_unit_table_matches_the_data():
+    units = load_civ_data().units
+    rows = rules_table("Unit")
+
+    assert set(rows) == set(units)
+    for unit_id, (cost, strength, movement, upkeep, _notes) in rows.items():
+        unit = units[unit_id]
+        assert amounts(cost) == unit.cost, unit_id
+        assert int(strength) == unit.strength, unit_id
+        assert int(movement) == unit.movement, unit_id
+        assert amounts(upkeep) == unit.upkeep, unit_id
+
+
+def test_rules_building_table_matches_the_data():
+    buildings = load_civ_data().buildings
+    rows = rules_table("Building")
+
+    assert set(rows) == set(buildings)
+    for building_id, (cost, _effect) in rows.items():
+        assert amounts(cost) == buildings[building_id].cost, building_id
+
+
+def test_rules_terrain_table_matches_the_data():
+    terrain = load_civ_data().terrain
+    rows = rules_table("Terrain")
+
+    assert set(rows) == set(terrain)
+    for terrain_id, (yields, move, _defense) in rows.items():
+        expected_move = None if move == "impassable" else int(move.split(",")[0])
+        assert amounts(yields) == terrain[terrain_id].yields, terrain_id
+        assert expected_move == terrain[terrain_id].movement_cost, terrain_id
+
+
+@pytest.mark.parametrize("value", ["60.5", "60.0"])
+def test_map_tiles_must_be_whole_numbers(data_dir: Path, value: str):
+    edit(data_dir / "balance.yaml", "tiles: {min: 60,", f"tiles: {{min: {value},")
+
+    assert "map.tiles.min: Input should be a valid integer" in rejected(data_dir)

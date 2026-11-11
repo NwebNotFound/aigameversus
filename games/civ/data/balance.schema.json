@@ -200,14 +200,35 @@
       "title": "ConquestBalance",
       "type": "object"
     },
+    "IntRange": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "minimum": 1,
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "minimum": 1,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "title": "IntRange",
+      "type": "object"
+    },
     "MapBalance": {
       "additionalProperties": false,
       "properties": {
         "tiles": {
-          "$ref": "#/$defs/Range"
+          "$ref": "#/$defs/IntRange"
         },
         "nations": {
-          "$ref": "#/$defs/Range"
+          "$ref": "#/$defs/IntRange"
         },
         "fog_vision_radius": {
           "minimum": 0,
