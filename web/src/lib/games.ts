@@ -40,3 +40,11 @@ export const GAMES: GameCard[] = [
 		accent: '#7fb8ff'
 	}
 ];
+
+/** Display names for game ids that have no card, such as the High Card reference game. */
+const OTHER_NAMES: Record<string, string> = { toy: 'High Card' };
+
+/** A readable name for a game id; the id itself when the game is unknown. */
+export function gameName(id: string): string {
+	return GAMES.find((game) => game.id === id)?.name ?? OTHER_NAMES[id] ?? id;
+}
