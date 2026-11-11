@@ -209,10 +209,12 @@ def test_wolves_chat_privately_at_most_twice_then_vote():
 def test_wolf_majority_and_tie_rule():
     table = Table(CLASSIC)
     table.act("b", "seer_check", target="f")
-    table.act("a", "wolf_kill", target="f")
-    table.act("e", "wolf_kill", target="g")
+    # Tie 1:1. The first vote (a) is for g, the later one (e) for f: g wins,
+    # although f comes first by name and by seat.
+    table.act("a", "wolf_kill", target="g")
+    table.act("e", "wolf_kill", target="f")
 
-    assert table.state.wolf_victim() == "f"  # tie: the first of the tied targets voted for
+    assert table.state.wolf_victim() == "g"
 
 
 def test_witch_sees_the_victim_only_on_her_turn_and_can_heal():
@@ -428,6 +430,40 @@ class Spy:
         return await self.bot.act(request)
 
 
+# Game events a player may ever receive in public. Anything else must stay private.
+PUBLIC_EVENTS = {
+    MESSAGE,
+    "roles_in_play",
+    "night_started",
+    "morning_started",
+    "player_died",
+    "hunter_shot",
+    "day_started",
+    "vote_cast",
+    "vote_result",
+    "game_over",
+}
+# Game events that may reach a player privately (their audience is checked below).
+PRIVATE_EVENTS = {
+    MESSAGE,  # wolf chat, to the pack only
+    "role_assigned",
+    "pack_revealed",
+    "wolf_vote",
+    "wolf_talked",
+    "seer_inspected",
+    "witch_acted",
+}
+
+
+def test_a_hunter_dying_last_gets_no_shot():
+    table = Table(CLASSIC)
+    table.state.alive = ["d"]
+
+    table.apply("player_died", player="d", cause="wolves", role="hunter")
+
+    assert all(step.kind != "hunter" for step in table.state.queue)
+
+
 @pytest.mark.parametrize("seed", [1, 2, 3, 4])
 def test_no_player_learns_a_hidden_role(seed):
     plugin = Werewolf()
@@ -442,6 +478,9 @@ def test_no_player_learns_a_hidden_role(seed):
         for request in spy.requests:
             dead = {d["player"] for d in request.observation["dead"]}
             for event in request.events:
+                if event.source is EventSource.GAME:
+                    allowed = PUBLIC_EVENTS if event.visible_to is None else PRIVATE_EVENTS
+                    assert event.type in allowed, (player, event.type, event.visible_to)
                 if event.type == "role_assigned":
                     assert event.data["player"] == player
                 if event.type in ("pack_revealed", "wolf_vote", "wolf_talked"):
