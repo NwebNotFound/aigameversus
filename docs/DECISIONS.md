@@ -1598,7 +1598,7 @@ Each entry: date, decision, why, alternatives considered.
   "you" (would change what was said); marking every event that names the
   reader anywhere (marks votes against the player as theirs).
 
-## D-096 · The runner takes the prompt version from the match settings
+## D-093 · The runner takes the prompt version from the match settings
 
 - **Date:** 2026-11-11
 - **Decision:** `ModelAgent` gets the match settings. It asks the game for
