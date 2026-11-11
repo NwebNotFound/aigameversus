@@ -27,7 +27,7 @@ flowchart LR
 | Block | Where | State |
 | --- | --- | --- |
 | 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog) | engine built; API for matches, WebSocket planned |
-| 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card and Liar's Deck (`games/liars_deck`, both variants) play full matches; Poker, Werewolf and Throne of Tokens planned |
+| 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants) and Poker (`games/poker`, tournament and duplicate mode) play full matches; Werewolf and Throne of Tokens planned |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built; real models are not wired to matches until the cost caps exist (step 1.5) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |

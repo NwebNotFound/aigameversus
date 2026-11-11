@@ -65,6 +65,9 @@ class Table:
         assert problem is None, problem
         self.plugin.apply_actions(self.state, {player: action}, self.ctx())
 
+    def tools_of(self, player):
+        return {t.name for t in self.plugin.get_tools(self.state, player)}
+
     def problem(self, player, tool, **arguments):
         return self.plugin.validate(self.state, player, Action(tool=tool, arguments=arguments))
 
@@ -202,6 +205,27 @@ def test_min_raise_and_mistakes_are_explained():
         "minimum": 40,
         "maximum": 1000,
     }
+
+
+def test_no_all_in_tool_when_it_would_be_a_raise_after_a_short_all_in():
+    table = Table({"a": 1000, "b": 1000, "c": 130}, ["2c 3d", "4c 5d", "6c 7d"], "Kh Qs 9d 8c 2h")
+    table.act("a", "raise", amount=100)
+    table.act("b", "call")
+    table.act("c", "all_in")  # 130: a raise of only 30 over 100
+
+    assert set(table.tools_of("a")) == {"fold", "call", "table_talk"}
+    assert table.problem("a", "all_in") == (
+        "You may not raise now, and all your chips would be a raise; call or fold."
+    )
+
+
+def test_all_in_tool_stays_when_it_is_only_a_call():
+    table = Table({"a": 1000, "b": 1000, "c": 50}, ["2c 3d", "4c 5d", "6c 7d"], "Kh Qs 9d 8c 2h")
+    table.act("a", "raise", amount=100)
+    table.act("b", "call")
+
+    # c: big blind 20 + 30 behind = 50, less than the 100 to call.
+    assert "all_in" in table.tools_of("c")
 
 
 def test_table_talk_once_per_turn_within_40_words():

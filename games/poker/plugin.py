@@ -224,8 +224,8 @@ class Poker(GamePlugin[PokerState]):
         tools = [FOLD, CHECK if legal.can_check else _call_tool(legal.call_amount)]
         if legal.min_raise_to is not None:
             tools.append(_raise_tool(legal.min_raise_to, legal.max_raise_to))
-        if state.street.stacks[player] > 0:
-            tools.append(ALL_IN)
+        if state.street.stacks[player] > 0 and state.street.problem(player, "all_in") is None:
+            tools.append(ALL_IN)  # not after a short all-in when it would be a raise
         if not state.talked:
             tools.append(TABLE_TALK)
         return tools
