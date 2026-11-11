@@ -1,11 +1,13 @@
 """POST /matches/estimate: what a match of models would cost, with no model call."""
 
 import asyncio
+import time
 from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 
+from arena.api import matches
 from arena.api.app import app
 from arena.db.database import connect, migrate
 from tests.db.test_model_seats_api import MODELS, PLAY_3
@@ -74,14 +76,29 @@ def test_the_month_so_far_comes_from_the_ledger_and_can_make_it_not_fit(
     assert out["fits"] is False
 
 
-def test_history_in_the_ledger_lowers_the_estimate_of_a_model(client, database_url):
+def test_history_in_the_ledger_lowers_the_estimate_of_a_model_and_says_so(client, database_url):
     before = client.post("/matches/estimate", json=BODY).json()["seats"]["p1"]
     booked(database_url, [("glm-flash", 1, 50)] * 10)
+    client.app.state.estimates.answers.clear()
 
     after = client.post("/matches/estimate", json=BODY).json()["seats"]["p1"]
 
+    assert before["basis"] == "output limit"
+    assert after["basis"] == "ledger history"
     assert after["calls"] == before["calls"]
     assert after["estimate_micro_eur"] < before["estimate_micro_eur"]
+
+
+def test_the_same_request_within_half_a_minute_gets_the_same_answer(
+    client, database_url, monkeypatch
+):
+    first = client.post("/matches/estimate", json=BODY).json()
+    booked(database_url, [("glm-flash", 1, 50)] * 10)  # would change a new estimate
+    assert client.post("/matches/estimate", json=BODY).json() == first
+
+    later = matches.ESTIMATE_TTL + 1
+    monkeypatch.setattr(matches, "_clock", lambda: time.monotonic() + later)
+    assert client.post("/matches/estimate", json=BODY).json() != first
 
 
 @pytest.mark.parametrize(

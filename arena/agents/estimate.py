@@ -9,7 +9,7 @@ priced like the budget prices a call.
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from arena.agents.budget import cost_micro_eur
 from arena.agents.prompt import build_messages, tool_schemas
@@ -25,11 +25,15 @@ RETRY_SHARE = 1.3  # corrections and retries on top of one answer per turn
 HISTORY_MIN = 10  # answers of a model in the ledger before its own mean output is used
 
 
+Basis = Literal["ledger history", "output limit"]
+
+
 @dataclass(frozen=True)
 class SeatEstimate:
     model_id: str
     calls: int  # prompts in the most expensive of the matches played
     estimate_micro_eur: int
+    basis: Basis  # how its answers were counted: its mean in the ledger, or the output limit
 
 
 class _Measured:
@@ -79,8 +83,14 @@ def _priced(
     output_history: Mapping[str, tuple[int, float]],
 ) -> SeatEstimate:
     answers, mean = output_history.get(model_id, (0, 0.0))
-    output = mean if answers >= HISTORY_MIN else config.limits.max_output_tokens
+    known = answers >= HISTORY_MIN
+    output = mean if known else config.limits.max_output_tokens
     input_tokens = sum(sizes) / BYTES_PER_TOKEN * RETRY_SHARE
     output_tokens = len(sizes) * output * RETRY_SHARE
     cost = cost_micro_eur(config, config.models[model_id], input_tokens, output_tokens)
-    return SeatEstimate(model_id=model_id, calls=len(sizes), estimate_micro_eur=cost)
+    return SeatEstimate(
+        model_id=model_id,
+        calls=len(sizes),
+        estimate_micro_eur=cost,
+        basis="ledger history" if known else "output limit",
+    )

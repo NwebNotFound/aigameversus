@@ -6,6 +6,7 @@ thoughts and hidden cards. The API listens on localhost only.
 
 import asyncio
 import os
+import time
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
@@ -15,7 +16,7 @@ from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
 from arena.agents.budget import MICRO
-from arena.agents.estimate import estimate
+from arena.agents.estimate import Basis, estimate
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
 from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
@@ -160,6 +161,11 @@ class SeatEstimateOut(BaseModel):
     model_id: str
     calls: int = Field(description="Prompts the seat got in the most expensive trial match")
     estimate_micro_eur: int
+    basis: Basis = Field(
+        description="Answers counted at the model's mean output in the ledger, or at the "
+        "output limit while the ledger knows fewer than 10 of its answers (then several "
+        "times too high)"
+    )
 
 
 class EstimateOut(BaseModel):
@@ -171,15 +177,47 @@ class EstimateOut(BaseModel):
     fits: bool = Field(description="Whether the estimate fits the match cap and the month left")
 
 
+class Estimates:
+    """One estimate at a time, and an answer kept for ESTIMATE_TTL seconds.
+
+    The trial matches take the server's CPU, and the API has no login: without this,
+    a client that asks again and again would slow every live match down.
+    """
+
+    def __init__(self):
+        self.lock = asyncio.Lock()
+        self.answers: dict[str, tuple[float, EstimateOut]] = {}
+
+
+ESTIMATE_TTL = 30.0
+_clock = time.monotonic  # seconds; a test moves it on
+
+
 @router.post("/matches/estimate")
-async def estimate_match(new: EstimateRequest, live: Live) -> EstimateOut:
+async def estimate_match(new: EstimateRequest, request: Request, live: Live) -> EstimateOut:
     """What a match of these models would cost, estimated without calling any model.
 
     Random bots play the match three times and every prompt a seat's model would get is
     measured; answers are counted at the model's mean output in the ledger, or at the output
     limit for a model with little history. A guide, not a promise: the caps still stop a
     match that costs more. Spends nothing and needs no flag. 503 while the ledger is down.
+    One estimate runs at a time; the same request within 30 seconds gets the same answer.
     """
+    estimates: Estimates = request.app.state.estimates
+    key = new.model_dump_json()
+    async with estimates.lock:
+        kept = estimates.answers.get(key)
+        if kept is not None and _clock() - kept[0] < ESTIMATE_TTL:
+            return kept[1]
+        answer = await _estimate(new, live)
+        estimates.answers = {
+            k: v for k, v in estimates.answers.items() if _clock() - v[0] < ESTIMATE_TTL
+        }
+        estimates.answers[key] = (_clock(), answer)
+        return answer
+
+
+async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
@@ -204,7 +242,10 @@ async def estimate_match(new: EstimateRequest, live: Live) -> EstimateOut:
         month_cap_micro_eur=month_cap,
         seats={
             seat: SeatEstimateOut(
-                model_id=e.model_id, calls=e.calls, estimate_micro_eur=e.estimate_micro_eur
+                model_id=e.model_id,
+                calls=e.calls,
+                estimate_micro_eur=e.estimate_micro_eur,
+                basis=e.basis,
             )
             for seat, e in per_seat.items()
         },
