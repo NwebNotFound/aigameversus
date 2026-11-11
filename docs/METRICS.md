@@ -43,6 +43,37 @@ same numbers for the same log. The definitions follow the Researcher's review
 | `rejected` | Answers of this move the engine rejected (each one led to a correction). |
 | `fallback` | The engine played this move (see above). |
 
+## Sections (`sections`, `numbers`)
+
+Every answer lists the parts it has besides `game`, `spoilers`, `events` and
+`meta`, in order: `["situation"]` for a game with a situation only (Poker
+today), `["situation", "players", "moves", ...]` for Liar's Deck. A client
+checks this list instead of probing for keys. `numbers` is `false` when the
+answer has the situation only, `true` otherwise.
+
+## Situation (`situation`), every game with one
+
+"How is the game going?" at the end of the log read: `situation.facts` (numbers)
+and `situation.lines.en` / `.de` (a few short sentences, the same number in both
+languages, display names, never a seat id). Liar's Deck, Poker and Werewolf have
+one; a game with a situation but no other analytics yet answers with the
+situation only. Built from the same events as the rest, so without spoilers it
+reads public events only (`arena/analytics/situation.py`).
+
+- **Liar's Deck:** round, table card, whose turn, cards left per player (the
+  public count of cards played), pulls survived, the risk of each player's next
+  pull (public, as for `pulls`), the player closest to elimination (highest risk
+  of those who have pulled), the last call (who called whom, whether the cards
+  were honest once revealed, who pulled and whether they survived), the winner.
+- **Poker:** hand, street, pot, every stack (starting stack, minus blinds and
+  bets, plus pots won; chips always add up), chip leader, all-in players (stack
+  0, still in the hand, chips in the pot), short stacks (under 10 big blinds),
+  the biggest pot so far, the winner or the hand limit.
+- **Werewolf:** night or day and its number, alive of all, votes cast today per
+  target, the last death with its public role and cause, the winner. **Teams
+  alive** (village, wolves, on their own) only with spoilers: roles are private
+  until a player dies.
+
 ## Liar's Deck
 
 ### Moves (`moves`)
