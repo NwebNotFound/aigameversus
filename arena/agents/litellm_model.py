@@ -17,9 +17,11 @@ class LiteLLMModel:
     counts the cost, and tests and CI use the mock LLM instead.
     """
 
-    def __init__(self, model: str, *, max_output_tokens: int):
+    def __init__(self, model: str, *, max_output_tokens: int, reasoning_effort: str | None = None):
         self._model = model
         self._max_output_tokens = max_output_tokens
+        # Reasoning is billed as output and counts against the output limit.
+        self._options = {} if reasoning_effort is None else {"reasoning_effort": reasoning_effort}
 
     async def __call__(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
         litellm = _litellm()
@@ -30,11 +32,14 @@ class LiteLLMModel:
                 tools=tools,
                 max_tokens=self._max_output_tokens,
                 num_retries=0,  # the agent runner retries, with its own backoff
+                **self._options,
             )
-            message = response.choices[0].message
+            choice = response.choices[0]
+            message = choice.message
             usage = getattr(response, "usage", None)
             return ModelReply(
-                text=message.content,
+                # A model that only reasoned has said what it thinks there.
+                text=message.content or getattr(message, "reasoning_content", None),
                 tool_calls=tuple(
                     ToolCall(call.function.name, call.function.arguments)
                     for call in message.tool_calls or ()
@@ -42,6 +47,7 @@ class LiteLLMModel:
                 usage=(
                     None if usage is None else Usage(usage.prompt_tokens, usage.completion_tokens)
                 ),
+                cut_off=choice.finish_reason == "length",
             )
         except Exception as error:
             # Whatever fails here, in the provider or in an answer of an unexpected

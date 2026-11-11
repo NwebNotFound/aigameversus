@@ -1307,3 +1307,28 @@ Each entry: date, decision, why, alternatives considered.
   outside the package (would not be tested with the rest); raising the cap
   from a prompt in the terminal (a second way to spend that tests cannot
   cover).
+
+## D-071 · Reasoning models are kept short, and a cut-off answer is told so
+
+- **Date:** 2026-11-11
+- **Decision:** Every call to a real model carries `reasoning_effort` from
+  `limits.reasoning_effort` in `config/models.yaml`, set to `low`. A reply
+  knows whether it ran into the output limit (`ModelReply.cut_off`); when
+  such a reply has no tool call, the correction says that it was cut off and
+  asks for one or two short sentences before the call. When an answer has no
+  text of its own, the model's reasoning is its thought. The system prompt
+  asks for a short thought and says that a call written as text is not a
+  call. The output limit stays at 1500 tokens.
+- **Why:** In the first match of four real models (Liar's Deck, cheapest
+  models of the roster) 83 of 130 answers were rejected and 18 turns went to
+  the random fallback. Two models spent the whole output limit on reasoning
+  in 73 of their 87 calls and never reached the tool call, and the plain "no
+  tool call" correction made them do it again. That reasoning was also 90 %
+  of the output tokens paid for. Raising the limit would have paid for more
+  of the same.
+- **Alternatives:** A higher output limit (more cost per call, and the cap
+  per call is what the budget books up front); `tool_choice: required` (cuts
+  off the thought text of models that write one, and not every provider
+  behind OpenRouter honours it; kept in reserve); switching reasoning off
+  entirely (`minimal` is one config line away if `low` is still too long);
+  dropping reasoning models from the roster (they are among the cheapest).

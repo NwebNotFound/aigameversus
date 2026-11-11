@@ -62,6 +62,24 @@ def test_answer_without_a_tool_call_is_a_problem_and_keeps_the_thought():
     )
 
 
+def test_answer_cut_off_before_its_tool_call_is_told_to_be_short():
+    reply, _, _ = ask(ModelReply(text="First I weigh every card in my", cut_off=True))
+
+    assert reply == Reply(
+        problem=(
+            "Your answer was cut off at the length limit before it called a tool. "
+            "Think in one or two short sentences, then call exactly one tool."
+        ),
+        thought="First I weigh every card in my",
+    )
+
+
+def test_cut_off_answer_that_did_call_a_tool_is_a_move():
+    reply, _, _ = ask(ModelReply(tool_calls=(ToolCall("play_card", '{"card": 7}'),), cut_off=True))
+
+    assert reply == Reply(action=Action(tool="play_card", arguments={"card": 7}))
+
+
 @pytest.mark.parametrize(
     "arguments",
     ["{card: 7}", '{"card": 7', "", "7", "[7]", '"card"', "null", "[" * 100_000],

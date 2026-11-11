@@ -64,9 +64,13 @@ class ModelAgent:
 def _read(reply: ModelReply) -> Reply:
     thought = (reply.text or "").strip() or None
     if not reply.tool_calls:
-        return Reply(
-            problem="Your answer contained no tool call. Call exactly one tool.", thought=thought
-        )
+        problem = "Your answer contained no tool call. Call exactly one tool."
+        if reply.cut_off:
+            problem = (
+                "Your answer was cut off at the length limit before it called a tool. "
+                "Think in one or two short sentences, then call exactly one tool."
+            )
+        return Reply(problem=problem, thought=thought)
     call = reply.tool_calls[0]  # one action per request: further calls are ignored
     try:
         arguments = json.loads(call.arguments)

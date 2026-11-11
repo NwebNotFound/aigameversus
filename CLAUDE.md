@@ -159,6 +159,21 @@ calls out, `ModelError` on failure. Two things implement it:
   and would otherwise download a price list, and it switches LiteLLM's own
   logger off, because that logs whole requests and provider error texts.
 
+What the first matches with real models taught (a Liar's Deck match of four
+cheap models: 83 of 130 answers were rejected):
+
+- Reasoning models think before they answer, the thinking is billed as output,
+  and it counts against `max_output_tokens`. Two of the four spent the whole
+  limit thinking and never reached their tool call. `limits.reasoning_effort`
+  in `config/models.yaml` (`low`) is sent with every call to keep it short.
+- An answer that ran into the output limit is marked (`ModelReply.cut_off`).
+  If it has no tool call, the player is told that it was cut off and to think
+  in a sentence or two, not just that the tool call is missing.
+- A model that only reasoned has its reasoning as its thought, so spectators
+  still read what it was thinking.
+- The prompt says that a call written out as text is not a call: one model
+  kept printing `default_api.call_liar(...)` instead of calling the tool.
+
 Failures:
 
 - A failed model call is retried 3 times, after 1, 2 and 4 seconds. Errors
@@ -174,7 +189,8 @@ Failures:
 ### Cost caps
 
 `config/models.yaml` holds the limits (0.50 € per match, 5 € per calendar
-month, token limits per call) and the models with their prices.
+month, token limits per call, how long reasoning models may think) and the
+models with their prices.
 `arena/config.py` loads and checks it.
 
 A match that uses models gets one `Budget` (`arena/agents/budget.py`), and

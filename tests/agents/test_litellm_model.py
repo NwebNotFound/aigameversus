@@ -137,3 +137,53 @@ def test_provider_text_does_not_travel_with_the_error(litellm, answer_with):
     failure = call()
 
     assert PROVIDER_TEXT not in "".join(traceback.format_exception(failure))
+
+
+def answer(litellm, *, finish, content, reasoning=None):
+    """A provider response as LiteLLM hands it on: how it ended, its text, its reasoning."""
+    message = {"role": "assistant", "content": content, "reasoning_content": reasoning}
+    return litellm.ModelResponse(
+        choices=[{"finish_reason": finish, "index": 0, "message": message}],
+        usage={"prompt_tokens": 100, "completion_tokens": 300, "total_tokens": 400},
+    )
+
+
+def test_reasoning_effort_is_sent_only_when_the_model_is_given_one(answer_with):
+    sent = answer_with(mock_response="Short.")
+
+    asyncio.run(LiteLLMModel(MODEL, max_output_tokens=300, reasoning_effort="low")(MESSAGES, TOOLS))
+    assert sent["reasoning_effort"] == "low"
+
+    sent.clear()
+    call()
+    assert "reasoning_effort" not in sent
+
+
+def test_answer_that_ran_into_the_output_limit_is_marked_as_cut_off(litellm, answer_with):
+    answer_with(mock_response=answer(litellm, finish="length", content="I think that"))
+
+    reply = call()
+
+    assert (reply.cut_off, reply.text, reply.tool_calls) == (True, "I think that", ())
+    assert reply.usage == Usage(100, 300)
+
+
+def test_finished_answer_is_not_cut_off(litellm, answer_with):
+    answer_with(mock_response=answer(litellm, finish="stop", content="The 3 is enough."))
+
+    assert call().cut_off is False
+
+
+def test_reasoning_is_the_text_of_an_answer_that_has_no_other(litellm, answer_with):
+    answer_with(
+        mock_response=answer(litellm, finish="length", content=None, reasoning="Hmm, the 3")
+    )
+    assert call().text == "Hmm, the 3"
+
+    answer_with(
+        mock_response=answer(litellm, finish="stop", content="The 3.", reasoning="Long thoughts")
+    )
+    assert call().text == "The 3."
+
+    answer_with(mock_response=answer(litellm, finish="stop", content=None))
+    assert call().text is None
