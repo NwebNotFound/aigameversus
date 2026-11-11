@@ -1,5 +1,6 @@
 import asyncio
 from functools import partial
+from importlib import resources
 from uuid import uuid4
 
 import asyncpg
@@ -140,7 +141,9 @@ def test_migrating_twice_applies_nothing_new(database_url):
 
     first, second = asyncio.run(run())
 
-    assert first == ["0001_match_events.sql"]
+    files = resources.files("arena.db") / "migrations"
+    assert first == sorted(f.name for f in files.iterdir() if f.name.endswith(".sql"))
+    assert first[0] == "0001_match_events.sql"
     assert second == []
 
 
