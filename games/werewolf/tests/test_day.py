@@ -38,14 +38,16 @@ def test_the_village_elects_a_captain_before_the_first_discussion():
 
 
 def test_a_tied_election_is_settled_by_the_seed():
-    def elected(seed_start):
-        table = Table(CLASSIC, captain=True, speaking_start=seed_start)
+    def elected(seed):
+        table = Table(CLASSIC, captain=True, seed=seed)
         night_without_deaths(table)
-        elect(table, {p: ("f" if i % 2 else "g") for i, p in enumerate("abcdefgh")})
+        elect(table, {p: ("f" if i % 2 else "g") for i, p in enumerate("abcdefgh")})  # 4:4
         return table.state.captain
 
-    assert elected(0) in ("f", "g")
-    assert elected(0) == elected(0)
+    outcomes = [elected(seed) for seed in range(20)]
+
+    assert set(outcomes) == {"f", "g"}  # different seeds pick different tied players
+    assert outcomes == [elected(seed) for seed in range(20)]  # the same seed, the same pick
 
 
 def test_only_day_one_has_an_election():
