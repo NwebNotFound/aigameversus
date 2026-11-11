@@ -105,7 +105,10 @@ with `python scripts/decisions.py adopt`.
 - [D-099](decisions/D-099-key-moments-are-staged-by-the-watch-screen-from-the.md) · Key moments are staged by the watch screen, from the transcript's highlights
 - [D-100](decisions/D-100-a-finished-match-ends-on-a-result-card-showdowns-and-the.md) · A finished match ends on a result card; showdowns and the final ranking are structured
 - [D-101](decisions/D-101-an-estimate-before-a-match-bots-play-it-the-prompts-are.md) · An estimate before a match: bots play it, the prompts are measured
+- [D-102](decisions/D-102-any-openrouter-model-that-can-call-tools-may-take-a-seat.md) · Any OpenRouter model that can call tools may take a seat
 - [D-103](decisions/D-103-a-seat-s-identity-comes-from-the-match-record-first-a-model.md) · A seat's identity comes from the match record first; a model seat never reads as a bot
 - [D-104](decisions/D-104-one-display-name-per-seat-computed-by-the-server-never-the.md) · One display name per seat, computed by the server, never the seat id
 - [D-106](decisions/D-106-match-analytics-a-pure-function-of-the-log-public-events.md) · Match analytics: a pure function of the log, public events only without spoilers
+- [D-107](decisions/D-107-the-analytics-tab-draws-the-arena-s-numbers-with-its-own.md) · The Analytics tab draws the arena's numbers with its own small SVG charts
+- [D-108](decisions/D-108-every-model-move-says-what-it-took-in-a-spectators-only.md) · Every model move says what it took, in a spectators-only event
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips

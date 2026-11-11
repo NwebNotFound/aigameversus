@@ -221,6 +221,11 @@ platform, not an afterthought.
   provider reports the real token counts. A call that fails or times out
   keeps its worst case. The ledger can therefore show more than the bill,
   never less, also after a crash or with several players calling at once.
+- **Any compatible model:** `GET /models/catalog` lists every OpenRouter model
+  that can call tools, with its price per million tokens; marked `verified`
+  are the ones in [config/models.yaml](config/models.yaml), whose prices and
+  behaviour were checked by hand. Every one of them plays behind the same
+  caps and needs the same `confirm_spend`.
 - **Estimate first:** `POST /matches/estimate` with the game and the models
   says what the match would cost per seat, what the month has cost so far and
   whether it fits, without calling any model.

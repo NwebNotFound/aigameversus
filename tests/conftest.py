@@ -74,3 +74,16 @@ def fake_games(tmp_path, monkeypatch):
     for name in installed:
         sys.modules.pop(f"games.{name}.plugin", None)
         sys.modules.pop(f"games.{name}", None)
+
+
+@pytest.fixture(autouse=True)
+def offline_catalog(tmp_path, monkeypatch):
+    """No test reaches OpenRouter for its model list: each starts without a cached copy and
+    with downloads refused. A test that wants a list writes the cache (see test_catalog)."""
+    import arena.catalog
+
+    def refuse():
+        raise OSError("These tests must not use the network")
+
+    monkeypatch.setattr(arena.catalog, "_download", refuse)
+    monkeypatch.setenv("ARENA_CATALOG_CACHE", str(tmp_path / "catalog-cache.json"))
