@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { Seat, TranscriptLine } from '#lib/api.js';
+	import { card } from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import { commentary, seatModel, seatName, words, type View } from '#lib/viewer.js';
+	import {
+		commentary,
+		ordinal,
+		seatModel,
+		seatName,
+		showdownHands,
+		words,
+		type Placement,
+		type View
+	} from '#lib/viewer.js';
 
 	/**
 	 * The commentary column of the watch screen: the transcript, newest at the bottom.
@@ -45,6 +55,11 @@
 	}
 
 	const name = (seat: string | null) => (seat ? seatName(seat, players) : '');
+	/** The final ranks of a `match_finished` line, best first. */
+	const ranksOf = (line: TranscriptLine) =>
+		[...(((line.raw?.data as { placements?: Placement[] })?.placements ?? []) as Placement[])].sort(
+			(a, b) => a.rank - b.rank
+		);
 	const colour = (seat: string) => seatModel(seat, players) ?? seat;
 </script>
 
@@ -109,6 +124,39 @@
 							{/if}
 						</span>
 						<p class="bubble">{words(line) ?? line.text}</p>
+					</div>
+				{:else if line.raw?.type === 'match_finished' && ranksOf(line).length}
+					<div class="final" data-testid="final-ranks">
+						<span class="label">Final ranking</span>
+						<ol>
+							{#each ranksOf(line) as place (place.player)}
+								<li class:first={place.rank === 1}>
+									<span class="rank">{ordinal(place.rank)}</span>
+									<Avatar name={name(place.player)} colourKey={colour(place.player)} size={22} />
+									<span>{name(place.player)}</span>
+								</li>
+							{/each}
+						</ol>
+					</div>
+				{:else if line.raw?.type === 'showdown' && showdownHands(lines, lines.indexOf(line)).length}
+					<div class="showdown" data-testid="showdown">
+						<span class="label">Showdown</span>
+						{#each showdownHands(lines, lines.indexOf(line)) as hand (hand.player)}
+							<div class="hand-row" class:won={hand.won > 0}>
+								<Avatar name={name(hand.player)} colourKey={colour(hand.player)} size={24} />
+								<span class="hand-who">{name(hand.player)}</span>
+								<span class="hand-cards">
+									{#each hand.cards as text (text)}
+										{@const c = card(text)}
+										{#if c}<span class="mini" class:red={c.red} aria-label={c.label}
+												>{c.rank}{c.symbol}</span
+											>{/if}
+									{/each}
+								</span>
+								<span class="hand-kind">{hand.hand}</span>
+								{#if hand.won > 0}<span class="hand-won">+{hand.won}</span>{/if}
+							</div>
+						{/each}
 					</div>
 				{:else if line.kind === 'narration'}
 					<p class="narration">{line.text}</p>
@@ -362,6 +410,109 @@
 		to {
 			box-shadow: 0 0 0 2px transparent;
 		}
+	}
+
+	.final,
+	.showdown {
+		display: grid;
+		gap: 0.35rem;
+		width: 100%;
+	}
+
+	.label {
+		font-size: 0.75rem;
+		font-weight: 650;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--muted);
+	}
+
+	.final ol {
+		display: grid;
+		gap: 0.25rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.final li {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.9rem;
+	}
+
+	.final li.first {
+		font-weight: 700;
+		color: var(--accent);
+	}
+
+	.final .rank {
+		width: 2.2rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--muted);
+	}
+
+	.hand-row {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-areas:
+			'avatar who cards'
+			'avatar kind won';
+		align-items: center;
+		column-gap: 0.45rem;
+		padding: 0.3rem 0.4rem;
+		border-radius: 8px;
+		background: var(--surface);
+	}
+
+	.hand-row > :global(svg) {
+		grid-area: avatar;
+	}
+
+	.hand-row.won {
+		box-shadow: inset 3px 0 0 var(--ok);
+	}
+
+	.hand-who {
+		grid-area: who;
+		font-weight: 600;
+		font-size: 0.875rem;
+	}
+
+	.hand-cards {
+		grid-area: cards;
+		display: flex;
+		gap: 0.2rem;
+	}
+
+	.mini {
+		padding: 0 0.25rem;
+		border-radius: 4px;
+		background: #f3ead8;
+		color: #1d1a16;
+		font-size: 0.8rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.mini.red {
+		color: #b3202e;
+	}
+
+	.hand-kind {
+		grid-area: kind;
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+
+	.hand-won {
+		grid-area: won;
+		justify-self: end;
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: var(--ok);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.narration {

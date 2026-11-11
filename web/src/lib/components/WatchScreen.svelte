@@ -5,8 +5,16 @@
 	import Beats from '#lib/components/Beats.svelte';
 	import Board from '#lib/components/Board.svelte';
 	import Commentary from '#lib/components/Commentary.svelte';
+	import ResultCard from '#lib/components/ResultCard.svelte';
 	import { euros } from '#lib/live.js';
-	import { seatModel, seatName, type Beat, type View } from '#lib/viewer.js';
+	import {
+		resultOf,
+		seatModel,
+		seatName,
+		type Beat,
+		type Placement,
+		type View
+	} from '#lib/viewer.js';
 
 	/**
 	 * One match on screen, live or replayed: the cast, the board as the stage, the
@@ -21,6 +29,8 @@
 		players,
 		costs,
 		active = null,
+		placements = null,
+		ended = false,
 		controls
 	}: {
 		spec: Record<string, unknown> | null;
@@ -32,10 +42,20 @@
 		/** Micro-euros per seat, or null when nothing is known. */
 		costs: Record<string, number> | null;
 		active?: string | null;
+		/** The final ranks, once the match is over. */
+		placements?: Placement[] | null;
+		/** The match is over and its end is on screen: show the result card. */
+		ended?: boolean;
 		controls: Snippet;
 	} = $props();
 
 	let beat = $state<Beat | null>(null);
+	const result = $derived(ended ? resultOf(placements, lines) : null);
+	/** The viewer closed the card to look at the board; it comes back at the next end. */
+	let dismissed = $state(false);
+	$effect(() => {
+		if (!ended) dismissed = false;
+	});
 	/** Seat id to the key of its colour: the model, so a model looks the same in every match. */
 	const colours = $derived(
 		Object.fromEntries(seats.map((seat) => [seat, seatModel(seat, players) ?? seat]))
@@ -66,7 +86,8 @@
 				/>
 				<span class="who">
 					<strong>{seatName(seat, players)}</strong>
-					<small>{model ?? (players?.[seat] ? 'random bot' : seat)}</small>
+					<!-- The model; "bot" for a bot seat; nothing when the name is the seat id already. -->
+					{#if model}<small>{model}</small>{:else if players?.[seat]?.name}<small>bot</small>{/if}
 				</span>
 				{#if costs && model}
 					<span class="cost" title="Model cost so far">{euros(costs[seat] ?? 0)}</span>
@@ -81,6 +102,9 @@
 				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} />
 			</div>
 			<Beats {lines} bind:current={beat} />
+			{#if result && !dismissed}
+				<ResultCard {result} {players} {costs} onclose={() => (dismissed = true)} />
+			{/if}
 		</section>
 		<div class="controls">{@render controls()}</div>
 	</div>

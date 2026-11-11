@@ -122,7 +122,8 @@ def test_the_json_names_who_sits_in_each_seat_the_same_with_and_without_spoilers
     assert plain == spoiled
     # A random bot is named as the lines name it, and has no model.
     assert plain == {
-        seat: {"name": f"Random Bot {seat}", "model": None} for seat in ("p1", "p2", "p3")
+        seat: {"name": f"Random Bot {seat}", "model": None, "kind": "bot", "vendor": None}
+        for seat in ("p1", "p2", "p3")
     }
 
 
@@ -166,5 +167,15 @@ def test_a_rated_model_seat_gives_its_name_and_model_as_separate_fields(client):
     asyncio.run(seat_a_model())
     players = client.get(f"/matches/{match_id}/transcript").json()["players"]
 
-    assert players["p1"] == {"name": "Mia", "model": "glm-flash"}
-    assert players["p2"] == {"name": "Random Bot p2", "model": None}
+    assert players["p1"] == {
+        "name": "Mia",
+        "model": "glm-flash",
+        "kind": "model",
+        "vendor": "z-ai",
+    }
+    assert players["p2"] == {
+        "name": "Random Bot p2",
+        "model": None,
+        "kind": "bot",
+        "vendor": None,
+    }
