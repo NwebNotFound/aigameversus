@@ -19,7 +19,10 @@ router = APIRouter(tags=["transcript"])
 
 
 class Player(BaseModel):
-    """Who sits in a seat, for avatars and chips; null for a random bot or an unrated match."""
+    """Who sits in a seat: its label (a bot is "Random Bot p4") and, for a model, the model id.
+
+    Both are null for a seat of an unrated match, which the lines call by its seat id.
+    """
 
     name: str | None = None
     model: str | None = None
@@ -66,9 +69,14 @@ async def transcript(
     lines = [line for line in lines if line.importance >= min_importance]
     if format == "json":
         profiles = await live.matches.seat_profiles(match_id)
+        # The name is the label the lines use for the seat ("Random Bot p4" for a bot, the
+        # profile name for a model), so the page needs no label rule of its own.
         players = {
-            seat: Player(name=profiles[seat][0], model=profiles[seat][1])
-            if seat in profiles and profiles[seat][1] != BOT_MODEL_ID
+            seat: Player(
+                name=profiles[seat][0],
+                model=None if profiles[seat][1] == BOT_MODEL_ID else profiles[seat][1],
+            )
+            if seat in profiles
             else Player()
             for seat in record.players
         }

@@ -120,8 +120,23 @@ def test_the_json_names_who_sits_in_each_seat_the_same_with_and_without_spoilers
 
     assert list(plain) == ["p1", "p2", "p3"]  # in seat order
     assert plain == spoiled
-    # Random bots have no name or model of their own to show.
-    assert plain == {seat: {"name": None, "model": None} for seat in ("p1", "p2", "p3")}
+    # A random bot is named as the lines name it, and has no model.
+    assert plain == {
+        seat: {"name": f"Random Bot {seat}", "model": None} for seat in ("p1", "p2", "p3")
+    }
+
+
+def test_the_name_in_players_is_the_label_the_lines_use(client):
+    match_id = start(client, "liars_deck", players=3, seed=5)
+    finish(client, match_id)
+    url = f"/matches/{match_id}/transcript"
+
+    players = client.get(url).json()["players"]
+    text = client.get(url, params={"format": "text"}).text
+
+    for seat, player in players.items():
+        assert player["name"] in text, seat
+    assert "Random Bot p1" in text and "(random-bot)" not in text
 
 
 def test_a_rated_model_seat_gives_its_name_and_model_as_separate_fields(client):
@@ -152,4 +167,4 @@ def test_a_rated_model_seat_gives_its_name_and_model_as_separate_fields(client):
     players = client.get(f"/matches/{match_id}/transcript").json()["players"]
 
     assert players["p1"] == {"name": "Mia", "model": "glm-flash"}
-    assert players["p2"] == {"name": None, "model": None}
+    assert players["p2"] == {"name": "Random Bot p2", "model": None}
