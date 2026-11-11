@@ -16,14 +16,17 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
+import yaml
 from pydantic import BaseModel
 
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.types import MESSAGE, Action, Event, Placement, PlayerId, ToolSpec, TurnMode
 from games.werewolf.abilities import NIGHT, implemented, target_schema, tool
+from games.werewolf.narrator import LANGUAGES, narrate
 from games.werewolf.selection import (
     MAX_PLAYERS,
     MIN_PLAYERS,
+    ROOT,
     apply_template,
     assign_roles,
     fill_selection,
@@ -36,12 +39,13 @@ MAX_SHORT_WORDS = 40  # wolf chat and vote reasons
 MAX_WOLF_MESSAGES = 2
 DISCUSSION_ROUNDS = 2
 WOLF_NIGHT_ORDER = 6
+OPTIONS = yaml.safe_load((ROOT / "options.yaml").read_text(encoding="utf-8"))
 
 Phase = Literal["setup", "night", "morning", "day", "dusk", "over"]
 
 
 class Step(BaseModel):
-    kind: Literal["night", "wolf", "speak", "vote", "hunter"]
+    kind: Literal["night", "wolf", "captain_vote", "speak", "vote", "hunter", "pass_captaincy"]
     player: PlayerId
     ability: str | None = None  # night steps: the handler from the role file
 
@@ -69,6 +73,12 @@ class WerewolfState(BaseModel):
     day_votes: dict[PlayerId, PlayerId | None] = {}
     winner: str | None = None
     winners: list[PlayerId] = []
+    language: str = "de"
+    captain_enabled: bool = True
+    captain_weight: int = 2
+    successor_on_death: bool = True
+    captain: PlayerId | None = None
+    captain_votes: dict[PlayerId, PlayerId] = {}
 
     def wolf_victim(self) -> PlayerId | None:
         """The pack's choice: most votes; on a tie, the first of the tied targets voted for."""
@@ -103,9 +113,12 @@ class Werewolf(GamePlugin[WerewolfState]):
     def initial_state(
         self, players: Sequence[PlayerId], settings: Mapping[str, Any]
     ) -> WerewolfState:
-        unknown = set(settings) - {"template", "roles", "roles_public"}
+        unknown = set(settings) - {"template", "roles", "roles_public", "captain", "language"}
         if unknown:
             raise ValueError(f"Unknown settings for werewolf: {sorted(unknown)}")
+        language = settings.get("language", "de")
+        if language not in LANGUAGES:
+            raise ValueError(f"language must be one of {', '.join(LANGUAGES)}, got {language!r}")
         if "template" in settings and "roles" in settings:
             raise ValueError("Give either a template or roles, not both")
         count = len(players)
@@ -130,6 +143,10 @@ class Werewolf(GamePlugin[WerewolfState]):
             template=template,
             roles_public=bool(settings.get("roles_public", False)),
             alive=list(players),
+            language=language,
+            captain_enabled=bool(settings.get("captain", OPTIONS["captain"]["enabled"])),
+            captain_weight=OPTIONS["captain"]["vote_weight"],
+            successor_on_death=OPTIONS["captain"]["successor_on_death"],
         )
 
     def _playable(self) -> dict:
@@ -154,7 +171,16 @@ class Werewolf(GamePlugin[WerewolfState]):
         ctx.emit("pack_revealed", {"wolves": pack}, visible_to=pack)
         if state.roles_public:
             ctx.emit("roles_in_play", {"selection": selection})
-        ctx.emit("night_started", {"night": 1})
+        self._start_night(state, ctx, 1)
+
+    def _start_night(self, state: WerewolfState, ctx: TurnContext, night: int) -> None:
+        ctx.emit("night_started", {"night": night})
+        self._narrate(state, ctx, "night_falls", {"night": night})
+
+    def _narrate(self, state: WerewolfState, ctx: TurnContext, key: str, data: dict) -> None:
+        """A public narrator line from the template; a game master may retell it with a model."""
+        text = narrate(key, data, state.language)
+        ctx.emit("narration", {"key": key, "data": data, "text": text, "language": state.language})
 
     # --- turns -------------------------------------------------------------
 
@@ -197,6 +223,24 @@ class Werewolf(GamePlugin[WerewolfState]):
                     f"Your public speech in the discussion, at most {MAX_SPEECH_WORDS} words.",
                     {"text": _text("What you say to everyone.", MAX_SPEECH_WORDS)},
                     required=["text"],
+                )
+            ]
+        if step.kind == "captain_vote":
+            return [
+                tool(
+                    "elect_captain",
+                    "Vote for the village captain. The captain's day vote counts double.",
+                    {"target": target_schema(list(state.alive), "Your candidate.")},
+                    required=["target"],
+                )
+            ]
+        if step.kind == "pass_captaincy":
+            return [
+                tool(
+                    "pass_captaincy",
+                    "You are dying as captain: name the living player who takes over.",
+                    {"target": target_schema(others, "The new captain.")},
+                    required=["target"],
                 )
             ]
         if step.kind == "vote":
@@ -258,7 +302,16 @@ class Werewolf(GamePlugin[WerewolfState]):
                     ctx.emit(MESSAGE, {"player": player, "text": args["reason"]})
             elif action.tool == "hunter_shoot":
                 ctx.emit("hunter_shot", {"player": player, "target": args["target"]})
+            elif action.tool == "elect_captain":
+                ctx.emit("captain_vote", {"player": player, "target": args["target"]})
+            elif action.tool == "pass_captaincy":
+                ctx.emit("captain_passed", {"from": player, "to": args["target"]})
+                self._narrate(state, ctx, "captain_passed", {"player": args["target"]})
             ctx.emit("step_done", {"player": player}, visible_to=[])
+            if action.tool == "elect_captain" and not (
+                state.queue and state.queue[0].kind == "captain_vote"
+            ):
+                self._elect_captain(state, ctx)
             if action.tool == "hunter_shoot":
                 self._kill(state, ctx, [(args["target"], "hunter")])
         self.step(state, ctx)
@@ -278,7 +331,7 @@ class Werewolf(GamePlugin[WerewolfState]):
                         "day_started", {"day": state.night, "order": order[start:] + order[:start]}
                     )
                 else:
-                    ctx.emit("night_started", {"night": state.night + 1})
+                    self._start_night(state, ctx, state.night + 1)
             elif state.phase == "day":
                 self._end_day(state, ctx)
 
@@ -316,16 +369,37 @@ class Werewolf(GamePlugin[WerewolfState]):
         if state.poisoned and all(state.poisoned != p for p, _ in deaths):
             deaths.append((state.poisoned, "poison"))
         ctx.emit("morning_started", {"night": state.night, "deaths": [p for p, _ in deaths]})
+        if deaths:
+            dead = [{"player": p, "role": state.roles[p]} for p, _ in deaths]
+            self._narrate(state, ctx, "morning_deaths", {"deaths": dead})
+        else:
+            self._narrate(state, ctx, "morning_quiet", {})
         self._kill(state, ctx, deaths)
 
+    def _elect_captain(self, state: WerewolfState, ctx: TurnContext) -> None:
+        """Most votes win; a tie is broken by the match seed."""
+        counts = Counter(state.captain_votes.values())
+        top = max(counts.values())
+        tied = [p for p in state.players if counts.get(p) == top]
+        chosen = tied[0] if len(tied) == 1 else ctx.rng("captain_tie", state.day).choice(tied)
+        ctx.emit("captain_elected", {"player": chosen, "votes": dict(counts)})
+        self._narrate(state, ctx, "captain_elected", {"player": chosen})
+
     def _end_day(self, state: WerewolfState, ctx: TurnContext) -> None:
-        counts = Counter(t for t in state.day_votes.values() if t is not None)
+        counts: Counter[PlayerId] = Counter()
+        for voter, target in state.day_votes.items():
+            if target is not None:
+                counts[target] += state.captain_weight if voter == state.captain else 1
         top = max(counts.values(), default=0)
         leaders = [p for p, n in counts.items() if n == top]
         executed = leaders[0] if top > 0 and len(leaders) == 1 else None
         ctx.emit("vote_result", {"day": state.day, "counts": dict(counts), "executed": executed})
         if executed:
+            role = state.roles[executed]
+            self._narrate(state, ctx, "execution", {"player": executed, "role": role})
             self._kill(state, ctx, [(executed, "executed")])
+        else:
+            self._narrate(state, ctx, "no_execution", {})
 
     def _kill(
         self, state: WerewolfState, ctx: TurnContext, deaths: list[tuple[PlayerId, str]]
@@ -349,6 +423,7 @@ class Werewolf(GamePlugin[WerewolfState]):
         else:
             return False
         ctx.emit("game_over", {"winner": outcome[0], "winners": outcome[1]})
+        self._narrate(state, ctx, "game_over", {"winner": outcome[0]})
         return True
 
     # --- event application ------------------------------------------------
@@ -397,21 +472,36 @@ class Werewolf(GamePlugin[WerewolfState]):
                 player = data["player"]
                 state.alive.remove(player)
                 state.revealed[player] = data["role"]
+                if player == state.captain:
+                    if state.successor_on_death and state.alive:
+                        state.queue.insert(0, Step(kind="pass_captaincy", player=player))
+                    else:
+                        state.captain = None
                 if (
                     self._roles[data["role"]].hooks.get("on_death") == "hunter_shoot"
                     and state.alive
                 ):
                     state.queue.insert(0, Step(kind="hunter", player=player))
-            case "hunter_shot":
+            case "hunter_shot" | "narration":
                 pass
+            case "captain_vote":
+                state.captain_votes[data["player"]] = data["target"]
+            case "captain_elected":
+                state.captain = data["player"]
+            case "captain_passed":
+                state.captain = data["to"]
             case "day_started":
                 state.day = data["day"]
                 state.phase = "day"
                 state.day_votes = {}
                 state.speaking_order = list(data["order"])
                 speeches = [Step(kind="speak", player=p) for p in data["order"]] * DISCUSSION_ROUNDS
-                votes = [Step(kind="vote", player=p) for p in state.players if p in state.alive]
-                state.queue = speeches + votes
+                living = [p for p in state.players if p in state.alive]
+                votes = [Step(kind="vote", player=p) for p in living]
+                election = []
+                if state.captain_enabled and data["day"] == 1:
+                    election = [Step(kind="captain_vote", player=p) for p in living]
+                state.queue = election + speeches + votes
             case "vote_cast":
                 state.day_votes[data["player"]] = data["target"]
             case "vote_result":
@@ -445,6 +535,8 @@ class Werewolf(GamePlugin[WerewolfState]):
             "step": step.kind if step else None,
             "speaking_order": list(state.speaking_order),
             "votes_today": dict(state.day_votes),
+            "captain": state.captain,
+            "language": state.language,
         }
         if player in state.pack:
             observation["pack"] = list(state.pack)

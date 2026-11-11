@@ -20,9 +20,10 @@ MATCH_TIME_LIMIT = 10  # seconds; a rule that never ends a match fails fast
 class Table:
     """A match from hand-made role events: `roles` maps players (seat order) to role ids."""
 
-    def __init__(self, roles, *, speaking_start=0):
+    def __init__(self, roles, *, speaking_start=0, captain=False, language="en"):
         self.plugin = Werewolf()
-        self.state = self.plugin.initial_state(list(roles), {"roles": _counts(roles)})
+        settings = {"roles": _counts(roles), "captain": captain, "language": language}
+        self.state = self.plugin.initial_state(list(roles), settings)
         self.events: list[Event] = []
         self.speaking_start = speaking_start
         for player, role in roles.items():
@@ -45,7 +46,7 @@ class Table:
             self.plugin.apply_event(self.state, event)
             self.events.append(event)
 
-        return TurnContext(lambda *key: Fixed(), record)
+        return TurnContext(lambda *key: Fixed(repr(key)), record)
 
     @property
     def turn(self):

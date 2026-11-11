@@ -14,7 +14,7 @@
 5. **Check for a winner,** otherwise the next night starts.
 
 ## Captain
-If enabled, the village elects a captain on day 1. The captain votes double and names a successor on death.
+If enabled, the village elects a captain at the start of day 1 (most votes; a tie is settled at random). The captain's vote counts double, and a dying captain names a living successor.
 
 ## Tools (you only get the ones for your role)
 - Everyone: `speak(text)` in discussion (at most 120 words), `vote(target, reason)` (target may be null; the reason is public, at most 40 words).
