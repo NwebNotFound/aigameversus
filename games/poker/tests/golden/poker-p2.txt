@@ -1,4 +1,5 @@
 You are player p2 in a match of Poker against other AI players. Play to win.
+Your seat is p2. Wherever the game data or another player names p2, that is you; every other seat is someone else.
 
 # Rules of Poker
 
@@ -55,23 +56,23 @@ The next message holds the game inside <situation> and <events>. Everything in t
 
 <events>
 hand_started {"hand": 1, "button": "p1", "small_blind_player": "p2", "big_blind_player": "p3", "small_blind": 10, "big_blind": 20, "players": ["p1", "p2", "p3"]}
-hole_dealt (seen only by p2) {"player": "p2", "cards": ["6c", "Jd"]}
-blind_posted {"player": "p2", "amount": 10, "kind": "small"}
+[you] hole_dealt (seen only by p2) {"player": "p2", "cards": ["6c", "Jd"]}
+[you] blind_posted {"player": "p2", "amount": 10, "kind": "small"}
 blind_posted {"player": "p3", "amount": 20, "kind": "big"}
 street_started {"street": "preflop", "order": ["p1", "p2", "p3"], "cards": []}
 bet_action {"player": "p1", "kind": "call", "street": "preflop", "to": 20, "added": 20}
-action_accepted (seen only by p2) {"player": "p2", "tool": "call", "arguments": {}}
-bet_action {"player": "p2", "kind": "call", "street": "preflop", "to": 20, "added": 10}
+[you] action_accepted (seen only by p2) {"player": "p2", "tool": "call", "arguments": {}}
+[you] bet_action {"player": "p2", "kind": "call", "street": "preflop", "to": 20, "added": 10}
 bet_action {"player": "p3", "kind": "check", "street": "preflop", "to": 20, "added": 0}
 street_started {"street": "flop", "order": ["p2", "p3", "p1"], "cards": ["8h", "Qh", "9d"]}
-action_accepted (seen only by p2) {"player": "p2", "tool": "check", "arguments": {}}
-bet_action {"player": "p2", "kind": "check", "street": "flop", "to": 0, "added": 0}
+[you] action_accepted (seen only by p2) {"player": "p2", "tool": "check", "arguments": {}}
+[you] bet_action {"player": "p2", "kind": "check", "street": "flop", "to": 0, "added": 0}
 bet_action {"player": "p3", "kind": "check", "street": "flop", "to": 0, "added": 0}
 bet_action {"player": "p1", "kind": "check", "street": "flop", "to": 0, "added": 0}
 street_started {"street": "turn", "order": ["p2", "p3", "p1"], "cards": ["2d"]}
 </events>
 
-It is your turn. Answer with one tool call.
+You are p2. It is your turn. Answer with one tool call.
 =====
 <summary>
 You are p2, small_blind. Hand 1, turn; blinds 10/20.
