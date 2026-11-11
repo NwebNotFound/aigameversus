@@ -26,6 +26,25 @@ uv run ruff format --check .           # formatting (use `ruff format .` to fix)
 
 Arena core tests live in `tests/`, a game's tests in `games/<id>/tests/`.
 
+## Model players in tests
+
+A test never calls a model. It gives `ModelAgent` a `MockLLM` with a script:
+answers, functions that answer from the prompt, `ModelError`s to raise, or
+`HANGS` for a model that never answers.
+
+```python
+mock = MockLLM(ModelError("RateLimitError"), tool_call("play_card", {"card": 3}))
+agent = ModelAgent(mock, plugin, sleep=no_pause)   # no real waiting between retries
+match = Match(plugin, {"p1": agent, ...}, seed=1, turn_timeout=0.2)
+```
+
+`mock.calls` holds every prompt the model would have seen. Patterns for whole
+matches, timeouts and API errors are in `tests/agents/test_model_match.py`.
+
+`tests/agents/test_litellm_model.py` is the only test that loads LiteLLM (about
+4 seconds). It uses LiteLLM's own mock responses and refuses every name lookup,
+so it fails if anything tries to reach the network.
+
 ## Secret scan
 
 CI scans the full git history with gitleaks:
