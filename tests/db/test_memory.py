@@ -215,8 +215,14 @@ def test_a_match_with_memory_is_remembered_and_can_be_forgotten(client):
     reset = client.post("/memory/reset", json={"profile_id": p1}).json()
     assert reset["memories"] == 1
     assert client.get(f"/profiles/{p1}/memories").json() == []
-    everyone = client.post("/memory/reset", json={}).json()
+    refused = client.post("/memory/reset", json={})
+    assert refused.status_code == 422
+    assert "confirm" in refused.json()["detail"]
+    p2 = bots(client, "werewolf")["p2"]
+    assert len(client.get(f"/profiles/{p2}/memories").json()) == 1  # nothing was forgotten
+    everyone = client.post("/memory/reset", json={"confirm": True}).json()
     assert everyone["memories"] == 7  # the other seven bots
+    assert client.get(f"/profiles/{p2}/memories").json() == []
 
 
 def test_unknown_profile_has_no_memories(client):

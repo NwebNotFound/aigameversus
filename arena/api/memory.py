@@ -80,6 +80,9 @@ class ResetRequest(BaseModel):
     profile_id: UUID | None = Field(
         None, description="Only what this player remembers; null: every player's memory"
     )
+    confirm: bool = Field(
+        False, description="Must be true to forget every player's memory (no profile_id)"
+    )
 
 
 class ResetOut(BaseModel):
@@ -94,5 +97,11 @@ async def reset_memory(request: Request, reset: ResetRequest) -> ResetOut:
     Ratings and statistics stay. A match that was already remembered is not
     remembered again.
     """
+    if reset.profile_id is None and not reset.confirm:
+        raise HTTPException(
+            status_code=422,
+            detail='Forgetting the memory of every player needs "confirm": true; '
+            "it cannot be undone.",
+        )
     done = await MemoryStore(request.app.state.pool).reset(reset.profile_id)
     return ResetOut(relationships=done.relationships, memories=done.memories)
