@@ -75,3 +75,46 @@ def test_malformed_request_is_a_422():
     )
 
     assert response.status_code == 422
+
+
+def test_templates_give_their_roles_for_the_table_size():
+    templates = {t["id"]: t for t in client.get("/games/werewolf/templates?players=9").json()}
+
+    assert list(templates) == ["classic", "duesterwald", "chaos", "random_balanced"]
+    classic = templates["classic"]
+    assert classic["name"] == "Klassisch"
+    assert classic["selection"] == {
+        "werewolf": 3,
+        "seer": 1,
+        "witch": 1,
+        "hunter": 1,
+        "villager": 3,
+    }
+    assert (
+        classic["balance"]
+        == client.post(
+            "/games/werewolf/selection/validate",
+            json={"roles": classic["selection"], "player_count": 9},
+        ).json()["balance"]
+    )
+    assert sum(templates["duesterwald"]["selection"].values()) == 9
+
+
+def test_template_that_does_not_fit_the_table_has_no_selection():
+    templates = {t["id"]: t for t in client.get("/games/werewolf/templates?players=8").json()}
+
+    assert templates["chaos"]["min_players"] == 14
+    assert templates["chaos"]["selection"] is None
+    assert templates["chaos"]["balance"] is None
+    assert templates["random_balanced"] == {
+        "id": "random_balanced",
+        "name": templates["random_balanced"]["name"],
+        "min_players": 6,
+        "random": True,
+        "selection": None,
+        "balance": None,
+    }
+
+
+def test_templates_need_a_table_size():
+    assert client.get("/games/werewolf/templates").status_code == 422
