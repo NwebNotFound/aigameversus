@@ -58,7 +58,8 @@ export function parseForm(form: FormData, games: GameInfo[], models: string[] = 
 		} else if (modelSeats.some((seat) => !models.includes(seat))) {
 			errors.seats = 'Choose a model from the list for every seat.';
 		} else if (modelSeats.length !== seats.length) {
-			errors.seats = 'Choose a model for every seat, or a bot for every seat: no mixed tables yet.';
+			errors.seats =
+				'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.';
 		} else if (Number.isInteger(players) && seats.length !== players) {
 			errors.seats = 'Choose one model per player.';
 		} else {

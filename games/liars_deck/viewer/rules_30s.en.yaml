@@ -1,0 +1,11 @@
+title: Liar's Deck in 30 seconds
+lines:
+  - "Liar's Deck is a bluffing card game for 2 to 4 players. The goal: be the last player alive."
+  - "Every round each player gets 5 cards, and one card kind is named the table card: king, queen or ace."
+  - "On your turn you put 1 to 3 cards face down and say they are all the table card. You are allowed to lie."
+  - "Or you call 'Liar!' and doubt the last player's cards. Those cards are turned over."
+  - "If one of them is not the table card (jokers count as the table card), the liar must pull the trigger. If they were all true, the caller must."
+  - "Each player has a revolver with 6 chambers and one live bullet in a secret spot. Every shot moves it one chamber on, so the risk grows: 1 in 6, then 1 in 5, and so on."
+  - "A live shot knocks the player out. Then a new round starts with new cards and a new table card."
+  - "Devil card variant: if a call reveals the devil card, everyone except the player who played it pulls the trigger at the same time."
+  - "Watch for who bluffs a lot, who calls a lot, and whose revolver is about to fire."

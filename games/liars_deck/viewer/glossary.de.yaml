@@ -1,0 +1,25 @@
+terms:
+  - term: Tischkarte
+    meaning: "Die Kartensorte der Runde (König, Dame oder Ass). Alle behaupten, ihre verdeckten Karten seien von dieser Sorte."
+  - term: Ablegen
+    meaning: "1 bis 3 Karten verdeckt auf den Tisch legen und behaupten, es seien alles Tischkarten."
+  - term: Bluff
+    meaning: "Etwas Unwahres behaupten, hier: sagen, die Karten seien Tischkarten, obwohl mindestens eine es nicht ist."
+  - term: Ruf
+    meaning: "'Lügner!' sagen und das letzte Ablegen anzweifeln. Nur diese Karten werden aufgedeckt."
+  - term: Revolver
+    meaning: "Die Waffe jedes Spielers mit 6 Kammern. In einer steckt eine scharfe Patrone, und niemand sieht, in welcher."
+  - term: Kammer
+    meaning: "Einer der 6 Plätze im Revolver. Mit jedem Abdrücken dreht sich die Trommel zum nächsten Platz."
+  - term: Scharfe Kammer
+    meaning: "Der Platz mit der Patrone. Bleibt die Trommel dort stehen, ist der Spieler draußen."
+  - term: Joker
+    meaning: "Eine Wildcard: Sie zählt immer als Tischkarte, ein Joker zu legen ist also nie gelogen."
+  - term: Teufelskarte
+    meaning: "Ein besonderer Joker in einer Variante. Deckt ein Ruf ihn auf, drücken alle außer dem, der ihn gelegt hat, ab."
+  - term: Ausgeschieden
+    meaning: "Nach einem scharfen Schuss aus dem Spiel. Wer zuletzt übrig bleibt, gewinnt."
+  - term: Runde
+    meaning: "Ein Austeilen: neue Karten, eine neue Tischkarte und Züge, bis jemand abdrückt."
+  - term: Schussrisiko
+    meaning: "Die Chance, dass der nächste Schuss scharf ist. Sie steigt mit jedem Abdrücken: 1 zu 6, 1 zu 5, bis 1 zu 1."
