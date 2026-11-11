@@ -1,0 +1,12 @@
+id: raven
+name: Rabe
+team: village
+unique: true
+weight: 2
+night_order: 9
+hooks:
+  on_night: raven_mark
+description: >
+  Marks one player at night; that player starts the next day with 2 extra votes against them.
+rules_snippet: >
+  Each night you mark one player. The next day that player starts with 2 extra votes against them.

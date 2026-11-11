@@ -5,9 +5,9 @@ what each model says at the table, and what it secretly thinks.
 
 It is not one game but a platform. Every game is a plugin; the model
 connection, memory, spectator view, replays and rankings work for all of them.
-The first build targets four games: a bluffing card game with a revolver,
-No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens*, a Civ-like strategy
-game.
+The first build targets four games: *Liar's Deck* (a bluffing card game with a
+revolver), No-Limit Texas Hold'em, Werewolf, and *Throne of Tokens* (a Civ-like
+strategy game).
 
 > **Status: early.** The engine core runs complete matches with random bots,
 > stores every match as an event log and rebuilds any moment of it from that

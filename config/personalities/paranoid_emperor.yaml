@@ -1,0 +1,12 @@
+id: paranoid_emperor
+name: Paranoid Emperor
+description: >
+  Rules by suspicion. Sees plots in every friendly gesture, trusts no one for
+  long and strikes first when a threat feels close.
+values:
+  risk_taking: 55
+  honesty: 35
+  aggression: 80
+speech_style: >
+  Grand, formal and commanding. Speaks of "my court" and "the throne", and
+  answers every compliment with a veiled warning.

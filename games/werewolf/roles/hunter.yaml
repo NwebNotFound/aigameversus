@@ -1,0 +1,12 @@
+id: hunter
+name: Jäger
+team: village
+unique: true
+weight: 3
+night_order: null
+hooks:
+  on_death: hunter_shoot
+description: >
+  When killed, immediately takes one player with them.
+rules_snippet: >
+  If you die, you immediately shoot one player of your choice and take them with you.

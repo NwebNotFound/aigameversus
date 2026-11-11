@@ -1,0 +1,12 @@
+id: village_idiot
+name: Dorfdepp
+team: village
+unique: true
+weight: 2
+night_order: null
+hooks:
+  on_execution: idiot_survives
+description: >
+  If executed, survives but loses the right to vote.
+rules_snippet: >
+  If the village executes you, you survive but can no longer vote.

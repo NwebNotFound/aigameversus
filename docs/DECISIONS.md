@@ -1,8 +1,9 @@
 # Decisions
 
 Decisions taken where [DESIGN.md](DESIGN.md) is open, or where this project
-deliberately differs from it. `DESIGN.md` is kept verbatim as the original
-spec; where the two disagree, this file wins.
+deliberately differs from it. `DESIGN.md` is kept as the original spec, apart
+from the author line and the game title (D-018); where the two disagree, this
+file wins.
 
 Each entry: date, decision, why, alternatives considered.
 
@@ -214,7 +215,21 @@ Each entry: date, decision, why, alternatives considered.
   tests independent of each other and of development data.
 - **Alternatives:** Mocking the driver; an in-memory fake store; testcontainers.
 
-## D-018 · Throne of Tokens data: layout and loader
+## D-018 · The bluff card game is called Liar's Deck
+
+- **Date:** 2026-11-11
+- **Decision:** The game's public name is "Liar's Deck" everywhere: README, UI,
+  docs, and the game id (`liars_deck`, package `games/liars_deck/`). The spec
+  used the title of the commercial game that inspired it as a working title;
+  `docs/DESIGN.md` was edited to the new name. Code refers to the game by its
+  id, and the display name is defined in exactly one place, so a later rename
+  is a one-line change.
+- **Why:** Decided by the project owner. The project carries no title,
+  characters or assets of an existing game.
+- **Alternatives:** Keeping the working title; a different title, which
+  remains possible because of the single definition.
+
+## D-019 · Throne of Tokens data: layout and loader
 
 - **Date:** 2026-11-11
 - **Decision:** Content lives in `games/civ/data/` (events in
@@ -231,7 +246,7 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** hand-written JSON schemas validated with `jsonschema`;
   one file per unit and building; id-keyed mappings.
 
-## D-019 · Throne of Tokens values the spec leaves open
+## D-020 · Throne of Tokens values the spec leaves open
 
 - **Date:** 2026-11-11
 - **Decision:** Starting values, all in the data files and meant to be tuned:
