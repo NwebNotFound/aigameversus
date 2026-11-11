@@ -49,6 +49,7 @@ def test_devil_card_is_data():
         "revealed_on_liar_call",
         1,
     )
+    assert devil.replaces_normal_shot is True
 
 
 def broken(tmp_path: Path, **changes) -> Path:
@@ -69,6 +70,19 @@ def broken(tmp_path: Path, **changes) -> Path:
         ({"id": "broken", "hand_size": 6}, "too small"),
         ({"id": "broken", "surprise": True}, "surprise"),
         ({"id": "other"}, "must match the file name"),
+        (
+            {
+                "id": "broken",
+                "devil_card": {
+                    "card": "joker",
+                    "count": 3,
+                    "trigger": "revealed_on_liar_call",
+                    "effect": "all_others_shoot",
+                    "replaces_normal_shot": True,
+                },
+            },
+            "devil_card.count",
+        ),
     ],
 )
 def test_broken_variant_is_rejected_readably(tmp_path, changes, fragment):

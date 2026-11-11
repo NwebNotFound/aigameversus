@@ -55,13 +55,18 @@
           "const": "all_others_shoot",
           "title": "Effect",
           "type": "string"
+        },
+        "replaces_normal_shot": {
+          "title": "Replaces Normal Shot",
+          "type": "boolean"
         }
       },
       "required": [
         "card",
         "count",
         "trigger",
-        "effect"
+        "effect",
+        "replaces_normal_shot"
       ],
       "title": "DevilCard",
       "type": "object"

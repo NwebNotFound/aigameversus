@@ -21,7 +21,7 @@ You are one of 2-4 players at a table. Goal: be the last player alive.
 - A player with no cards waits for the next round and cannot be accused, except for their last play.
 - If only one player still holds cards, they must check the last play: they call "Liar!" automatically.
 - With fewer than 4 players, some cards stay in the draw pile.
-- Variant "devil card": one joker is the devil card. If a "Liar!" call reveals it, every other player pulls the trigger at the same time. The match settings tell you if this variant is active.
+- Variant "devil card": one joker is the devil card. If a "Liar!" call reveals it, every living player except the one who played it (the caller included) pulls the trigger at the same time. The normal shot of that round does not happen. The match settings tell you if this variant is active.
 
 ## Tools
 - `play_cards(card_ids, claim_text)`: play 1-3 of your cards face down; `claim_text` is optional.

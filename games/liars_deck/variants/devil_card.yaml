@@ -2,7 +2,8 @@ id: devil_card
 name: Devil card
 description: >
   Like base, but one joker is the devil card. If it is revealed by a
-  "Liar!" call, every other player pulls the trigger at the same time.
+  "Liar!" call, every living player except the one who played it pulls the
+  trigger at the same time, and the normal shot of that round is skipped.
 players: {min: 2, max: 4}
 deck: {kings: 6, queens: 6, aces: 6, jokers: 2}
 hand_size: 5
@@ -12,4 +13,8 @@ devil_card:
   card: joker       # the devil card is one of the jokers in the deck
   count: 1
   trigger: revealed_on_liar_call
+  # all_others_shoot: every living player except the one who played the devil
+  # card (the caller included) shoots at the same time.
   effect: all_others_shoot
+  # true: the normal shot (liar or wrong caller) does not happen this round.
+  replaces_normal_shot: true

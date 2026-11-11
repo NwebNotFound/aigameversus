@@ -50,6 +50,7 @@ class DevilCard(_Strict):
     count: int = Field(ge=1)
     trigger: Literal["revealed_on_liar_call"]
     effect: Literal["all_others_shoot"]
+    replaces_normal_shot: bool
 
 
 class Variant(_Strict):
