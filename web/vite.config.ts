@@ -13,7 +13,7 @@ export default defineConfig({
 			// A Node server, so pages can call the arena API server-side (D-030).
 			adapter: adapter(),
 			// Form posts are refused from any origin but ORIGIN (CSRF check). The
-			// local stack answers on both names of this machine (D-054).
+			// local stack answers on both names of this machine (D-065).
 			csrf: { trustedOrigins: ['http://127.0.0.1:3100', 'http://localhost:3100'] }
 		})
 	],

@@ -1121,7 +1121,6 @@ Each entry: date, decision, why, alternatives considered.
   the numbers up (an old log would change its meaning when a number is
   tuned); one event per city and round.
 
-
 ## D-058 · Match controls: pause between turns, abort as its own status
 
 - **Date:** 2026-11-11
@@ -1231,7 +1230,7 @@ Each entry: date, decision, why, alternatives considered.
   custom server around the adapter's handler); browser calls to the arena with CORS; spoiler marks in each
   `render_spec`; boards built from the events in the browser.
 
-## D-054 · New-match form: bot seats now, models and cost limit shown for later
+## D-065 · New-match form: bot seats now, models and cost limit shown for later
 
 - **Date:** 2026-11-11
 - **Decision:**
