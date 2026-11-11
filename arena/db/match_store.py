@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from arena.engine.types import Placement, PlayerId
 
-Status = Literal["running", "finished", "failed", "interrupted"]
+Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 
 _COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements"
 

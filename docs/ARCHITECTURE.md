@@ -26,7 +26,7 @@ flowchart LR
 
 | Block | Where | State |
 | --- | --- | --- |
-| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog), `arena/api/matches.py` and `live.py` (start, list and stream matches), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats, pause and speed controls planned |
+| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog), `arena/api/matches.py` and `live.py` (start, list, stream and control matches, board and cost), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats planned |
 | 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation and fog of war (`games/civ`), no plugin yet |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |
@@ -165,7 +165,7 @@ sequenceDiagram
         L->>D: append the events of the turn
         L-->>C: the events, one JSON object each, with seq
     end
-    L->>D: UPDATE matches (finished + placements, or failed)
+    L->>D: UPDATE matches (finished + placements, failed or aborted)
     A-->>C: close 1000
 ```
 
@@ -177,6 +177,15 @@ sequenceDiagram
   them `interrupted`; their stored turns stay readable.
 - At most `MAX_RUNNING` (10) matches run at a time; `POST /matches` answers
   429 beyond that. A match that is not over at its turn limit ends `failed`.
+- A spectator controls a running match: `POST /matches/{id}/pause` and
+  `/resume`, `PUT /matches/{id}/speed {turn_delay}`, `POST /matches/{id}/abort`;
+  `GET /matches/{id}/control` reads the state. A paused match stops after its
+  turn is stored, before the next turn asks anyone. A new speed applies to the
+  wait that has begun. An aborted match is cancelled and closed `aborted`; its
+  log stays. A match that is not running answers 409.
+- `GET /matches/{id}/board` is the game's `render_spec` of the state after the
+  stored log (`null` for a game without one), `GET /matches/{id}/cost` the
+  ledger of the match per player.
 - `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
   its own process and prints the events.
 - Games come from `arena/games.py`: one plugin per folder `games/<id>/` with a

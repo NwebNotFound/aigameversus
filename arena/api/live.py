@@ -4,6 +4,8 @@ import asyncio
 import logging
 import random
 from collections.abc import AsyncIterator, Mapping, Sequence
+from contextlib import suppress
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -11,6 +13,7 @@ import asyncpg
 
 from arena.agents.random_bot import random_bots
 from arena.db.event_store import EventStore
+from arena.db.ledger import Ledger
 from arena.db.match_store import MatchRecord, MatchStore
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
@@ -25,14 +28,48 @@ class ArenaBusy(Exception):
     """The server already plays as many matches as it does at a time."""
 
 
+class NotRunning(Exception):
+    """The match is not being played by this server (it ended, or never ran here)."""
+
+
+@dataclass(frozen=True)
+class Control:
+    """How a running match is being played right now."""
+
+    paused: bool
+    turn_delay: float
+
+
 class _Running:
     """A match of this process and how much of its log spectators may read."""
 
-    def __init__(self, match: Match):
+    def __init__(self, match: Match, turn_delay: float):
         self.match = match
         self.published = 0  # events of completed turns, all of them stored
         self.over = False
         self.changed = asyncio.Condition()
+        self.turn_delay = turn_delay
+        self.resumed = asyncio.Event()  # cleared while paused
+        self.resumed.set()
+        self.aborted = False
+        self.task: asyncio.Task | None = None
+        self._delay_changed = asyncio.Event()
+
+    def control(self) -> Control:
+        return Control(paused=not self.resumed.is_set(), turn_delay=self.turn_delay)
+
+    async def wait_delay(self) -> None:
+        """Wait `turn_delay` seconds from now, the delay as it is set when it runs out."""
+        loop = asyncio.get_running_loop()
+        since = loop.time()
+        while (left := since + self.turn_delay - loop.time()) > 0:
+            self._delay_changed.clear()
+            with suppress(TimeoutError):
+                await asyncio.wait_for(self._delay_changed.wait(), left)
+
+    def set_delay(self, turn_delay: float) -> None:
+        self.turn_delay = turn_delay
+        self._delay_changed.set()
 
     async def publish(self, count: int | None = None) -> None:
         """Make the first `count` events readable; without a count, say that no more will come."""
@@ -51,6 +88,7 @@ class LiveMatches:
         self.games = games
         self.matches = MatchStore(pool)
         self._events = EventStore(pool)
+        self.ledger = Ledger(pool)
         self._running: dict[UUID, _Running] = {}
         self._tasks: set[asyncio.Task] = set()
 
@@ -75,9 +113,10 @@ class LiveMatches:
 
         async def sink(first_seq: int, events: Sequence[Event]) -> None:
             if first_seq:
-                await asyncio.sleep(turn_delay)
+                await running.wait_delay()
             await self._events.append(match_id, first_seq, events)
             await running.publish(first_seq + len(events))
+            await running.resumed.wait()  # a paused match stops here, between two turns
 
         match = Match(
             plugin, random_bots(plugin, players, seed), seed=seed, settings=settings, sink=sink
@@ -87,7 +126,7 @@ class LiveMatches:
                 f"{MAX_RUNNING} matches are running, the most this server plays at a time. "
                 "Try again when one has ended."
             )
-        running = _Running(match)
+        running = _Running(match, turn_delay)
         # The place is taken before the first await, so two requests cannot share the last one.
         self._running[match_id] = running
         try:
@@ -96,6 +135,7 @@ class LiveMatches:
             del self._running[match_id]
             raise
         task = asyncio.create_task(self._play(match_id, running))
+        running.task = task
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return record
@@ -104,12 +144,52 @@ class LiveMatches:
         try:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
+        except asyncio.CancelledError:
+            if not running.aborted:
+                raise  # the server shuts down: the next start marks the match interrupted
+            await self.matches.close(match_id, "aborted")
         except Exception:
             log.exception("Match %s failed", match_id)
             await self.matches.close(match_id, "failed")
         finally:
             del self._running[match_id]
             await running.publish()
+
+    def _get(self, match_id: UUID) -> _Running:
+        running = self._running.get(match_id)
+        if running is None:
+            raise NotRunning("The match is not running, so it cannot be controlled.")
+        return running
+
+    def control(self, match_id: UUID) -> Control:
+        """Whether a running match is paused, and its delay between turns."""
+        return self._get(match_id).control()
+
+    def pause(self, match_id: UUID) -> Control:
+        """Stop the match after its current turn, until `resume`."""
+        running = self._get(match_id)
+        running.resumed.clear()
+        return running.control()
+
+    def resume(self, match_id: UUID) -> Control:
+        running = self._get(match_id)
+        running.resumed.set()
+        return running.control()
+
+    def set_delay(self, match_id: UUID, turn_delay: float) -> Control:
+        """Seconds to wait after each turn, from now on: also a wait that has begun follows it."""
+        running = self._get(match_id)
+        running.set_delay(turn_delay)
+        return running.control()
+
+    async def abort(self, match_id: UUID) -> None:
+        """Stop the match for good. Its log stays; its record says `aborted`."""
+        running = self._get(match_id)
+        running.aborted = True
+        running.resumed.set()
+        assert running.task is not None
+        running.task.cancel()
+        await asyncio.gather(running.task, return_exceptions=True)
 
     async def log(self, match_id: UUID) -> list[Event]:
         """The log of a match so far: its completed turns."""
