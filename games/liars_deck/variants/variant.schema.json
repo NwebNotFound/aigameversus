@@ -1,0 +1,191 @@
+{
+  "$defs": {
+    "Deck": {
+      "additionalProperties": false,
+      "properties": {
+        "kings": {
+          "minimum": 0,
+          "title": "Kings",
+          "type": "integer"
+        },
+        "queens": {
+          "minimum": 0,
+          "title": "Queens",
+          "type": "integer"
+        },
+        "aces": {
+          "minimum": 0,
+          "title": "Aces",
+          "type": "integer"
+        },
+        "jokers": {
+          "minimum": 0,
+          "title": "Jokers",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kings",
+        "queens",
+        "aces",
+        "jokers"
+      ],
+      "title": "Deck",
+      "type": "object"
+    },
+    "DevilCard": {
+      "additionalProperties": false,
+      "properties": {
+        "card": {
+          "const": "joker",
+          "title": "Card",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "trigger": {
+          "const": "revealed_on_liar_call",
+          "title": "Trigger",
+          "type": "string"
+        },
+        "effect": {
+          "const": "all_others_shoot",
+          "title": "Effect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "card",
+        "count",
+        "trigger",
+        "effect"
+      ],
+      "title": "DevilCard",
+      "type": "object"
+    },
+    "PlayRule": {
+      "additionalProperties": false,
+      "properties": {
+        "min_cards": {
+          "minimum": 1,
+          "title": "Min Cards",
+          "type": "integer"
+        },
+        "max_cards": {
+          "minimum": 1,
+          "title": "Max Cards",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min_cards",
+        "max_cards"
+      ],
+      "title": "PlayRule",
+      "type": "object"
+    },
+    "PlayerRange": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "minimum": 2,
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "minimum": 2,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "title": "PlayerRange",
+      "type": "object"
+    },
+    "Revolver": {
+      "additionalProperties": false,
+      "properties": {
+        "chambers": {
+          "minimum": 1,
+          "title": "Chambers",
+          "type": "integer"
+        },
+        "live": {
+          "minimum": 1,
+          "title": "Live",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "chambers",
+        "live"
+      ],
+      "title": "Revolver",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "players": {
+      "$ref": "#/$defs/PlayerRange"
+    },
+    "deck": {
+      "$ref": "#/$defs/Deck"
+    },
+    "hand_size": {
+      "minimum": 1,
+      "title": "Hand Size",
+      "type": "integer"
+    },
+    "play": {
+      "$ref": "#/$defs/PlayRule"
+    },
+    "revolver": {
+      "$ref": "#/$defs/Revolver"
+    },
+    "devil_card": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DevilCard"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "description",
+    "players",
+    "deck",
+    "hand_size",
+    "play",
+    "revolver"
+  ],
+  "title": "Variant",
+  "type": "object"
+}

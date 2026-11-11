@@ -1,0 +1,15 @@
+id: devil_card
+name: Devil card
+description: >
+  Like base, but one joker is the devil card. If it is revealed by a
+  "Liar!" call, every other player pulls the trigger at the same time.
+players: {min: 2, max: 4}
+deck: {kings: 6, queens: 6, aces: 6, jokers: 2}
+hand_size: 5
+play: {min_cards: 1, max_cards: 3}
+revolver: {chambers: 6, live: 1}
+devil_card:
+  card: joker       # the devil card is one of the jokers in the deck
+  count: 1
+  trigger: revealed_on_liar_call
+  effect: all_others_shoot
