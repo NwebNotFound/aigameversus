@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "Terrain": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "English display name",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "name_de": {
+          "description": "German display name",
+          "minLength": 1,
+          "title": "Name De",
+          "type": "string"
+        },
+        "yields": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Per round, for the working city",
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Yields",
+          "type": "object"
+        },
+        "movement_cost": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Movement points to enter; null = impassable",
+          "title": "Movement Cost"
+        },
+        "defense": {
+          "default": 0.0,
+          "description": "Defender bonus on this tile",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Defense",
+          "type": "number"
+        },
+        "crossing_extra_cost": {
+          "default": 0,
+          "description": "Extra movement points to cross (rivers)",
+          "minimum": 0,
+          "title": "Crossing Extra Cost",
+          "type": "integer"
+        },
+        "attacker_modifier": {
+          "default": 0.0,
+          "description": "Applied to armies attacking this tile",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Attacker Modifier",
+          "type": "number"
+        },
+        "rare": {
+          "default": false,
+          "title": "Rare",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "name_de",
+        "movement_cost"
+      ],
+      "title": "Terrain",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "terrains": {
+      "items": {
+        "$ref": "#/$defs/Terrain"
+      },
+      "minItems": 1,
+      "title": "Terrains",
+      "type": "array"
+    }
+  },
+  "required": [
+    "terrains"
+  ],
+  "title": "TerrainFile",
+  "type": "object"
+}

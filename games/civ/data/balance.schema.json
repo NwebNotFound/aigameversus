@@ -1,0 +1,439 @@
+{
+  "$defs": {
+    "ArmyBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "max_units": {
+          "minimum": 1,
+          "title": "Max Units",
+          "type": "integer"
+        },
+        "fortify_defense": {
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Fortify Defense",
+          "type": "number"
+        },
+        "starving_units_lost_per_round": {
+          "minimum": 0,
+          "title": "Starving Units Lost Per Round",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_units",
+        "fortify_defense",
+        "starving_units_lost_per_round"
+      ],
+      "title": "ArmyBalance",
+      "type": "object"
+    },
+    "BuildingSlots": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minimum": 0,
+          "title": "Base",
+          "type": "integer"
+        },
+        "population_divisor": {
+          "minimum": 1,
+          "title": "Population Divisor",
+          "type": "integer"
+        },
+        "max": {
+          "minimum": 1,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "population_divisor",
+        "max"
+      ],
+      "title": "BuildingSlots",
+      "type": "object"
+    },
+    "CityBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "base_yields": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Base Yields",
+          "type": "object"
+        },
+        "work_radius": {
+          "minimum": 1,
+          "title": "Work Radius",
+          "type": "integer"
+        },
+        "expanded_work_radius": {
+          "minimum": 1,
+          "title": "Expanded Work Radius",
+          "type": "integer"
+        },
+        "expanded_at_population": {
+          "minimum": 1,
+          "title": "Expanded At Population",
+          "type": "integer"
+        },
+        "growth_food": {
+          "minimum": 1,
+          "title": "Growth Food",
+          "type": "integer"
+        },
+        "food_per_population": {
+          "minimum": 0,
+          "title": "Food Per Population",
+          "type": "integer"
+        },
+        "building_slots": {
+          "$ref": "#/$defs/BuildingSlots"
+        },
+        "focus_yields": {
+          "additionalProperties": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ],
+            "type": "string"
+          },
+          "description": "Which resource each population adds under a city focus",
+          "propertyNames": {
+            "enum": [
+              "growth",
+              "production",
+              "military"
+            ]
+          },
+          "title": "Focus Yields",
+          "type": "object"
+        }
+      },
+      "required": [
+        "base_yields",
+        "work_radius",
+        "expanded_work_radius",
+        "expanded_at_population",
+        "growth_food",
+        "food_per_population",
+        "building_slots",
+        "focus_yields"
+      ],
+      "title": "CityBalance",
+      "type": "object"
+    },
+    "CombatBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "random_factor": {
+          "$ref": "#/$defs/Range"
+        },
+        "ranged_rounds": {
+          "minimum": 0,
+          "title": "Ranged Rounds",
+          "type": "integer"
+        },
+        "winner_loss_factor": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Winner Loss Factor",
+          "type": "number"
+        }
+      },
+      "required": [
+        "random_factor",
+        "ranged_rounds",
+        "winner_loss_factor"
+      ],
+      "title": "CombatBalance",
+      "type": "object"
+    },
+    "ConquestBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "population_loss": {
+          "minimum": 0,
+          "title": "Population Loss",
+          "type": "integer"
+        },
+        "capital_lost_production_modifier": {
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Capital Lost Production Modifier",
+          "type": "number"
+        },
+        "capital_lost_rounds": {
+          "minimum": 1,
+          "title": "Capital Lost Rounds",
+          "type": "integer"
+        },
+        "pillage_loot_share": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pillage Loot Share",
+          "type": "number"
+        }
+      },
+      "required": [
+        "population_loss",
+        "capital_lost_production_modifier",
+        "capital_lost_rounds",
+        "pillage_loot_share"
+      ],
+      "title": "ConquestBalance",
+      "type": "object"
+    },
+    "MapBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "tiles": {
+          "$ref": "#/$defs/Range"
+        },
+        "nations": {
+          "$ref": "#/$defs/Range"
+        },
+        "fog_vision_radius": {
+          "minimum": 0,
+          "title": "Fog Vision Radius",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tiles",
+        "nations",
+        "fog_vision_radius"
+      ],
+      "title": "MapBalance",
+      "type": "object"
+    },
+    "Range": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "minimum": 0,
+          "title": "Min",
+          "type": "number"
+        },
+        "max": {
+          "minimum": 0,
+          "title": "Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "title": "Range",
+      "type": "object"
+    },
+    "StartBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Resources",
+          "type": "object"
+        },
+        "units": {
+          "items": {
+            "$ref": "#/$defs/UnitCount"
+          },
+          "minItems": 1,
+          "title": "Units",
+          "type": "array"
+        }
+      },
+      "required": [
+        "resources",
+        "units"
+      ],
+      "title": "StartBalance",
+      "type": "object"
+    },
+    "TradeBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "base_fee": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Base Fee",
+          "type": "number"
+        },
+        "low_reputation_below": {
+          "title": "Low Reputation Below",
+          "type": "integer"
+        },
+        "low_reputation_extra_fee": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Low Reputation Extra Fee",
+          "type": "number"
+        }
+      },
+      "required": [
+        "base_fee",
+        "low_reputation_below",
+        "low_reputation_extra_fee"
+      ],
+      "title": "TradeBalance",
+      "type": "object"
+    },
+    "TurnBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "info_tool_calls": {
+          "minimum": 0,
+          "title": "Info Tool Calls",
+          "type": "integer"
+        },
+        "diplomacy_passes": {
+          "minimum": 1,
+          "title": "Diplomacy Passes",
+          "type": "integer"
+        },
+        "resolution_order": {
+          "items": {
+            "enum": [
+              "trade",
+              "build_and_train",
+              "movement",
+              "combat",
+              "production",
+              "growth",
+              "events"
+            ],
+            "type": "string"
+          },
+          "title": "Resolution Order",
+          "type": "array"
+        }
+      },
+      "required": [
+        "info_tool_calls",
+        "diplomacy_passes",
+        "resolution_order"
+      ],
+      "title": "TurnBalance",
+      "type": "object"
+    },
+    "UnitCount": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "unit",
+        "count"
+      ],
+      "title": "UnitCount",
+      "type": "object"
+    },
+    "WarWeariness": {
+      "additionalProperties": false,
+      "properties": {
+        "production_modifier_per_round": {
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Production Modifier Per Round",
+          "type": "number"
+        },
+        "max_production_modifier": {
+          "description": "Relative change: 0.25 = +25 %",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "Max Production Modifier",
+          "type": "number"
+        }
+      },
+      "required": [
+        "production_modifier_per_round",
+        "max_production_modifier"
+      ],
+      "title": "WarWeariness",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "map": {
+      "$ref": "#/$defs/MapBalance"
+    },
+    "start": {
+      "$ref": "#/$defs/StartBalance"
+    },
+    "city": {
+      "$ref": "#/$defs/CityBalance"
+    },
+    "army": {
+      "$ref": "#/$defs/ArmyBalance"
+    },
+    "combat": {
+      "$ref": "#/$defs/CombatBalance"
+    },
+    "conquest": {
+      "$ref": "#/$defs/ConquestBalance"
+    },
+    "war_weariness": {
+      "$ref": "#/$defs/WarWeariness"
+    },
+    "trade": {
+      "$ref": "#/$defs/TradeBalance"
+    },
+    "turn": {
+      "$ref": "#/$defs/TurnBalance"
+    }
+  },
+  "required": [
+    "map",
+    "start",
+    "city",
+    "army",
+    "combat",
+    "conquest",
+    "war_weariness",
+    "trade",
+    "turn"
+  ],
+  "title": "BalanceFile",
+  "type": "object"
+}

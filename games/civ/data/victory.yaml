@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=victory.schema.json
+# The first condition met ends the match.
+domination:
+  city_share: 0.5 # control at least this share of all cities
+
+economy:
+  gold: 500 # hold at least this much gold ...
+  hold_rounds: 5 # ... for this many rounds in a row
+  public_countdown: true
+
+round_limit:
+  rounds: 60
+  # score = cities * per_city + population * per_population
+  #       + gold / gold_divisor + reputation / reputation_divisor (each division rounded down)
+  score:
+    per_city: 10
+    per_population: 1
+    gold_divisor: 10
+    reputation_divisor: 5

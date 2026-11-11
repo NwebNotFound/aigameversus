@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "Counter": {
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "description": "Unit id this unit is strong against",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        },
+        "multiplier": {
+          "exclusiveMinimum": 1,
+          "title": "Multiplier",
+          "type": "number"
+        }
+      },
+      "required": [
+        "target",
+        "multiplier"
+      ],
+      "title": "Counter",
+      "type": "object"
+    },
+    "Unit": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "English display name",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "name_de": {
+          "description": "German display name",
+          "minLength": 1,
+          "title": "Name De",
+          "type": "string"
+        },
+        "cost": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Cost",
+          "type": "object"
+        },
+        "strength": {
+          "minimum": 0,
+          "title": "Strength",
+          "type": "integer"
+        },
+        "movement": {
+          "minimum": 1,
+          "title": "Movement",
+          "type": "integer"
+        },
+        "upkeep": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Per round",
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Upkeep",
+          "type": "object"
+        },
+        "counters": {
+          "items": {
+            "$ref": "#/$defs/Counter"
+          },
+          "title": "Counters",
+          "type": "array"
+        },
+        "trained_in": {
+          "anyOf": [
+            {
+              "description": "snake_case English id",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Building id required to train; null = any city",
+          "title": "Trained In"
+        },
+        "ranged": {
+          "default": false,
+          "title": "Ranged",
+          "type": "boolean"
+        },
+        "first_strike": {
+          "default": false,
+          "title": "First Strike",
+          "type": "boolean"
+        },
+        "city_defense": {
+          "default": 0.0,
+          "description": "Extra strength when defending a city",
+          "maximum": 10,
+          "minimum": -1,
+          "title": "City Defense",
+          "type": "number"
+        },
+        "vs_walls_multiplier": {
+          "default": 1.0,
+          "minimum": 1,
+          "title": "Vs Walls Multiplier",
+          "type": "number"
+        },
+        "founds_city": {
+          "default": false,
+          "title": "Founds City",
+          "type": "boolean"
+        },
+        "vision_bonus": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Vision Bonus",
+          "type": "integer"
+        },
+        "auto_retreat": {
+          "default": false,
+          "title": "Auto Retreat",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "name_de",
+        "cost",
+        "strength",
+        "movement",
+        "trained_in"
+      ],
+      "title": "Unit",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "units": {
+      "items": {
+        "$ref": "#/$defs/Unit"
+      },
+      "minItems": 1,
+      "title": "Units",
+      "type": "array"
+    }
+  },
+  "required": [
+    "units"
+  ],
+  "title": "UnitsFile",
+  "type": "object"
+}
