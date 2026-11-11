@@ -161,16 +161,36 @@ def test_command_refuses_models_without_its_ledger(
 def test_leaderboard_and_model_page_take_their_costs_from_the_ledger_database(
     server, database_url, other_database_url
 ):
-    play(database_url, ledger_url=other_database_url)
+    first = play(database_url, ledger_url=other_database_url)  # glm-flash in p1: 6000
+    asyncio.run(book(other_database_url, first, "p2", "deepseek-flash", 4000))
 
     with server(other_database_url) as client:
         board = {r["model_id"]: r for r in client.get("/leaderboard").json()["rows"]}
-        page = client.get("/models/glm-flash").json()
+        glm = client.get("/models/glm-flash").json()
+        deepseek = client.get("/models/deepseek-flash").json()
 
+    # Two seats of one match with different costs: each model gets its own seat's cost.
     assert board["glm-flash"]["cost_per_game_micro_eur"] == 2000  # 6000 over 3 rated games
-    assert page["usage"]["cost_total_micro_eur"] == 6000
-    games = {game["game_id"]: game["usage"] for game in page["games"]}
+    assert board["deepseek-flash"]["cost_per_game_micro_eur"] == 1333  # 4000 over 3
+    assert glm["usage"]["cost_total_micro_eur"] == 6000
+    assert deepseek["usage"]["cost_total_micro_eur"] == 4000
+    games = {game["game_id"]: game["usage"] for game in glm["games"]}
     assert games["liars_deck"]["cost_total_micro_eur"] == 6000
+
+
+async def book(ledger_url, match_id, player, model, cost):
+    pool = await connect(ledger_url)
+    try:
+        await pool.execute(
+            "INSERT INTO model_calls (match_id, player, model, called_at, cost_micro_eur) "
+            "VALUES ($1, $2, $3, now(), $4)",
+            match_id,
+            player,
+            model,
+            cost,
+        )
+    finally:
+        await pool.close()
 
 
 def test_without_its_ledger_costs_are_unknown_and_the_rest_still_shows(

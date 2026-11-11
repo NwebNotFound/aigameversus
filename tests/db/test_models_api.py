@@ -24,7 +24,7 @@ def play(database_url, ledger_url=None):
 
     glm-flash sits in seat p1, then in p2; it wins the first Liar's Deck match. Its calls cost
     6000 in the first match (booked in `ledger_url`, default the match database) and its
-    engine log has 9 accepted answers and 1 refused one.
+    engine log has 9 accepted answers and 1 refused one. Returns the id of that first match.
     """
 
     async def go():
@@ -66,10 +66,11 @@ def play(database_url, ledger_url=None):
                     kind,
                     {"player": "p1"},
                 )
+            return first
         finally:
             await pool.close()
 
-    asyncio.run(go())
+    return asyncio.run(go())
 
 
 def test_a_model_page_has_rating_cost_and_tool_errors_per_game_and_overall(database_url, client):
