@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.rng import derive_rng
 from arena.engine.types import MESSAGE, Action, Event, Placement, PlayerId, ToolSpec, TurnMode
+from games.poker import prompt
 from games.poker.betting import Street, side_pots, split
 from games.poker.cards import Card, Deck
 from games.poker.evaluator import best_hand, win_probabilities
@@ -148,12 +149,30 @@ class Poker(GamePlugin[PokerState]):
     max_turns = turn_bound(6, **DEFAULTS)
     turn_mode = TurnMode.SEQUENTIAL
 
+    # --- the prompt ----------------------------------------------------------
+
+    def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
+        """The prompt version of a match, recorded with it (see `prompt.py` next to this file)."""
+        return prompt.version_of(settings)
+
+    def rules(self, settings: Mapping[str, Any] | None = None) -> str:
+        return prompt.rules_text(prompt.version_of(settings))
+
+    def situation_summary(
+        self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
+    ) -> str | None:
+        """A short text for the top of the turn's prompt; only version p2 has one."""
+        if prompt.version_of(settings) == "poker-p1":
+            return None
+        return prompt.situation_summary(observation)
+
     # --- setup -------------------------------------------------------------
 
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> PokerState:
-        unknown = set(settings) - {*DEFAULTS, "duplicate"}
+        unknown = set(settings) - {*DEFAULTS, "duplicate", "prompt_version"}
         if unknown:
             raise ValueError(f"Unknown settings for poker: {sorted(unknown)}")
+        prompt.version_of(settings)  # refuses an unknown prompt version
         values = {key: settings.get(key, default) for key, default in DEFAULTS.items()}
         for key, value in values.items():
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
