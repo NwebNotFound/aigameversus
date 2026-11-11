@@ -61,7 +61,9 @@ class Role(_Model):
     weight: int
     night_order: int | None
     first_night_only: bool = False
+    hooks: dict[str, str] = {}  # hook name -> handler in games/werewolf/abilities.py
     description: str
+    rules_snippet: str = ""
 
     @property
     def hunts_with_wolves(self) -> bool:
