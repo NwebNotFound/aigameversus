@@ -81,11 +81,12 @@ test('a game sets the range of players and one seat per player', async ({ page }
 	await expect(page.getByTestId('seats').locator('li')).toHaveCount(2);
 });
 
-test('models, personalities and the cost limit are shown but not yet selectable', async ({
+test('without model seats on the server, models are listed but not selectable', async ({
 	page,
 	request
 }) => {
 	const setup = await (await request.get(`${ARENA}/setup`)).json();
+	test.skip(setup.model_seats, 'this server allows model seats');
 	await page.goto('/matches/new');
 
 	const seat = page.getByLabel('Player of p1');
@@ -93,12 +94,10 @@ test('models, personalities and the cost limit are shown but not yet selectable'
 	for (const model of setup.models) {
 		await expect(seat.locator(`option[value="${model.id}"]`)).toBeDisabled();
 	}
-	const personality = page.getByLabel('Personality of p1');
-	await expect(personality).toBeDisabled();
-	await expect(personality.locator('option')).toHaveCount(setup.personalities.length + 1);
-	const cost = page.getByLabel('Cost limit (€)');
-	await expect(cost).toBeDisabled();
-	await expect(cost).toHaveValue(String(setup.caps.match_eur));
+	await expect(page.getByLabel('Personality of p1')).toBeDisabled();
+	await expect(page.getByText('This server plays random bots only')).toBeVisible();
+	await expect(page.getByTestId('spend')).toHaveCount(0);
+	await expect(page.getByText('Bots cost nothing.')).toBeVisible();
 });
 
 test('a refused field is marked next to it and the form keeps what was entered', async ({

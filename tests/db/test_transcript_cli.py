@@ -31,7 +31,7 @@ def test_a_stored_match_is_printed_with_the_names_of_its_profiles(stored_match, 
     out = capsys.readouterr().out
     assert code == 0
     assert "Runde 1, Tischkarte:" in out
-    assert "Random Bot p1 (random-bot)" in out
+    assert "Random Bot p1" in out and "(random-bot)" not in out
     assert "{" not in out
 
 

@@ -9,6 +9,7 @@ import asyncpg
 from pydantic import BaseModel
 
 from arena.engine.types import Placement, PlayerId
+from arena.ratings.store import BOT_MODEL_ID
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
 Origin = Literal["played", "imported"]
@@ -123,9 +124,14 @@ class MatchStore:
         return {row["seat"]: (row["name"], row["model_id"]) for row in rows}
 
     async def seat_names(self, match_id: UUID) -> dict[str, str]:
-        """ "Name (model)" for each seat of a rated match; empty for a match that was not rated."""
+        """How each seat of a rated match is shown: a bot as "Random Bot p3", a model as its
+        profile name, with "(model)" added when the name says more than the model id (a model
+        with a personality). Empty for a match that was not rated."""
         profiles = await self.seat_profiles(match_id)
-        return {seat: f"{name} ({model})" for seat, (name, model) in profiles.items()}
+        return {
+            seat: name if model in (BOT_MODEL_ID, name) else f"{name} ({model})"
+            for seat, (name, model) in profiles.items()
+        }
 
     async def finished(self, limit: int = 100) -> list[MatchRecord]:
         """The newest finished matches, newest first."""

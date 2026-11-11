@@ -61,7 +61,7 @@ describe('parseForm', () => {
 		[
 			{ seat: [BOT, 'deepseek-flash', BOT] },
 			'seats',
-			'Models cannot take a seat yet; every seat is a random bot for now.'
+			'This server plays random bots only; models cannot take a seat here.'
 		]
 	])('refuses %o at its field', (change, field, message) => {
 		expect(parseForm(form({ ...LIARS, ...change }), GAMES)).toEqual({
@@ -126,6 +126,51 @@ describe('parseForm', () => {
 				ok: false,
 				errors: { roles: 'A role count is a whole number of 0 or more.' }
 			});
+		});
+	});
+
+	describe('model seats', () => {
+		const MODELS = ['deepseek-flash', 'qwen-flash'];
+		const THREE = { ...LIARS, seat: ['deepseek-flash', 'qwen-flash', 'deepseek-flash'] };
+
+		it('starts a match of models when the spend box is ticked', () => {
+			expect(parseForm(form({ ...THREE, confirm_spend: 'on' }), GAMES, MODELS)).toMatchObject({
+				ok: true,
+				match: {
+					players: 3,
+					models: ['deepseek-flash', 'qwen-flash', 'deepseek-flash'],
+					confirm_spend: true
+				}
+			});
+		});
+
+		it('refuses a match of models without the spend box', () => {
+			expect(parseForm(form(THREE), GAMES, MODELS)).toEqual({
+				ok: false,
+				errors: {
+					confirm_spend: 'A match of models spends real money: tick the box to start it.'
+				}
+			});
+		});
+
+		it.each([
+			[
+				[BOT, 'qwen-flash', BOT],
+				'Choose a model for every seat, or a bot for every seat: no mixed tables yet.'
+			],
+			[['qwen-flash', 'gpt-x', 'qwen-flash'], 'Choose a model from the list for every seat.']
+		])('refuses the seats %o', (seat, message) => {
+			expect(parseForm(form({ ...LIARS, seat, confirm_spend: 'on' }), GAMES, MODELS)).toEqual({
+				ok: false,
+				errors: { seats: message }
+			});
+		});
+
+		it('sends no models and no spend for a bot match', () => {
+			const parsed = parseForm(form({ ...LIARS, confirm_spend: 'on' }), GAMES, MODELS);
+
+			expect(parsed.ok && 'models' in parsed.match).toBe(false);
+			expect(parsed.ok && 'confirm_spend' in parsed.match).toBe(false);
 		});
 	});
 });
