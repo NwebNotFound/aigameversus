@@ -19,9 +19,10 @@ model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models, but nothing
 starts a match with a real model yet: the `arena` command and `POST /matches`
-seat random bots only, and there is no API key before phase 2. There is one
-playable game, High Card (`games/toy`). The arena API starts bot matches, lists
-them and streams their events over WebSocket, next to `GET /health` (it
+seat random bots only, and there is no API key before phase 2. Two games can
+be played: High Card (`games/toy`), the reference plugin, and Liar's Deck
+(`games/liars_deck`). The arena API starts bot matches, lists them and streams
+their events over WebSocket, next to `GET /health` (it
 migrates the database at startup), the leaderboard and the Werewolf setup
 endpoints. The worker is a heartbeat placeholder, the web UI (`web/`,
 SvelteKit) has a home page and placeholders for the other pages. Sections below
@@ -286,6 +287,7 @@ arena/
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
+  liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -450,7 +452,8 @@ uv run pytest tests/config
 
 One YAML file in
 `games/liars_deck/variants/<id>.yaml`, validated by `games/liars_deck/variants.py`
-(`load_variant`, `load_variants`; errors name file and field). The schema file
+(`load_variant`, `load_variants`; errors name file and field), and played by
+`games/liars_deck/plugin.py` (`settings={"variant": "<id>"}`). The schema file
 `variants/variant.schema.json` is generated from the models:
 
 ```bash
