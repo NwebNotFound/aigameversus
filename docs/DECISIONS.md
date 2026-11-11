@@ -1482,3 +1482,26 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** trust from the whole log (the seer's checks would reach
   every player); decay over time (not in the spec); notes for every match
   without a cap.
+
+## D-077 · Events as sentences, in the language of the match
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - The live view and replays show each event as a sentence
+    (`web/src/lib/event-text.ts`): one phrase per event type and game, in
+    English and German, and the final placements as "1st p4 · 2nd p2, p3".
+    The language is the match's `language` setting; English when it has none.
+  - An event without a phrase, or with data of a shape the phrase does not
+    expect, keeps its raw line (type and data). A "Raw events" toggle in the
+    Public column shows every line raw.
+  - Player ids, role ids and card ids are shown as stored (p3, white wolf,
+    K4); names come with player profiles in the prompt and the profile pages.
+  - A home card links to the new-match form with its game chosen only when
+    `GET /games` lists the game; otherwise it says "Coming soon". Throne of
+    Tokens therefore turns active when its plugin is installed.
+- **Why:** Spectators should read what happened, not event names; keeping
+  the raw form one click away helps whoever debugs a match.
+- **Alternatives:** sentences written by the plugins (puts UI text in the
+  game rules); a UI language switch independent of the match (the match
+  already has one); translated role names (they come from the role files and
+  would need a second source of truth).
