@@ -23,10 +23,10 @@ from uuid import UUID, uuid4
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
-from arena.config import display_name, load_config, missing_keys
-from arena.db.database import connect, migrate
+from arena.config import display_name, load_config, load_keys
+from arena.db.database import connect, ledger_url, migrate
 from arena.db.event_store import EventStore
-from arena.db.ledger import Ledger
+from arena.db.ledger import Ledger, LedgerUnavailable
 from arena.db.match_store import MatchStore, Seat
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
@@ -221,7 +221,7 @@ async def _play_models(
             f"unknown model {', '.join(unknown)}; config/models.yaml has: "
             f"{', '.join(config.models)}"
         )
-    if missing := missing_keys(config, model_ids):
+    if missing := load_keys(config, model_ids):
         raise _WrongCall(
             f"--models needs {', '.join(missing)} in the environment, the provider's API key. "
             "Nothing was sent or booked"
@@ -234,9 +234,14 @@ async def _play_models(
     seats = {f"p{seat}": model_id for seat, model_id in enumerate(model_ids, start=1)}
     match_id = uuid4()
     pool = await connect(url)
+    ledger_pool = pool if ledger_url(url) == url else await connect(ledger_url(url), min_size=0)
     try:
         await migrate(pool)
-        matches, log, ledger = MatchStore(pool), EventStore(pool), Ledger(pool)
+        matches, log, ledger = MatchStore(pool), EventStore(pool), Ledger(ledger_pool)
+        try:
+            await ledger.check(await matches.model_matches())
+        except LedgerUnavailable as down:
+            raise _WrongCall(f"{down} Nothing was sent or booked") from down
         budget = Budget(ledger, match_id, config)
 
         async def store_and_print(first_seq: int, events: Sequence[Event]) -> None:
@@ -259,6 +264,7 @@ async def _play_models(
                 player: Seat(name=display_name(config, model), model_id=model, kind="model")
                 for player, model in seats.items()
             },
+            prompt_version=plugin.prompt_version(match.settings),
         )
         print(f"{plugin.name} ({plugin.id}), match {match_id}, seed {match.seed}")
         print("Seats: " + "  ".join(f"{player} {model}" for player, model in seats.items()))
@@ -315,6 +321,8 @@ async def _play_models(
             return 1
         return 0 if placements is not None else STOPPED_AT_CAP
     finally:
+        if ledger_pool is not pool:
+            await ledger_pool.close()
         await pool.close()
 
 

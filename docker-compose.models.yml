@@ -1,0 +1,25 @@
+# Real models for the stack: model seats on, the key from a file, the spend
+# ledger in its own database. PAID CALLS, inside the caps of config/models.yaml.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.models.yml up -d --build
+#
+# Needs in .env (see docs/COSTS.md):
+#   LEDGER_DATABASE_URL     the ledger database as the arena container reaches it,
+#                           e.g. postgresql://arena:PASSWORD@host.docker.internal:5435/arena
+#   OPENROUTER_API_KEY_PATH a file outside the repository that holds only the key
+
+services:
+  arena:
+    environment:
+      ARENA_ALLOW_MODEL_SEATS: "1"
+      LEDGER_DATABASE_URL: ${LEDGER_DATABASE_URL:?set LEDGER_DATABASE_URL in .env, see docs/COSTS.md}
+      # Read at every start of a model match; the key never enters the environment of Compose.
+      OPENROUTER_API_KEY_FILE: /run/secrets/openrouter_api_key
+    secrets:
+      - openrouter_api_key
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+secrets:
+  openrouter_api_key:
+    file: ${OPENROUTER_API_KEY_PATH:?set OPENROUTER_API_KEY_PATH in .env, see docs/COSTS.md}

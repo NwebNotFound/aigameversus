@@ -27,7 +27,7 @@ flowchart LR
 | Block | Where | State |
 | --- | --- | --- |
 | 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (roles, templates per table size and the selection check for the new-match form), `arena/api/setup.py` (`GET /setup`: models, personalities, cost caps), `arena/api/matches.py` and `live.py` (start, list, stream and control matches, board and cost), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats planned |
-| 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation, fog of war and city economy (`games/civ`), no plugin yet |
+| 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation, fog of war, city economy and armies (`games/civ`), no plugin yet |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
 | 4. Memory and profiles | `arena/memory/`: `facts.py` (what each player saw others do, per game), `trust.py` (rules from `config/memory/trust.yaml`), `store.py` (relationships and match summaries in Postgres), `summary.py` (a match from one player's view), `block.py` (the memory a model brings to a match); `GET /profiles/{id}/relations` and `/memories`, `POST /memory/reset` (`arena/api/memory.py`), `arena memory reset` | built for API bot matches: trust and a summary after every remembered match, memory off per match; `ModelAgent` takes a memory block, but `arena run --models` does not build one yet |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
@@ -130,7 +130,9 @@ flowchart LR
 - `arena/db/event_store.py`: `EventStore.append(match_id, first_seq, events)` and
   `load(match_id)` on the `match_events` table.
 - `arena/db/ledger.py`: `Ledger.book(...)` and `settle(...)` on the
-  `model_calls` table, one row per model call with its cost.
+  `model_calls` table, one row per model call with its cost. The table may
+  live in a database of its own (`LEDGER_DATABASE_URL`); `Ledger.check` runs
+  before every model match ([COSTS.md](COSTS.md)).
 - `arena/db/match_store.py`: `MatchStore` on the `matches` table, one row per
   match started through the API: game, players, seed, settings, status,
   placements.

@@ -16,19 +16,27 @@ test("a bot's profile lists who it trusts and why", async ({ page, request }) =>
 		await request.get(`${ARENA}/leaderboard?game=werewolf&kind=all&group_bots=false`)
 	).json();
 	const bot = board.rows.find((row: { name: string }) => row.name === 'Random Bot p1');
-	const { relations } = await (
-		await request.get(`${ARENA}/profiles/${bot.profile_id}/relations`)
-	).json();
-	expect(relations.length).toBeGreaterThan(0);
+	// Random bots are one profile per seat, shared by every spec: a match another spec finishes
+	// meanwhile changes this profile's trust. So compare the page with an API read taken just
+	// before it, and read both again until they agree.
+	await expect(async () => {
+		const { relations } = await (
+			await request.get(`${ARENA}/profiles/${bot.profile_id}/relations`)
+		).json();
+		expect(relations.length).toBeGreaterThan(0);
 
-	await page.goto(`/profiles/${bot.profile_id}`);
+		await page.goto(`/profiles/${bot.profile_id}`);
 
-	const items = page.getByTestId('relations').locator('li');
-	await expect(items).toHaveCount(relations.length);
-	const first = items.first();
-	await expect(first.getByRole('link')).toHaveText(relations[0].name);
-	await expect(first).toHaveAttribute('data-trust', String(relations[0].trust));
-	await expect(first).toContainText(relations[0].notes[0].text);
+		const items = page.getByTestId('relations').locator('li');
+		await expect(items).toHaveCount(relations.length, { timeout: 2000 });
+		const shown = await items.evaluateAll((lis) =>
+			lis.map((li) => [li.querySelector('a')?.textContent?.trim(), li.getAttribute('data-trust')])
+		);
+		expect(shown).toEqual(
+			relations.map((r: { name: string; trust: number }) => [r.name, String(r.trust)])
+		);
+		await expect(items.first()).toContainText(relations[0].notes[0].text, { timeout: 2000 });
+	}).toPass({ timeout: 30_000 });
 });
 
 test('a player nobody has met says so', async ({ page }) => {
@@ -54,7 +62,9 @@ test("a bot's profile lists its memories of past matches, linked to their replay
 	await expect
 		.poll(async () => (await (await request.get(`${ARENA}/matches/${match.id}`)).json()).status)
 		.toBe('finished');
-	const board = await (await request.get(`${ARENA}/leaderboard?game=werewolf`)).json();
+	const board = await (
+		await request.get(`${ARENA}/leaderboard?game=werewolf&kind=all&group_bots=false`)
+	).json();
 	const bot = board.rows.find((row: { name: string }) => row.name === 'Random Bot p2');
 	const memories = await (await request.get(`${ARENA}/profiles/${bot.profile_id}/memories`)).json();
 	const mine = memories.find((m: { match_id: string }) => m.match_id === match.id);
