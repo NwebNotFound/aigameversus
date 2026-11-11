@@ -131,11 +131,11 @@ def test_six_model_league_is_balanced_over_models_pairs_seats_and_seeds():
     assert {"qwen-flash", "gemini-flash-lite"}.isdisjoint(played)
 
 
-def test_version_2_is_an_amendment_with_its_own_approval():
+def test_versions_2_and_3_are_amendments_and_a2_has_its_approval():
     experiment = load_experiment(E1)
 
-    assert experiment.version == 2
-    assert [entry["version"] for entry in experiment.amendments] == [2]
+    assert experiment.version == 3
+    assert [entry["version"] for entry in experiment.amendments] == [2, 3]
     assert any("A2" in entry["stages"] for entry in experiment.approvals)
     stage_a = next(stage for stage in experiment.stages if stage.id == "A")
     assert stage_a.budget_eur == stage_a.pilot_budget_eur

@@ -9,7 +9,7 @@
 
 id: E1
 title: "Liar's Deck: a league of cheap models, reasoning effort, and stronger guests"
-version: 2
+version: 3
 status: approved          # approved by Nils 2026-11-11 (stage B, C after A); -> running -> closed
 registered: "2026-11-11"
 author: Arena Researcher
@@ -34,6 +34,19 @@ amendments:
       approved 3.00 EUR could not pay for the 112 planned matches; 6 models
       cost about 0.020 EUR a match. Decided before any league match was played.
     pilot_data: "the 6 pilot matches stay pilot data and are not part of any test"
+  - version: 3
+    date: "2026-11-11"
+    what: >
+      A clarification, no change to how matches are played. All stages run
+      without answer repair: a malformed tool call is rejected and corrected
+      as before (the arena is getting an optional repair of such calls).
+      Reliability is reported in four parts per model: clean moves,
+      repaired moves (zero here), rejected answers and fallback moves.
+    why: >
+      Repair changes what counts as a rejected answer and a fallback move.
+      Mixing repaired and unrepaired matches inside a stage would confound
+      the reliability results and stage B. Written while league A2 was
+      running, before any outcome was read.
 # Every paid run needs the project owner's own yes. What he has said yes to:
 approvals:
   - stages: [A]
@@ -84,6 +97,7 @@ conditions:
     across commits.
   history_shown: "last 40 visible events (HISTORY_LIMIT)"
   sampling: "provider defaults; the arena sets no temperature"
+  answer_repair: "off in every stage (version 3): malformed tool calls are rejected and corrected, never repaired"
   tool_choice: required
   provider_routing: "OpenRouter's default; the serving provider is stored per call if the export has it"
   usd_to_eur: "1.0 as in config/models.yaml (overstates cost)"
@@ -268,7 +282,7 @@ metrics:
   outcome: [win, finishing rank, rounds survived]
   rating: "Plackett-Luce strength and multiplayer Elo (K 32, start 1000), both with 2 000 bootstrap resamples of whole seeds"
   skill: [lie rate, share of lies caught, call rate, call accuracy, boldest bluff risk, cards per play]
-  reliability: [rejected answers per turn, fallback turns per turn, failed agents, timeouts]
+  reliability: [clean moves per turn, repaired moves per turn, rejected answers per turn, fallback turns per turn, failed agents, timeouts]
   cost: [EUR per match, EUR per win, tokens per move, seconds per move]
   exploratory:
     - "lie rate against revolver risk (does a model bluff less when a shot is more likely to kill)"

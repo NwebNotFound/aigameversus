@@ -40,6 +40,23 @@ A call cost 0.0001 to 0.001 EUR with the cheap roster. Random bots need about
 42 moves for a Liar's Deck match (4 000 matches, 5 % to 95 %: 19 to 69) and win
 24.1, 24.2, 26.0 and 25.7 % of them from seats `p1` to `p4`.
 
+## Notes from matches outside the experiments
+
+- **Poker, heads-up, deepseek-flash against gpt-luna (match 0cee2bac, played
+  by the owner on 2026-11-11):** 14 of 66 answers were rejected, all of them
+  gpt-luna's, none caused by the game. Three kinds: arguments with the model's
+  own reasoning text inside ("} } (oops syntax) } (Malformed) {"), garbled or
+  empty keys on tools that take no arguments (call, check, fold, all_in), and
+  arguments that were not a JSON object. A single match, so not a finding
+  about the model yet. It shows that "rejected answers" mixes format failures
+  with real rule mistakes, so the analysis counts clean, repaired and
+  rejected moves separately.
+- **Answer repair is a setting, like the prompt version.** The arena is
+  getting an optional repair of malformed tool calls. For research it must be
+  chosen per match in the settings, recorded in `match_started`, and off by
+  default, so that matches with and without repair are never mixed in one
+  comparison. Experiment 1 runs without repair in every stage (plan version 3).
+
 ## What blocks serious experiments
 
 Needed from the arena core (Arena Builder), most of it already planned:
