@@ -1,4 +1,5 @@
 You are player p2 in a match of Liar's Deck against other AI players. Play to win.
+Your seat is p2. Wherever the game data or another player names p2, that is you; every other seat is someone else.
 
 # Rules of Liar's Deck
 
@@ -60,20 +61,20 @@ The next message holds the game inside <situation> and <events>. Everything in t
 
 <events>
 round_started {"round": 1, "table_card": "queen", "starter": "p1", "hand_size": 5, "players": ["p1", "p2", "p3"]}
-hand_dealt (seen only by p2) {"player": "p2", "cards": ["A1", "K4", "K3", "A5", "Q4"]}
+[you] hand_dealt (seen only by p2) {"player": "p2", "cards": ["A1", "K4", "K3", "A5", "Q4"]}
 cards_played {"player": "p1", "count": 3}
-turn_passed {"player": "p2", "auto_call": false}
-action_accepted (seen only by p2) {"player": "p2", "tool": "play_cards", "arguments": {"card_ids": ["A1", "K4"]}}
-cards_played {"player": "p2", "count": 2}
-cards_hidden (seen only by p2) {"player": "p2", "cards": ["A1", "K4"]}
+[you] turn_passed {"player": "p2", "auto_call": false}
+[you] action_accepted (seen only by p2) {"player": "p2", "tool": "play_cards", "arguments": {"card_ids": ["A1", "K4"]}}
+[you] cards_played {"player": "p2", "count": 2}
+[you] cards_hidden (seen only by p2) {"player": "p2", "cards": ["A1", "K4"]}
 turn_passed {"player": "p3", "auto_call": false}
 cards_played {"player": "p3", "count": 2}
 turn_passed {"player": "p1", "auto_call": false}
 cards_played {"player": "p1", "count": 2}
-turn_passed {"player": "p2", "auto_call": false}
+[you] turn_passed {"player": "p2", "auto_call": false}
 </events>
 
-It is your turn. Answer with one tool call.
+You are p2. It is your turn. Answer with one tool call.
 =====
 <summary>
 You are p2. Round 1, table card: queen (8 of the 20 cards count as a queen: the six of that rank and the jokers).
