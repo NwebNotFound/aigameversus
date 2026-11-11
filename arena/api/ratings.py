@@ -62,7 +62,9 @@ class LeaderboardRow(StandingOut):
 
 class Leaderboard(BaseModel):
     game: str | None = Field(description="The game shown, or null for the overall rating")
-    games: list[str] = Field(description="Every game with at least one rated match")
+    games: list[str] = Field(
+        description="Every game with at least one rated match of the kind shown (tabs)"
+    )
     kind: Literal["models", "bots", "all"] = Field(description="Who is shown")
     fallback: bool = Field(
         False, description="True when real models were asked for but none is rated yet: all shown"
@@ -206,7 +208,7 @@ async def leaderboard(
         )
     return Leaderboard(
         game=game,
-        games=await store.rated_games(),
+        games=await store.rated_games(shown, demo=demo),
         kind=shown,
         fallback=fallback,
         counts=counts,
