@@ -28,8 +28,8 @@ profiles with their game statistics (`GET /profiles/{id}/stats`), the
 Werewolf setup endpoints and `GET /setup` (models, personalities and cost
 caps for the form). The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
-new-match form (`/matches/new`) and the live view of a match
-(`/matches/<id>`); Replays is a placeholder.
+new-match form (`/matches/new`), the live view of a match (`/matches/<id>`)
+and replays (`/replays`, `/replays/<id>`).
 Sections below marked *not built yet* describe the target from the spec and
 get filled in as their phase lands.
 

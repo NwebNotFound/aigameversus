@@ -50,6 +50,17 @@ export interface Board {
 	spec: Record<string, unknown> | null;
 }
 
+/** A finished match as `GET /replays` lists it. */
+export interface ReplaySummary {
+	id: string;
+	game: string;
+	players: string[];
+	winners: string[];
+	started_at: string;
+	finished_at: string;
+	cost_micro_eur: number;
+}
+
 /** `GET /matches/{id}/cost`, in millionths of a euro. */
 export interface Cost {
 	total_micro_eur: number;
@@ -178,6 +189,11 @@ export interface ArenaClient {
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
 	/** The WebSocket URL of a match's event stream. */
 	eventsUrl(id: string): string;
+	replays(): Promise<ApiResult<ReplaySummary[]>>;
+	/** The whole stored log of a match. */
+	events(id: string): Promise<ApiResult<MatchEvent[]>>;
+	/** The board after the first `events` events of the log. */
+	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
 	games(): Promise<ApiResult<GameInfo[]>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
@@ -313,6 +329,26 @@ export function createArenaClient(
 							body: JSON.stringify({ turn_delay: command.turn_delay })
 						}
 					: { method: 'POST' }
+			);
+		},
+
+		replays() {
+			return getJson<ReplaySummary[]>('/replays', Array.isArray);
+		},
+
+		events(id) {
+			return getJson<MatchEvent[]>(
+				`/matches/${encodeURIComponent(id)}/events`,
+				Array.isArray,
+				[404, 422]
+			);
+		},
+
+		boardAt(id, events) {
+			return getJson<Board>(
+				`/matches/${encodeURIComponent(id)}/board?events=${encodeURIComponent(events)}`,
+				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
 			);
 		},
 
