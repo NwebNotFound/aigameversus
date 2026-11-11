@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import WerewolfRoles from '#lib/components/WerewolfRoles.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS } from '#lib/live.js';
-	import { BOT, DEFAULT_TURN_DELAY, GAMES_WITH_LANGUAGE, LANGUAGES } from '#lib/new-match.js';
+	import {
+		BOT,
+		DEFAULT_TEMPLATE,
+		DEFAULT_TURN_DELAY,
+		GAMES_WITH_LANGUAGE,
+		LANGUAGES
+	} from '#lib/new-match.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -21,6 +28,16 @@
 		game ? Math.min(Math.max(players || game.min_players, game.min_players), game.max_players) : 0
 	);
 	let submitting = $state(false);
+
+	const werewolfRoles = $derived(data.werewolfRoles.state === 'ok' ? data.werewolfRoles.data : []);
+	// The role counts entered before a refused submit.
+	const enteredCounts = $derived(
+		Object.fromEntries(
+			Object.entries(form?.values ?? {})
+				.filter(([name]) => name.startsWith('role_'))
+				.map(([name, value]) => [name.slice('role_'.length), Number(value) || 0])
+		)
+	);
 
 	function chooseGame(id: string) {
 		gameId = id;
@@ -138,6 +155,17 @@
 			</p>
 			{#if errors.seats}<p class="field-error">{errors.seats}</p>{/if}
 		</fieldset>
+
+		{#if game.id === 'werewolf'}
+			{#if errors.roles}<p class="field-error" role="alert">{errors.roles}</p>{/if}
+			<WerewolfRoles
+				players={seatCount}
+				roles={werewolfRoles}
+				initialMode={form?.values?.ww_mode || DEFAULT_TEMPLATE}
+				initialCounts={enteredCounts}
+				serverProblems={form?.problems ?? []}
+			/>
+		{/if}
 
 		<fieldset>
 			<legend>Settings</legend>

@@ -492,8 +492,9 @@ uv run pytest games/liars_deck
 ```
 
 A new Werewolf role already shows up in the role selection
-(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles` and
-`POST /games/werewolf/selection/validate`): give it a `team`, `unique` and a
+(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles`,
+`GET /games/werewolf/templates?players=N` and
+`POST /games/werewolf/selection/validate`, and shown in the new-match form): give it a `team`, `unique` and a
 balance `weight`.
 
 ### A unit, building or event

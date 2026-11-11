@@ -395,3 +395,34 @@ describe('setup', () => {
 		expect(calls).toEqual(['http://arena:8000/setup']);
 	});
 });
+
+describe('werewolf setup', () => {
+	it('asks for the templates of one table size', async () => {
+		const { calls, fetchFn } = fakeFetch(() => Response.json([]));
+
+		await createArenaClient('http://arena:8000', fetchFn).werewolfTemplates(9);
+
+		expect(calls).toEqual(['http://arena:8000/games/werewolf/templates?players=9']);
+	});
+
+	it('posts a selection to check', async () => {
+		const report = { valid: true, problems: [], selection: { werewolf: 2 }, balance: null };
+		const sent: { url: string; init?: RequestInit }[] = [];
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			sent.push({ url: String(input), init });
+			return Response.json(report);
+		}) as typeof fetch;
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).checkSelection(
+			{ werewolf: 2 },
+			8
+		);
+
+		expect(result).toEqual({ state: 'ok', data: report });
+		expect(sent[0].url).toBe('http://arena:8000/games/werewolf/selection/validate');
+		expect(JSON.parse(String(sent[0].init?.body))).toEqual({
+			roles: { werewolf: 2 },
+			player_count: 8
+		});
+	});
+});

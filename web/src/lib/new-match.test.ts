@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameInfo } from './api.js';
-import { BOT, parseForm } from './new-match.js';
+import { BOT, CUSTOM, parseForm } from './new-match.js';
 
 const GAMES: GameInfo[] = [
 	{ id: 'liars_deck', name: "Liar's Deck", min_players: 2, max_players: 4 },
@@ -36,7 +36,7 @@ describe('parseForm', () => {
 
 		expect(parseForm(form(werewolf), GAMES)).toMatchObject({
 			ok: true,
-			match: { settings: { language: 'de' }, turn_delay: 0 }
+			match: { settings: { language: 'de', template: 'classic' }, turn_delay: 0 }
 		});
 		expect(parseForm(form({ ...werewolf, language: 'en' }), GAMES)).toMatchObject({
 			match: { settings: { language: 'en' } }
@@ -60,6 +60,57 @@ describe('parseForm', () => {
 		expect(parseForm(form({ ...LIARS, ...change }), GAMES)).toEqual({
 			ok: false,
 			errors: { [field]: message }
+		});
+	});
+
+	describe('Werewolf roles', () => {
+		const WEREWOLF = {
+			game: 'werewolf',
+			players: '8',
+			seat: Array(8).fill(BOT),
+			turn_delay: '1',
+			language: 'de'
+		};
+
+		it('sends a chosen template', () => {
+			expect(parseForm(form({ ...WEREWOLF, ww_mode: 'chaos' }), GAMES)).toMatchObject({
+				ok: true,
+				match: { settings: { language: 'de', template: 'chaos' } }
+			});
+		});
+
+		it('sends the counts of a custom mix, without the roles left at 0', () => {
+			const custom = {
+				...WEREWOLF,
+				ww_mode: CUSTOM,
+				role_werewolf: '2',
+				role_seer: '1',
+				role_hunter: '0',
+				role_witch: ''
+			};
+
+			const parsed = parseForm(form(custom), GAMES);
+
+			expect(parsed).toMatchObject({ ok: true });
+			expect(parsed.ok && parsed.match.settings).toEqual({
+				language: 'de',
+				roles: { werewolf: 2, seer: 1 }
+			});
+		});
+
+		it('ignores the checklist while a template is chosen', () => {
+			const parsed = parseForm(form({ ...WEREWOLF, ww_mode: 'classic', role_seer: '1' }), GAMES);
+
+			expect(parsed.ok && parsed.match.settings).toEqual({ language: 'de', template: 'classic' });
+		});
+
+		it.each(['-1', '1.5', 'two'])('refuses the count %s at the roles', (count) => {
+			const custom = { ...WEREWOLF, ww_mode: CUSTOM, role_werewolf: count };
+
+			expect(parseForm(form(custom), GAMES)).toEqual({
+				ok: false,
+				errors: { roles: 'A role count is a whole number of 0 or more.' }
+			});
 		});
 	});
 });
