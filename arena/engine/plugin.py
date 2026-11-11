@@ -81,10 +81,26 @@ class GamePlugin[StateT: BaseModel](ABC):
     # does. Set it to what the rules allow at most, with room to spare.
     max_turns: ClassVar[int] = 10_000
 
-    def rules(self) -> str:
-        """The rule summary a model gets in its prompt: `rules.md` next to the plugin."""
+    def rules(self, settings: Mapping[str, Any] | None = None) -> str:
+        """The rule summary a model gets in its prompt: `rules.md` next to the plugin.
+
+        A game with several prompt versions picks the text by `settings`.
+        """
         package = type(self).__module__.rpartition(".")[0]
         return resources.files(package).joinpath("rules.md").read_text(encoding="utf-8")
+
+    def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
+        """Which prompt the models of a match get; recorded in `match_started`."""
+        return "v1"
+
+    def situation_summary(
+        self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
+    ) -> str | None:
+        """A short text about the turn for the top of the prompt, or None for none.
+
+        Build it from `observation` only: it is that player's view.
+        """
+        return None
 
     @abstractmethod
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> StateT:
