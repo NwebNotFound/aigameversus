@@ -64,6 +64,7 @@ jobs:
   web:
     name: Web UI lint, build and Playwright
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: web
@@ -84,7 +85,37 @@ jobs:
       - name: Fill the fresh CI database with DEMO ratings (random bots only)
         working-directory: .
         run: docker compose exec -T arena python -m arena.ratings.demo_seed --matches 30
-      - run: npx playwright install --with-deps chromium
+      - name: Playwright version (cache key)
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # The runner image already has most system libraries, so first fetch only the browser
+      # (a no-op on a cache hit) and check that it launches. apt is used only if that fails, and
+      # then every try is bounded: the apt mirror is down now and then, and a hung step runs for hours.
+      - name: Install Chromium (browser only, then system libraries if it does not launch)
+        timeout-minutes: 20
+        run: |
+          launch() { timeout 60 node -e "require('@playwright/test').chromium.launch().then(b => b.close())"; }
+          if timeout 300 npx playwright install chromium && launch; then
+            echo "PATH TAKEN: browser only (cache hit: ${{ steps.playwright-cache.outputs.cache-hit }})"
+            exit 0
+          fi
+          echo "Chromium does not launch without more libraries: falling back to apt"
+          for attempt in 1 2 3; do
+            timeout 180 sudo apt-get update -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=2 || true
+            if timeout 300 npx playwright install --with-deps chromium && launch; then
+              echo "PATH TAKEN: --with-deps, attempt $attempt"
+              exit 0
+            fi
+            echo "Attempt $attempt failed"
+            sleep $((attempt * 10))
+          done
+          exit 1
       - name: Playwright smoke tests on port 3100 (375 and 1280 px)
         run: npx playwright test
       - name: Keep the Playwright traces
