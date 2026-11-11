@@ -205,6 +205,7 @@ arena/
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
+  liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -345,7 +346,8 @@ uv run pytest tests/config
 
 One YAML file in
 `games/liars_deck/variants/<id>.yaml`, validated by `games/liars_deck/variants.py`
-(`load_variant`, `load_variants`; errors name file and field). The schema file
+(`load_variant`, `load_variants`; errors name file and field), and played by
+`games/liars_deck/plugin.py` (`settings={"variant": "<id>"}`). The schema file
 `variants/variant.schema.json` is generated from the models:
 
 ```bash
