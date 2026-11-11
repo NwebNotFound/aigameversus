@@ -1254,6 +1254,37 @@ Each entry: date, decision, why, alternatives considered.
   custom server around the adapter's handler); browser calls to the arena with CORS; spoiler marks in each
   `render_spec`; boards built from the events in the browser.
 
+## D-065 · New-match form: bot seats now, models and cost limit shown for later
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - `/matches/new` is a SvelteKit form action: it works without JavaScript,
+    checks every field on the web server (`web/src/lib/new-match.ts`), shows a
+    problem next to its field and keeps what was entered, then starts the match
+    with `POST /matches` and redirects to its live view. A refusal of the arena
+    (422 from the game, 429 when the arena is full) is shown above the form.
+  - `GET /setup` (`arena/api/setup.py`) lists the models of
+    `config/models.yaml`, the personalities of `config/personalities/`
+    (checked against their schema) and the cost caps, with
+    `model_seats: false`. As long as it is false, every seat is a random bot:
+    the models, the personality per seat and the cost limit (the match cap as
+    its default) are shown but disabled, and the web server refuses a model
+    seat. Phase 2 enables them; then `POST /matches` needs seats and a limit.
+  - Language (de/en, default de) goes into the settings only of games that
+    have game text in a language: today Werewolf (its narrator). The other
+    games refuse unknown settings.
+  - Speed is one of the live view's speeds (default Normal, 1 s per turn).
+  - The web container gets `ORIGIN: http://127.0.0.1:3100`. SvelteKit refuses a
+    form POST from another origin, and without `ORIGIN` adapter-node expects
+    https, which refused every submit of the local stack. `csrf.trustedOrigins`
+    in `web/vite.config.ts` also lets `http://localhost:3100` post; any other
+    origin is still refused.
+- **Why:** The form can be used today for bot matches and already has the
+  shape the spec asks for (game, players, models, personalities, cost limit,
+  seed), without an API for model seats before the runner can play them.
+- **Alternatives:** leaving models and cost limit out until phase 2; accepting
+  and ignoring them in `POST /matches`; a language setting for every game.
+
 ## D-067 · Game tables are components chosen by the render_spec layout
 
 - **Date:** 2026-11-11
@@ -1358,3 +1389,31 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** steps per turn (the log has no turn marker every game
   shares); boards for all steps at once (hundreds of replays per load);
   exporting only public events.
+
+## D-073 · Relationships: trust from facts each player saw, rules as data
+
+- **Date:** 2026-11-11
+- **Decision:**
+  - After a rated match the server adds its facts to the relationships of the
+    seated profiles (`relationships`, `remembered_matches`, migration `0008`),
+    once per match id, in one transaction. A memory problem never fails the
+    match or its rating.
+  - A fact is one player's view of another (`arena/memory/facts.py`) and is
+    read only from the game events that player could see: public ones and
+    those sent to them. Thoughts and spectator-only events are never read.
+  - Facts today: Liar's Deck: caught lying, accused me falsely, told the truth
+    when I called; Poker: bet or raised and lost every pot of the showdown (the
+    stats' bluff rule); Werewolf: packmate, turned out to be a wolf (the seer's
+    check, or the role shown at death; once per wolf), voted against me, voted
+    against me though we were lovers.
+  - What each fact is worth and its note are in `config/memory/trust.yaml`.
+    A match sums its facts per pair, then trust is clamped to -100..+100.
+    A pair keeps its 10 newest notes, newest first.
+  - `GET /profiles/{id}/relations` lists the others, strongest feeling
+    first; the profile page shows them as a trust list. `relations` left the
+    profile response.
+- **Why:** Facts from the observer's own view cannot leak hidden roles or
+  cards. Rules as data can be tuned without code, as rule 7 asks.
+- **Alternatives:** trust from the whole log (the seer's checks would reach
+  every player); decay over time (not in the spec); notes for every match
+  without a cap.

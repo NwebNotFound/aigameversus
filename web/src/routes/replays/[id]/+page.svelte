@@ -174,9 +174,7 @@
 			>
 				Export JSON
 			</a>
-			<small class="muted export-note">
-				Includes hidden cards, roles and thoughts.
-			</small>
+			<small class="muted export-note"> Includes hidden cards, roles and thoughts. </small>
 			<span class="share">
 				<input
 					readonly
