@@ -67,7 +67,7 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
   with the reason. A model has one rating profile whatever seat it sits in, and
   model matches, from the command or the API, are rated (`arena ratings backfill` rates earlier ones). Demo data is hidden until "Show demo data" is switched on. The leaderboard lists real
   models first (vendor, cost per game, share of refused answers) and groups the
-  random-bot seats; each model has a page (`/models/<id>`) with its rating, cost
+  random-bot seats; a rating from fewer than 10 rated games (`PROVISIONAL_GAMES`) carries a "provisional" badge, and a provisional player does not stand above an established one less than 25 points behind; each model has a page (`/models/<id>`) with its rating, cost
   and tool errors per game, its personalities and recent matches.
 - **A readable play-by-play** of every match (`arena/transcript`): one renderer
   per game, in German and English, shared by the API, the `arena` command, the
@@ -221,6 +221,14 @@ platform, not an afterthought.
   provider reports the real token counts. A call that fails or times out
   keeps its worst case. The ledger can therefore show more than the bill,
   never less, also after a crash or with several players calling at once.
+- **Any compatible model:** `GET /models/catalog` lists every OpenRouter model
+  that can call tools, with its price per million tokens; marked `verified`
+  are the ones in [config/models.yaml](config/models.yaml), whose prices and
+  behaviour were checked by hand. Every one of them plays behind the same
+  caps and needs the same `confirm_spend`.
+- **Estimate first:** `POST /matches/estimate` with the game and the models
+  says what the match would cost per seat, what the month has cost so far and
+  whether it fits, without calling any model.
 - **Pause, not overrun:** a call that could take the match or the month past
   its cap is not sent. The engine pauses the match with the amounts in its log
   and can resume it later from the same turn, unchanged. Today nothing asks you

@@ -48,7 +48,8 @@ test('the replay list shows a finished match with its winner and links to it', a
 
 	const row = page.locator(`[data-testid="replays"] tr[data-id="${record.id}"]`);
 	await expect(row).toContainText("Liar's Deck");
-	await expect(row).toContainText(winner);
+	// Seats read by display name: a bot in seat pN is "Bot N".
+	await expect(row).toContainText(`Bot ${winner.slice(1)}`);
 	await expect(row).toContainText('0.0000 €');
 	await row.getByRole('link').click();
 	await expect(page).toHaveURL(new RegExp(`/replays/${record.id}`));

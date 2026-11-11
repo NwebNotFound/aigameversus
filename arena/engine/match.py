@@ -18,6 +18,7 @@ from arena.engine.types import (
     Action,
     Agent,
     AgentError,
+    AnswerStats,
     Event,
     EventSource,
     MatchPaused,
@@ -66,7 +67,13 @@ class Match[StateT: BaseModel]:
         sink: EventSink | None = None,
         turn_timeout: float = DEFAULT_TURN_TIMEOUT,
         max_turns: int | None = None,
+        clock: Callable[[], float] | None = None,
     ):
+        """`clock` (seconds, e.g. time.monotonic) times every move into its `decision` event.
+
+        Without it the time stays out of the log, so a match is the same each time it is
+        played with the same seed and answers.
+        """
         players = list(agents)
         if not plugin.min_players <= len(players) <= plugin.max_players:
             raise ValueError(
@@ -81,6 +88,7 @@ class Match[StateT: BaseModel]:
         self._agents = dict(agents)
         self._sink = sink
         self._turn_timeout = turn_timeout
+        self._clock = clock
         self._max_turns = plugin.max_turns if max_turns is None else max_turns
         self._turns = 0  # completed turns
         self._failed: set[PlayerId] = set()  # seats whose agent gave up for good
@@ -198,12 +206,16 @@ class Match[StateT: BaseModel]:
         observation = plugin.get_observation(self.state, player)
         tools = plugin.get_tools(self.state, player)
         trail: list[Event] = []
+        answers: list[AnswerStats | None] = []
+        started = self._clock() if self._clock else None
         reason = "agent_failed"
         if player not in self._failed:
             try:
                 async with asyncio.timeout(self._turn_timeout):
-                    action = await self._ask(player, observation, tools, trail)
+                    action = await self._ask(player, observation, tools, trail, answers)
                 if action is not None:
+                    if any(stats is not None for stats in answers):  # a model, not a bot
+                        trail.append(self._decision(player, started, answers, None))
                     return action, trail
                 reason = "rejected"
             except TimeoutError:
@@ -234,7 +246,44 @@ class Match[StateT: BaseModel]:
                 visible_to=(player,),
             )
         )
+        trail.append(self._decision(player, started, answers, reason))
         return action, trail
+
+    def _decision(
+        self,
+        player: PlayerId,
+        started: float | None,
+        answers: list[AnswerStats | None],
+        fallback: str | None,
+    ) -> Event:
+        """What a move took: time, tokens, calls tried again, and the fallback if one played.
+
+        Spectators only. Logged for every move that ended in a fallback and for every
+        move of an agent that reports stats (a model); a bot's move has none. A token
+        count is null when no answer of the move reported it.
+        """
+        reported = [stats for stats in answers if stats is not None]
+
+        def total(field: str) -> int | None:
+            counts = [getattr(stats, field) for stats in reported]
+            known = [count for count in counts if count is not None]
+            return sum(known) if known else None
+
+        latency = None if started is None else round((self._clock() - started) * 1000)
+        return _engine_event(
+            "decision",
+            {
+                "player": player,
+                "answers": len(answers),
+                "latency_ms": latency,
+                "tokens_in": total("tokens_in"),
+                "tokens_out": total("tokens_out"),
+                "reasoning_tokens": total("reasoning_tokens"),
+                "retries": sum(stats.retries for stats in reported),
+                "fallback": fallback,
+            },
+            visible_to=(),
+        )
 
     async def _ask(
         self,
@@ -242,6 +291,7 @@ class Match[StateT: BaseModel]:
         observation: dict[str, Any],
         tools: list[ToolSpec],
         trail: list[Event],
+        answers: list[AnswerStats | None],
     ) -> Action | None:
         """Ask the agent until an answer passes every check. None if the last correction failed."""
         error = None
@@ -255,6 +305,7 @@ class Match[StateT: BaseModel]:
             )
             reply = await self._agents[player].act(request)
             reply = Reply.model_validate(_storable(reply.model_dump()))
+            answers.append(reply.stats)
             if reply.thought:
                 # Spectators only: no player gets a thought, not even its author.
                 trail.append(
