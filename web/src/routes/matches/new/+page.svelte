@@ -202,7 +202,7 @@
 							<select
 								aria-label="Personality of {seat}"
 								disabled
-								title="The arena does not take a personality per seat yet"
+								title="Not possible yet: the live arena does not take a personality per seat"
 							>
 								<option value="">No personality</option>
 								{#each setup?.personalities ?? [] as personality (personality.id)}
@@ -239,8 +239,8 @@
 			{/if}
 			<p class="hint">
 				{#if setup?.model_seats}
-					Every seat a random bot (free), or every seat a model (paid); no mixed tables yet.
-					Personalities come later.
+					A table is all models (paid) or all random bots (free). Not possible yet: bots and models
+					at one table, and a personality per seat; both need an arena update that is not live.
 				{:else}
 					This server plays random bots only: it was not started with model seats on, or it has no
 					API key. Models and personalities are listed, not selectable.

@@ -67,7 +67,9 @@ test('bots and models do not mix at one table', async ({ page, request }) => {
 	await page.getByRole('button', { name: 'Start match (spends money)' }).click();
 
 	await expect(
-		page.getByText('Choose a model for every seat, or a bot for every seat: no mixed tables yet.')
+		page.getByText(
+			'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.'
+		)
 	).toBeVisible();
 	await expect(page).toHaveURL('/matches/new');
 });
