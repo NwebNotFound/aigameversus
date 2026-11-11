@@ -71,6 +71,35 @@ export type ControlAction =
 	| { action: 'abort' }
 	| { action: 'speed'; turn_delay: number };
 
+/** A game as `GET /games` lists it. */
+export interface GameInfo {
+	id: string;
+	name: string;
+	min_players: number;
+	max_players: number;
+}
+
+/** `GET /setup`: what the new-match form offers. */
+export interface SetupOptions {
+	/** Whether a seat can be a model yet; until then every seat is a random bot. */
+	model_seats: boolean;
+	models: { id: string; model: string }[];
+	personalities: { id: string; name: string; description: string }[];
+	caps: { match_eur: number; month_eur: number };
+}
+
+/** The body of `POST /matches`. */
+export interface NewMatch {
+	game: string;
+	players: number;
+	seed?: number;
+	settings: Record<string, unknown>;
+	turn_delay: number;
+}
+
+/** A start the arena refused, with its reason (422: the game refused, 429: arena full). */
+export type Refused = { state: 'refused'; status: number; detail: string };
+
 /** One player's standing, as in `GET /leaderboard` and `GET /profiles/{id}`. */
 export interface Standing {
 	profile_id: string;
@@ -129,6 +158,9 @@ export interface ArenaClient {
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
 	/** The WebSocket URL of a match's event stream. */
 	eventsUrl(id: string): string;
+	games(): Promise<ApiResult<GameInfo[]>>;
+	setup(): Promise<ApiResult<SetupOptions>>;
+	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
 export function createArenaClient(
@@ -248,6 +280,38 @@ export function createArenaClient(
 			);
 		},
 
+		games() {
+			return getJson<GameInfo[]>('/games', Array.isArray);
+		},
+
+		setup() {
+			return getJson<SetupOptions>(
+				'/setup',
+				(body) => isObject(body) && Array.isArray(body.models) && isObject(body.caps)
+			);
+		},
+
+		async startMatch(match) {
+			let response: Response;
+			try {
+				response = await get('/matches', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify(match)
+				});
+			} catch (error) {
+				return { state: 'unreachable', reason: describe(error) };
+			}
+			const body: unknown = await response.json().catch(() => undefined);
+			if (response.status === 201 && isObject(body) && typeof body.id === 'string') {
+				return { state: 'ok', data: body as unknown as MatchRecord };
+			}
+			if ([404, 422, 429].includes(response.status)) {
+				return { state: 'refused', status: response.status, detail: detailOf(body) };
+			}
+			return { state: 'unreachable', reason: `the arena answered ${response.status}` };
+		},
+
 		eventsUrl(id) {
 			return `${root.replace(/^http/, 'ws')}/matches/${encodeURIComponent(id)}/events`;
 		}
@@ -256,6 +320,19 @@ export function createArenaClient(
 
 function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** FastAPI's `detail`: a message, or a list of field errors. */
+function detailOf(body: unknown): string {
+	if (!isObject(body)) return 'no reason given';
+	const { detail } = body;
+	if (typeof detail === 'string') return detail;
+	if (Array.isArray(detail)) {
+		return detail
+			.map((problem) => (isObject(problem) ? String(problem.msg) : String(problem)))
+			.join('; ');
+	}
+	return 'no reason given';
 }
 
 function describe(error: unknown): string {

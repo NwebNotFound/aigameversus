@@ -24,9 +24,11 @@ be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard and the
-Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
+Werewolf setup endpoints and `GET /setup` (models, personalities and cost
+caps for the form). The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
-live view of a match (`/matches/<id>`); New match and Replays are placeholders.
+new-match form (`/matches/new`) and the live view of a match
+(`/matches/<id>`); Replays is a placeholder.
 Sections below marked *not built yet* describe the target from the spec and
 get filled in as their phase lands.
 

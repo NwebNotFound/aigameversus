@@ -313,3 +313,85 @@ describe('eventsUrl', () => {
 		);
 	});
 });
+
+describe('startMatch', () => {
+	const BODY = { game: 'toy', players: 2, settings: {}, turn_delay: 1 };
+
+	function answering(response: Response) {
+		const sent: { url: string; init?: RequestInit }[] = [];
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			sent.push({ url: String(input), init });
+			return response;
+		}) as typeof fetch;
+		return { sent, fetchFn };
+	}
+
+	it('posts the match and returns its record', async () => {
+		const { sent, fetchFn } = answering(Response.json(RECORD, { status: 201 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({ state: 'ok', data: RECORD });
+		expect(sent[0].url).toBe('http://arena:8000/matches');
+		expect(sent[0].init?.method).toBe('POST');
+		expect(JSON.parse(String(sent[0].init?.body))).toEqual(BODY);
+	});
+
+	it('passes on why the game refused', async () => {
+		const { fetchFn } = answering(
+			Response.json({ detail: 'High Card takes 2 to 4 players' }, { status: 422 })
+		);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({
+			state: 'refused',
+			status: 422,
+			detail: 'High Card takes 2 to 4 players'
+		});
+	});
+
+	it('joins the messages of a field error list', async () => {
+		const detail = [{ msg: 'Input should be >= 0' }, { msg: 'Field required' }];
+		const { fetchFn } = answering(Response.json({ detail }, { status: 422 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toMatchObject({ detail: 'Input should be >= 0; Field required' });
+	});
+
+	it('reports a full arena as refused', async () => {
+		const { fetchFn } = answering(
+			Response.json({ detail: '10 matches are running' }, { status: 429 })
+		);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({ state: 'refused', status: 429, detail: '10 matches are running' });
+	});
+
+	it('reports a server error as unreachable', async () => {
+		const { fetchFn } = answering(new Response('boom', { status: 500 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).startMatch(BODY);
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena answered 500' });
+	});
+});
+
+describe('setup', () => {
+	it('returns the options of the new-match form', async () => {
+		const options = {
+			model_seats: false,
+			models: [{ id: 'm', model: 'x/m' }],
+			personalities: [],
+			caps: { match_eur: 0.5, month_eur: 5 }
+		};
+		const { calls, fetchFn } = fakeFetch(() => Response.json(options));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).setup();
+
+		expect(result).toEqual({ state: 'ok', data: options });
+		expect(calls).toEqual(['http://arena:8000/setup']);
+	});
+});
