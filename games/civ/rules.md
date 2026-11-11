@@ -99,6 +99,35 @@ war, open borders), open_borders (3–30 rounds), tribute (1–20 rounds).
 Reputation runs 0–100, starting at 50. Breaking a treaty costs 20 and everyone
 sees it. Trades carry a 10 % fee, +10 % if your reputation is below 30.
 
+## Orders
+
+You submit all orders of a round in one `submit_orders` call, a list of orders.
+City orders run first, then army orders, each in the order you give them. An
+illegal order is rejected with a reason and the rest still run.
+
+Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
+
+```json
+{"orders": [
+  {"order": "set_focus", "city": "c1", "focus": "production"},
+  {"order": "build", "city": "c1", "building": "farm"},
+  {"order": "train", "city": "c1", "unit": "spearman", "count": 2},
+  {"order": "settle", "army": "a2"},
+  {"order": "move", "army": "a1", "to": [4, 3]}
+]}
+```
+
+| Order | Arguments |
+| --- | --- |
+| build, demolish | city, building |
+| set_focus | city, focus (growth, production, military) |
+| train | city, unit, count (1 to 10) |
+| move | army, to ([col, row], a tile it can reach) |
+| settle | army (its settler founds a city here) |
+| split | army, units (unit ids to take out as a new army) |
+| merge | armies (ids on one tile; they join the first) |
+| disband | army |
+
 ## A round
 
 1. Info: up to 8 info tool calls.
