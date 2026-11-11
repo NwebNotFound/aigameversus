@@ -155,3 +155,11 @@ def test_command_refuses_models_without_its_ledger(
     assert "Nothing was sent or booked" in complaints
     matches, _, booked = stored(database_url)
     assert (matches, booked, sent) == ([], [], {})
+
+
+def test_without_its_ledger_the_month_is_unknown_not_zero(server, closed_port_url):
+    with server(closed_port_url) as client:
+        month = client.get("/ledger/month")
+
+    assert month.status_code == 503
+    assert "spend ledger cannot be read" in month.json()["detail"]

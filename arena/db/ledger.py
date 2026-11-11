@@ -115,13 +115,17 @@ class Ledger:
             )
 
     async def month_spent(self, now: datetime) -> int:
-        """What every call of the calendar month of `now` (UTC) cost, in millionths of a euro."""
+        """What every call of the calendar month of `now` (UTC) cost, in millionths of a euro.
+
+        Raises LedgerUnavailable when the ledger cannot be read: never a 0 that is not true.
+        """
         month = now.astimezone(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return await self._pool.fetchval(
-            "SELECT coalesce(sum(cost_micro_eur), 0)::bigint FROM model_calls "
-            "WHERE called_at >= $1",
-            month,
-        )
+        async with _reading():
+            return await self._pool.fetchval(
+                "SELECT coalesce(sum(cost_micro_eur), 0)::bigint FROM model_calls "
+                "WHERE called_at >= $1",
+                month,
+            )
 
     async def match_costs(self, match_id: UUID) -> dict[PlayerId, int]:
         """What each player of a match has cost so far, in millionths of a euro."""
