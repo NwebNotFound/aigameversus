@@ -1,5 +1,9 @@
 <script lang="ts">
+	import Avatar from '#lib/components/Avatar.svelte';
 	import { GAMES, gameName } from '#lib/games.js';
+	import type { MatchSummary } from '#lib/api.js';
+	import { euros } from '#lib/live.js';
+	import { batchLine, type MatchLine } from '#lib/match-line.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -42,6 +46,30 @@
 	</ul>
 </section>
 
+{#snippet row(match: MatchSummary, line: MatchLine)}
+	<li data-testid="running-match" data-match={match.id}>
+		<a class="game" href="/matches/{match.id}">{gameName(match.game)}</a>
+		<span class="badge" data-testid="kind">{line.real ? 'real models' : 'bots'}</span>
+		<ul class="who" aria-label="Players">
+			{#each line.seats as seat (seat.seat)}
+				<li data-testid="player">
+					<Avatar name={seat.name} colourKey={seat.colourKey} size={20} />
+					<span data-testid="player-name">{seat.name}</span>
+					{#if seat.kind === 'model'}<span class="model">model</span>{/if}
+				</li>
+			{/each}
+		</ul>
+		<span class="muted">
+			{#if line.progress}<span data-testid="progress">{line.progress}</span> ·
+			{/if}
+			{#if line.cost_micro_eur !== null && line.real}<span data-testid="cost"
+					>{euros(line.cost_micro_eur)}</span
+				> ·
+			{/if}{match.status}
+		</span>
+	</li>
+{/snippet}
+
 <section aria-labelledby="matches-title">
 	<h2 id="matches-title">Running matches</h2>
 	{#if data.matches.state === 'unreachable'}
@@ -56,12 +84,25 @@
 		</div>
 	{:else}
 		<ul class="match-list" data-testid="match-list">
-			{#each data.matches.matches as match (match.id)}
-				<li>
-					<a class="game" href="/matches/{match.id}">{gameName(match.game)}</a>
-					<span>{match.players.join(' · ')}</span>
-					<span class="muted">{match.status}</span>
-				</li>
+			{#each data.entries as entry (entry.batch?.id ?? entry.items[0].match.id)}
+				{#if entry.batch}
+					<li class="batch" data-testid="batch-row" data-batch={entry.batch.id}>
+						<strong data-testid="batch-line"
+							>{batchLine(
+								entry.batch,
+								data.summaries[entry.batch.id] ?? null,
+								entry.items.length
+							)}</strong
+						>
+						<ul class="match-list">
+							{#each entry.items as { match, line } (match.id)}
+								{@render row(match, line)}
+							{/each}
+						</ul>
+					</li>
+				{:else}
+					{@render row(entry.items[0].match, entry.items[0].line)}
+				{/if}
 			{/each}
 		</ul>
 	{/if}
@@ -164,8 +205,46 @@
 		border: 1px solid var(--border);
 	}
 
+	.match-list > li {
+		align-items: center;
+	}
+
 	.game {
 		font-weight: 600;
+	}
+
+	.batch {
+		flex-direction: column;
+	}
+
+	.batch .match-list {
+		width: 100%;
+	}
+
+	.who {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.75rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		flex-basis: 100%;
+	}
+
+	.who li {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.model {
+		font-size: 0.7rem;
+		padding: 0 0.4rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		color: var(--muted);
 	}
 
 	.muted {

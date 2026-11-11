@@ -276,7 +276,9 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   at the model's mean output in the ledger (the output limit with fewer than
   10 answers there), times 1.3 for corrections and retries. The answer has
   the month so far and whether the estimate fits the match cap and the month
-  left, and per seat its `basis` (`ledger history` or `output limit`). It
+  left, per seat its `basis` (`ledger history` or `output limit`), and in
+  `high_price` the models above 10 USD per million output tokens. It takes
+  every id of `GET /models/catalog`, priced as the budget books it. It
   calls no model, needs no flag, runs one at a time and keeps an answer for
   30 seconds (`Estimates` in `arena/api/matches.py`), and is a guide: the caps
   still stop a match that costs more.
@@ -583,7 +585,23 @@ or field shows nothing there until it is listed as public. A game without
 
 ### A model
 
-An entry under `models` in `config/models.yaml`: an id of your choice,
+Any model in `GET /models/catalog` can take a seat without a code or config
+change (`arena/catalog.py`): OpenRouter's public model list (no key), kept to
+the models that write text and take a forced tool call (`tools` and
+`tool_choice` in `supported_parameters`), cached for an hour in the file
+`ARENA_CATALOG_CACHE` (default in the temp folder), the last copy when
+OpenRouter cannot be reached, and only the config models without any copy.
+Such a model goes by its OpenRouter id (`vendor/model`) and is booked at
+OpenRouter's listed price times 1.25 (`UNVERIFIED_PRICE_MARGIN`: not checked
+by hand), behind the same caps; a price that is not a finite number up to
+10,000 USD per million tokens, and every `:` variant but `:free`, leave a
+model out; `catalog.resolve` adds it to the config where
+a match is started, so the budget, the seats and the ledger treat it like any
+other. Tests never download it: the autouse fixture `offline_catalog` in
+`tests/conftest.py` refuses, and `tests/test_catalog.py` hands over a sample.
+
+A model you checked yourself is *verified*: an entry under `models` in
+`config/models.yaml`, under an id of your choice that the catalog then uses,
 `provider` (only `openrouter` today), `model` (the provider's name for it) and
 the prices `input_usd_per_mtok` and `output_usd_per_mtok` in US dollars per
 million tokens, as the provider lists them. A model that needs it may also set
