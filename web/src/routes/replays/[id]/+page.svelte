@@ -3,6 +3,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import type { Board } from '#lib/api.js';
 	import ChroniclePanel from '#lib/components/ChroniclePanel.svelte';
+	import AnalyticsPanel from '#lib/components/analytics/AnalyticsPanel.svelte';
 	import Timeline from '#lib/components/Timeline.svelte';
 	import ViewSwitch from '#lib/components/ViewSwitch.svelte';
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
@@ -17,7 +18,9 @@
 		previousStop,
 		stops,
 		mergeSeats,
-		namedLines
+		namedLines,
+		seatName,
+		colourKey
 	} from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
@@ -47,8 +50,9 @@
 	let highlightsOnly = $state(false);
 	let copied = $state(false);
 	// svelte-ignore state_referenced_locally
-	let tab = $state<'replay' | 'chronicle'>(
-		page.url.searchParams.get('tab') === 'chronicle' ? 'chronicle' : 'replay'
+	let tab = $state<'replay' | 'analytics' | 'chronicle'>(
+		(['analytics', 'chronicle'] as const).find((t) => t === page.url.searchParams.get('tab')) ??
+			'replay'
 	);
 
 	/** Position in the full log after the shown events: what the arena's board needs. */
@@ -146,10 +150,18 @@
 	$effect(() => {
 		const url = new URL(page.url.href);
 		url.searchParams.set('step', String(step));
-		if (tab === 'chronicle') url.searchParams.set('tab', 'chronicle');
-		else url.searchParams.delete('tab');
+		if (tab === 'replay') url.searchParams.delete('tab');
+		else url.searchParams.set('tab', tab);
 		if (url.href !== page.url.href) replaceState(url, {});
 	});
+
+	/** From a chart: show the replay at the event at `seq`, on the Watch tab. */
+	function jumpToSeq(seq: number) {
+		const at = log.findIndex((event) => event.seq === seq);
+		if (at < 0) return;
+		go(at + 1);
+		tab = 'replay';
+	}
 
 	function go(to: number) {
 		playing = false;
@@ -223,6 +235,15 @@
 					aria-selected={tab === 'replay'}
 					onclick={() => (tab = 'replay')}
 					data-testid="tab-replay">Watch</button
+				>
+				<button
+					role="tab"
+					aria-selected={tab === 'analytics'}
+					onclick={() => {
+						playing = false;
+						tab = 'analytics';
+					}}
+					data-testid="tab-analytics">Analytics</button
 				>
 				<button
 					role="tab"
@@ -317,6 +338,20 @@
 				</div>
 			{/snippet}
 		</WatchScreen>
+	{:else if tab === 'analytics'}
+		<div class="analytics-tab">
+			<p class="where" data-testid="analytics-step">
+				At step {step} of {log.length}{#if caption}: {caption.text}{/if}
+			</p>
+			<AnalyticsPanel
+				id={params.id}
+				{view}
+				lastSeq={step === 0 ? -1 : (log[step - 1]?.seq ?? null)}
+				names={Object.fromEntries(match.match.players.map((s) => [s, seatName(s, players)]))}
+				colours={Object.fromEntries(match.match.players.map((s) => [s, colourKey(s, players)]))}
+				onjump={jumpToSeq}
+			/>
+		</div>
 	{:else}
 		<ChroniclePanel id={params.id} spoilers={view === 'spectator'} onreveal={revealChronicle} />
 	{/if}
@@ -512,5 +547,16 @@
 	.problem {
 		margin: 0;
 		color: var(--danger);
+	}
+	.analytics-tab {
+		display: grid;
+		gap: 0.6rem;
+		padding-block: 0.75rem 2rem;
+	}
+
+	.where {
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--muted);
 	}
 </style>

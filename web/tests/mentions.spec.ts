@@ -18,8 +18,10 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	await page.route(`**/matches/${match.id}/transcript*`, async (route) => {
 		const response = await route.fetch();
 		const body = await response.json();
-		const line = (seq: number, text: string, kind: string) => ({
-			seq,
+		// Lines of their own (no log position): the commentary shows them at any moment, so the
+		// live playout does not hold them back.
+		const line = (text: string, kind: string) => ({
+			seq: null,
 			kind,
 			actor: 'p1',
 			text: `p1: "${text}"`,
@@ -27,16 +29,19 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 			importance: 2,
 			raw: { type: kind === 'thought' ? 'thought' : 'message', data: { player: 'p1', text } }
 		});
-		body.lines.push(
-			line(100000, SENTENCE, 'speech'),
-			line(100001, 'p9 is not here; p3 is.', 'thought')
-		);
+		body.lines.push(line(SENTENCE, 'speech'), line('p9 is not here; p3 is.', 'thought'));
 		await route.fulfill({ response, json: body });
 	});
 
 	await page.goto(`/matches/${match.id}`);
 
-	const speech = page.getByTestId('commentary').locator('li[data-seq="100000"] .bubble');
+	const bubble = (kind: string, words: string) =>
+		page
+			.getByTestId('commentary')
+			.locator(`li[data-kind="${kind}"]`)
+			.filter({ hasText: words })
+			.locator('.bubble');
+	const speech = bubble('speech', 'two kings with your history');
 	await expect(speech).toBeVisible({ timeout: 15_000 });
 	const name = (await page
 		.locator('[data-testid="cast"] li[data-seat="p2"] strong')
@@ -48,7 +53,7 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	await expect(speech).not.toContainText('p2,');
 
 	// A seat that is not in the match stays as written; one that is becomes a chip.
-	const thought = page.getByTestId('commentary').locator('li[data-seq="100001"] .bubble');
+	const thought = bubble('thought', 'p9 is not here');
 	await expect(thought).toContainText('p9 is not here');
 	await expect(thought.getByTestId('mention')).toHaveAttribute('data-seat', 'p3');
 

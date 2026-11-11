@@ -124,7 +124,13 @@ Three ways:
   `arena ratings backfill` rates the earlier ones. Every match record has `seats` (seat ->
   `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
   the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
-  `GET /replays` adds `real`.
+  `GET /replays` adds `real`. `"batch": {"id", "label", "index", "of"}` in
+  `POST /matches` puts a match into a batch (an experiment stage, a league;
+  unknown keys are refused), the record keeps it, and `GET /matches?batch=<id>`
+  lists every match of one. `arena batches backfill <started.jsonl> --id ...
+  --label ... --of N --first-order K [--schedule CSV]` tags matches played
+  before the field, from a batch runner's log (idempotent, never moves a match
+  to another batch, checks seeds against the schedule).
 - A running match can be paused, resumed, sped up or slowed down and aborted:
   `POST /matches/{id}/pause`, `/resume`, `/abort`, `PUT /matches/{id}/speed`,
   state in `GET /matches/{id}/control`. A pause takes effect between turns,
@@ -257,6 +263,18 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   ledger answers. Read costs only through `Ledger` (`RatingStore.usage` takes
   it): a query that joins `model_calls` in the match database finds nothing
   when the ledger lives elsewhere.
+- `POST /matches/estimate` (`arena/agents/estimate.py`) says what a match of
+  given models would cost before anyone spends: random bots play it three
+  times (seeds 1 to 3), every prompt a seat's model would get is built as the
+  runner builds it and measured, and each seat is priced at its most
+  expensive trial: prompt bytes / 3.5 as input tokens, one answer per prompt
+  at the model's mean output in the ledger (the output limit with fewer than
+  10 answers there), times 1.3 for corrections and retries. The answer has
+  the month so far and whether the estimate fits the match cap and the month
+  left, and per seat its `basis` (`ledger history` or `output limit`). It
+  calls no model, needs no flag, runs one at a time and keeps an answer for
+  30 seconds (`Estimates` in `arena/api/matches.py`), and is a guide: the caps
+  still stop a match that costs more.
 - The API key comes from `OPENROUTER_API_KEY`, or from the file that
   `OPENROUTER_API_KEY_FILE` names (the stack mounts it read-only, see
   `docker-compose.models.yml`). `load_keys` in `arena/config.py` reads the
@@ -310,9 +328,24 @@ and `games/<game>/tests/golden/` holds the exact prompt text per version
 ### Events and state
 
 A match is a list of `Event`s. Engine events (`match_started`, `thought`,
-`action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
-`match_paused`, `match_resumed`, `turn_limit_reached`, `match_finished`) are
-bookkeeping. Game events come from the plugin through `ctx.emit` and are the
+`action_accepted`, `action_rejected`, `action_fallback`, `decision`,
+`agent_failed`, `match_paused`, `match_resumed`, `turn_limit_reached`,
+`match_finished`) are bookkeeping.
+
+`decision` (spectators only) closes every move of a model and every move that
+ended in a random one: `{player, answers, latency_ms, tokens_in, tokens_out,
+reasoning_tokens, retries, fallback}`. `answers` counts the replies of the
+move (corrections included), the token counts add up what they reported
+(`null` when none did), `retries` counts failed calls tried again, `fallback`
+is the reason of a random move or `null`. `latency_ms` is the wall time of the
+whole move, network and corrections included, measured only when the `Match`
+gets a `clock` (the API and `arena run --models` pass `time.monotonic`);
+without one it is `null`, so a test's log is the same every time. Tokens come
+from the agent (`Reply.stats`, an `AnswerStats`); a bot reports none and its
+moves leave no `decision`. The ledger keeps `latency_ms` and
+`reasoning_tokens` per call too.
+
+Game events come from the plugin through `ctx.emit` and are the
 only thing that changes the game state: `emit` records the event and passes it
 to the plugin's `apply_event` at once. Replaying the game events over
 `initial_state` therefore rebuilds the exact state.

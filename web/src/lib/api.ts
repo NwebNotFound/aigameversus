@@ -294,6 +294,8 @@ export interface RecentMatch {
 	match_id: string;
 	game_id: string;
 	rated_at: string;
+	/** When the match itself ended; `rated_at` is when its rating was applied. */
+	played_at: string;
 	rank: number;
 	players: number;
 	rating_change: number;

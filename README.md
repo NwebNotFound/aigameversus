@@ -221,6 +221,9 @@ platform, not an afterthought.
   provider reports the real token counts. A call that fails or times out
   keeps its worst case. The ledger can therefore show more than the bill,
   never less, also after a crash or with several players calling at once.
+- **Estimate first:** `POST /matches/estimate` with the game and the models
+  says what the match would cost per seat, what the month has cost so far and
+  whether it fits, without calling any model.
 - **Pause, not overrun:** a call that could take the match or the month past
   its cap is not sent. The engine pauses the match with the amounts in its log
   and can resume it later from the same turn, unchanged. Today nothing asks you

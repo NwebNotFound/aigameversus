@@ -22,6 +22,7 @@ class Usage:
 
     input_tokens: int
     output_tokens: int
+    reasoning_tokens: int | None = None  # the part of the output spent thinking, if reported
 
 
 @dataclass(frozen=True)
