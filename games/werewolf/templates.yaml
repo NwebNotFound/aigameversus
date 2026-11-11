@@ -12,8 +12,14 @@ templates:
     name: Düsterwald-Mix
     min_players: 8
     roles: {werewolf: 2, seer: 1, witch: 1, hunter: 1, cupid: 1, bear_tamer: 1, little_girl: 1, villager: fill}
+    # Wolves scale with the table so the balance light stays close to even (D-061): 2 wolves
+    # for 8 players (the most that fit beside the six special roles; the light stays village
+    # at +9), 3 for 9, 4 for 10-16.
+    by_players:
+      werewolf: {8: 2, 9: 3, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4}
   - id: chaos
     name: Chaos
+    # Even at 14 to 16 players with 2 werewolves beside the Prime and White Wolf (D-061).
     min_players: 14
     roles: {werewolf: 2, prime_wolf: 1, white_wolf: 1, seer: 1, witch: 1, hunter: 1, cupid: 1, protector: 1, raven: 1, scapegoat: 1, wild_child: 1, village_idiot: 1, elder: 1, villager: fill}
   - id: random_balanced

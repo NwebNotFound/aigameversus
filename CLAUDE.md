@@ -306,6 +306,7 @@ arena/
   gamemaster/   match setup, scheduling, narrator
   db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
+  chronicle/    the chronicler: a finished match as a story (templates, styles, languages)
   cli.py        the `arena` command
   config.py     loader of config/models.yaml (limits, models, prices)
   games.py      finds the games under games/

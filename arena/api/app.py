@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from arena.api import matches, ratings, werewolf
+from arena.api import chronicle, matches, ratings, werewolf
 from arena.api.live import LiveMatches
 from arena.db.database import connect, migrate
 from arena.games import load_games
@@ -37,6 +37,7 @@ app = FastAPI(title="AIGameVersus Arena", lifespan=lifespan)
 app.include_router(werewolf.router)
 app.include_router(ratings.router)
 app.include_router(matches.router)
+app.include_router(chronicle.router)
 
 
 @app.get("/health")
