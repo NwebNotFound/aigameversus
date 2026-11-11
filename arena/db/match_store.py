@@ -129,9 +129,13 @@ class MatchStore:
         return [MatchRecord(**row) for row in rows]
 
     async def model_matches(self) -> int:
-        """How many finished matches had a model in a seat."""
+        """How many finished matches played here had a model in a seat.
+
+        Imported matches booked their calls in another ledger, if anywhere.
+        """
         return await self._pool.fetchval(
-            "SELECT count(*) FROM matches WHERE status = 'finished' AND EXISTS "
+            "SELECT count(*) FROM matches WHERE status = 'finished' AND origin = 'played' "
+            "AND EXISTS "
             "(SELECT 1 FROM jsonb_each(seats) seat WHERE seat.value->>'kind' = 'model')"
         )
 

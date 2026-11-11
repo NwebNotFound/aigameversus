@@ -4,12 +4,17 @@ Model seats and costs need the ledger; bot matches do not. LiteLLM answers
 from its own mock with every name lookup refused: nothing here costs money.
 """
 
+import asyncio
 import socket
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
 from arena.api.app import app
+from arena.db.database import connect, migrate
+from arena.db.match_store import MatchStore, Seat
+from arena.engine.types import Placement
 from tests.db.test_cli_models import stored
 from tests.db.test_model_seats_api import KEY, MODELS, PLAY_3, calls, finish
 from tests.test_cli import arena
@@ -60,7 +65,7 @@ def test_model_calls_are_booked_in_the_ledger_database_and_costs_come_from_there
     assert (replay["id"], replay["cost_micro_eur"]) == (match["id"], cost["total_micro_eur"])
 
 
-def test_without_its_ledger_the_server_plays_bots_and_refuses_models_and_costs(
+def test_without_its_ledger_the_server_plays_bots_and_refuses_models_and_costs_of_a_match(
     server, closed_port_url, answer_with
 ):
     sent = answer_with(**PLAY_3)
@@ -77,7 +82,9 @@ def test_without_its_ledger_the_server_plays_bots_and_refuses_models_and_costs(
     assert "spend ledger cannot be read" in refused.json()["detail"]
     assert [match["id"] for match in listed] == [bots["id"]]
     assert sent == {}
-    assert (cost.status_code, replays.status_code) == (503, 503)
+    assert cost.status_code == 503
+    assert replays.status_code == 200
+    assert [(r["id"], r["cost_micro_eur"]) for r in replays.json()] == [(bots["id"], None)]
     assert KEY not in refused.text
 
 
@@ -99,6 +106,36 @@ def test_an_empty_ledger_beside_finished_model_matches_is_not_used(
     assert [match["id"] for match in listed] == [first["id"]]
     assert sent == {}
     assert calls(other_database_url) == []
+
+
+def test_an_imported_model_match_does_not_need_its_calls_in_this_ledger(
+    server, database_url, other_database_url, answer_with
+):
+    answer_with(**PLAY_3)
+    asyncio.run(imported_model_match(database_url))
+
+    with server(other_database_url) as client:  # an empty ledger
+        started = client.post("/matches", json=MODEL_MATCH)
+        match = finish(client, started.json()["id"])
+
+    assert (started.status_code, match["status"]) == (201, "finished")
+    assert calls(other_database_url)
+
+
+async def imported_model_match(database_url):
+    """A finished match with model seats, recorded as imported from a file."""
+    pool = await connect(database_url)
+    try:
+        await migrate(pool)
+        store, match_id = MatchStore(pool), uuid4()
+        seats = {
+            seat: Seat(name=model, model_id=model, kind="model")
+            for seat, model in zip(["p1", "p2"], MODELS, strict=True)
+        }
+        await store.create(match_id, "toy", ["p1", "p2"], 1, {}, seats, origin="imported")
+        await store.close(match_id, "finished", [Placement(player="p1", rank=1)])
+    finally:
+        await pool.close()
 
 
 def test_command_refuses_models_without_its_ledger(

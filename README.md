@@ -211,7 +211,7 @@ platform, not an afterthought.
   has no login: anything on this machine that reaches it could otherwise
   spend. Both need the key and refuse to start without it, and both refuse
   model seats when the ledger cannot be read, or is empty while finished
-  model matches exist (a wrong or lost ledger would let the month cap be
+  model matches played here exist (a wrong or lost ledger would let the month cap be
   passed). Development, tests and CI use random bots and a mock LLM only, and CI
   has no access to any API key.
 - **Keys stay out of the repository:** in the stack the key is a file mounted

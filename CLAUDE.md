@@ -249,10 +249,11 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   ([docs/COSTS.md](docs/COSTS.md)); `scripts/backup-ledger.sh` dumps it.
 - Without a ledger there is no model call. Before a model match starts, the
   API and the command call `Ledger.check`: a ledger that does not answer, or
-  is empty while the match database holds finished model matches (the wrong
-  one, or a lost one), refuses the match with `LedgerUnavailable` (503 in the
+  is empty while the match database holds finished model matches played
+  here, not imported (the wrong one, or a lost one), refuses the match with `LedgerUnavailable` (503 in the
   API), and nothing is recorded or booked. The server itself starts without
-  its ledger, so bot matches play on.
+  its ledger, so bot matches play on; `/matches/{id}/cost` answers 503 and
+  `/replays` shows the costs as null until the ledger answers.
 - The API key comes from `OPENROUTER_API_KEY`, or from the file that
   `OPENROUTER_API_KEY_FILE` names (the stack mounts it read-only, see
   `docker-compose.models.yml`). `load_keys` in `arena/config.py` reads the
