@@ -5,6 +5,7 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import RichText from '#lib/components/RichText.svelte';
 	import {
+		attempts,
 		colourKey,
 		commentary,
 		ordinal,
@@ -40,8 +41,11 @@
 	let list = $state<HTMLOListElement>();
 	let pinned = true;
 
+	/** Refused answers fold into a small marker on the move that counted. */
+	const tries = $derived(attempts(lines));
 	const shown = $derived(
 		commentary(lines, bookkeeping)
+			.filter((line) => bookkeeping || !tries.hidden.has(line))
 			.filter((line) => tab === 'all' || line.kind === 'thought' || line.kind === 'whisper')
 			.filter((line) => who === 'all' || line.actor === who)
 	);
@@ -66,6 +70,29 @@
 		);
 	const colour = (seat: string) => colourKey(seat, players);
 </script>
+
+{#snippet retry(line: TranscriptLine)}
+	{@const a = tries.marks.get(line)}
+	{#if a?.fallback}
+		<span
+			class="retry fallback"
+			data-testid="fallback-mark"
+			title="No usable answer from {name(line.actor)}: the engine played a random move"
+			>random move</span
+		>
+	{:else if a}
+		<span
+			class="retry"
+			data-testid="retry-mark"
+			title="{name(line.actor)}'s first {a.retries > 1
+				? `${a.retries} answers were`
+				: 'answer was'} malformed, fixed on retry"
+			><svg viewBox="0 0 12 12" aria-hidden="true"
+				><path d="M9.5 6a3.5 3.5 0 1 1-1-2.5M9.5 1.5v2.2H7.3" /></svg
+			>retry{a.retries > 1 ? ` ×${a.retries}` : ''}</span
+		>
+	{/if}
+{/snippet}
 
 <section class="commentary" aria-labelledby="commentary-title">
 	<header>
@@ -126,6 +153,7 @@
 							{:else if line.kind === 'whisper'}
 								<span class="tag whisper-tag">whispers</span>
 							{/if}
+							{@render retry(line)}
 						</span>
 						<div class="bubble">
 							{#if raw}<span class="raw-words">{words(line) ?? line.text}</span>{:else}<RichText
@@ -176,7 +204,7 @@
 						<Avatar name={name(line.actor)} colourKey={colour(line.actor)} size={24} />
 					{/if}
 					<div class="told">
-						<span>{line.text}</span>
+						<span>{line.text}{@render retry(line)}</span>
 						{#if line.detail}<small>{line.detail}</small>{/if}
 					</div>
 				{/if}
@@ -255,6 +283,35 @@
 		color: var(--bg);
 		background: var(--accent);
 		border-color: var(--accent);
+	}
+
+	.retry {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		margin-left: 0.4rem;
+		padding: 0 0.4rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		font-size: 0.7rem;
+		font-weight: 500;
+		color: var(--muted);
+		vertical-align: 0.1em;
+		cursor: help;
+	}
+
+	.retry svg {
+		width: 0.7rem;
+		height: 0.7rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.4;
+		stroke-linecap: round;
+	}
+
+	.retry.fallback {
+		color: var(--danger);
+		border-color: color-mix(in srgb, var(--danger) 55%, transparent);
 	}
 
 	.feed {

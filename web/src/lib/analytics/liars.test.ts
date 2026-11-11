@@ -22,8 +22,13 @@ describe.each(views)('the web sums like the arena (%s)', (_, data) => {
 		const ours = totalsOf(data.players, data.moves, data.pulls, data.spoilers);
 		for (const player of data.players) {
 			for (const [key, value] of Object.entries(ours[player])) {
+				if (key === 'rejected') continue; // the arena sends it as a rate, checked below
 				expect(value, `${player}.${key}`).toEqual(data.totals[player][key]);
 			}
+			const moves = data.moves.filter((m) => m.player === player).length;
+			expect(ours[player].rejected / moves, `${player}.rejected`).toBeCloseTo(
+				data.totals[player].rejected_per_move as number
+			);
 		}
 	});
 

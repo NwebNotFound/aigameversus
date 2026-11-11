@@ -27,6 +27,8 @@ export interface LiarsMove {
 	tokens_out: number | null;
 	reasoning_tokens: number | null;
 	retries: number | null;
+	/** Answers of this move the engine refused before one counted: answer quality, not drama. */
+	rejected?: number | null;
 }
 
 export interface LiarsPull {
@@ -62,6 +64,8 @@ export interface LiarsTotals {
 	pulls: number;
 	pulls_survived: number;
 	fallbacks: number;
+	/** Refused answers over all the player's moves, each fixed on a retry or by a fallback. */
+	rejected: number;
 	response_ms_total: number | null;
 	response_ms_mean: number | null;
 	[more: string]: unknown;
@@ -151,6 +155,7 @@ export function totalsOf(
 					pulls: myPulls.length,
 					pulls_survived: myPulls.filter((p) => !p.live).length,
 					fallbacks: mine.filter((m) => m.fallback).length,
+					rejected: mine.reduce((sum, m) => sum + (m.rejected ?? 0), 0),
 					response_ms_total: total,
 					response_ms_mean: total === null ? null : total / times.length
 				}
