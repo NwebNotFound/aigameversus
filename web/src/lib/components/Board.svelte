@@ -2,6 +2,7 @@
 	import type { MatchEvent } from '#lib/api.js';
 	import { hidden } from '#lib/live.js';
 	import LiarsDeckTable from './LiarsDeckTable.svelte';
+	import PokerTable from './PokerTable.svelte';
 
 	/**
 	 * The generic board: any game's render_spec as a header of fields and one card
@@ -37,6 +38,18 @@
 		);
 	}
 
+	/** The Poker table needs seats with a stack and hole cards, and a board. */
+	function isPokerTable(spec: Record<string, unknown>): boolean {
+		return (
+			Array.isArray(spec.board) &&
+			Array.isArray(spec.seats) &&
+			spec.seats.every(
+				(s) =>
+					typeof s?.player === 'string' && typeof s.stack === 'number' && Array.isArray(s.cards)
+			)
+		);
+	}
+
 	const SEAT_FLAGS = ['player', 'alive', 'folded'];
 
 	const label = (key: string) => key.replaceAll('_', ' ');
@@ -60,6 +73,8 @@
 	</div>
 {:else if spec.layout === 'card_table' && isCardTable(spec)}
 	<LiarsDeckTable {spec} {spoilers} {events} />
+{:else if spec.layout === 'poker_table' && isPokerTable(spec)}
+	<PokerTable {spec} {spoilers} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}
