@@ -29,7 +29,7 @@ def bot_seats(players: Sequence[PlayerId]) -> dict[PlayerId, Seat]:
 
 _COLUMNS = (
     "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, "
-    "origin, prompt_version"
+    "origin, memory, prompt_version"
 )
 
 
@@ -45,6 +45,7 @@ class MatchRecord(BaseModel):
     placements: list[Placement] | None
     seats: dict[PlayerId, Seat] | None = None  # None for matches recorded before seats were
     origin: Origin = "played"
+    memory: bool = True  # False: the match neither reads nor writes memory
     prompt_version: str | None = None  # None for matches recorded before it was
 
     @property
@@ -66,13 +67,14 @@ class MatchStore:
         settings: dict[str, Any],
         seats: dict[PlayerId, Seat] | None = None,
         origin: Origin = "played",
+        memory: bool = True,
         prompt_version: str | None = None,
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
             "INSERT INTO matches "
-            "(id, game, status, players, seed, settings, seats, origin, prompt_version) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7, $8) RETURNING {_COLUMNS}",
+            "(id, game, status, players, seed, settings, seats, origin, memory, prompt_version) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7, $8, $9) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
@@ -80,6 +82,7 @@ class MatchStore:
             settings,
             None if seats is None else {p: s.model_dump() for p, s in seats.items()},
             origin,
+            memory,
             prompt_version,
         )
         return MatchRecord(**row)

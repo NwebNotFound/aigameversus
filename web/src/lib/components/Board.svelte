@@ -13,13 +13,16 @@
 		spec,
 		spoilers,
 		events = [],
-		names = {}
+		names = {},
+		colours = {}
 	}: {
 		spec: Record<string, unknown> | null;
 		spoilers: boolean;
 		events?: MatchEvent[];
 		/** Seat id to the name shown at the seat; the seat id when missing. */
 		names?: Record<string, string>;
+		/** Seat id to the key its avatar colour comes from (the model, else the seat). */
+		colours?: Record<string, string>;
 	} = $props();
 
 	type Seat = Record<string, unknown> & { player: string };
@@ -88,11 +91,11 @@
 		<span>The events in the other columns show the whole match.</span>
 	</div>
 {:else if spec.layout === 'card_table' && isCardTable(spec)}
-	<LiarsDeckTable {spec} {spoilers} {events} {names} />
+	<LiarsDeckTable {spec} {spoilers} {names} {colours} />
 {:else if spec.layout === 'poker_table' && isPokerTable(spec)}
-	<PokerTable {spec} {spoilers} {names} />
+	<PokerTable {spec} {spoilers} {events} {names} {colours} />
 {:else if spec.layout === 'player_circle' && isPlayerCircle(spec)}
-	<WerewolfCircle {spec} {spoilers} {events} {names} />
+	<WerewolfCircle {spec} {spoilers} {events} {names} {colours} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}

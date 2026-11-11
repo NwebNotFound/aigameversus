@@ -8,6 +8,7 @@
 		tally,
 		themeOf
 	} from '#lib/boards/werewolfCircle.js';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import { hidden } from '#lib/live.js';
 
 	/**
@@ -19,12 +20,14 @@
 		spec,
 		spoilers,
 		events = [],
-		names = {}
+		names = {},
+		colours = {}
 	}: {
 		spec: Record<string, unknown>;
 		spoilers: boolean;
 		events?: MatchEvent[];
 		names?: Record<string, string>;
+		colours?: Record<string, string>;
 	} = $props();
 	const label = (seat: string) => names[seat] ?? seat;
 
@@ -67,9 +70,6 @@
 			y2: a.top + dy * end
 		};
 	}
-
-	const palette = ['#f0b35a', '#7fb8ff', '#7ad69a', '#ff7a7a', '#c9a0ff', '#ffd27f'];
-	const colour = (index: number) => palette[index % palette.length];
 </script>
 
 <div class="circle {theme}" data-testid="board" data-layout="player_circle" data-theme={theme}>
@@ -105,7 +105,7 @@
 				<path d="M0 0 L6 3 L0 6 z" fill="#ffb347" />
 			</marker>
 		</defs>
-		{#each votes as vote (vote.from)}
+		{#each votes as vote, order (vote.from)}
 			{@const line = arrow(vote.from, vote.to)}
 			{#if line}
 				<line
@@ -113,13 +113,15 @@
 					stroke="#ffb347"
 					stroke-width="0.7"
 					marker-end="url(#vote-head)"
+					pathLength="100"
+					style="--order: {order}"
 					data-testid="vote-arrow"
 				/>
 			{/if}
 		{/each}
 	</svg>
 
-	{#each seats as seat, index (seat.player)}
+	{#each seats as seat (seat.player)}
 		{@const point = points[seat.player]}
 		<section
 			class="seat"
@@ -129,22 +131,20 @@
 			data-testid="seat"
 			aria-label={label(seat.player)}
 		>
-			<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
-				<circle
-					cx="20"
-					cy="20"
-					r="19"
-					fill="var(--surface-raised)"
-					stroke={colour(index)}
-					stroke-width="2"
+			<span class="avatar">
+				<Avatar
+					name={label(seat.player)}
+					colourKey={colours[seat.player] ?? seat.player}
+					size={34}
+					active={seat.player === spec.turn}
+					out={!seat.alive}
 				/>
-				<text x="20" y="26" text-anchor="middle" font-size="18" fill={colour(index)}>
-					{seat.player.slice(-1).toUpperCase()}
-				</text>
 				{#if !seat.alive}
-					<path d="M10 10 L30 30 M30 10 L10 30" stroke="var(--danger)" stroke-width="2.5" />
+					<svg class="grave" viewBox="0 0 12 12" aria-hidden="true"
+						><path d="M3 3 L9 9 M9 3 L3 9" /></svg
+					>
 				{/if}
-			</svg>
+			</span>
 			<span class="name">{label(seat.player)}</span>
 			{#if hideRoles}
 				<span class="role" data-testid="secret">?</span>
@@ -229,8 +229,48 @@
 	}
 
 	.avatar {
-		width: 2.2rem;
-		height: 2.2rem;
+		position: relative;
+		display: inline-block;
+	}
+
+	.grave {
+		position: absolute;
+		right: -0.2rem;
+		bottom: -0.1rem;
+		width: 0.95rem;
+		height: 0.95rem;
+		border-radius: 50%;
+		background: var(--bg);
+		fill: none;
+		stroke: var(--danger);
+		stroke-width: 1.8;
+		stroke-linecap: round;
+	}
+
+	/* The votes draw one after another, so the tally builds up as it happened. */
+	line[data-testid='vote-arrow'] {
+		stroke-dasharray: 100;
+		animation: draw 450ms ease-out both;
+		animation-delay: calc(var(--order) * 120ms);
+	}
+
+	@keyframes draw {
+		from {
+			stroke-dashoffset: 100;
+		}
+		to {
+			stroke-dashoffset: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		line[data-testid='vote-arrow'] {
+			animation: none;
+		}
+
+		.circle {
+			transition: none;
+		}
 	}
 
 	.name {
@@ -239,7 +279,7 @@
 	}
 
 	.role {
-		font-size: 0.65rem;
+		font-size: 0.75rem;
 		padding: 0 0.35rem;
 		border-radius: 999px;
 		background: #0008;
@@ -251,17 +291,13 @@
 	}
 
 	.tag {
-		font-size: 0.6rem;
+		font-size: 0.75rem;
 		color: var(--muted);
 	}
 
 	.seat.dead {
 		opacity: 0.45;
 		filter: grayscale(1);
-	}
-
-	.seat.turn .avatar {
-		filter: drop-shadow(0 0 4px var(--accent));
 	}
 
 	.votes {
@@ -286,13 +322,9 @@
 		.seat {
 			width: 3.2rem;
 		}
-		.avatar {
-			width: 1.7rem;
-			height: 1.7rem;
-		}
 		.name,
 		.role {
-			font-size: 0.6rem;
+			font-size: 0.7rem;
 		}
 	}
 </style>

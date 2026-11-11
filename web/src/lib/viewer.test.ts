@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchEvent, TranscriptLine } from './api.js';
 import {
+	beatOf,
 	chapterLabel,
 	commentary,
 	langOf,
 	linesUpTo,
 	marks,
+	newBeats,
 	nextStop,
 	previousStop,
 	seatHue,
@@ -105,5 +107,29 @@ describe('seats and words', () => {
 	it("takes a speaker's own words from the event, not the sentence", () => {
 		expect(words(line(1, 'speech', 2, 'Juniper: "Hi"', { text: 'Hi' }))).toBe('Hi');
 		expect(words(line(1, 'speech', 2, 'x'))).toBeNull();
+	});
+});
+
+describe('beats', () => {
+	const at = (seq: number, type: string, importance: 1 | 2 | 3, data = {}) =>
+		({
+			...line(seq, 'result', importance, `${type} ${seq}`),
+			raw: { type, data }
+		}) as TranscriptLine;
+
+	it('gives a highlight its beat by event type, and nightfall one too', () => {
+		expect(beatOf(at(1, 'liar_called', 3))).toBe('call');
+		expect(beatOf(at(1, 'trigger_pulled', 3, { live: true }))).toBe('bang');
+		expect(beatOf(at(1, 'trigger_pulled', 3, { live: false }))).toBe('click');
+		expect(beatOf(at(1, 'night_started', 2))).toBe('night');
+		expect(beatOf(at(1, 'something_new', 3))).toBe('highlight');
+		expect(beatOf(at(1, 'cards_played', 2))).toBeNull();
+	});
+
+	it('plays the beats of what was just watched, not of a jump', () => {
+		const lines = [at(1, 'cards_played', 2), at(2, 'liar_called', 3), at(3, 'trigger_pulled', 3)];
+		expect(newBeats(lines, 1).map((b) => b.beat)).toEqual(['call', 'click']);
+		expect(newBeats(lines, 3)).toEqual([]);
+		expect(newBeats(lines, -1, 2)).toEqual([]);
 	});
 });

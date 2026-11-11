@@ -64,7 +64,7 @@ test('a player links to a profile with rating bars and stats', async ({ page }) 
 	await expect(page.getByRole('region', { name: 'Statistics', exact: true })).toContainText(
 		'Win rate'
 	);
-	await expect(page.getByText('not available yet')).toBeVisible();
+	await expect(page.getByTestId('no-memories')).toBeVisible();
 });
 
 test('a malformed profile id is the same 404 page', async ({ page }) => {

@@ -274,3 +274,26 @@ def test_model_seats_get_the_prompt_version_of_the_settings(client, answer_with)
     assert match["prompt_version"] == "poker-p2"
     assert client.get("/replays").json()[0]["prompt_version"] == "poker-p2"
     assert sent["messages"][1]["content"].startswith("<summary>\nYou are p")
+
+
+def test_a_model_match_with_memory_on_remembers_nothing_yet(client, database_url, answer_with):
+    # Model seats have no profiles yet, so their matches are not rated, and only rated
+    # matches are remembered. A bot match of the same game does write a summary.
+    answer_with(**PLAY_3)
+    models = client.post(
+        "/matches",
+        json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": 4, "memory": True},
+    ).json()
+    bots = client.post("/matches", json={"game": "toy", "seed": 4}).json()
+    assert finish(client, models["id"])["status"] == "finished"
+    assert finish(client, bots["id"])["status"] == "finished"
+
+    async def remembered():
+        pool = await connect(database_url)
+        try:
+            rows = await pool.fetch("SELECT DISTINCT match_id FROM match_memories")
+            return {str(row["match_id"]) for row in rows}
+        finally:
+            await pool.close()
+
+    assert asyncio.run(remembered()) == {bots["id"]}

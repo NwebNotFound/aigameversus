@@ -119,3 +119,59 @@ export function words(line: TranscriptLine): string | null {
 	}
 	return null;
 }
+
+/** The short staged reaction of the stage to a key moment. */
+export type Beat =
+	'call' | 'reveal' | 'bang' | 'click' | 'allin' | 'win' | 'death' | 'night' | 'end' | 'highlight';
+
+const BEATS: Record<string, Beat> = {
+	liar_called: 'call',
+	cards_revealed: 'reveal',
+	showdown: 'reveal',
+	bet_action: 'allin',
+	pot_awarded: 'win',
+	captain_elected: 'win',
+	players_eliminated: 'death',
+	player_died: 'death',
+	hunter_shot: 'death',
+	morning_started: 'death',
+	vote_result: 'reveal',
+	night_started: 'night',
+	match_over: 'end',
+	game_over: 'end',
+	match_finished: 'end'
+};
+
+/**
+ * The beat a line asks for, or null. Highlights (importance 3) get one, and so does
+ * nightfall; the kind comes from the event type, the words from the line itself.
+ */
+export function beatOf(line: TranscriptLine): Beat | null {
+	const type = String(line.raw?.type ?? '');
+	if (type === 'night_started') return 'night';
+	if (line.importance < 3) return null;
+	if (type === 'trigger_pulled') {
+		const data = line.raw?.data as { live?: unknown } | undefined;
+		return data?.live === true ? 'bang' : 'click';
+	}
+	return BEATS[type] ?? 'highlight';
+}
+
+/**
+ * The beats to play when the shown lines go from `before` (the newest position shown so far)
+ * to `lines`: none when the viewer jumped back, or ahead by more than `maxJump` lines that
+ * matter (a seek, not watching).
+ */
+export function newBeats(
+	lines: TranscriptLine[],
+	before: number,
+	maxJump = 12
+): { line: TranscriptLine; beat: Beat }[] {
+	const fresh = lines.filter((line) => line.seq !== null && line.seq > before);
+	const matter = fresh.filter((line) => line.importance > 1 && line.kind !== 'info');
+	if (matter.length > maxJump) return [];
+	return fresh.flatMap((line) => {
+		const beat = beatOf(line);
+		return beat ? [{ line, beat }] : [];
+	});
+}
