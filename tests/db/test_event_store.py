@@ -6,7 +6,10 @@ import asyncpg
 import pytest
 from fastapi.testclient import TestClient
 
+from arena.agents.mock_llm import MockLLM
+from arena.agents.model import ModelReply, ToolCall
 from arena.agents.random_bot import random_bots
+from arena.agents.runner import ModelAgent
 from arena.api.app import app
 from arena.db.database import connect, migrate
 from arena.db.event_store import EventStore
@@ -54,6 +57,34 @@ def test_stored_match_replays_to_the_exact_end_state(database_url):
 
     assert stored == match.events
     assert replay(plugin, stored) == match.state
+
+
+def test_match_of_model_players_is_stored_whatever_they_write(database_url):
+    plugin = ToyGame()
+    match_id = uuid4()
+
+    def odd_model(messages, tools):
+        # Postgres refuses NUL, half surrogate pairs and NaN; the engine removes them.
+        return ModelReply(
+            text="my plan\x00 \ud83d ♠ <b>",
+            tool_calls=(ToolCall("play\x00_card", '{"card": NaN, "why": "\\u0000\\ud83d"}'),),
+        )
+
+    async def scenario(store):
+        agents = {player: ModelAgent(MockLLM(odd_model), plugin) for player in PLAYERS}
+        match = Match(plugin, agents, seed=21, sink=partial(store.append, match_id))
+        await match.run()
+        return match, await store.load(match_id)
+
+    match, stored = with_store(database_url, scenario)
+
+    assert stored == match.events
+    assert replay(plugin, stored) == match.state
+    thought = next(event for event in stored if event.type == "thought")
+    assert thought.data["text"] == "my plan  ♠ <b>"
+    assert thought.visible_to == ()
+    rejected = next(event for event in stored if event.type == "action_rejected")
+    assert rejected.data["arguments"] == {"card": None, "why": ""}
 
 
 def test_visibility_and_nested_data_survive_storage(database_url):
