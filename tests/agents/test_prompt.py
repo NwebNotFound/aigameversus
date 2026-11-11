@@ -75,7 +75,7 @@ def test_events_about_the_reader_are_marked_as_theirs_and_others_are_not():
 @pytest.mark.parametrize(
     ("type", "mine", "theirs"),
     [
-        ("liar_called", {"caller": "p1", "accused": "p2"}, {"caller": "p2", "accused": "p1"}),
+        ("liar_called", {"caller": "p1", "target": "p2"}, {"caller": "p2", "target": "p1"}),
         ("captain_passed", {"from": "p1", "to": "p2"}, {"from": "p2", "to": "p1"}),
     ],
 )
