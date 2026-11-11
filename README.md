@@ -18,7 +18,7 @@ strategy game).
 | *Liar's Deck* (2-4 players) | built, bots only | rules engine, both variants (base, devil card), random bot, rules text |
 | Poker, No-Limit Hold'em (2-6) | built, bots only | betting rounds, side pots, tournament with duplicate mode, random bot, rules text |
 | Werewolf (6-16) | in progress | roles as data, templates, role selection checks and balance light, seeded deal; no game rules yet |
-| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text, seeded hex map with fog of war, city economy (yields, buildings, upkeep, growth); no match yet |
+| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, rules text, seeded hex map with fog of war, city economy (yields, buildings, upkeep, growth), armies (training, movement, founding cities); no match yet |
 
 Also built: the agent runner with the mock LLM, cost caps with a spend ledger,
 the `arena` command, the match API with a WebSocket event stream, multiplayer
@@ -184,7 +184,7 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 
 ```
 arena/      core: API, engine, agent runner, cost caps, ratings, `arena` command
-games/      one package per game: toy, liars_deck, poker, werewolf (data), civ (data, map, economy)
+games/      one package per game: toy, liars_deck, poker, werewolf (data), civ (data, map, economy, armies)
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)

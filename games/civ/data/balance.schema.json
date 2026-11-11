@@ -90,6 +90,12 @@
           "title": "Expanded At Population",
           "type": "integer"
         },
+        "min_distance": {
+          "description": "A new city must be at least this many steps from every other city",
+          "minimum": 1,
+          "title": "Min Distance",
+          "type": "integer"
+        },
         "growth_food": {
           "minimum": 1,
           "title": "Growth Food",
@@ -130,6 +136,7 @@
         "work_radius",
         "expanded_work_radius",
         "expanded_at_population",
+        "min_distance",
         "growth_food",
         "food_per_population",
         "building_slots",

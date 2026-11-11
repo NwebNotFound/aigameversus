@@ -1,8 +1,8 @@
 """The state of a Throne of Tokens match, as far as the game is built.
 
 It holds what is true now and no rules. It changes only when an event is
-applied (``apply_event`` in ``economy.py``), so the event log of a match
-rebuilds it exactly.
+applied (``apply_event`` in ``turn.py``), so the event log of a match rebuilds
+it exactly.
 """
 
 from __future__ import annotations
@@ -46,13 +46,42 @@ class City(BaseModel):
         return self.col, self.row
 
 
+class Troop(BaseModel):
+    """One unit of an army."""
+
+    kind: str  # a unit id from the data
+    bonus: int = 0  # strength added where it was trained
+
+
+class Army(BaseModel):
+    id: str  # "a1", "a2", ... in the order the armies were raised; never used twice
+    owner: str
+    col: int
+    row: int
+    units: list[Troop]  # never empty: an army that loses its last unit is gone
+
+    @property
+    def tile(self) -> Hex:
+        return self.col, self.row
+
+
 class CivState(BaseModel):
+    round: int = 0  # the round being played; 0 before the first
     world: WorldMap = WorldMap(rows=[], starts=[])
     nations: dict[str, Nation]
     cities: list[City] = []  # in founding order: the older city wins a tie over a tile
+    armies: list[Army] = []
+    armies_raised: int = 0  # how many armies there have ever been, for the next id
 
     def city(self, city_id: str) -> City:
         return next(city for city in self.cities if city.id == city_id)
+
+    def army(self, army_id: str) -> Army:
+        return next(army for army in self.armies if army.id == army_id)
+
+    def units_of(self, player: str) -> list[str]:
+        """The kinds of all units the nation keeps, army by army."""
+        return [troop.kind for army in self.armies if army.owner == player for troop in army.units]
 
 
 def new_game(players: Sequence[str], data: CivData) -> CivState:
