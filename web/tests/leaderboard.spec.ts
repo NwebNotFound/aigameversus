@@ -56,6 +56,14 @@ test('a player links to a profile with rating bars and stats', async ({ page }) 
 	await expect(page.getByText('not available yet')).toBeVisible();
 });
 
+test('a malformed profile id is the same 404 page', async ({ page }) => {
+	const response = await page.goto('/profiles/not-a-uuid');
+
+	expect(response?.status()).toBe(404);
+	await expect(page.getByText('No player with this id')).toBeVisible();
+	await expect(page.getByTestId('arena-unreachable')).toHaveCount(0);
+});
+
 test('an unknown profile is a 404 page', async ({ page }) => {
 	const response = await page.goto('/profiles/00000000-0000-0000-0000-000000000000');
 

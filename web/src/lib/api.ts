@@ -92,7 +92,8 @@ export function createArenaClient(
 	/** GET a JSON body and check its shape; any failure becomes a result, never a throw. */
 	async function getJson<T>(
 		path: string,
-		valid: (body: unknown) => boolean
+		valid: (body: unknown) => boolean,
+		notFound: number[] = [404]
 	): Promise<ApiResult<T>> {
 		let response: Response;
 		try {
@@ -100,7 +101,7 @@ export function createArenaClient(
 		} catch (error) {
 			return { state: 'unreachable', reason: describe(error) };
 		}
-		if (response.status === 404) return { state: 'not_found' };
+		if (notFound.includes(response.status)) return { state: 'not_found' };
 		if (!response.ok) {
 			return { state: 'unreachable', reason: `the arena answered ${response.status}` };
 		}
@@ -144,7 +145,9 @@ export function createArenaClient(
 		profile(id) {
 			return getJson<Profile>(
 				`/profiles/${encodeURIComponent(id)}`,
-				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings)
+				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
+				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
 			);
 		}
 	};

@@ -148,6 +148,22 @@ describe('profile', () => {
 		expect(calls).toEqual(['http://arena:8000/profiles/x%2Fy']);
 	});
 
+	it('reports a malformed id (422) as not found', async () => {
+		const { fetchFn } = fakeFetch(() => Response.json({ detail: [] }, { status: 422 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).profile('not-a-uuid');
+
+		expect(result).toEqual({ state: 'not_found' });
+	});
+
+	it('keeps a 422 from other endpoints as unreachable', async () => {
+		const { fetchFn } = fakeFetch(() => new Response('', { status: 422 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).leaderboard();
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena answered 422' });
+	});
+
 	it('reports a refused connection as unreachable', async () => {
 		const { fetchFn } = fakeFetch(() => Promise.reject(new TypeError('fetch failed')));
 
