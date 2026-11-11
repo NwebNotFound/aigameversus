@@ -3,13 +3,15 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import asyncpg
 
 from arena.engine.types import Placement
 from arena.ratings.elo import DEFAULT_K, RatingChange, overall_rating, update_ratings
 from arena.ratings.stats import win_rate
+
+BOT_MODEL_ID = "random-bot"
 
 
 @dataclass(frozen=True)
@@ -80,6 +82,22 @@ class RatingStore:
             personality_id,
         )
         return profile_id
+
+    async def bot_profiles(self, seats: Sequence[str]) -> dict[str, UUID]:
+        """The profile of the random bot on each seat, created on first use (D-052).
+
+        One profile per seat name ("Random Bot p1"), because a match rates every
+        profile once. The id derives from the seat, so it is the same every time.
+        """
+        ids = {
+            seat: uuid5(NAMESPACE_URL, f"aigameversus/bot/{BOT_MODEL_ID}/{seat}") for seat in seats
+        }
+        await self._pool.executemany(
+            "INSERT INTO player_profiles (id, name, model_id) VALUES ($1, $2, $3) "
+            "ON CONFLICT (id) DO NOTHING",
+            [(profile_id, f"Random Bot {seat}", BOT_MODEL_ID) for seat, profile_id in ids.items()],
+        )
+        return ids
 
     async def ratings(self, profile_id: UUID) -> dict[str, GameRating]:
         """The profile's rating in every game it has played, by game id."""
