@@ -315,7 +315,7 @@ def reliability(matches: Sequence[dict]) -> dict[str, dict]:
         repaired: Counter[str] = Counter()
         for event in match["events"]:
             data = event.get("data") or {}
-            if event.get("type") == "decision" and data.get("repaired"):
+            if event.get("type") == "decision" and data.get("repairs"):  # #114; missing = []
                 repaired[data.get("player")] += 1
         for player, seat in match["seat_reports"].items():
             row = rows[seat["model"]]
