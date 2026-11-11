@@ -32,6 +32,12 @@ async def analytics(
     if record is None:
         raise HTTPException(404, f"No match {match_id}")
     try:
-        return match_analytics(record.game, await live.log(match_id), spoilers)
+        result = match_analytics(record.game, await live.log(match_id), spoilers)
     except NoAnalytics as missing:
         raise HTTPException(404, str(missing)) from missing
+    # Who sat where (seat to model id; null for a bot), so a batch groups like with like.
+    seats = record.seats or {}
+    result["meta"]["seats"] = {
+        seat: seats[seat].model_id if seat in seats else None for seat in record.players
+    }
+    return result

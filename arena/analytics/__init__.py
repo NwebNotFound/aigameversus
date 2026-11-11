@@ -12,6 +12,7 @@ from typing import Any
 
 from arena.analytics import liars_deck
 from arena.engine.types import Event
+from arena.transcript.common import public_settings
 
 # Each analyzer takes (seq, event) pairs: seq is the event's position in the whole log,
 # so the UI can jump a replay to a move even when some events are filtered out.
@@ -30,5 +31,19 @@ def match_analytics(game: str, events: Iterable[Event], spoilers: bool) -> dict[
         raise NoAnalytics(f"No analytics for {game} yet (known: {', '.join(ANALYZERS)})")
     log = list(enumerate(events))
     if not spoilers:
-        log = [(seq, e) for seq, e in log if e.visible_to is None]
+        # The start of the match stays, as in the transcript: without the seed (it would
+        # give every hidden draw away) and with only the settings anyone may read.
+        log = [
+            (seq, _public_start(e))
+            for seq, e in log
+            if e.visible_to is None or e.type == "match_started"
+        ]
     return {"game": game, "spoilers": spoilers, "events": len(log), **analyze(log, spoilers)}
+
+
+def _public_start(event: Event) -> Event:
+    if event.type != "match_started":
+        return event
+    data = {k: v for k, v in event.data.items() if k != "seed"}
+    data["settings"] = public_settings(event.data.get("settings") or {})
+    return event.model_copy(update={"data": data})

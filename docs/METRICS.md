@@ -10,8 +10,11 @@ same numbers for the same log. The definitions follow the Researcher's review
 
 - **Spoilers.** With `spoilers=true` every event is read (the spectator view,
   also what players hid). With `spoilers=false` only public events are read
-  (`visible_to` is null); every number that needs a hidden event is `null`,
-  never a guess and never 0. The cut is the same as the transcript's.
+  (`visible_to` is null), plus the match start without its seed and with only
+  the settings anyone may read; every number that needs a hidden event is
+  `null`, never a guess and never 0. The cut is the same as the transcript's.
+  Selection-biased numbers (a lie rate over revealed plays only) are not shown
+  without spoilers at all: a spoiler-free view gets public counts.
 - **Rates carry their n.** A rate is `{"value", "n", "of"}`: `n / of`, with
   `value: null` when `of` is 0. "No data" is `null`, never 0.
 - **Fallbacks are not the model's.** A move the engine played for a model
@@ -25,8 +28,9 @@ same numbers for the same log. The definitions follow the Researcher's review
 - **Positions.** Every move and pull carries `seq`, its position in the whole
   log, so the UI can jump a replay there; `index` is its position among moves.
 - **What the match was.** `meta` holds the game `version`, `prompt_version`,
-  `seed` and `settings` from `match_started` (spoilers only: without them the
-  start, seed included, is hidden), so comparisons group like with like.
+  `settings` and `seed` (spoilers only) from `match_started`, and `seats` (seat
+  to model id; `null` for a bot) from the match record, so comparisons group
+  like with like. The arena's code version is not in the log yet.
 
 ### Per move: cost of the decision
 
@@ -77,8 +81,10 @@ choices and are left out everywhere.
 
 A `trigger_pulled` event: `pull` is the player's pull number, `live` whether it
 fired. `risk` (also on each play and call) is live chambers / chambers not yet
-pulled of that player's own revolver at that moment, so later pulls are riskier
-(spoilers: it needs the hidden loading).
+pulled of that player's own revolver at that moment, so later pulls are riskier.
+It needs no spoilers: the variant says how many chambers are live
+(`revolver.live`), the pulls are public, and a live pull ends the player; only
+where the bullets sit is hidden.
 
 ### Totals per player (`totals`)
 
@@ -88,11 +94,11 @@ Skill numbers use the model's own moves only (fallbacks left out).
 |---|---|
 | `plays`, `plays_known` | Plays made; those whose truth is known. |
 | `honest`, `lies` | Known plays that were honest / lies. |
-| `lie_rate` | lies / plays_known (spoilers). It mostly measures the cards dealt; see `chosen_lie_rate`. |
+| `lie_rate` | lies / plays_known (spoilers only: over revealed plays it would be biased towards called plays). It mostly measures the cards dealt; see `chosen_lie_rate`. |
 | `chosen_lie_rate` | chosen lies / plays where an honest play was possible (the hand held a table card or joker) (spoilers). |
 | `forced_lies` | Lies with no honest play possible (spoilers). |
 | `mean_lie_size` | Mean `lie_size` over lies (spoilers). |
-| `lies_called` | Lies that were turned over. |
+| `lies_called` | Lies that were turned over, by a chosen or an automatic call (apart from the chosen-call figures below). |
 | `calls`, `calls_correct`, `calls_wrong` | Chosen calls, and those whose revealed play was a lie / was honest. |
 | `call_accuracy` | correct calls / judged calls. It depends on how often the others lie: read it with the next two. |
 | `call_rate` | calls / call opportunities. |

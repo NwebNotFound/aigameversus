@@ -56,13 +56,18 @@ def test_without_spoilers_nothing_hidden_is_counted(events):
             assert move["honest"] is None or move["called"]
             if move["honest"] is not None:
                 assert move["honest"] == full_by_seq[move["seq"]]["honest"]
-    # No risk at a pull: it needs the hidden revolver loading.
-    assert all(pull["risk"] is None for pull in open_["pulls"])
-    # Hidden events are not even read.
-    hidden = {seq for seq, e in enumerate(events) if e.visible_to is not None}
+    # Risk needs no secret: the same in both views.
+    assert [p["risk"] for p in open_["pulls"]] == [p["risk"] for p in full["pulls"]]
+    # Hidden events are not read, except the start without its seed and secret settings.
+    hidden = {
+        seq
+        for seq, e in enumerate(events)
+        if e.visible_to is not None and e.type != "match_started"
+    }
     assert not hidden & {m["seq"] for m in open_["moves"]}
     assert open_["events"] == len(events) - len(hidden)
     assert "thought" not in json.dumps(open_)
+    assert open_["meta"]["seed"] is None
 
 
 def test_every_move_points_at_its_event_in_the_log():
@@ -88,13 +93,16 @@ def test_by_round_adds_up_to_the_totals():
         assert sum(c["calls"] for c in cells) == total["calls"]
 
 
-def test_risk_at_a_pull_is_live_chambers_over_chambers_left():
-    analytics = match_analytics("liars_deck", played(9), spoilers=True)
+def test_risk_is_live_chambers_over_chambers_left_and_needs_no_spoilers():
+    events = played(9)
 
-    for pull in analytics["pulls"]:
-        assert 0 < pull["risk"] <= 1
-        if pull["pull"] == 1:
-            assert pull["risk"] == pytest.approx(1 / 6)  # one live chamber of six at the start
+    for spoilers in (True, False):
+        analytics = match_analytics("liars_deck", events, spoilers=spoilers)
+        for pull in analytics["pulls"]:
+            # The pull-th pull has 6 - (pull - 1) chambers left, one of them live.
+            assert pull["risk"] == pytest.approx(1 / (6 - pull["pull"] + 1))
+        for move in analytics["moves"]:
+            assert 0 < move["risk"] <= 1
 
 
 def test_a_real_match_has_its_fallbacks_and_a_partial_log_works():
@@ -214,7 +222,19 @@ def test_without_spoilers_the_numbers_that_need_hidden_cards_are_null():
 
 def test_the_match_says_what_it_was_for_grouping():
     meta = match_analytics("liars_deck", example(), spoilers=True)["meta"]
-    hidden = match_analytics("liars_deck", example(), spoilers=False)["meta"]
+    public = match_analytics("liars_deck", example(), spoilers=False)["meta"]
 
     assert meta["version"] == "1" and meta["seed"] == 2027 and meta["settings"] == {}
-    assert hidden["seed"] is None
+    assert public["seed"] is None and public["version"] == "1"
+
+
+def test_the_spoiler_free_start_keeps_only_the_public_settings():
+    events = played(18, settings={"variant": "devil_card"})
+    for event in events:
+        if event.type == "match_started":
+            event.data["settings"]["secret_test_setting"] = "hidden"
+
+    public = match_analytics("liars_deck", events, spoilers=False)
+
+    assert public["meta"]["settings"] == {"variant": "devil_card"}
+    assert "hidden" not in json.dumps(public)

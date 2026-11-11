@@ -29,7 +29,8 @@ def test_a_finished_match_has_its_analytics_with_and_without_spoilers(client):
         t["plays"] for t in full["totals"].values()
     )
     assert public["events"] < full["events"]
-    assert all(p["risk"] is None for p in public["pulls"])
+    assert public["meta"]["seed"] is None and full["meta"]["seed"] == 3
+    assert full["meta"]["seats"] == public["meta"]["seats"] == {"p1": None, "p2": None}
     assert "cards_hidden" not in json.dumps(public)
 
 

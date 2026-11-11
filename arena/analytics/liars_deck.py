@@ -65,15 +65,16 @@ def analyze(log: list[tuple[int, Event]], spoilers: bool) -> dict[str, Any]:
         meta = {
             "version": start.data.get("version"),
             "prompt_version": start.data.get("prompt_version"),
-            "seed": start.data.get("seed"),
+            "seed": start.data.get("seed"),  # not in the spoiler-free start
             "settings": start.data.get("settings", {}),
         }
-    else:  # spoiler-free: the start (seed included) is hidden; the first round names who plays
+    else:  # a log without its start (a part of one): the first round names who plays
         first = next((e for e in events if e.type == "round_started"), None)
         players = list(first.data["players"]) if first else []
         variant = "base"
         meta = {"version": None, "prompt_version": None, "seed": None, "settings": {}}
-    chambers = load_variants()[variant].revolver.chambers
+    revolver = load_variants()[variant].revolver
+    chambers = revolver.chambers
 
     moves: list[dict[str, Any]] = []
     pulls: list[dict[str, Any]] = []
@@ -81,18 +82,17 @@ def analyze(log: list[tuple[int, Event]], spoilers: bool) -> dict[str, Any]:
     decisions = _Decisions()
     hands: dict[PlayerId, list[str]] = {}  # spoilers: the cards each player holds
     hand_size: dict[PlayerId, int] = {}
-    live_chambers: dict[PlayerId, int] = {}
     pulled: dict[PlayerId, int] = dict.fromkeys(players, 0)
     table_card: str | None = None
     round_no = 0
     on_table: dict[str, Any] | None = None  # the last play, not yet called
     call: dict[str, Any] | None = None
 
-    def risk(player: PlayerId) -> float | None:
+    def risk(player: PlayerId) -> float:
+        # Public: the variant says how many chambers are live, the pulls are public, and a
+        # live pull ends the player, so until then every live chamber is still ahead.
         left = chambers - pulled.get(player, 0)
-        if not spoilers or player not in live_chambers or left <= 0:
-            return None
-        return live_chambers[player] / left
+        return min(1.0, revolver.live / left) if left > 0 else 1.0
 
     def facing() -> bool | None:
         """Whether the play on the table is a lie; null while that is not known."""
@@ -106,8 +106,6 @@ def analyze(log: list[tuple[int, Event]], spoilers: bool) -> dict[str, Any]:
             decisions.note(event)
             continue
         match event.type:
-            case "revolver_loaded":
-                live_chambers[data["player"]] = len(data["live"])
             case "round_started":
                 round_no, table_card = data["round"], data["table_card"]
                 on_table = None
