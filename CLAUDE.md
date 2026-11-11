@@ -512,7 +512,9 @@ What the UI draws comes from the plugin's `render_spec(state)`, a plain JSON
 dict with a `layout` (`card_table`, `poker_table`, `player_circle`) and a list
 of `seats`, each with a `player`. Until a game has its own table in `web/`,
 the generic board shows the other fields as text; it hides the fields `hand`,
-`cards` and `role` when the spectator switches spoilers off. A game without
+`cards` and `role` in the spoiler-free view. A spoiler-free page gets its board
+through an allowlist per layout in `web/src/lib/server/redact.ts`: a new layout
+or field shows nothing there until it is listed as public. A game without
 `render_spec` shows its events only.
 
 ### A model

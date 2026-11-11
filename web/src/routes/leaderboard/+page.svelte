@@ -106,6 +106,8 @@
 							<td>
 								{#if row.members > 1}
 									{row.name} <span class="model">({row.members} seats)</span>
+								{:else if row.kind === 'model'}
+									<a href="/models/{encodeURIComponent(row.model_id)}">{row.name}</a>
 								{:else}
 									<a href="/profiles/{row.profile_id}">{row.name}</a>
 								{/if}

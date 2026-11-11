@@ -32,4 +32,10 @@ describe('shareLink', () => {
 			'http://127.0.0.1:3100/replays/m1?step=7'
 		);
 	});
+
+	it('keeps a spoiler-free link spoiler-free', () => {
+		expect(shareLink('http://x', 'm1', 3, 'spoiler-free')).toBe(
+			'http://x/replays/m1?step=3&view=spoiler-free'
+		);
+	});
 });
