@@ -158,3 +158,13 @@ def test_the_same_log_gives_the_same_statistics():
     events = bot_log(3, 9)
 
     assert match_stats(events) == match_stats(events)
+
+
+def test_the_registry_finds_liars_deck_by_game_id():
+    from arena.stats import STATS
+
+    stats = STATS["liars_deck"]
+    per_player = stats.match_stats(bot_log(2, 3))
+
+    assert set(per_player) == {"p1", "p2"}
+    assert stats.aggregate([per_player["p1"]]).matches == 1
