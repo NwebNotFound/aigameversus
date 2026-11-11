@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ControlAction, LiveState, MatchEvent, Transcript } from '#lib/api.js';
+	import type { Board, ControlAction, LiveState, MatchEvent, Transcript } from '#lib/api.js';
 	import ViewSwitch from '#lib/components/ViewSwitch.svelte';
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS, euros, merge } from '#lib/live.js';
-	import { langOf, mergeSeats, namedLines } from '#lib/viewer.js';
+	import { dwellMs, SPEEDS as PLAYBACK } from '#lib/pacing.js';
+	import { langOf, linesUpTo, mergeSeats, namedLines, nextStop, stops } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -27,6 +28,16 @@
 	let busy = $state(false);
 	let problem = $state<string | null>(null);
 
+	// The playout: events arrive as fast as the models answer; the screen shows them moment by
+	// moment, each for as long as the director says, so a burst of instant moves is still
+	// watchable. Joining a running match starts at its newest moment (no replay of the past).
+	let shown = $state(0);
+	let started = $state(false);
+	let playback = $state(1);
+	/** When the newest event arrived, for the thinking timer while a model is asked. */
+	let arrived = $state(Date.now());
+	let now = $state(Date.now());
+
 	const status = $derived(live?.control?.paused ? 'paused' : (live?.match.status ?? 'unknown'));
 	const base = $derived(`/matches/${encodeURIComponent(params.id)}`);
 	const lang = $derived(live ? langOf(live.match.settings) : 'en');
@@ -36,6 +47,76 @@
 			? mergeSeats(live.match.players, live.match.seats, transcript?.players, data.roster)
 			: undefined
 	);
+
+	const allLines = $derived(namedLines(transcript?.lines ?? [], players));
+	const moments = $derived(stops(log, allLines, 2));
+	/** The transcript covers the log up to here; the playout never runs ahead of its words. */
+	const covered = $derived.by(() => {
+		const last = Math.max(-1, ...allLines.map((l) => l.seq ?? -1));
+		return log.filter((e) => e.seq <= last).length;
+	});
+	const behind = $derived(moments.filter((m) => m > shown).length);
+	const atLive = $derived(shown >= log.length);
+	const shownSeq = $derived(shown === 0 ? -1 : (log[shown - 1]?.seq ?? -1));
+
+	$effect(() => {
+		if (!started || shown >= log.length) return;
+		const target = Math.min(nextStop(moments, shown, log.length), Math.max(covered, shown));
+		if (target <= shown) return;
+		const before = Math.max(0, ...moments.filter((m) => m <= shown));
+		const since = before === 0 ? -1 : log[before - 1].seq;
+		const showing = allLines.filter((l) => l.seq !== null && l.seq > since && l.seq <= shownSeq);
+		const timer = setTimeout(() => (shown = target), dwellMs(showing, playback));
+		return () => clearTimeout(timer);
+	});
+
+	// The board of the moment on screen while the playout is behind; the live board at live.
+	const boards = new Map<number, Board['spec']>();
+	let pastSpec = $state<Board['spec']>(null);
+	$effect(() => {
+		if (atLive) return;
+		const at = shownSeq + 1;
+		if (boards.has(at)) {
+			pastSpec = boards.get(at) ?? null;
+			return;
+		}
+		const query = view === 'spoiler-free' ? '&view=spoiler-free' : '';
+		fetch(`/replays/${encodeURIComponent(params.id)}/board?events=${at}${query}`)
+			.then((r) => (r.ok ? r.json() : null))
+			.then((board: Board | null) => {
+				if (!board) return;
+				boards.set(at, board.spec);
+				if (shownSeq + 1 === at) pastSpec = board.spec;
+			})
+			.catch(() => {});
+	});
+
+	/** Who is being asked right now, and since when: the arena's word if it sends it. */
+	const thinking = $derived.by(() => {
+		if (!live || !atLive || live.match.status !== 'running' || live.control?.paused) return null;
+		const asking = (live.control as { asking?: { player: string; since: string }[] } | null)
+			?.asking;
+		if (asking?.length) {
+			return { seat: asking[0].player, ms: now - Date.parse(asking[0].since) };
+		}
+		return typeof turn === 'string' ? { seat: turn, ms: now - arrived } : null;
+	});
+
+	/** Each player's last response time, from the decision events (spectators only). */
+	const responses = $derived.by(() => {
+		const last: Record<string, number> = {};
+		for (const event of log.slice(0, shown)) {
+			const ms = event.data.latency_ms;
+			if (
+				event.type === 'decision' &&
+				typeof event.data.player === 'string' &&
+				typeof ms === 'number'
+			) {
+				last[event.data.player] = ms;
+			}
+		}
+		return last;
+	});
 
 	let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 	/** Board, cost, status and commentary after new turns; at most about three times a second. */
@@ -79,8 +160,16 @@
 		};
 		source.addEventListener('event', (message) => {
 			log = merge(log, [JSON.parse(message.data)]);
+			arrived = Date.now();
+			if (!started) shown = log.length;
 			refreshSoon();
 		});
+		// The backlog of a running match comes in one burst: show its end, then play out.
+		const begin = setTimeout(() => {
+			started = true;
+			shown = log.length;
+		}, 600);
+		const tick = setInterval(() => (now = Date.now()), 1000);
 		for (const [type, state] of [
 			['end', 'ended'],
 			['missing', 'missing']
@@ -95,6 +184,8 @@
 		return () => {
 			source.close();
 			clearTimeout(refreshTimer);
+			clearTimeout(begin);
+			clearInterval(tick);
 		};
 	});
 </script>
@@ -114,7 +205,7 @@
 		</span>
 	</div>
 {:else}
-	<header class="top" aria-label="Match">
+	<header class="top" aria-label="Match" data-testid="live-header" data-received={log.length}>
 		<div class="title">
 			<h1>{gameName(live.match.game)}</h1>
 			<span class="pill" data-status={status} data-testid="status">
@@ -136,18 +227,36 @@
 	</header>
 
 	<WatchScreen
-		spec={live.board.spec}
+		spec={atLive ? live.board.spec : (pastSpec ?? live.board.spec)}
 		{view}
-		events={log}
-		lines={namedLines(transcript?.lines ?? [], players)}
+		events={log.slice(0, shown)}
+		lines={linesUpTo(allLines, shownSeq)}
+		{thinking}
+		{responses}
 		seats={live.match.players}
 		{players}
 		costs={live.cost.players}
 		active={typeof turn === 'string' ? turn : null}
 		placements={live.match.placements}
-		ended={live.match.status === 'finished'}
+		ended={live.match.status === 'finished' && atLive}
 	>
 		{#snippet controls()}
+			<div class="playout" data-testid="playout">
+				<label>
+					Playback
+					<select bind:value={playback} aria-label="Playback speed">
+						{#each PLAYBACK as option (option.factor)}
+							<option value={option.factor}>{option.label}</option>
+						{/each}
+					</select>
+				</label>
+				{#if behind > 2}
+					<span class="behind" data-testid="behind">{behind} moments behind</span>
+					<button onclick={() => (shown = log.length)} data-testid="jump-live">Jump to live</button>
+				{:else if live.match.status === 'running'}
+					<span class="muted" data-testid="at-live">at live</span>
+				{/if}
+			</div>
 			{#if live.control}
 				<div class="controls" role="group" aria-label="Controls">
 					{#if live.control.paused}
@@ -324,5 +433,17 @@
 
 	.problem {
 		color: var(--danger);
+	}
+	.playout {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 0.75rem;
+		margin-bottom: 0.6rem;
+	}
+
+	.behind {
+		font-size: 0.85rem;
+		color: var(--accent);
 	}
 </style>
