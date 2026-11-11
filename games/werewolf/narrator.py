@@ -23,6 +23,13 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "execution": "Das Dorf hat entschieden: {player} wird hingerichtet. {player} war {role}.",
         "no_execution": "Das Dorf ist sich nicht einig. Heute stirbt niemand.",
         "game_over": "Das Spiel ist aus. {winner}",
+        "grief": "{player} stirbt aus Kummer um {lover}.",
+        "idiot_spared": "{player} ist der Dorfdepp und überlebt, darf aber nicht mehr abstimmen.",
+        "scapegoat": "Gleichstand. Der Sündenbock {player} muss sterben.",
+        "powers_lost": (
+            "Das Dorf hat seinen Ältesten {player} getötet. "
+            "Alle Sonderrollen des Dorfes verlieren ihre Kräfte."
+        ),
     },
     "en": {
         "night_falls": "Night {night} falls. The village sleeps.",
@@ -33,6 +40,12 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "execution": "The village has decided: {player} is executed. {player} was {role}.",
         "no_execution": "The village cannot agree. Nobody dies today.",
         "game_over": "The game is over. {winner}",
+        "grief": "{player} dies of grief for {lover}.",
+        "idiot_spared": "{player} is the Village Idiot and survives, but may no longer vote.",
+        "scapegoat": "A tie. The scapegoat {player} must die.",
+        "powers_lost": (
+            "The village killed its Elder {player}. All village special roles lose their powers."
+        ),
     },
 }
 
@@ -41,11 +54,13 @@ WINNERS = {
         "village": "Das Dorf hat gewonnen.",
         "wolves": "Die Werwölfe haben gewonnen.",
         "nobody": "Niemand hat überlebt.",
+        "lovers": "Das Liebespaar hat gewonnen.",
     },
     "en": {
         "village": "The village wins.",
         "wolves": "The werewolves win.",
         "nobody": "Nobody survived.",
+        "lovers": "The lovers win.",
     },
 }
 

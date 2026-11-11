@@ -126,7 +126,7 @@ def bot_match(count, *, seed=1, settings=None, agents=None):
         ({"moon": "full"}, "Unknown settings"),
         ({"template": "classic", "roles": {"werewolf": 1}}, "either a template or roles"),
         ({"roles": {"seer": 2, "werewolf": 1}}, "Seherin may appear only once"),
-        ({"roles": {"werewolf": 2, "cupid": 1}}, "Roles not playable yet: cupid"),
+        ({"roles": {"werewolf": 2, "bear_tamer": 1}}, "Roles not playable yet: bear_tamer"),
     ],
 )
 def test_bad_settings_are_rejected(settings, message):
@@ -485,7 +485,7 @@ def test_200_random_bot_matches_end_with_a_winner():
         match, placements = bot_match(count, seed=number, settings={"template": template})
 
         assert match.state.phase == "over", number
-        assert match.state.winner in ("village", "wolves", "nobody")
+        assert match.state.winner in ("village", "wolves", "lovers", "nobody")
         assert sorted(p.player for p in placements) == sorted(match.state.players)
         winners.add(match.state.winner)
     assert {"village", "wolves"} <= winners

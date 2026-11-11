@@ -133,12 +133,113 @@ class WolvesChooseVictim(NightAbility):
         return False
 
 
+class CupidLinkLovers(NightAbility):
+    """Night 1 only (role file): two players fall in love; each learns the other."""
+
+    handler = "cupid_link_lovers"
+
+    def tools(self, state, player):
+        living = list(state.alive)
+        return [
+            tool(
+                "link_lovers",
+                "Make two living players lovers (you may pick yourself). If one dies, "
+                "the other dies of grief. Only they and you learn it.",
+                {
+                    "a": target_schema(living, "The first lover."),
+                    "b": target_schema(living, "The second lover."),
+                },
+                required=["a", "b"],
+            )
+        ]
+
+    def validate(self, state, player, action):
+        if action.arguments["a"] == action.arguments["b"]:
+            return "Pick two different players as lovers."
+        return None
+
+    def apply(self, state, player, action, ctx):
+        lovers = [action.arguments["a"], action.arguments["b"]]
+        ctx.emit("lovers_linked", {"player": player, "lovers": lovers}, visible_to=[player])
+        ctx.emit("love_revealed", {"lovers": lovers}, visible_to=lovers)
+
+
+class ProtectorGuard(NightAbility):
+    """Protects one player from the wolves; never the same player two nights in a row."""
+
+    handler = "protector_guard"
+
+    def tools(self, state, player):
+        choices = [p for p in state.alive if p != state.last_protected]
+        return [
+            tool(
+                "protect",
+                "Protect one living player from the wolves tonight (yourself allowed, "
+                "not the same player as last night).",
+                {"target": target_schema(choices, "The player to protect.")},
+                required=["target"],
+            )
+        ]
+
+    def apply(self, state, player, action, ctx):
+        target = action.arguments["target"]
+        ctx.emit("protected", {"player": player, "target": target}, visible_to=[player])
+
+
+SPY_FIND_CHANCE = 0.30
+SPY_CAUGHT_CHANCE = 0.15
+
+
+class LittleGirlSpy(NightAbility):
+    """May spy on the wolves: 30 % to learn one wolf, 15 % to be caught and eaten instead."""
+
+    handler = "little_girl_spy"
+
+    def tools(self, state, player):
+        return [
+            tool(
+                "spy",
+                "Peek at the wolves: 30 % chance to learn one of them, but 15 % chance "
+                "they catch you and eat you instead of their victim.",
+                {},
+            ),
+            tool("stay_in_bed", "Do not spy tonight.", {}),
+        ]
+
+    def apply(self, state, player, action, ctx):
+        if action.tool != "spy":
+            return
+        rng = ctx.rng("spy", state.night)
+        found = rng.random() < SPY_FIND_CHANCE
+        caught = rng.random() < SPY_CAUGHT_CHANCE
+        wolves = sorted(p for p in state.alive if p in state.pack)
+        wolf = rng.choice(wolves) if found and wolves else None
+        ctx.emit("spied", {"player": player, "wolf": wolf}, visible_to=[player])
+        if caught:
+            ctx.emit("girl_caught", {"player": player}, visible_to=[])
+
+
 NIGHT: dict[str, NightAbility] = {
-    ability.handler: ability for ability in (SeerInspect(), WitchPotions(), WolvesChooseVictim())
+    ability.handler: ability
+    for ability in (
+        SeerInspect(),
+        WitchPotions(),
+        WolvesChooseVictim(),
+        CupidLinkLovers(),
+        ProtectorGuard(),
+        LittleGirlSpy(),
+    )
 }
 
 # Passive hooks the plugin implements by name.
-PASSIVE = {"hunter_shoot"}
+PASSIVE = {
+    "hunter_shoot",
+    "lover_dies_of_grief",
+    "elder_survives_first",
+    "elder_strips_powers",
+    "idiot_survives",
+    "scapegoat_dies",
+}
 
 
 def implemented(handler: str) -> bool:
