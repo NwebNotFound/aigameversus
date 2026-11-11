@@ -1,0 +1,9 @@
+# Allow-list: the arena image needs only the lockfile, the packages and config.
+*
+!pyproject.toml
+!uv.lock
+!arena
+!games
+!config
+**/__pycache__
+**/tests

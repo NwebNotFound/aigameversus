@@ -1,0 +1,77 @@
+name: aigameversus
+
+# Host ports bind to 127.0.0.1 only: this is a local stack and the API has no
+# authentication. Container ports stay standard.
+
+x-arena-image: &arena-image
+  image: aigameversus-arena
+  build: .
+
+x-healthcheck-timing: &healthcheck-timing
+  interval: 5s
+  timeout: 3s
+  retries: 3
+  start_period: 30s
+
+services:
+  arena:
+    <<: *arena-image
+    ports:
+      - "127.0.0.1:8100:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-timing
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+
+  worker:
+    <<: *arena-image
+    command: ["python", "-m", "arena.worker"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD", "python", "-m", "arena.worker", "--check"]
+
+  web:
+    build: ./web
+    ports:
+      - "127.0.0.1:3100:80"
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/"]
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: arena
+      POSTGRES_DB: arena
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arena_dev}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD", "pg_isready", "--username=arena", "--dbname=arena"]
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    healthcheck:
+      <<: *healthcheck-timing
+      test: ["CMD", "redis-cli", "ping"]
+
+volumes:
+  db-data:

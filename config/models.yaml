@@ -1,0 +1,4 @@
+# Models that can take a seat in a match. Format: docs/DESIGN.md, "Modell-Konfiguration".
+# Empty on purpose: until the default roster lands (roadmap step 1.5), every seat
+# is a random bot or the mock LLM, so nothing here can cost money.
+models: {}

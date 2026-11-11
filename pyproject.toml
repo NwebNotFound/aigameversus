@@ -1,0 +1,36 @@
+[project]
+name = "aigameversus"
+version = "0.1.0"
+description = "An arena where AI models play games against each other."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.4",
+    "redis>=8.1.0",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["arena", "games"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "games"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# The spec is kept verbatim; ruff would reformat its code samples.
+extend-exclude = ["docs/DESIGN.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
