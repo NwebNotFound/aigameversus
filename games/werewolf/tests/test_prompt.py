@@ -168,3 +168,40 @@ def test_golden_prompt_of_version_p2_has_the_new_rules_and_the_summary():
     messages = build_messages("Werewolf", plugin.rules(settings), request, summary)
 
     check_golden("werewolf-p2.txt", "\n=====\n".join(m["content"] for m in messages) + "\n")
+
+
+def test_golden_prompt_of_version_p3_has_the_new_rules_and_the_advice():
+    request = a_request()
+    plugin = Werewolf()
+    settings = {"prompt_version": "werewolf-p3"}
+    summary = plugin.situation_summary(request.observation, settings)
+    messages = build_messages("Werewolf", plugin.rules(settings), request, summary)
+
+    assert "For this move:" in summary
+    check_golden("werewolf-p3.txt", "\n=====\n".join(m["content"] for m in messages) + "\n")
+
+
+def test_p3_keeps_p1_and_p2_as_they_were_and_adds_advice_only_on_your_turn():
+    plugin = Werewolf()
+    p2 = {"prompt_version": "werewolf-p2"}
+    p3 = {"prompt_version": "werewolf-p3"}
+    assert len(prompt.rules_text("werewolf-p3").split()) < 1900
+    for request in requests_of(4):
+        observation = request.observation
+        base = plugin.situation_summary(observation, p2)
+        assert "For this move" not in base
+        tipped = plugin.situation_summary(observation, p3)
+        assert tipped.startswith(base)
+
+
+def test_p3_advice_never_names_a_role_the_reader_may_not_know():
+    for seed in (1, 2, 3):
+        for request in requests_of(seed):
+            observation = request.observation
+            summary = prompt.situation_summary_v3(observation)
+            advice = summary[len(prompt.situation_summary(observation)) :]
+            allowed = set(ALWAYS_NAMED) | {observation["role"]["id"]}
+            allowed |= set(observation.get("seer_results", {}).values())
+            for role_id in ROLES:
+                if re.search(rf"\b{role_id}\b", advice):
+                    assert role_id in allowed, (request.player, role_id, advice)
