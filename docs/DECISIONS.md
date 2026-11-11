@@ -1268,7 +1268,7 @@ Each entry: date, decision, why, alternatives considered.
   keep in step); a separate API endpoint for the chances (a second request per
   turn); exact enumeration (too slow before the flop).
 
-## D-060 · The Werewolf circle draws votes from the log and shows no model names
+## D-069 · The Werewolf circle draws votes from the log and shows no model names
 
 - **Date:** 2026-11-11
 - **Decision:** The Werewolf circle (`layout: player_circle`) gets its vote arrows
