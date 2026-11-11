@@ -353,8 +353,12 @@ export function withDisplayNames(
  */
 export function namedText(text: string, players: Record<string, Seat> | undefined): string {
 	if (!players) return text;
-	return text.replace(/(?:Random Bot )?\b(p\d+)\b(?: \(random-bot\))?/g, (whole, seat: string) =>
-		players[seat] ? seatName(seat, players) : whole
+	return text.replace(
+		/(?:Random Bot )?(?<![A-Za-z0-9])([pP]\d+)(?!\d)(?: \(random-bot\))?/g,
+		(whole, id: string) => {
+			const seat = id.toLowerCase();
+			return players[seat] ? seatName(seat, players) : whole;
+		}
 	);
 }
 
@@ -397,6 +401,13 @@ export function seatSub(seat: string, players: Record<string, Seat> | undefined)
 	return line || (info?.kind === 'bot' ? 'Random Bot' : null);
 }
 
+/**
+ * A seat id in player-written text: "p4", also with what a language glues to it ("p4s Frage",
+ * "p3's vote", "p4-Antwort", "p4:"), in any case ("P4"), and in lists ("p1/p2"). Not inside a
+ * word ("mp3", "top2") and not a longer number ("p41" is not p4).
+ */
+const SEAT_MENTION = /(?<![A-Za-z0-9])[pP]([1-9][0-9]?)(?![0-9])/g;
+
 /** A piece of player-written text: plain words, or a seat the player named by its id. */
 export type Part = { text: string } | { seat: string; text: string };
 
@@ -409,7 +420,7 @@ export function mentionParts(text: string, players: Record<string, Seat> | undef
 	if (!players) return [{ text }];
 	const parts: Part[] = [];
 	let last = 0;
-	for (const match of text.matchAll(/\b[pP]([1-9][0-9]?)\b/g)) {
+	for (const match of text.matchAll(SEAT_MENTION)) {
 		const seat = `p${match[1]}`;
 		if (!players[seat]) continue;
 		if (match.index > last) parts.push({ text: text.slice(last, match.index) });
