@@ -89,6 +89,38 @@ def test_models_play_a_match_that_is_metered_and_says_who_sat_where(
     assert (replay["id"], replay["real"]) == (match["id"], True)
 
 
+def test_the_transcript_names_the_models_of_a_running_match_and_after_it(client, answer_with):
+    answer_with(**PLAY_3)
+    config = load_config()
+    response = client.post(
+        "/matches",
+        json={"game": "toy", "models": MODELS, "confirm_spend": True, "seed": 4, "turn_delay": 5},
+    )
+    match_id = response.json()["id"]
+
+    def players():
+        return client.get(f"/matches/{match_id}/transcript").json()["players"]
+
+    expected = {
+        f"p{n}": {
+            "name": config.models[model].name or model,
+            "model": model,
+            "kind": "model",
+            "vendor": config.models[model].model.split("/")[0],
+        }
+        for n, model in enumerate(MODELS, start=1)
+    }
+    running = players()  # the match is still running: nobody has rated it yet
+    client.post(f"/matches/{match_id}/abort")
+    finish(client, match_id)
+
+    assert client.get(f"/matches/{match_id}").json()["status"] == "aborted"
+    assert running == expected
+    assert players() == expected
+    text = client.get(f"/matches/{match_id}/transcript", params={"format": "text"}).text
+    assert expected["p1"]["name"] in text and "Random Bot" not in text
+
+
 def test_cap_ends_a_model_match_as_interrupted_before_any_call(
     client, database_url, answer_with, monkeypatch
 ):
