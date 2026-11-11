@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 // The Analytics tab of Liar's Deck, on bot matches started on the arena (ARENA_URL).
 
@@ -108,4 +109,24 @@ test('a game without analytics yet says so', async ({ page, request }) => {
 	const id = await finished(request, { game: 'poker', players: 3, seed: 55 });
 	await page.goto(`/replays/${id}?tab=analytics`);
 	await expect(page.getByTestId('analytics-none')).toBeVisible();
+});
+
+test('a situation-only answer (no moves, no totals) says so and never crashes', async ({
+	page,
+	request
+}) => {
+	// What the arena answers Poker and Werewolf with since #102: the situation, no numbers.
+	const body = JSON.parse(
+		readFileSync('src/lib/analytics/fixture-poker-situation-only.json', 'utf-8')
+	);
+	const id = await finished(request, { game: 'poker', players: 3, seed: 56 });
+	const errors: string[] = [];
+	page.on('pageerror', (error) => errors.push(error.message));
+	for (const answer of [body, { ...body, numbers: undefined }]) {
+		await page.route(`**/matches/${id}/analytics*`, (route) => route.fulfill({ json: answer }));
+		await page.goto(`/replays/${id}?tab=analytics`);
+		await expect(page.getByTestId('analytics-none')).toBeVisible();
+		await page.unroute(`**/matches/${id}/analytics*`);
+	}
+	expect(errors).toEqual([]);
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { slowMoves, upTo, type LiarsAnalytics } from '#lib/analytics/liars.js';
+	import { hasNumbers, slowMoves, upTo, type LiarsAnalytics } from '#lib/analytics/liars.js';
 	import { pct, seconds } from '#lib/analytics/chart.js';
 	import type { View } from '#lib/viewer.js';
 	import CardsLeft from './CardsLeft.svelte';
@@ -50,7 +50,11 @@
 				.then(async (response) => {
 					if (response.status === 404) load = { state: 'none' };
 					else if (!response.ok) load = { state: 'error' };
-					else load = { state: 'ok', data: await response.json() };
+					else {
+						// A situation-only answer (no moves, no totals) has no charts to draw yet.
+						const body: unknown = await response.json();
+						load = hasNumbers(body) ? { state: 'ok', data: body } : { state: 'none' };
+					}
 				})
 				.catch((error) => {
 					if (error?.name !== 'AbortError') load = { state: 'error' };
