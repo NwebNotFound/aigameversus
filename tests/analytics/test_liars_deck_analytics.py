@@ -107,7 +107,7 @@ def test_a_real_match_has_its_fallbacks_and_a_partial_log_works():
     assert 0 < len(partial["moves"]) < len(full["moves"])
     # Without the decision fields yet, thinking time is unknown, not 0.
     assert all(m["latency_ms"] is None for m in full["moves"])
-    assert full["totals"]["p1"]["thinking_ms_total"] is None
+    assert full["totals"]["p1"]["response_ms_total"] is None
 
 
 def test_thinking_time_is_read_from_the_decision_event_when_present():
@@ -122,7 +122,7 @@ def test_thinking_time_is_read_from_the_decision_event_when_present():
     assert all(m["latency_ms"] == 1200 for m in moves)
     total = analytics["totals"]["p1"]
     mine = [m for m in moves if m["player"] == "p1"]
-    assert total["thinking_ms_total"] == 1200 * len(mine)
+    assert total["response_ms_total"] == 1200 * len(mine)
     assert total["tokens_out"] == 40 * len(mine)
 
 
@@ -137,3 +137,84 @@ def test_the_same_log_gives_the_same_analytics():
 def test_a_game_without_analytics_says_so():
     with pytest.raises(NoAnalytics, match="No analytics for toy yet"):
         match_analytics("toy", [], spoilers=True)
+
+
+@pytest.mark.parametrize("seed", [12, 13, 14])
+def test_a_lie_is_forced_exactly_when_the_hand_held_no_table_card(seed):
+    events = played(seed)
+    analytics = match_analytics("liars_deck", events, spoilers=True)
+
+    for move in analytics["moves"]:
+        if move["kind"] != "play":
+            continue
+        assert move["table_cards_held"] is not None
+        if move["honest"] is False:
+            assert move["forced"] == (move["table_cards_held"] == 0)
+            assert 0 < move["lie_size"] <= 1
+            assert move["false_cards"] == round(move["lie_size"] * move["cards"])
+        else:
+            assert move["forced"] is None and move["false_cards"] == 0
+
+
+def test_every_rate_carries_its_n_and_no_data_is_null():
+    totals = match_analytics("liars_deck", played(15), spoilers=True)["totals"]
+
+    for total in totals.values():
+        lie = total["lie_rate"]
+        assert (lie["n"], lie["of"]) == (total["lies"], total["plays_known"])
+        assert lie["value"] == (None if lie["of"] == 0 else lie["n"] / lie["of"])
+        chosen = total["chosen_lie_rate"]
+        assert chosen["n"] == total["lies"] - total["forced_lies"]
+        for name in ("call_rate", "hit_rate", "false_alarm_rate", "call_accuracy"):
+            assert total[name]["n"] <= total[name]["of"]
+
+
+def test_opportunities_split_into_ones_facing_a_lie_and_ones_facing_the_truth():
+    analytics = match_analytics("liars_deck", played(16, players=3), spoilers=True)
+
+    for total in analytics["totals"].values():
+        calls_on_lies = total["hit_rate"]["n"]
+        calls_on_truth = total["false_alarm_rate"]["n"]
+        assert calls_on_lies + calls_on_truth == total["calls"]
+        assert total["hit_rate"]["of"] + total["false_alarm_rate"]["of"] == total["call_rate"]["of"]
+        assert calls_on_lies == total["calls_correct"]
+
+
+def test_fallback_moves_are_flagged_and_left_out_of_the_skill_numbers():
+    events = example()
+    analytics = match_analytics("liars_deck", events, spoilers=True)
+
+    p3 = analytics["totals"]["p3"]
+    flagged = [m for m in analytics["moves"] if m["player"] == "p3" and m["fallback"]]
+    own_plays = [
+        m
+        for m in analytics["moves"]
+        if m["player"] == "p3" and m["kind"] == "play" and not m["fallback"]
+    ]
+    assert flagged and p3["fallbacks"] == len(flagged)
+    assert p3["plays"] == len(own_plays)
+    assert p3["fallback_share"]["n"] == len(flagged)
+
+
+def test_without_spoilers_the_numbers_that_need_hidden_cards_are_null():
+    totals = match_analytics("liars_deck", played(17), spoilers=False)["totals"]
+
+    for total in totals.values():
+        for name in (
+            "lie_rate",
+            "chosen_lie_rate",
+            "forced_lies",
+            "mean_lie_size",
+            "hit_rate",
+            "false_alarm_rate",
+        ):
+            assert total[name] is None
+        assert total["call_rate"]["of"] >= total["calls"]
+
+
+def test_the_match_says_what_it_was_for_grouping():
+    meta = match_analytics("liars_deck", example(), spoilers=True)["meta"]
+    hidden = match_analytics("liars_deck", example(), spoilers=False)["meta"]
+
+    assert meta["version"] == "1" and meta["seed"] == 2027 and meta["settings"] == {}
+    assert hidden["seed"] is None

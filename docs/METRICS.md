@@ -3,76 +3,136 @@
 What `GET /matches/{id}/analytics?spoilers=` returns, and what each number means.
 The code is `arena/analytics/` (one module per game); it is a pure function of the
 stored event log, so a running match, a finished match and a replay file give the
-same numbers for the same log.
+same numbers for the same log. The definitions follow the Researcher's review
+(validity for papers).
 
-**Spoilers.** With `spoilers=true` every event is read (the spectator view, also
-what players hid). With `spoilers=false` only public events are read
-(`visible_to` is null); every number that needs a hidden event is `null`, never
-a guess and never 0. The cut is the same as the transcript's.
+## Rules for every game
 
-**Positions.** Every move and pull carries `seq`, its position in the whole log,
-so the UI can jump a replay there; `index` is its position among the moves.
+- **Spoilers.** With `spoilers=true` every event is read (the spectator view,
+  also what players hid). With `spoilers=false` only public events are read
+  (`visible_to` is null); every number that needs a hidden event is `null`,
+  never a guess and never 0. The cut is the same as the transcript's.
+- **Rates carry their n.** A rate is `{"value", "n", "of"}`: `n / of`, with
+  `value: null` when `of` is 0. "No data" is `null`, never 0.
+- **Fallbacks are not the model's.** A move the engine played for a model
+  (`action_fallback`: rejected answers, a timeout, a failed agent) is flagged
+  `fallback: true` on every move and left out of every skill number (lie rate,
+  call accuracy, ...). It counts only in the reliability numbers
+  (`fallback_share`, `rejected_per_move`).
+- **Across matches** (batch analytics, not built yet): intervals come from
+  resampling whole matches, not single moves, because the moves of one match
+  are not independent.
+- **Positions.** Every move and pull carries `seq`, its position in the whole
+  log, so the UI can jump a replay there; `index` is its position among moves.
+- **What the match was.** `meta` holds the game `version`, `prompt_version`,
+  `seed` and `settings` from `match_started` (spoilers only: without them the
+  start, seed included, is hidden), so comparisons group like with like.
 
-## Common fields per move
+### Per move: cost of the decision
 
 | Field | Meaning |
 |---|---|
-| `latency_ms` | Thinking time of the decision: from the request to the model to its answer, network time included (the runner measures the whole call, retries included). `null` for bots and until the runner records it. |
-| `tokens_in`, `tokens_out` | Prompt and answer tokens of the decision, as the provider reports them. `null` when unknown. |
-| `reasoning_tokens` | Hidden reasoning tokens the provider reports, if any. |
-| `retries` | Model calls repeated after an error for this decision. |
-| `fallback` | The move was not the model's: the engine played a random legal move (rejected answers, a timeout, or a failed agent). Spectator view only. |
+| `latency_ms` | **Response time**, not thinking time (thinking is not measurable from outside): wall clock per model call, measured in the arena from sending the request to the full answer, network and provider queue included, `turn_delay` excluded. Per move it is the sum over all calls of the move, corrections included. `null` for bots and until the runner records it. |
+| `tokens_in`, `tokens_out` | Prompt and answer tokens of the move's calls, as the provider reports them. |
+| `reasoning_tokens` | Hidden reasoning tokens the provider reports: the proxy for thinking. |
+| `retries` | Model calls repeated after an error for this move. |
+| `rejected` | Answers of this move the engine rejected (each one led to a correction). |
+| `fallback` | The engine played this move (see above). |
 
 ## Liar's Deck
 
 ### Moves (`moves`)
 
-- **play** (`kind: "play"`): a `cards_played` event. `cards` is how many cards
-  were put face down; `cards_left` the hand size after it.
-  - `honest`: true if every card played is the round's table card or a joker,
-    false if at least one is not (a **lie**). With spoilers it is known for
-    every play (from `cards_hidden`); without, only for plays whose cards were
-    turned over (`cards_revealed`), else `null`.
-  - `called`: the play was turned over by a call (chosen or automatic).
-- **call** (`kind: "call"`): a `liar_called` event. `target` is whose play was
-  called; `automatic` is true for the forced call when nobody else holds cards.
-  `correct`: the revealed play was a lie (`honest: false`).
+- **play** (`kind: "play"`, a `cards_played` event):
+  - `cards`: cards put face down; `hand_before`, `cards_left`: hand size before
+    and after.
+  - `table_cards_held`: table cards plus jokers in the hand at that moment
+    (spoilers).
+  - `honest`: every card played is the table card or a joker. A **lie** is a
+    play with at least one card that is neither. Known for every play with
+    spoilers (from `cards_hidden`); without them only for plays whose cards
+    were turned over (`cards_revealed`), else `null`.
+  - `false_cards`, `lie_size`: cards that were not the table card or a joker,
+    and their share of the cards played (spoilers).
+  - `forced`: a lie the hand left no choice about (it held no table card and no
+    joker); `false` for a **chosen** lie; `null` for honest or unknown plays.
+  - `called`: the play was turned over by the next call (chosen or automatic).
+  - `could_call`, `facing_lie`: a play was on the table that this player could
+    have called instead, and whether it was a lie (see call opportunities).
+  - `risk`: the player's own revolver risk at that moment (see pulls).
+- **call** (`kind: "call"`, a `liar_called` event): `target` is whose play was
+  called; `automatic` marks the forced call when nobody else holds cards.
+  `correct`: the revealed play was a lie. `facing_lie` as above.
 
-A hand-over (`turn_passed`) is not a move: it only says whose turn is next.
+A hand-over (`turn_passed`) is not a move: it only names whose turn is next.
+
+### Call opportunities
+
+A **call opportunity** is a turn on which `call_liar` was offered: the player's
+own move came with a play by someone else on the table. The player either called
+(a call) or played on (a play with `could_call: true`). Automatic calls are not
+choices and are left out everywhere.
 
 ### Pulls (`pulls`)
 
 A `trigger_pulled` event: `pull` is the player's pull number, `live` whether it
-fired. `risk` is the chance it fires: live chambers / chambers not yet pulled,
-at the moment of the pull (0 to 1). It needs the hidden revolver loading, so it
-is `null` without spoilers.
+fired. `risk` (also on each play and call) is live chambers / chambers not yet
+pulled of that player's own revolver at that moment, so later pulls are riskier
+(spoilers: it needs the hidden loading).
 
 ### Totals per player (`totals`)
 
+Skill numbers use the model's own moves only (fallbacks left out).
+
 | Field | Definition |
 |---|---|
-| `plays` | Plays made. |
-| `plays_known` | Plays whose honesty is known (all of them with spoilers). |
+| `plays`, `plays_known` | Plays made; those whose truth is known. |
 | `honest`, `lies` | Known plays that were honest / lies. |
-| `lie_rate` | `lies / plays_known`; `null` with no known play. Without spoilers it is the rate among **revealed** plays only, which over-weights called plays: compare it only with spoilers. |
-| `lies_called` | Lies that were turned over (chosen or automatic call). |
-| `calls` | Calls the player chose to make; automatic calls are left out. |
-| `calls_correct`, `calls_wrong` | Chosen calls whose revealed play was a lie / was honest. |
-| `call_accuracy` | `calls_correct / (calls_correct + calls_wrong)`; `null` without a judged call. |
-| `cards_claimed` | Cards put down over all plays (the "bluff size" summed). |
+| `lie_rate` | lies / plays_known (spoilers). It mostly measures the cards dealt; see `chosen_lie_rate`. |
+| `chosen_lie_rate` | chosen lies / plays where an honest play was possible (the hand held a table card or joker) (spoilers). |
+| `forced_lies` | Lies with no honest play possible (spoilers). |
+| `mean_lie_size` | Mean `lie_size` over lies (spoilers). |
+| `lies_called` | Lies that were turned over. |
+| `calls`, `calls_correct`, `calls_wrong` | Chosen calls, and those whose revealed play was a lie / was honest. |
+| `call_accuracy` | correct calls / judged calls. It depends on how often the others lie: read it with the next two. |
+| `call_rate` | calls / call opportunities. |
+| `hit_rate` | calls on lies / opportunities facing a lie (spoilers). |
+| `false_alarm_rate` | calls on honest plays / opportunities facing an honest play (spoilers). |
+| `cards_claimed` | Cards put down over all plays. |
 | `pulls`, `pulls_survived` | Trigger pulls, and those that did not fire. |
-| `fallbacks` | Moves the engine played instead of the model. |
-| `thinking_ms_total`, `thinking_ms_mean` | Sum and mean of `latency_ms` over the player's moves that have it. |
-| `tokens_in`, `tokens_out` | Sums over the player's moves that report them. |
+| `fallbacks`, `fallback_share` | Moves the engine played, and their share of all the player's moves. |
+| `rejected_per_move` | Rejected answers per move. |
+| `response_ms_total`, `response_ms_mean` | Sum and mean of `latency_ms` over moves that have it. |
+| `tokens_in`, `tokens_out`, `reasoning_tokens` | Sums over moves that report them. |
 
-These agree with `arena/stats/liars_deck.py` (the profile statistics) for plays,
-lies, times caught and calls; a test checks it on bot matches.
+With spoilers, plays, lies, times caught and calls agree with
+`arena/stats/liars_deck.py` (the profile statistics); a test checks it.
 
 ### Per round (`by_round`)
 
 For each round and player: `honest`, `lies`, `unknown` (plays with no known
-honesty) and `calls`. The cells add up to the totals.
+truth), `calls` and `fallbacks`.
 
-## Poker, Werewolf
+### One row per move
 
-Not built yet; they will follow the same layout (moves, totals, per hand or day).
+`moves` is the per-move table a paper needs: round, cards in hand, table cards
+plus jokers held, cards played, truth, called or not, risk, response time and
+tokens. The research export will write it as one row per move.
+
+## Poker (planned)
+
+- VPIP and PFR the standard way (blinds and a free check excluded). Aggression
+  factor = (bets + raises) / calls, `null` with no call.
+- A **bluff** is a bet or raise when the hand's equity against random hands at
+  that street is below 0.33; a **value bet** above 0.6. Equity from a seeded
+  Monte Carlo with a fixed, documented number of samples, stored per decision;
+  the win-probability curve uses the same function. Showdowns alone do not
+  define bluffs: most bluffs never reach one.
+
+## Werewolf (planned)
+
+- **Vote accuracy** = votes for wolves / votes cast, village side only;
+  abstentions counted apart. For wolves: the share of votes on fellow wolves
+  (bussing).
+- A suspicion or trust matrix from messages is **heuristic** (names or keywords
+  mentioned) and is labelled so, apart from the facts.
