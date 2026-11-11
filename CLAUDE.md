@@ -213,6 +213,11 @@ new YAML file in the game's data folder (for example
 `games/werewolf/roles/<id>.yaml`); it is validated at startup and appears in
 the role selection automatically. Only a new ability needs code.
 
+A new Werewolf role already shows up in the role selection
+(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles` and
+`POST /games/werewolf/selection/validate`): give it a `team`, `unique` and a
+balance `weight`.
+
 ### A unit, building or event
 
 *Not built yet: phase 7.* Target: a new YAML file under the strategy game's
