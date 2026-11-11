@@ -487,7 +487,30 @@ Each entry: date, decision, why, alternatives considered.
   times as hard); TrueSkill or Glicko (better uncertainty, harder to explain);
   a plain mean or the maximum of per-game ratings for the overall value.
 
-## D-032 · Money is counted per model call, in a ledger, before the call is sent
+## D-032 · Leaderboard: per-match placements, demo seed, display rules
+
+- **Date:** 2026-11-11
+- **Decision:** A new table `match_placements` (migration 0003) keeps each rated
+  player's rank, table size and rating before and after, per match. Win rate
+  (share of matches at rank 1), average placement and a profile's recent
+  matches come from it. `GET /leaderboard?game=<id>` returns rows sorted by
+  rating, then name; without `game` it uses the overall rating (D-031) and sums
+  games, wins and placements over all games. The row `rank` is the position on
+  the board. Ratings and changes are rounded to one decimal in API answers and
+  to whole numbers in the UI. Profiles without a rated match are left off the
+  board. Relations and memory on a profile are explicit "not available yet"
+  placeholders until phase 6. `python -m arena.ratings.demo_seed` fills the
+  tables with six "DEMO …" profiles (model `random-bot`, fixed ids) playing
+  real High Card matches as random bots, with match ids derived from the seed:
+  re-running adds nothing, and it refuses when any non-demo profile exists.
+  CI seeds its fresh database for the leaderboard Playwright tests.
+- **Why:** Win rate and placement cannot be derived from the rating rows alone,
+  and storing them per match also gives match history. Demo data from real
+  bot matches exercises the same write path as real results, at no cost.
+- **Alternatives:** counters on `ratings` (no history); computing stats from
+  the event logs on each request; a static JSON fixture for the UI.
+
+## D-033 · Money is counted per model call, in a ledger, before the call is sent
 
 - **Date:** 2026-11-11
 - **Decision:** Every model call of a match goes through `Budget.meter`
@@ -522,9 +545,9 @@ Each entry: date, decision, why, alternatives considered.
   that timed out on our side); LiteLLM's built-in cost tracking (prices come
   from a list bundled with the library, in memory only); the cost a provider
   reports per call (provider-specific; can replace the price list later);
-  cost events in the match log (a dropped turn would lose them, D-033).
+  cost events in the match log (a dropped turn would lose them, D-034).
 
-## D-033 · At a cap the match pauses: the turn is dropped and played again later
+## D-034 · At a cap the match pauses: the turn is dropped and played again later
 
 - **Date:** 2026-11-11
 - **Decision:** An agent that cannot go on without the user raises
@@ -548,7 +571,7 @@ Each entry: date, decision, why, alternatives considered.
   waiting inside the model call until the user decides (the engine would not
   know that the match is paused).
 
-## D-034 · `config/models.yaml`: limits and prices next to the roster
+## D-035 · `config/models.yaml`: limits and prices next to the roster
 
 - **Date:** 2026-11-11
 - **Decision:** `config/models.yaml` has two parts. `limits`: the caps in
@@ -570,7 +593,7 @@ Each entry: date, decision, why, alternatives considered.
   API at startup (network at startup, and a silent change of what a cap
   means); caps in environment variables; prices already converted to euros.
 
-## D-035 · LiteLLM's own logger is switched off
+## D-036 · LiteLLM's own logger is switched off
 
 - **Date:** 2026-11-11
 - **Decision:** `LiteLLMModel` disables the `LiteLLM` logger when it loads the

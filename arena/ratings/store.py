@@ -2,12 +2,14 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID, uuid4
 
 import asyncpg
 
 from arena.engine.types import Placement
 from arena.ratings.elo import DEFAULT_K, RatingChange, overall_rating, update_ratings
+from arena.ratings.stats import win_rate
 
 
 @dataclass(frozen=True)
@@ -16,15 +18,59 @@ class GameRating:
     games_played: int
 
 
+# Placements with the game they were played in.
+_PLACEMENTS_BY_GAME = (
+    "SELECT mp.match_id, mp.profile_id, mp.rank, rm.game_id "
+    "FROM match_placements mp JOIN rated_matches rm ON rm.match_id = mp.match_id"
+)
+
+
+@dataclass(frozen=True)
+class Standing:
+    profile_id: UUID
+    name: str
+    model_id: str
+    rating: float
+    games_played: int
+    win_rate: float | None
+    average_placement: float | None
+
+
+@dataclass(frozen=True)
+class MatchResult:
+    match_id: UUID
+    game_id: str
+    rated_at: datetime
+    rank: int
+    players: int
+    rating_change: float
+
+
+@dataclass(frozen=True)
+class Profile:
+    profile_id: UUID
+    name: str
+    model_id: str
+    personality_id: str | None
+    overall: Standing | None
+    per_game: dict[str, Standing]
+    recent_matches: list[MatchResult]
+
+
 class RatingStore:
     def __init__(self, pool: asyncpg.Pool, k: float = DEFAULT_K):
         self._pool = pool
         self._k = k
 
     async def create_profile(
-        self, name: str, model_id: str, personality_id: str | None = None
+        self,
+        name: str,
+        model_id: str,
+        personality_id: str | None = None,
+        profile_id: UUID | None = None,
     ) -> UUID:
-        profile_id = uuid4()
+        """Add a profile; a random id unless `profile_id` is given."""
+        profile_id = profile_id or uuid4()
         await self._pool.execute(
             "INSERT INTO player_profiles (id, name, model_id, personality_id) "
             "VALUES ($1, $2, $3, $4)",
@@ -88,4 +134,108 @@ class RatingStore:
                 "updated_at = now() WHERE profile_id = $1 AND game_id = $2",
                 [(UUID(player), game_id, change.after) for player, change in changes.items()],
             )
+            rank = {placement.player: placement.rank for placement in placements}
+            await connection.executemany(
+                "INSERT INTO match_placements "
+                "(match_id, profile_id, rank, players, rating_before, rating_after) "
+                "VALUES ($1, $2, $3, $4, $5, $6)",
+                [
+                    (match_id, UUID(player), rank[player], len(placements), c.before, c.after)
+                    for player, c in changes.items()
+                ],
+            )
             return changes
+
+    async def rated_games(self) -> list[str]:
+        """Ids of the games that have at least one rated match, sorted."""
+        rows = await self._pool.fetch("SELECT DISTINCT game_id FROM ratings ORDER BY game_id")
+        return [row["game_id"] for row in rows]
+
+    async def leaderboard(self, game_id: str | None = None) -> list[Standing]:
+        """Everyone with at least one rated match, best first.
+
+        With `game_id` the rating of that game; without it the overall rating.
+        """
+        rows = await self._pool.fetch(
+            "SELECT p.id, p.name, p.model_id, r.game_id, r.rating, r.games_played, "
+            "count(mp.match_id) FILTER (WHERE mp.rank = 1) AS wins, "
+            "coalesce(sum(mp.rank), 0) AS rank_sum "
+            "FROM ratings r JOIN player_profiles p ON p.id = r.profile_id "
+            f"LEFT JOIN ({_PLACEMENTS_BY_GAME}) mp "
+            "  ON mp.profile_id = r.profile_id AND mp.game_id = r.game_id "
+            "WHERE r.games_played > 0 AND ($1::text IS NULL OR r.game_id = $1) "
+            "GROUP BY p.id, p.name, p.model_id, r.game_id, r.rating, r.games_played",
+            game_id,
+        )
+        by_profile: dict[UUID, list[asyncpg.Record]] = {}
+        for row in rows:
+            by_profile.setdefault(row["id"], []).append(row)
+        standings = [_standing(group) for group in by_profile.values()]
+        return sorted(standings, key=lambda s: (-s.rating, s.name, str(s.profile_id)))
+
+    async def profile(self, profile_id: UUID, recent: int = 10) -> Profile | None:
+        """A profile with its rating per game and its latest matches; None if unknown."""
+        row = await self._pool.fetchrow(
+            "SELECT id, name, model_id, personality_id FROM player_profiles WHERE id = $1",
+            profile_id,
+        )
+        if row is None:
+            return None
+        games = await self._pool.fetch(
+            "SELECT r.game_id, r.rating, r.games_played, "
+            "count(mp.match_id) FILTER (WHERE mp.rank = 1) AS wins, "
+            "coalesce(sum(mp.rank), 0) AS rank_sum, p.id, p.name, p.model_id "
+            "FROM ratings r JOIN player_profiles p ON p.id = r.profile_id "
+            f"LEFT JOIN ({_PLACEMENTS_BY_GAME}) mp "
+            "  ON mp.profile_id = r.profile_id AND mp.game_id = r.game_id "
+            "WHERE r.profile_id = $1 AND r.games_played > 0 "
+            "GROUP BY r.game_id, r.rating, r.games_played, p.id, p.name, p.model_id "
+            "ORDER BY r.game_id",
+            profile_id,
+        )
+        matches = await self._pool.fetch(
+            "SELECT rm.match_id, rm.game_id, rm.rated_at, mp.rank, mp.players, "
+            "mp.rating_before, mp.rating_after "
+            "FROM match_placements mp JOIN rated_matches rm ON rm.match_id = mp.match_id "
+            "WHERE mp.profile_id = $1 ORDER BY rm.rated_at DESC, rm.match_id LIMIT $2",
+            profile_id,
+            recent,
+        )
+        return Profile(
+            profile_id=row["id"],
+            name=row["name"],
+            model_id=row["model_id"],
+            personality_id=row["personality_id"],
+            overall=_standing(games) if games else None,
+            per_game={g["game_id"]: _standing([g]) for g in games},
+            recent_matches=[
+                MatchResult(
+                    match_id=m["match_id"],
+                    game_id=m["game_id"],
+                    rated_at=m["rated_at"],
+                    rank=m["rank"],
+                    players=m["players"],
+                    rating_change=m["rating_after"] - m["rating_before"],
+                )
+                for m in matches
+            ],
+        )
+
+
+def _standing(rows: Sequence[asyncpg.Record]) -> Standing:
+    """One standing from a profile's rating rows: one row for a game, several for overall."""
+    games = sum(row["games_played"] for row in rows)
+    wins = sum(row["wins"] for row in rows)
+    rank_sum = sum(row["rank_sum"] for row in rows)
+    first = rows[0]
+    return Standing(
+        profile_id=first["id"],
+        name=first["name"],
+        model_id=first["model_id"],
+        rating=overall_rating(
+            {row["game_id"]: (row["rating"], row["games_played"]) for row in rows}
+        ),
+        games_played=games,
+        win_rate=win_rate(wins, games),
+        average_placement=rank_sum / games if games else None,
+    )

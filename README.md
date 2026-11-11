@@ -19,6 +19,8 @@ strategy game).
 
 ![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
 
+![Leaderboard with DEMO random-bot players: rating, games, win rate and average placement](docs/images/web-leaderboard-1280.png)
+
 *The home page of the spectator UI (roadmap step 5.1). Live match views and match GIFs follow in phase 5.*
 
 ## Quick start
@@ -33,10 +35,17 @@ That builds and starts five services, each with a healthcheck:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Web UI | <http://localhost:3100> | SvelteKit spectator UI: home page; match pages follow in phase 5 |
-| Arena API | <http://localhost:8100> | `GET /health`, interactive docs at `/docs` |
-| PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs and the spend ledger |
+| Web UI | <http://localhost:3100> | SvelteKit spectator UI: home page, leaderboard and player profiles; match pages follow in phase 5 |
+| Arena API | <http://localhost:8100> | health, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
+| PostgreSQL | `localhost:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
 | Redis | `localhost:6380` | match queue; today only the worker pings it |
+
+To see a filled leaderboard without any model calls, add demo data (six
+"DEMO …" random-bot players; refused once real profiles exist):
+
+```bash
+docker compose exec arena python -m arena.ratings.demo_seed
+```
 
 All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
 `--volumes` to also delete the database).
