@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from arena.api import werewolf
 from arena.db.database import connect, migrate
 
 
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="AIGameVersus Arena", lifespan=lifespan)
+app.include_router(werewolf.router)
 
 
 @app.get("/health")
