@@ -545,8 +545,11 @@ the models that write text and take a forced tool call (`tools` and
 `tool_choice` in `supported_parameters`), cached for an hour in the file
 `ARENA_CATALOG_CACHE` (default in the temp folder), the last copy when
 OpenRouter cannot be reached, and only the config models without any copy.
-Such a model goes by its OpenRouter id (`vendor/model`), at OpenRouter's
-prices, behind the same caps; `catalog.resolve` adds it to the config where
+Such a model goes by its OpenRouter id (`vendor/model`) and is booked at
+OpenRouter's listed price times 1.25 (`UNVERIFIED_PRICE_MARGIN`: not checked
+by hand), behind the same caps; a price that is not a finite number up to
+10,000 USD per million tokens, and every `:` variant but `:free`, leave a
+model out; `catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
 `tests/conftest.py` refuses, and `tests/test_catalog.py` hands over a sample.

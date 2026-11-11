@@ -140,7 +140,9 @@ def test_resolve_adds_catalog_models_at_their_prices_and_leaves_unknown_ids_unkn
         "acme/plays",
         "Vendor: acme/plays",
     )
-    assert (added.input_usd_per_mtok, added.output_usd_per_mtok) == (Decimal(1), Decimal(2))
+    margin = catalog.UNVERIFIED_PRICE_MARGIN  # not checked by hand: booked dearer
+    assert (added.input_usd_per_mtok, added.output_usd_per_mtok) == (margin, 2 * margin)
+    assert config.models["glm-flash"] == CONFIG.models["glm-flash"]  # verified: as checked
     assert "acme/nothing" not in config.models
     assert config.limits == CONFIG.limits
 
@@ -150,3 +152,51 @@ def test_resolve_reads_nothing_when_every_model_is_in_the_config(monkeypatch):
 
     assert asyncio.run(catalog.resolve(CONFIG, ["glm-flash"])) is CONFIG
     assert calls == []
+
+
+@pytest.mark.parametrize(
+    "price", ["NaN", "Infinity", "-Infinity", "1e400", "0.02", "-0.000001", "", "free"]
+)
+def test_a_price_that_cannot_be_counted_leaves_the_model_out(monkeypatch, price):
+    serve(monkeypatch, [listed("acme/odd", completion=price), listed("acme/plays")])
+
+    found = by_id(load())
+
+    assert "acme/odd" not in found  # 0.02 per token is 20,000 USD per million: a mistake
+    assert "acme/plays" in found
+
+
+def test_only_the_free_variant_of_a_model_is_listed_beside_it(monkeypatch):
+    serve(
+        monkeypatch, [listed("acme/plays"), listed("acme/plays:free"), listed("acme/plays:batch")]
+    )
+
+    assert {"acme/plays", "acme/plays:free"} <= set(by_id(load()))
+    assert "acme/plays:batch" not in by_id(load())
+
+
+def test_every_entry_says_where_its_price_comes_from(monkeypatch):
+    serve(monkeypatch)
+
+    found = by_id(load())
+
+    assert found["glm-flash"].price_source == "config/models.yaml"
+    assert found["acme/plays"].price_source == "openrouter list"
+
+
+def test_a_download_larger_than_any_real_list_is_refused(monkeypatch):
+    class Huge:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self, limit):
+            return b"x" * limit
+
+    monkeypatch.undo()  # the real _download, with the network replaced
+    monkeypatch.setattr(catalog.urllib.request, "urlopen", lambda *a, **k: Huge())
+
+    with pytest.raises(ValueError, match="larger"):
+        catalog._download()

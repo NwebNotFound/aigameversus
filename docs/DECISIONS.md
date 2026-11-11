@@ -1868,10 +1868,17 @@ Each entry: date, decision, why, alternatives considered.
   `tools` and `tool_choice`, with vendor, context length, price per million
   tokens and flags for reasoning, moderation, free and high price (output
   above 10 USD per million tokens). `POST /matches` and `arena run --models`
-  take any of these ids; an unverified model goes by its OpenRouter id at
-  OpenRouter's prices. The list is cached for an hour, the last copy is used
+  take any of these ids; an unverified model goes by its OpenRouter id and is
+  booked at OpenRouter's listed price times 1.25 (`UNVERIFIED_PRICE_MARGIN`),
+  because nobody checked the price and a call may be routed to a dearer
+  provider: the caps then stop it early, not late. A model is left out when a
+  price is not a finite number from 0 to 10,000 USD per million tokens, and so
+  is every id with a `:` variant except `:free` (`:batch` is another API).
+  Each entry says its `price_source`. The list is cached for an hour, the last copy is used
   when OpenRouter cannot be reached, and without one only the config models
-  can play. The caps, `confirm_spend` and the key rules are the same for
+  can play. The cache file (default in the temp folder) is writable by other
+  programs of the same user, like the rest of this local stack; the download
+  is capped at 20 MB. The caps, `confirm_spend` and the key rules are the same for
   every model. Every model gets the options of `limits` (reasoning effort,
   output limit, a forced tool call); a provider that refuses them gets the
   request once more without them, as before.

@@ -34,6 +34,8 @@ def test_the_catalog_lists_verified_models_first_then_openrouters_others(client,
     assert plays["verified"] is False
     assert (plays["input_usd_per_mtok"], plays["output_usd_per_mtok"]) == (1.0, 2.0)
     assert models["acme/pricey"]["high_price"] is True
+    assert models["glm-flash"]["price_source"] == "config/models.yaml"
+    assert plays["price_source"] == "openrouter list"
     assert "acme/no-tool-choice" not in models
     assert out["fresh"] is True and out["fetched_at"] is not None
 
