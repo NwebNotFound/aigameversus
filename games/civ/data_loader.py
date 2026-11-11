@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -257,9 +257,20 @@ class IntRange(_Model):
 
 
 class MapBalance(_Model):
-    tiles: IntRange
+    tiles: IntRange = Field(description="Map size; grows with the number of nations")
     nations: IntRange
+    width: Annotated[int, Field(ge=1)] = Field(description="Tiles per row")
     fog_vision_radius: Annotated[int, Field(ge=0)]
+    terrain_weights: dict[Id, Annotated[int, Field(ge=1)]] = Field(
+        min_length=1, description="Relative frequency of a terrain outside the start regions"
+    )
+    rare_tiles: dict[Id, Annotated[int, Field(ge=0)]] = Field(
+        description="Tiles of each rare terrain per map"
+    )
+    capital_terrain: Id
+    start_regions: dict[Resource, list[Id]] = Field(
+        description="Terrain of the tiles a capital works, by the resource the nation is short of"
+    )
 
 
 class StartBalance(_Model):
@@ -466,9 +477,55 @@ def _check_references(data_dir: Path, data: CivData) -> None:
             need("unit", data.units, group.unit, f"events/{event.id}.yaml: spawn_neutral_army")
     for group in data.balance.start.units:
         need("unit", data.units, group.unit, "balance.yaml: start.units")
+    problems += _map_problems(data)
 
     if problems:
         raise CivDataError(f"{data_dir}: broken references\n  " + "\n  ".join(problems))
+
+
+def _map_problems(data: CivData) -> list[str]:
+    """What the map generator could not work with."""
+    problems: list[str] = []
+    balance, terrain = data.balance.map, data.terrain
+    rare = {terrain_id for terrain_id, entry in terrain.items() if entry.rare}
+
+    def known(ref: str, where: str) -> bool:
+        if ref not in terrain:
+            problems.append(f"{where}: unknown terrain '{ref}' (known: {', '.join(terrain)})")
+        return ref in terrain
+
+    def passable(ref: str, where: str) -> None:
+        if known(ref, where) and terrain[ref].movement_cost is None:
+            problems.append(f"{where}: '{ref}' is impassable")
+
+    for ref in balance.terrain_weights:
+        if known(ref, "balance.yaml: map.terrain_weights") and ref in rare:
+            problems.append(
+                f"balance.yaml: map.terrain_weights: '{ref}' is rare, set its number in "
+                "map.rare_tiles"
+            )
+    if set(balance.rare_tiles) != rare:
+        problems.append(
+            f"balance.yaml: map.rare_tiles must name exactly the rare terrains "
+            f"({', '.join(sorted(rare))}), got {', '.join(sorted(balance.rare_tiles))}"
+        )
+    passable(balance.capital_terrain, "balance.yaml: map.capital_terrain")
+    radius = data.balance.city.work_radius
+    ring = 3 * radius * (radius + 1)
+    for resource in get_args(Resource):
+        region = balance.start_regions.get(resource)
+        where = f"balance.yaml: map.start_regions.{resource}"
+        if region is None:
+            problems.append(f"{where}: missing")
+            continue
+        if len(region) != ring:
+            problems.append(
+                f"{where}: {len(region)} tiles, but a capital works {ring} "
+                f"(city.work_radius {radius})"
+            )
+        for ref in region:
+            passable(ref, where)
+    return problems
 
 
 def json_schemas() -> dict[str, dict[str, Any]]:

@@ -12,7 +12,7 @@ with an error naming the file, the entry and the problem.
 | `events/<id>.yaml` | one random event per file |
 | `treaties.yaml` | treaty types and reputation |
 | `victory.yaml` | victory conditions and the round-limit score |
-| `balance.yaml` | every other tuning number: start, cities, armies, combat, trade, turn |
+| `balance.yaml` | every other tuning number: map, start, cities, armies, combat, trade, turn |
 | `*.schema.json` | JSON schemas, generated from the loader's models |
 
 Conventions: ids are `snake_case` English and never change once used (replays
@@ -65,6 +65,27 @@ Create `events/<id>.yaml`; the file name must equal the `id`. Set
 `only_conquered_within_rounds`, and at least one effect:
 `population_change`, `yield_modifiers`, `resources`, `city_becomes_neutral`,
 `spawn_neutral_army`.
+
+## Change the map
+
+`map` in `balance.yaml` is everything `games/civ/world.py` needs to make a map:
+
+| Field | Meaning |
+| --- | --- |
+| `tiles`, `nations`, `width` | The map has `width` tiles per row and as many rows as give `tiles.min` tiles for the fewest nations, `tiles.max` for the most, and a share in between. |
+| `terrain_weights` | How often each terrain is drawn for a tile outside the start regions. Rare terrains do not go here. |
+| `rare_tiles` | How many tiles of each terrain marked `rare: true` a map has. Every rare terrain needs a number. |
+| `capital_terrain` | The terrain under every capital. |
+| `start_regions` | The tiles around a capital, one list per resource a nation can be short of. A list has as many tiles as a capital works (6 for `city.work_radius: 1`). |
+| `fog_vision_radius` | How far a city or an army sees. |
+
+What the generator guarantees for any data that loads: every nation gets one
+of the `start_regions` whole and to itself, capitals are spread as widely as
+the map allows, all land is one piece, and rare tiles lie outside the start
+regions, between nations and never side by side. To keep starts fair, give
+every list in `start_regions` the same total yield; a test checks the shipped
+ones. Data that leaves no room, for example a map too small for the capitals
+or mostly water, is refused when a match starts, with a message naming `map`.
 
 ## Something the fields cannot express
 

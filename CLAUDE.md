@@ -296,6 +296,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
   liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
   poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
+  civ/          Throne of Tokens, in parts: data, map generation, fog of war
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -483,6 +484,23 @@ An entry in `games/civ/data/units.yaml` or `buildings.yaml`, or a new file in
 `games/civ/data/events/`; no code. `games/civ/data/README.md` lists the fields;
 `uv run python -m games.civ.data_loader` checks the result. The systems that
 use the data land in phase 7.
+
+### The Throne of Tokens map
+
+Built so far of the game itself (roadmap step 7.1; there is no plugin yet, so
+`arena games` does not list it):
+
+- `games/civ/world.py`: `generate_map(players, data, rng)` returns a
+  `WorldMap`: rows of terrain ids and one `Start` per nation. A tile is
+  `(col, row)`; odd rows sit half a tile to the right. `distance(a, b)` counts
+  steps, `world.within(tile, radius)` lists the tiles around one.
+- `games/civ/fog.py`: `visible_tiles(world, viewpoints)` and
+  `map_view(world, visible)`, the map with `None` for what a nation does not
+  see. An observation must be built from the view, never from the map.
+
+The size of the map, the terrain mix, the rare tiles and the tiles around a
+capital are numbers under `map` in `games/civ/data/balance.yaml`; the README
+next to it says what each does and what the generator guarantees.
 
 ### A system
 

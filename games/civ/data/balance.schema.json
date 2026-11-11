@@ -225,21 +225,89 @@
       "additionalProperties": false,
       "properties": {
         "tiles": {
-          "$ref": "#/$defs/IntRange"
+          "$ref": "#/$defs/IntRange",
+          "description": "Map size; grows with the number of nations"
         },
         "nations": {
           "$ref": "#/$defs/IntRange"
+        },
+        "width": {
+          "description": "Tiles per row",
+          "minimum": 1,
+          "title": "Width",
+          "type": "integer"
         },
         "fog_vision_radius": {
           "minimum": 0,
           "title": "Fog Vision Radius",
           "type": "integer"
+        },
+        "terrain_weights": {
+          "description": "Relative frequency of a terrain outside the start regions",
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "propertyNames": {
+            "description": "snake_case English id"
+          },
+          "title": "Terrain Weights",
+          "type": "object"
+        },
+        "rare_tiles": {
+          "description": "Tiles of each rare terrain per map",
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "propertyNames": {
+            "description": "snake_case English id"
+          },
+          "title": "Rare Tiles",
+          "type": "object"
+        },
+        "capital_terrain": {
+          "description": "snake_case English id",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Capital Terrain",
+          "type": "string"
+        },
+        "start_regions": {
+          "additionalProperties": {
+            "items": {
+              "description": "snake_case English id",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Terrain of the tiles a capital works, by the resource the nation is short of",
+          "propertyNames": {
+            "enum": [
+              "food",
+              "wood",
+              "iron",
+              "gold"
+            ]
+          },
+          "title": "Start Regions",
+          "type": "object"
         }
       },
       "required": [
         "tiles",
         "nations",
-        "fog_vision_radius"
+        "width",
+        "fog_vision_radius",
+        "terrain_weights",
+        "rare_tiles",
+        "capital_terrain",
+        "start_regions"
       ],
       "title": "MapBalance",
       "type": "object"
