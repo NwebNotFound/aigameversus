@@ -29,6 +29,17 @@
 	);
 	let submitting = $state(false);
 
+	// Who takes each seat: a random bot or a model id. A match is all bots or all models.
+	let choices = $state<string[]>([]);
+	const usesModels = $derived(
+		Array.from({ length: seatCount }, (_, i) => choices[i] ?? BOT).some((c) => c !== BOT)
+	);
+	const month = $derived(data.month.state === 'ok' ? data.month.data : null);
+	const matchCap = $derived(setup ? Math.round(setup.caps.match_eur * 1_000_000) : 0);
+	const monthEmpty = $derived(usesModels && month !== null && month.remaining_micro_eur <= 0);
+	const euro = (micro: number) => `${(micro / 1_000_000).toFixed(2)} €`;
+	const price = (usd: number) => `$${usd < 1 ? usd.toFixed(3) : usd.toFixed(2)}`;
+
 	const werewolfRoles = $derived(data.werewolfRoles.state === 'ok' ? data.werewolfRoles.data : []);
 	// The role counts entered before a refused submit.
 	const enteredCounts = $derived(
@@ -117,17 +128,30 @@
 			{#if errors.players}<p class="field-error">{errors.players}</p>{/if}
 
 			<ol class="seats" data-testid="seats">
-				{#each Array.from({ length: seatCount }, (_, i) => `p${i + 1}`) as seat (seat)}
+				{#each Array.from({ length: seatCount }, (_, i) => `p${i + 1}`) as seat, index (seat)}
 					<li>
 						<span class="seat">{seat}</span>
 						<label>
 							<span class="sr-only">Player of {seat}</span>
-							<select name="seat" aria-label="Player of {seat}">
-								<option value={BOT} selected>Random bot</option>
+							<select
+								name="seat"
+								aria-label="Player of {seat}"
+								value={choices[index] ?? BOT}
+								onchange={(e) => (choices[index] = e.currentTarget.value)}
+							>
+								<option value={BOT}>Random bot</option>
 								{#if setup?.models.length}
-									<optgroup label="Models (not available yet)">
+									<optgroup
+										label={setup.model_seats
+											? 'Models (paid, price per 1M tokens in / out)'
+											: 'Models (off on this server)'}
+									>
 										{#each setup.models as model (model.id)}
-											<option value={model.id} disabled={!setup.model_seats}>{model.id}</option>
+											<option value={model.id} disabled={!setup.model_seats}>
+												{model.name} · {price(model.input_usd_per_mtok)} / {price(
+													model.output_usd_per_mtok
+												)}
+											</option>
 										{/each}
 									</optgroup>
 								{/if}
@@ -137,8 +161,8 @@
 							<span class="sr-only">Personality of {seat}</span>
 							<select
 								aria-label="Personality of {seat}"
-								disabled={!setup?.model_seats}
-								title="Personalities shape how a model plays; bots have none"
+								disabled
+								title="The arena does not take a personality per seat yet"
 							>
 								<option value="">No personality</option>
 								{#each setup?.personalities ?? [] as personality (personality.id)}
@@ -150,8 +174,13 @@
 				{/each}
 			</ol>
 			<p class="hint">
-				Every seat is a random bot for now: real models take seats once their connection is switched
-				on (roadmap phase 2). Until then models and personalities are listed, not selectable.
+				{#if setup?.model_seats}
+					Every seat a random bot (free), or every seat a model (paid); no mixed tables yet.
+					Personalities come later.
+				{:else}
+					This server plays random bots only: it was not started with model seats on, or it has no
+					API key. Models and personalities are listed, not selectable.
+				{/if}
 			</p>
 			{#if errors.seats}<p class="field-error">{errors.seats}</p>{/if}
 		</fieldset>
@@ -209,28 +238,43 @@
 			<p class="hint">The same seed with the same players plays the same match.</p>
 			{#if errors.seed}<p class="field-error">{errors.seed}</p>{/if}
 
-			<label class="row">
-				<span>Cost limit (€)</span>
-				<input
-					type="number"
-					value={setup?.caps.match_eur ?? ''}
-					min="0.01"
-					max={setup?.caps.month_eur}
-					step="0.01"
-					disabled={!setup?.model_seats}
-					aria-describedby="cost-hint"
-				/>
-			</label>
-			<p class="hint" id="cost-hint">
-				Bots cost nothing. With models, a match pauses before a call that could pass
-				{setup ? `${setup.caps.match_eur.toFixed(2)} €` : 'the cap'}; all matches of a month stop at {setup
-					? `${setup.caps.month_eur.toFixed(2)} €`
-					: 'the monthly cap'}.
-			</p>
+			{#if usesModels}
+				<div class="spend" data-testid="spend" role="group" aria-label="Spending">
+					<p>
+						<strong>This match spends real money.</strong> It costs at most
+						<strong data-testid="match-cap">{euro(matchCap)}</strong>: it stops before a call that
+						could pass that.
+					</p>
+					{#if month}
+						<p data-testid="month">
+							This month: {euro(month.spent_micro_eur)} spent of {euro(month.cap_micro_eur)},
+							<strong>{euro(month.remaining_micro_eur)} left</strong>.
+						</p>
+						{#if monthEmpty}
+							<p class="field-error" role="alert" data-testid="month-empty">
+								Nothing is left this month: a match of models cannot start.
+							</p>
+						{:else if month.remaining_micro_eur < matchCap}
+							<p class="field-error" data-testid="month-low">
+								Less is left this month than one match may cost; it stops when the month runs out.
+							</p>
+						{/if}
+					{:else}
+						<p class="field-error">The spending of this month could not be read.</p>
+					{/if}
+					<label class="row confirm">
+						<input type="checkbox" name="confirm_spend" />
+						<span>I understand that this match spends money, up to {euro(matchCap)}.</span>
+					</label>
+					{#if errors.confirm_spend}<p class="field-error">{errors.confirm_spend}</p>{/if}
+				</div>
+			{:else}
+				<p class="hint">Bots cost nothing.</p>
+			{/if}
 		</fieldset>
 
-		<button type="submit" disabled={submitting}>
-			{submitting ? 'Starting…' : 'Start match'}
+		<button type="submit" disabled={submitting || monthEmpty}>
+			{submitting ? 'Starting…' : usesModels ? 'Start match (spends money)' : 'Start match'}
 		</button>
 	</form>
 {/if}
@@ -383,5 +427,18 @@
 		overflow: hidden;
 		clip-path: inset(50%);
 		white-space: nowrap;
+	}
+
+	.spend {
+		display: grid;
+		gap: 0.4rem;
+		padding: 0.75rem 0.9rem;
+		border-radius: var(--radius);
+		border: 1px solid var(--accent);
+		background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+	}
+
+	.spend p {
+		margin: 0;
 	}
 </style>

@@ -94,7 +94,13 @@ export interface GameInfo {
 export interface SetupOptions {
 	/** Whether a seat can be a model yet; until then every seat is a random bot. */
 	model_seats: boolean;
-	models: { id: string; model: string }[];
+	models: {
+		id: string;
+		model: string;
+		name: string;
+		input_usd_per_mtok: number;
+		output_usd_per_mtok: number;
+	}[];
 	personalities: { id: string; name: string; description: string }[];
 	caps: { match_eur: number; month_eur: number };
 }
@@ -146,6 +152,18 @@ export interface NewMatch {
 	seed?: number;
 	settings: Record<string, unknown>;
 	turn_delay: number;
+	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
+	models?: string[];
+	/** Must be true with `models`: the match spends money. */
+	confirm_spend?: boolean;
+}
+
+/** `GET /ledger/month`: what model calls cost this month and what the cap still allows. */
+export interface MonthSpend {
+	month: string;
+	spent_micro_eur: number;
+	cap_micro_eur: number;
+	remaining_micro_eur: number;
 }
 
 /** A start the arena refused, with its reason (422: the game refused, 429: arena full). */
@@ -242,6 +260,7 @@ export interface ArenaClient {
 		players: number
 	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
+	monthSpend(): Promise<ApiResult<MonthSpend>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
@@ -423,6 +442,13 @@ export function createArenaClient(
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ roles, player_count: players })
 				}
+			);
+		},
+
+		monthSpend() {
+			return getJson<MonthSpend>(
+				'/ledger/month',
+				(body) => isObject(body) && typeof body.remaining_micro_eur === 'number'
 			);
 		},
 

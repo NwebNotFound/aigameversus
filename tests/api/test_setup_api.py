@@ -18,7 +18,16 @@ def test_setup_lists_the_models_personalities_and_caps_of_the_config():
 
     config = load_config()
     assert options["model_seats"] is False
-    assert options["models"] == [{"id": key, "model": m.model} for key, m in config.models.items()]
+    assert options["models"] == [
+        {
+            "id": key,
+            "model": m.model,
+            "name": m.name or key,
+            "input_usd_per_mtok": float(m.input_usd_per_mtok),
+            "output_usd_per_mtok": float(m.output_usd_per_mtok),
+        }
+        for key, m in config.models.items()
+    ]
     assert options["caps"] == {
         "match_eur": float(config.limits.match_eur),
         "month_eur": float(config.limits.month_eur),
@@ -52,3 +61,15 @@ def test_personality_whose_id_is_not_its_file_name_is_refused(personalities):
 
     with pytest.raises(ValueError, match="schemer.yaml: id 'opportunist' must match"):
         load_personalities(personalities)
+
+
+def test_model_seats_need_the_server_switch_and_the_key(monkeypatch):
+    monkeypatch.delenv("ARENA_ALLOW_MODEL_SEATS", raising=False)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-not-a-key")
+    assert client.get("/setup").json()["model_seats"] is False
+
+    monkeypatch.setenv("ARENA_ALLOW_MODEL_SEATS", "1")
+    assert client.get("/setup").json()["model_seats"] is True
+
+    monkeypatch.delenv("OPENROUTER_API_KEY")
+    assert client.get("/setup").json()["model_seats"] is False
