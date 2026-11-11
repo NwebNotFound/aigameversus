@@ -215,10 +215,20 @@ export interface NewMatch {
 	seed?: number;
 	settings: Record<string, unknown>;
 	turn_delay: number;
+	/** false: a fair benchmark, the match neither reads nor writes memory. */
+	memory: boolean;
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
 	/** Must be true with `models`: the match spends money. */
 	confirm_spend?: boolean;
+}
+
+/** `GET /profiles/{id}/memories`: the player's own summaries of past matches. */
+export interface MatchMemory {
+	match_id: string;
+	game_id: string;
+	summary: string;
+	created_at: string;
 }
 
 /** `GET /ledger/month`: what model calls cost this month and what the cap still allows. */
@@ -291,7 +301,6 @@ export interface Profile {
 	overall: Standing | null;
 	ratings: (Standing & { game_id: string })[];
 	recent_matches: RecentMatch[];
-	memory: { available: boolean; note: string };
 }
 
 /** What a model cost and how often the server refused its answers. */
@@ -352,6 +361,7 @@ export interface ArenaClient {
 	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
+	memories(id: string): Promise<ApiResult<MatchMemory[]>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
 	/** Pause, resume, abort or re-time a running match; `not_found` when it is not running. */
 	control(id: string, command: ControlAction): Promise<ApiResult<Control | MatchRecord>>;
@@ -458,6 +468,14 @@ export function createArenaClient(
 				`/profiles/${encodeURIComponent(id)}`,
 				(body) => isObject(body) && typeof body.id === 'string' && Array.isArray(body.ratings),
 				// 422: the id is not a valid profile id, so no such player exists either.
+				[404, 422]
+			);
+		},
+
+		memories(id) {
+			return getJson<MatchMemory[]>(
+				`/profiles/${encodeURIComponent(id)}/memories`,
+				Array.isArray,
 				[404, 422]
 			);
 		},

@@ -57,6 +57,11 @@ class NewMatch(BaseModel):
     turn_delay: float = Field(
         0, ge=0, le=60, description="Seconds to wait after each turn, so people can follow"
     )
+    memory: bool = Field(
+        True,
+        description="False: a fair benchmark. The match neither reads nor writes any memory "
+        "(relationships, match summaries).",
+    )
 
 
 class EventOut(Event):
@@ -101,6 +106,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
             settings=new.settings,
             turn_delay=new.turn_delay,
             models=models,
+            memory=new.memory,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
