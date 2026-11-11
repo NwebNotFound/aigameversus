@@ -15,7 +15,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
 from arena.config import load_config, missing_keys
-from arena.db.match_store import MatchRecord, Status
+from arena.db.match_store import MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 
@@ -46,7 +46,10 @@ class NewMatch(BaseModel):
         min_length=1,
         description="Model ids from config/models.yaml, one per seat in order (p1, p2, ...). "
         "Makes paid model calls inside the cost caps. Only on a server started with "
-        "ARENA_ALLOW_MODEL_SEATS=1. Without: every seat is a random bot",
+        "ARENA_ALLOW_MODEL_SEATS=1, and with confirm_spend. Without: every seat is a random bot",
+    )
+    confirm_spend: bool = Field(
+        False, description="Must be true for a match with model seats: it spends money."
     )
     seed: int | None = Field(None, ge=0, lt=2**63, description="Default: a random seed")
     settings: dict[str, Any] = Field(default_factory=dict, description="Settings of the game")
@@ -113,6 +116,10 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
             f"{ALLOW_MODEL_SEATS}=1 to allow them.",
         )
     assert new.models is not None
+    if not new.confirm_spend:
+        raise HTTPException(
+            422, "A match with model seats spends money: send confirm_spend: true to start it."
+        )
     if new.players is not None and new.players != len(new.models):
         raise HTTPException(
             422, f"players is {new.players}, but {len(new.models)} models are named: one per seat"
@@ -206,7 +213,9 @@ class Replay(BaseModel):
     started_at: datetime
     finished_at: datetime
     cost_micro_eur: int = Field(description="What its model calls cost; 0 for bots")
-    models: dict[str, str] | None = Field(description="Seat -> model id; null for random bots")
+    seats: dict[str, Seat] | None = Field(description="Who played each seat; null for old rows")
+    origin: Origin
+    real: bool = Field(description="Whether a model played any seat")
 
 
 class Cost(BaseModel):
@@ -311,7 +320,9 @@ async def list_replays(live: Live) -> list[Replay]:
             started_at=record.started_at,
             finished_at=record.finished_at,
             cost_micro_eur=cost,
-            models=record.models,
+            seats=record.seats,
+            origin=record.origin,
+            real=record.real,
         )
         for record, cost in await live.matches.finished_with_cost()
     ]

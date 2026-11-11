@@ -1,8 +1,8 @@
 """`config/models.yaml`: the spending limits and the models that can take a seat."""
 
-from decimal import Decimal
 import os
 from collections.abc import Iterable
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
@@ -37,6 +37,7 @@ class Limits(_Strict):
 class Model(_Strict):
     provider: Literal["openrouter"]
     model: str = Field(min_length=1)  # the provider's name for it
+    name: str | None = Field(None, min_length=1)  # what people read; default: the id
     input_usd_per_mtok: Decimal = Field(ge=0)
     output_usd_per_mtok: Decimal = Field(ge=0)
 
@@ -70,3 +71,7 @@ def missing_keys(config: Config, model_ids: Iterable[str]) -> list[str]:
     """
     needed = {KEY_VARIABLES[config.models[model_id].provider] for model_id in model_ids}
     return sorted(name for name in needed if not os.environ.get(name))
+
+
+def display_name(config: Config, model_id: str) -> str:
+    return config.models[model_id].name or model_id

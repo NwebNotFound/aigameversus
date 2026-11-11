@@ -14,10 +14,10 @@ import asyncpg
 from arena.agents.budget import Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
-from arena.config import load_config
+from arena.config import display_name, load_config
 from arena.db.event_store import EventStore
 from arena.db.ledger import Ledger
-from arena.db.match_store import MatchRecord, MatchStore
+from arena.db.match_store import MatchRecord, MatchStore, Seat, bot_seats
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import Event, MatchPaused, Placement
@@ -137,10 +137,18 @@ class LiveMatches:
 
         if models is None:
             agents = random_bots(plugin, players, seed)
+            seats = bot_seats(players)
         else:
-            budget = Budget(self.ledger, match_id, load_config())
+            config = load_config()
+            budget = Budget(self.ledger, match_id, config)
             agents = {
                 seat: ModelAgent(budget.model(seat, models[seat]), plugin) for seat in players
+            }
+            seats = {
+                seat: Seat(
+                    name=display_name(config, models[seat]), model_id=models[seat], kind="model"
+                )
+                for seat in players
             }
         match = Match(plugin, agents, seed=seed, settings=settings, sink=sink)
         if len(self._running) >= MAX_RUNNING:
@@ -158,7 +166,7 @@ class LiveMatches:
                 players,
                 seed,
                 match.settings,
-                models=None if models is None else dict(models),
+                seats=seats,
             )
         except BaseException:
             del self._running[match_id]

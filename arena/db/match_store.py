@@ -11,8 +11,24 @@ from pydantic import BaseModel
 from arena.engine.types import Placement, PlayerId
 
 Status = Literal["running", "finished", "failed", "interrupted", "aborted"]
+Origin = Literal["played", "imported"]
 
-_COLUMNS = "id, game, status, players, seed, settings, started_at, finished_at, placements, models"
+
+class Seat(BaseModel):
+    """Who played a seat, for the people who watch: the event log only knows the seat id."""
+
+    name: str
+    model_id: str | None = None  # an id from config/models.yaml; None for a bot
+    kind: Literal["model", "bot"]
+
+
+def bot_seats(players: Sequence[PlayerId]) -> dict[PlayerId, Seat]:
+    return {player: Seat(name=f"Random Bot {player}", kind="bot") for player in players}
+
+
+_COLUMNS = (
+    "id, game, status, players, seed, settings, started_at, finished_at, placements, seats, origin"
+)
 
 
 class MatchRecord(BaseModel):
@@ -25,7 +41,13 @@ class MatchRecord(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     placements: list[Placement] | None
-    models: dict[PlayerId, str] | None = None  # seat -> model id; None for random bots
+    seats: dict[PlayerId, Seat] | None = None  # None for matches recorded before seats were
+    origin: Origin = "played"
+
+    @property
+    def real(self) -> bool:
+        """Whether a model played any seat."""
+        return any(seat.kind == "model" for seat in (self.seats or {}).values())
 
 
 class MatchStore:
@@ -39,18 +61,20 @@ class MatchStore:
         players: Sequence[PlayerId],
         seed: int,
         settings: dict[str, Any],
-        models: dict[PlayerId, str] | None = None,
+        seats: dict[PlayerId, Seat] | None = None,
+        origin: Origin = "played",
     ) -> MatchRecord:
         """Record a match that starts now, with status `running`."""
         row = await self._pool.fetchrow(
-            "INSERT INTO matches (id, game, status, players, seed, settings, models) "
-            f"VALUES ($1, $2, 'running', $3, $4, $5, $6) RETURNING {_COLUMNS}",
+            "INSERT INTO matches (id, game, status, players, seed, settings, seats, origin) "
+            f"VALUES ($1, $2, 'running', $3, $4, $5, $6, $7) RETURNING {_COLUMNS}",
             match_id,
             game,
             list(players),
             seed,
             settings,
-            models,
+            None if seats is None else {p: s.model_dump() for p, s in seats.items()},
+            origin,
         )
         return MatchRecord(**row)
 
