@@ -116,8 +116,13 @@ flowchart LR
 - `arena/db/event_store.py`: `EventStore.append(match_id, first_seq, events)` and
   `load(match_id)` on the `match_events` table.
 - `arena/db/database.py`: `connect(url)` and `migrate(pool)`; numbered SQL files
-  in `arena/db/migrations/` (today `0001_match_events.sql`), applied at API
-  startup under an advisory lock.
+  in `arena/db/migrations/` (today `0001_match_events.sql`, `0002_ratings.sql`),
+  applied at API startup under an advisory lock.
+- `arena/ratings/`: multiplayer Elo (`elo.update_ratings`, `overall_rating`),
+  count-based statistics (`stats`), and `RatingStore` on the `player_profiles`,
+  `ratings` and `rated_matches` tables. `apply_match_result(match_id, game_id,
+  placements)` counts each match once. Nothing calls it yet; match setup (1.6)
+  and profiles with memory (phase 6) will.
 
 ## Processes and Compose services
 
@@ -134,5 +139,5 @@ Compose project `aigameversus`, host ports bound to `127.0.0.1`:
 ## Planned
 
 Model configuration and cost caps (step 1.5), CLI, match API and live
-streaming to the UI (1.6), game registry, memory and Elo, game master, and all
+streaming to the UI (1.6), game registry, memory, rating matches automatically, game master, and all
 real games.
