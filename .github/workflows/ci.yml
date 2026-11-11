@@ -84,7 +84,29 @@ jobs:
       - name: Fill the fresh CI database with DEMO ratings (random bots only)
         working-directory: .
         run: docker compose exec -T arena python -m arena.ratings.demo_seed --matches 30
-      - run: npx playwright install --with-deps chromium
+      - name: Playwright version (cache key)
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # apt mirrors fail now and then ("Some index files failed to download"): retry, 3 attempts.
+      # The browser download is skipped on a cache hit; the system libraries are still installed.
+      - name: Install Chromium and its system libraries
+        env:
+          CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then install="install-deps"; else install="install --with-deps"; fi
+          for attempt in 1 2 3; do
+            sudo apt-get update -o Acquire::Retries=3 || true
+            if npx playwright $install chromium; then exit 0; fi
+            echo "Attempt $attempt failed"
+            sleep $((attempt * 15))
+          done
+          exit 1
       - name: Playwright smoke tests on port 3100 (375 and 1280 px)
         run: npx playwright test
       - name: Keep the Playwright traces
