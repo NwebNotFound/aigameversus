@@ -8,7 +8,7 @@ What is built on `main` today, and what is planned. Spec: [DESIGN.md](DESIGN.md)
 ```mermaid
 flowchart LR
     UI["6. Spectator UI<br/>(planned: web/ is a static page)"]
-    SRV["1. Arena server<br/>arena/api, arena/engine<br/>(engine built, API: /health only)"]
+    SRV["1. Arena server<br/>arena/api, arena/engine<br/>(engine built, API: /health, Werewolf setup)"]
     PLG["2. Game plugins<br/>games/*<br/>(High Card built)"]
     AGT["3. Agent runner<br/>arena/agents<br/>(random bot, model agent, mock LLM built)"]
     LLM["Model provider<br/>(via LiteLLM; not wired to matches yet)"]
@@ -26,7 +26,7 @@ flowchart LR
 
 | Block | Where | State |
 | --- | --- | --- |
-| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup) | engine built; API for matches, WebSocket planned |
+| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog) | engine built; API for matches, WebSocket planned |
 | 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | one reference game; real games planned |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built; real models are not wired to matches until the cost caps exist (step 1.5) |
 | 4. Memory and profiles | `arena/memory/` | planned (empty package) |

@@ -282,7 +282,26 @@ Each entry: date, decision, why, alternatives considered.
   joker keeps the deck size and the table-card rules unchanged.
 - **Alternatives:** A 21st card; one king, queen or ace marked as devil.
 
-## D-022 · An agent answers with one action and a thought; thoughts are an engine channel
+## D-022 · Werewolf role selection: wolf count and balance light
+
+- **Date:** 2026-11-11
+- **Decision:** For the selection rules ("at least 1 wolf", "wolves fewer
+  than half the players") the White Werewolf (team `solo`) counts as a wolf,
+  like the roles of team `wolves`, because it hunts with them. The balance light sums `weight × count`
+  over the filled selection: above +5 is *village*, below −5 is *wolves*,
+  anything from −5 to +5 is *even*, i.e. less than one werewolf's weight (−6)
+  away from 0. "Zufällig ausgewogen" draws 300 random playable mixes from the
+  match seed (wolf count, special roles on both sides, villagers for the rest)
+  and keeps the first one closest to the template's `target_balance`. Problems
+  carry a stable `code` and the role id, so the UI can translate the English
+  message.
+- **Why:** A fixed margin tied to the strongest repeatable role is easy to
+  explain next to the light; counting the White Werewolf keeps 3 wolves plus it
+  from passing as "3 wolves".
+- **Alternatives:** a margin scaled by player count; counting only team
+  `wolves`; picking the random mix by search instead of sampling.
+
+## D-023 · An agent answers with one action and a thought; thoughts are an engine channel
 
 - **Date:** 2026-11-11
 - **Decision:** `Agent.act` returns a `Reply`: exactly one `Action`, or a
@@ -304,7 +323,7 @@ Each entry: date, decision, why, alternatives considered.
   author; an exception for unusable answers (the thought of that answer would
   be lost); a batch of actions per reply.
 
-## D-023 · The turn clock is in the engine, and an agent that gives up loses its seat
+## D-024 · The turn clock is in the engine, and an agent that gives up loses its seat
 
 - **Date:** 2026-11-11
 - **Decision:** `Match(turn_timeout=60)` limits one turn of one player,
@@ -325,7 +344,7 @@ Each entry: date, decision, why, alternatives considered.
   turn of a slow player (needs a "do nothing" in every game); ending the match
   when a model fails; counting timeouts towards losing the seat.
 
-## D-024 · One model-call boundary; the runner retries; the mock LLM stands behind it
+## D-025 · One model-call boundary; the runner retries; the mock LLM stands behind it
 
 - **Date:** 2026-11-11
 - **Decision:** The agent runner (`ModelAgent`) reaches its model only through
@@ -334,7 +353,7 @@ Each entry: date, decision, why, alternatives considered.
   implement it. The runner retries a failed call 3 times with pauses of 1, 2
   and 4 seconds; a failure marked as not retryable (wrong key, bad request) is
   not retried. When that is used up, the model counts as failed for good: the
-  runner raises `AgentError` and the engine takes the seat (D-023). LiteLLM's
+  runner raises `AgentError` and the engine takes the seat (D-024). LiteLLM's
   own retries are switched off. `LiteLLMModel` imports LiteLLM on first use
   and in LiteLLM's offline mode; it maps a failure to its class name and drops
   the provider's message.
@@ -352,7 +371,7 @@ Each entry: date, decision, why, alternatives considered.
   several failed turns in a row (more state for a rare case; can be added if
   real matches show short outages).
 
-## D-025 · Prompt layout, and how other players' words are kept apart from instructions
+## D-026 · Prompt layout, and how other players' words are kept apart from instructions
 
 - **Date:** 2026-11-11
 - **Decision:** Two messages. System: who the player is, the game's
@@ -379,7 +398,7 @@ Each entry: date, decision, why, alternatives considered.
   filter can be talked around); a summary of older events (comes with memory,
   phase 6).
 
-## D-026 · What an agent writes is made storable before it is logged
+## D-027 · What an agent writes is made storable before it is logged
 
 - **Date:** 2026-11-11
 - **Decision:** The engine cleans every reply before it uses it: NUL
@@ -392,7 +411,7 @@ Each entry: date, decision, why, alternatives considered.
   the model cannot see); cleaning in the store (the stored log would differ
   from the events the match applied, against D-016).
 
-## D-027 · A game's title and rules text each live in one place
+## D-028 · A game's title and rules text each live in one place
 
 - **Date:** 2026-11-11
 - **Decision:** `GamePlugin.name` is the title that prompts, and later the UI,
