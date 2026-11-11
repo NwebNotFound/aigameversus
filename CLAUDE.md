@@ -269,7 +269,7 @@ summary of the turn in `<summary>` if it has one, the observation in
 the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
-  (Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
+  (Liar's Deck, Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
   prompt as it was, or `<game>-p2`). `ModelAgent(call, plugin,
   settings=...)` asks the plugin for `rules(settings)` once and for
   `situation_summary(observation, settings)` on every turn; the API and the
@@ -280,7 +280,6 @@ the server's error on a correction).
   summary, and its prompt is byte for byte what it was.
 - A summary is built from the player's observation only, so it can never
   hold what the player may not see; its `<` is escaped like all game data.
-
 - The player's seat is named three times: at the top of the system message
   ("wherever the game data names p8, that is you"), in the ask at the end
   ("You are p8."), and on every event the player did, which starts with
@@ -297,15 +296,13 @@ the server's error on a correction).
   rejects any other shape). The prompt shows it as `player p2 says: "..."`,
   the reader's own as `you said: "..."`.
 
-Prompt versions: a game may offer several prompts, `<game>-p1` (its
-`rules.md`, as it was) and `<game>-p2` (`rules_v2.md` plus a situation summary).
-The match setting `prompt_version` chooses one; the plugin answers
+Game side of a prompt version: a game offers `<game>-p1` (its `rules.md`, as it
+was) and `<game>-p2` (`rules_v2.md` plus a situation summary) by overriding
 `prompt_version(settings)`, `rules(settings)` and `situation_summary(observation,
-settings)` (None for p1). The runner passes the settings to `ModelAgent`, which
-puts the summary in a `<summary>` block above `<situation>`, and `match_started`
-records `prompt_version`. A summary is a pure function of the player's own
-observation, and `games/<game>/tests/golden/` holds the exact prompt text per
-version (`UPDATE_GOLDEN=1` rewrites it).
+settings)` (None for p1); `games/poker/prompt.py` is the pattern. Every tool a
+turn can offer must be named as `` `tool(` `` in the p2 rules (a test checks it),
+and `games/<game>/tests/golden/` holds the exact prompt text per version
+(`UPDATE_GOLDEN=1` rewrites it).
 
 ### Events and state
 
@@ -391,6 +388,7 @@ arena/
   gamemaster/   match setup, scheduling, narrator
   db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
+  research/     experiment plans, balanced seatings, match schedules, power
   chronicle/    the chronicler: a finished match as a story (templates, styles, languages)
   transcript/   the one readable play-by-play of a match: a renderer per game, de and en
   cli.py        the `arena` command
@@ -407,6 +405,8 @@ config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
 docs/           DESIGN.md, DECISIONS.md, CREDITS.md
+experiments/    one plan per experiment (YAML) and the schedule it fixes (CSV)
+research/       research plan and reports
 tests/          tests for the arena core
 ```
 
@@ -691,6 +691,22 @@ How these follow the engine's rules, and what the next systems should copy:
   in `games/civ/tests/realm.py`, which is as strict as the engine about
   random streams and event data; `games/civ/tests/test_sessions.py` plays
   random legal orders of all systems and should learn the new orders.
+
+### An experiment
+
+One YAML file in `experiments/`, written before its first paid match and
+loaded by `arena/research/experiment.py`: models with their ids and prices,
+stages (`league`, `mirror` or `guests`, the seatings of
+`arena/research/design.py`), hypotheses with their tests, stopping rules and
+budgets. Loading refuses unknown fields and budgets above the monthly cap.
+The schedule, every match with seed, seating and order, is stored next to the
+plan and checked by the tests. [experiments/README.md](experiments/README.md)
+has the rules; a plan spends nothing until it is approved.
+
+```bash
+uv run python -m arena.research.experiment experiments/<name>.yaml > experiments/<name>_schedule.csv
+uv run pytest tests/research
+```
 
 ### A system
 
