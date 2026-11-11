@@ -85,7 +85,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     # Event data can hold any character; a console that cannot show one must not stop a match.
-    sys.stdout.reconfigure(errors="backslashreplace")
+    # Lines go out as they are printed, so a match written to a file can be followed.
+    sys.stdout.reconfigure(errors="backslashreplace", line_buffering=True)
     games = load_games()
     if args.command == "games":
         for game in games.values():
