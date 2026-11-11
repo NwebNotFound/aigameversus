@@ -205,6 +205,7 @@ arena/
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
+  poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI

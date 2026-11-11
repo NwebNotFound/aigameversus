@@ -9,7 +9,7 @@ What is built on `main` today, and what is planned. Spec: [DESIGN.md](DESIGN.md)
 flowchart LR
     UI["6. Spectator UI<br/>(web/, SvelteKit: home page)"]
     SRV["1. Arena server<br/>arena/api, arena/engine<br/>(engine built, API: /health, Werewolf setup)"]
-    PLG["2. Game plugins<br/>games/*<br/>(High Card built)"]
+    PLG["2. Game plugins<br/>games/*<br/>(High Card, Poker built)"]
     AGT["3. Agent runner<br/>arena/agents<br/>(random bot, model agent, mock LLM built)"]
     LLM["Model provider<br/>(via LiteLLM; not wired to matches yet)"]
     MEM["4. Memory and profiles<br/>arena/memory<br/>(planned)"]
