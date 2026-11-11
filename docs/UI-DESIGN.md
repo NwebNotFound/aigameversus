@@ -86,7 +86,7 @@ System UI stack for text (no bundled font). Numbers use
 
 - **Header strip** (one line): game, status (`live` pulses), players as
   avatar chips, cost so far, and for batch runs "match 7 of 112 · €0.43 of
-  €3.00". Seed and export live in a "⋯" menu.
+  €3.00". Seed and export live in a "⋯" menu, in Spectator view only.
 - **Stage:** about 62% of the width on desktop, full width on mobile. Speech
   bubbles appear at the speaker's seat for a few seconds, then go to the feed.
   The active seat gets the brass rim light; the rest dim a bit.
@@ -117,9 +117,21 @@ Two named modes, a segmented switch in the header, also in the URL
 - **Spectator view** (default): thoughts, hands, roles, whispers and chambers
   visible. Marked with the lock-eye icon in `--thought`, so a screenshot always
   shows that it reveals hidden information.
-- **Spoiler-free:** the client fetches `spoilers=false`; thoughts, hidden hands,
-  roles, whispers and the revolver chamber are not rendered and not in the DOM.
-  Face-down cards show their backs. Switching back fetches again.
+- **Spoiler-free:** hidden information never reaches the browser.
+  - The transcript is fetched with `spoilers=false`.
+  - The web server, which proxies every arena call (D-030), strips the
+    spectator-only events (`visible_to` not null) from the event log and the
+    live stream. It also removes the secret board fields (`hand`, `cards`,
+    `role`, `win_probability`, the same list the boards already hide) before
+    it answers the page.
+  - So thoughts, hidden hands, roles, whispers and the revolver chamber are
+    neither fetched by the browser nor in the DOM. Face-down cards show their
+    backs. Switching back loads the page again in the other mode.
+  - The seed and the JSON export are Spectator-view only. The seed gives away
+    every hidden draw, and the export holds hands, roles and thoughts.
+  - Later, the arena's `GET /matches/{id}/board` could take `spoilers=false`
+    and redact in the plugin itself. The web filter then stays as a second
+    guard.
 
 ## Replay timeline
 
@@ -188,7 +200,9 @@ section sets its look.
 ## Checks for every UI PR
 
 - Screenshots at 375 and 1280, before and after, in the PR body.
-- Playwright: no horizontal scroll at 375; spoiler-free mode has no thought,
-  hand, role or whisper nodes; reduced motion has no running animation.
+- Playwright: no horizontal scroll at 375. In spoiler-free mode, no thought,
+  hand, role or whisper nodes, no seed text, no export link, and no secret
+  field in any response the page fetched. With reduced motion, no running
+  animation.
 - Contrast ≥ 4.5:1 for text, visible focus, every control reachable by
   keyboard.
