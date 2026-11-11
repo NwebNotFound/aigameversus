@@ -56,6 +56,29 @@ match = Match(plugin, {"p1": agent, ...}, seed=1, turn_timeout=0.2)
 `mock.calls` holds every prompt the model would have seen. Patterns for whole
 matches, timeouts and API errors are in `tests/agents/test_model_match.py`.
 
+## Matches over the API and the command line
+
+`tests/db/test_matches_api.py` starts matches through FastAPI's `TestClient`
+and follows them over WebSocket; the server closes the stream when the match
+stops:
+
+```python
+match = client.post("/matches", json={"game": "toy", "seed": 5}).json()
+with client.websocket_connect(f"/matches/{match['id']}/events") as stream:
+    first = stream.receive_json()  # {"seq": 0, "type": "match_started", ...}
+```
+
+`tests/db/test_server.py` does the same once through a real uvicorn server on
+a free port and a real WebSocket client, because the test client never opens a
+socket and would not notice a server that cannot speak WebSocket.
+
+`turn_delay` in the request keeps a match running long enough to look at it
+while it plays. The `fake_games` fixture (`tests/conftest.py`) replaces the
+`games` folder by plugins a test writes itself, for example a broken one.
+`tests/test_cli.py` calls `arena.cli.main([...])` and reads what it printed.
+`tests/test_games.py` plays and replays a bot match of every game it finds,
+so a new game is covered as soon as its folder exists.
+
 ## Cost caps in tests
 
 The caps are tested against the real ledger table, so these tests are database

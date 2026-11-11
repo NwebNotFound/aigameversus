@@ -13,9 +13,12 @@ strategy game).
 > as an event log and rebuilds any moment of it from that log. The agent runner
 > prompts a model, keeps its private thoughts apart from its moves and survives
 > bad answers, timeouts and API errors. Every model call is counted against
-> hard cost caps, and a match pauses at a cap (roadmap step 1.5). So far the
-> players are random bots and a scripted mock model, and the only game is a
-> small reference game. None of the four games exists yet.
+> hard cost caps, and a match pauses at a cap. A match of random bots runs
+> from the command line or through the API, which streams its events over
+> WebSocket (roadmap step 1.6, the end of phase 1). So far the players are
+> random bots and a scripted mock model. Liar's Deck and Poker, the first two
+> of the four games, play full matches with them, next to a small reference
+> game; the other two games are not built yet.
 
 ![Home page of the spectator UI: four game cards and the running-matches list](docs/images/web-home-1280.png)
 
@@ -49,6 +52,37 @@ docker compose exec arena python -m arena.ratings.demo_seed
 
 All ports bind to `127.0.0.1` only. Stop with `docker compose down` (add
 `--volumes` to also delete the database).
+
+### Play a match
+
+Every seat is a random bot for now, so a match costs nothing. In the terminal:
+
+```bash
+docker compose exec arena arena run --game toy --bots --seed 7
+```
+
+```
+High Card (toy), players p1 p2, seed 7
+   0  match_started    {"game": "toy", "version": "1", "players": ["p1", "p2"], "settings": {}, "seed": 7}  [spectators only]
+   1  hand_dealt       {"player": "p1", "cards": [1, 3, 5]}  [only p1]
+   ...
+  18  match_finished   {"placements": [{"player": "p1", "rank": 2}, {"player": "p2", "rank": 1}]}
+Result: 1. p2  2. p1
+```
+
+Or through the API, with a second between turns so that it can be watched:
+
+```bash
+curl -X POST http://localhost:8100/matches -H "content-type: application/json" \
+  -d '{"game": "toy", "turn_delay": 1}'
+```
+
+The answer holds the match `id`. `ws://localhost:8100/matches/<id>/events`
+streams the events of the match from its first one while it is played;
+`GET /matches/<id>/events` returns them as a list, `GET /matches` lists the
+matches. Without Docker, `uv run arena run --game toy --bots` does the same as
+the first command. `arena games` lists what can be played: `toy` is High Card,
+the small reference game, `liars_deck` is Liar's Deck and `poker` is Poker.
 
 Configuration is optional for now. To change the database password or add a
 model API key, copy `.env.example` to `.env` and edit it. `.env` is gitignored,

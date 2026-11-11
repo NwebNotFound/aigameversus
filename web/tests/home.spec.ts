@@ -24,7 +24,7 @@ test('nav has the four sections and marks the current page', async ({ page }) =>
 });
 
 // The smoke test runs against the whole stack, so the arena must be reachable.
-// It has no `GET /matches` yet and answers 404, which the UI shows as no matches.
+// Nothing has started a match on a fresh stack, so the list is empty.
 test('the web reaches the arena and shows no running matches', async ({ page }) => {
 	await page.goto('/');
 
