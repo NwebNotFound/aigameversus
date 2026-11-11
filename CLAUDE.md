@@ -260,7 +260,8 @@ the server's error on a correction).
   settings=...)` asks the plugin for `rules(settings)` once and for
   `situation_summary(observation, settings)` on every turn; the API and the
   command pass the match settings. `prompt_version(settings)` is recorded in
-  `match_started` and in the `--save` export, so an analysis can tell the
+  `match_started`, in the match record (`prompt_version` in `GET /matches`
+  and `/replays`) and in the `--save` export, so an analysis can tell the
   versions apart. A game without versions inherits `"v1"`, `rules.md` and no
   summary, and its prompt is byte for byte what it was.
 - A summary is built from the player's observation only, so it can never
