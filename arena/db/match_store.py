@@ -78,14 +78,19 @@ class MatchStore:
         row = await self._pool.fetchrow(f"SELECT {_COLUMNS} FROM matches WHERE id = $1", match_id)
         return None if row is None else MatchRecord(**row)
 
-    async def seat_names(self, match_id: UUID) -> dict[str, str]:
-        """ "Name (model)" for each seat of a rated match; empty for a match that was not rated."""
+    async def seat_profiles(self, match_id: UUID) -> dict[str, tuple[str, str]]:
+        """(profile name, model id) for each seat of a rated match; empty if it was not rated."""
         rows = await self._pool.fetch(
             "SELECT s.seat, p.name, p.model_id FROM match_seats s "
             "JOIN player_profiles p ON p.id = s.profile_id WHERE s.match_id = $1 ORDER BY s.seat",
             match_id,
         )
-        return {row["seat"]: f"{row['name']} ({row['model_id']})" for row in rows}
+        return {row["seat"]: (row["name"], row["model_id"]) for row in rows}
+
+    async def seat_names(self, match_id: UUID) -> dict[str, str]:
+        """ "Name (model)" for each seat of a rated match; empty for a match that was not rated."""
+        profiles = await self.seat_profiles(match_id)
+        return {seat: f"{name} ({model})" for seat, (name, model) in profiles.items()}
 
     async def finished_with_cost(self, limit: int = 100) -> list[tuple[MatchRecord, int]]:
         """The newest finished matches, newest first, each with its model cost in micro-euros."""
