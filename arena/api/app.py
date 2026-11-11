@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from arena.api import chronicle, matches, memory, ratings, setup, transcript, werewolf
+from arena.api import chronicle, matches, memory, models, ratings, setup, transcript, werewolf
 from arena.api.live import LiveMatches
 from arena.db.database import connect, ledger_url, migrate
 from arena.db.ledger import Ledger, LedgerUnavailable
@@ -59,6 +59,7 @@ app.include_router(ratings.router)
 app.include_router(memory.router)
 app.include_router(matches.router)
 app.include_router(chronicle.router)
+app.include_router(models.router)
 app.include_router(transcript.router)
 
 

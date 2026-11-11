@@ -1009,6 +1009,7 @@ Each entry: date, decision, why, alternatives considered.
   "no data" is `None`, never 0.
 - **Alternatives:** counting in the plugin state (changes the plugins, and old
   logs would have no numbers); storing the numbers per match in a table.
+
 ## D-054 · Poker statistics: definitions
 
 - **Date:** 2026-11-11
@@ -1027,6 +1028,7 @@ Each entry: date, decision, why, alternatives considered.
   tests check on real bot matches).
 - **Alternatives:** counting a showdown loss only when the hand was weak
   (needs a notion of a "strong" hand); counting every all-in as aggressive.
+
 ## D-055 · Werewolf statistics: definitions
 
 - **Date:** 2026-11-11
@@ -1618,6 +1620,81 @@ Each entry: date, decision, why, alternatives considered.
   "you" (would change what was said); marking every event that names the
   reader anywhere (marks votes against the player as theirs).
 
+## D-084 · Throne of Tokens armies: movement, training, and what a settler may do
+
+- **Date:** 2026-11-11
+- **Decision:** An army is a list of units on a tile, with an id that is
+  never used twice. Where the spec is silent:
+  - **Movement.** An army has the movement points of its slowest unit.
+    Entering a tile costs the tile's movement cost; leaving a river tile costs
+    the crossing on top. An army with points left may always take one more
+    step, and a tile that costs more than it has left ends its move. A move
+    order names a tile the army can reach this round; the server picks the
+    way that leaves the most points, the shorter of two equal ones. An order
+    lasts one round, and an army moves once per round: it remembers the round
+    of its last move, and so do units split off from it and an army it is
+    merged into. Armies of different nations may pass each other and stand on
+    one tile until combat (step 7.4) says what happens then.
+  - **Training.** One order trains 1 to 10 units of one kind. They are paid at
+    once and stand in the city at once, as a new army. Discounts (barracks)
+    apply to the whole order and each resource is rounded up, so a single
+    swordsman costs its full 3 iron and five cost 12. A forge marks the units
+    trained in its city with +1 strength; units without strength (settlers)
+    get no mark.
+  - **Organising.** `split` names kinds and takes the first units of each
+    kind; it must leave a unit behind. `merge` joins armies on one tile into
+    the first named, up to 10 units. `disband` removes a whole army.
+  - **Founding.** A settler founds a city on the tile where its army stands
+    and is used up. The tile must be at least `city.min_distance` (2) steps
+    from every other city, so no city stands in another's first ring.
+  - **Hunger.** The units a hungry nation loses are drawn from all its units
+    with the same chance each, from a random stream named by round and
+    nation.
+  - The state has a round number, set by the event `round_started`, and all
+    events are applied through `games/civ/turn.py`, which replaces the
+    per-module `apply_event` of the state decision.
+- **Why:** With the spec's costs (forest and hills 2) and its units (most
+  move 1), a rule without the free last step would lock most armies out of
+  most of the map. Naming a tile within reach keeps a move something the
+  server can check against what the player sees, and keeps orders from
+  running on for rounds after the plan changed. Rounding a discount up means
+  it can never make a unit free. New armies instead of joining a garrison
+  keep `train` free of surprises about army sizes. Two steps between cities
+  is what makes the "nearest city works the tile" rule safe for first rings.
+- **Alternatives:** Movement points carried over or spent exactly (slow
+  units could not enter forest); orders to far targets that persist (need
+  path memory and a cancel order); training that takes a round like building
+  (the spec gives building a time and units none); units with ids of their
+  own (longer prompts for little gain; an army's units are told apart by
+  kind); splitting by position in the army (models count badly).
+
+## D-086 · The watch screen: spoiler-free by allowlist in the web server, playback by moments
+
+- **Date:** 2026-11-11
+- **Decision:** The live view and the replay share one component
+  (`WatchScreen`): the cast, the board and a commentary column made of
+  transcript lines (D-078), drawn by `kind`. Bookkeeping (importance 1) is
+  folded unless the viewer shows it. In the spoiler-free view
+  (`?view=spoiler-free`), the SvelteKit server drops every event that is not
+  public from the log and the live stream. It removes the seed. It passes each
+  board through an allowlist per layout (`web/src/lib/server/redact.ts`):
+  hidden cards become placeholders, roles become null, and an unknown field or
+  layout is dropped. The transcript is fetched with `spoilers=false`. Switching
+  the view is a page load that keeps the event shown. Replay play and step
+  move from moment to moment (lines of importance 2 and up, chapter headings)
+  instead of event by event, or from highlight to highlight. A chapter button
+  is drawn for every numbered heading (round, hand, night, day).
+- **Why:** Nothing hidden may reach the browser in the spoiler-free view, and
+  an allowlist keeps a new secret field hidden by default, where a list of
+  secret names would leak it. Stepping by events showed long runs of
+  bookkeeping, which the audit found to be the main reason why replays felt
+  slow and unreadable.
+- **Alternatives:** A `spoilers=false` parameter on the arena's board and
+  events endpoints (cleaner, but a change to the core; the web filter can stay
+  as a second guard when it comes). Hiding the hidden data with CSS (it would
+  still be in the page). Playback by fixed time per event (spends most of the
+  time on bookkeeping).
+
 ## D-087 · Prompts have versions: a game's rules and summary per `prompt_version`
 
 - **Date:** 2026-11-11
@@ -1707,3 +1784,19 @@ Each entry: date, decision, why, alternatives considered.
   once per match), so the grouping is done where the board is read.
 - **Alternatives:** one stored profile per bot kind (impossible with several bot
   seats per match); hiding bots altogether (the demo needs them).
+
+## D-098 · A model page is the profile of a model without a personality
+
+- **Date:** 2026-11-11
+- **Decision:** `GET /models/{id}` (and `/models/[id]` in the UI) takes the id of a
+  model in `config/models.yaml` and describes its profile without a personality
+  (D-081): rating per game, cost per game, tool-error rate (also per game), the
+  latest rated matches with links to their replay and live view, and the game
+  statistics read from the logs (`/profiles/{profile_id}/stats`). Profiles of the
+  same model with a personality are listed and linked to their profile page. A
+  configured model that has not played gives an empty page, an unknown id is 404.
+- **Why:** The leaderboard names models, and a model's seat changes from match to
+  match, so the page must not depend on a seat. Keeping personalities apart keeps
+  their ratings comparable.
+- **Alternatives:** summing all personalities of a model (hides what a personality
+  changes); keying the page by profile id (the profile page already does that).

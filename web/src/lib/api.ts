@@ -21,7 +21,8 @@ export interface MatchSummary {
 
 /** A match as `GET /matches/{id}` returns it. */
 export interface MatchRecord extends MatchSummary {
-	seed: number;
+	/** null on a spoiler-free page: the seed gives every hidden draw away. */
+	seed: number | null;
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
@@ -65,6 +66,47 @@ export interface ReplaySummary {
 export interface Cost {
 	total_micro_eur: number;
 	players: Record<string, number>;
+}
+
+/** What a transcript line is, for drawing it (arena/transcript/common.py). */
+export type LineKind =
+	| 'heading'
+	| 'action'
+	| 'speech'
+	| 'whisper'
+	| 'thought'
+	| 'reveal'
+	| 'result'
+	| 'narration'
+	| 'info';
+
+/** One readable line of `GET /matches/{id}/transcript`: the only text the UI shows for an event. */
+export interface TranscriptLine {
+	/** The position of the event the line tells, or null for a line of its own. */
+	seq: number | null;
+	kind: LineKind;
+	/** The seat id of whoever acts or speaks. */
+	actor: string | null;
+	text: string;
+	detail: string | null;
+	/** 1 bookkeeping, 2 normal, 3 highlight. */
+	importance: 1 | 2 | 3;
+	raw: Record<string, unknown>;
+}
+
+/** Who sits in a seat; both null for random bots and unrated matches. */
+export interface Seat {
+	name: string | null;
+	model: string | null;
+}
+
+export interface Transcript {
+	game: string;
+	lang: 'en' | 'de';
+	spoilers: boolean;
+	lines: TranscriptLine[];
+	/** seat -> name and model, in seat order; missing on arenas that do not send it yet. */
+	players?: Record<string, Seat>;
 }
 
 /** Everything the live view shows next to the event log. */
@@ -213,6 +255,33 @@ export interface Profile {
 	memory: { available: boolean; note: string };
 }
 
+/** What a model cost and how often the server refused its answers. */
+export interface Usage {
+	cost_total_micro_eur: number;
+	cost_per_game_micro_eur: number | null;
+	answers: number;
+	tool_error_rate: number | null;
+}
+
+/** `GET /models/{id}`: one model across all its matches and seats. */
+export interface ModelPage {
+	/** null for a model that is not in config/models.yaml. */
+	model: {
+		id: string;
+		vendor: string | null;
+		provider_model: string;
+		input_usd_per_mtok: number;
+		output_usd_per_mtok: number;
+	} | null;
+	/** The profile without a personality; null until the model has played. */
+	profile_id: string | null;
+	overall: Standing | null;
+	usage: Usage;
+	games: (Standing & { game_id: string; usage: Usage })[];
+	recent_matches: RecentMatch[];
+	personalities: { profile_id: string; personality_id: string }[];
+}
+
 /** `GET /profiles/{id}/stats`: totals per game, from the logs of the rated matches. */
 export interface ProfileStats {
 	profile_id: string;
@@ -241,6 +310,7 @@ export interface ArenaClient {
 	listMatches(): Promise<MatchesResult>;
 	leaderboard(game?: string, kind?: LeaderboardKind): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
+	model(id: string): Promise<ApiResult<ModelPage>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
 	liveState(id: string): Promise<ApiResult<LiveState>>;
@@ -253,6 +323,8 @@ export interface ArenaClient {
 	events(id: string): Promise<ApiResult<MatchEvent[]>>;
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
+	/** The readable play-by-play; without `spoilers`, only what every player could see. */
+	transcript(id: string, spoilers: boolean, lang: 'en' | 'de'): Promise<ApiResult<Transcript>>;
 	games(): Promise<ApiResult<GameInfo[]>>;
 	werewolfRoles(): Promise<ApiResult<WerewolfRole[]>>;
 	werewolfTemplates(players: number): Promise<ApiResult<WerewolfTemplate[]>>;
@@ -330,6 +402,14 @@ export function createArenaClient(
 			return getJson<Leaderboard>(
 				`/leaderboard${query}`,
 				(body) => isObject(body) && Array.isArray(body.rows) && Array.isArray(body.games)
+			);
+		},
+
+		model(id) {
+			return getJson<ModelPage>(
+				`/models/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && Array.isArray(body.games) && isObject(body.usage),
+				[404]
 			);
 		},
 
@@ -416,6 +496,15 @@ export function createArenaClient(
 			return getJson<Board>(
 				`/matches/${encodeURIComponent(id)}/board?events=${encodeURIComponent(events)}`,
 				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
+			);
+		},
+
+		transcript(id, spoilers, lang) {
+			const query = new URLSearchParams({ spoilers: String(spoilers), lang, format: 'json' });
+			return getJson<Transcript>(
+				`/matches/${encodeURIComponent(id)}/transcript?${query}`,
+				(body) => isObject(body) && Array.isArray(body.lines),
 				[404, 422]
 			);
 		},

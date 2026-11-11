@@ -82,7 +82,8 @@ test('spoilers off turns every hand and the last play into card backs', async ({
 	await expect(page.getByTestId('seat')).toHaveCount(2);
 	await expect(page.getByTestId('secret')).toHaveCount(0);
 
-	await page.getByLabel('Show spoilers').uncheck();
+	await page.getByRole('link', { name: 'Spoiler-free' }).click();
+	await expect(page).toHaveURL(/view=spoiler-free/);
 
 	await expect(page.locator('.card.face')).toHaveCount(0);
 	await expect(page.getByTestId('stand').getByTestId('secret')).toHaveCount(2);

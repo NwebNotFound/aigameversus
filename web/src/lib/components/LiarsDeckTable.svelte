@@ -12,8 +12,15 @@
 	let {
 		spec,
 		spoilers,
-		events = []
-	}: { spec: Record<string, unknown>; spoilers: boolean; events?: MatchEvent[] } = $props();
+		events = [],
+		names = {}
+	}: {
+		spec: Record<string, unknown>;
+		spoilers: boolean;
+		events?: MatchEvent[];
+		names?: Record<string, string>;
+	} = $props();
+	const label = (seat: string) => names[seat] ?? seat;
 
 	interface Seat {
 		player: string;
@@ -80,7 +87,7 @@
 		</div>
 		<div class="play" data-testid="last-play">
 			{#if lastPlay}
-				<span class="who">{lastPlay.player} played {lastPlay.cards.length}</span>
+				<span class="who">{label(lastPlay.player)} played {lastPlay.cards.length}</span>
 				{#if hidePlay}
 					<span
 						class="backs"
@@ -111,7 +118,7 @@
 			class:out={!seat.alive}
 			class:turn={seat.player === spec.turn}
 			data-testid="seat"
-			aria-label={seat.player}
+			aria-label={label(seat.player)}
 		>
 			<header>
 				<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
@@ -127,7 +134,7 @@
 						{seat.player.slice(-1).toUpperCase()}
 					</text>
 				</svg>
-				<strong>{seat.player}</strong>
+				<strong>{label(seat.player)}</strong>
 				{#if seat.player === spec.turn}<span class="tag act">to act</span>{/if}
 				{#if !seat.alive}<span class="tag">out</span>{/if}
 			</header>
@@ -389,18 +396,23 @@
 		font-size: 0.8rem;
 	}
 
+	/* A short call-out at the top edge: it never covers the cards on the table. */
 	.banner {
 		position: absolute;
-		inset: 0;
+		top: 0.4rem;
+		left: 50%;
 		z-index: 3;
-		display: grid;
-		place-items: center;
-		background: #000a;
-		font-size: clamp(1.25rem, 5vw, 2rem);
+		max-width: calc(100% - 1rem);
+		transform: translateX(-50%);
+		padding: 0.35rem 1rem;
+		border-radius: 999px;
+		background: rgb(10 8 14 / 0.88);
+		border: 1px solid currentColor;
+		box-shadow: 0 6px 20px rgb(0 0 0 / 0.45);
+		font-size: clamp(0.95rem, 3vw, 1.2rem);
 		font-weight: 800;
 		text-align: center;
-		padding: 1rem;
-		border-radius: var(--radius);
+		pointer-events: none;
 		animation: pop 0.25s ease-out;
 	}
 
@@ -414,16 +426,16 @@
 
 	.banner.bang {
 		color: var(--danger);
-		background: #3a0a10cc;
+		background: rgb(58 10 16 / 0.92);
 	}
 
 	@keyframes pop {
 		from {
-			transform: scale(0.9);
+			transform: translateX(-50%) scale(0.9);
 			opacity: 0;
 		}
 		to {
-			transform: scale(1);
+			transform: translateX(-50%) scale(1);
 			opacity: 1;
 		}
 	}

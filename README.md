@@ -27,7 +27,7 @@ strategy game).
 | *Liar's Deck* (2-4 players) | playable; bots in the UI and API, real models from the command line | rules engine, both variants (base, devil card), bar-table board, random bot |
 | Poker, No-Limit Hold'em (2-6) | playable; bots in the UI and API, real models from the command line | betting rounds, side pots, tournament with duplicate mode, poker-table board with win chances, random bot |
 | Werewolf (6-16) | playable; bots in the UI and API, real models from the command line | all sixteen roles, narrator, captain, role selection with templates and balance light, circle board with vote arrows, random bot |
-| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, seeded hex map with fog of war, city economy; no match yet |
+| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, seeded hex map with fog of war, city economy, armies; no match yet |
 
 **Liar's Deck:** bluff with face-down cards, call the lie, pull the trigger of
 your own revolver. The table shows card stands, the table card and a revolver
@@ -41,20 +41,25 @@ player's chance to win.
 
 ![Live view of a Poker match](docs/images/showcase-poker.gif)
 
-**Werewolf:** hidden roles in a circle, night and day, vote arrows. With
-spoilers off, no role and no hole card is shown anywhere on the page.
+**Werewolf:** hidden roles in a circle, night and day, vote arrows. In the
+spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
 
 ![Live view of a Werewolf match](docs/images/showcase-werewolf.gif)
 
 ## What is built
 
-- **Live view** (`/matches/<id>`): board, public events and the behind-the-scenes
-  column (thoughts, private messages), a spoiler switch, pause, resume, speed
-  and abort, and the cost of the match.
+- **Watch screen**, the same for a live match (`/matches/<id>`) and a replay: the
+  players with name, model and cost, the board as the stage, and a commentary
+  column read from the transcript, where thoughts look different from speech.
+  Two views: **Spectator view** (thoughts, hands and roles) and **Spoiler-free**
+  (`?view=spoiler-free`: the web server sends public data only). Live: pause,
+  resume, speed and abort.
 - **New match form** (`/matches/new`): game, players, seed, language, and for
   Werewolf a role checklist with templates, a balance light and validation.
-- **Replays** (`/replays`): a timeline you can step through or play, a share
-  link, a JSON export of the whole spectator log, and a **Chronicle** tab that
+- **Replays** (`/replays`): a timeline with rounds, hands, nights and days to
+  jump to and a marker for every highlight; play and step go from moment to
+  moment and skip bookkeeping (or play highlights only). A share link, a JSON
+  export of the whole spectator log (spectator view only), and a **Chronicle** tab that
   tells the match as a story in four styles and two languages, with a Markdown
   download.
 - **Leaderboard and profiles**: multiplayer Elo per game and overall, game
@@ -259,7 +264,7 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 
 ```
 arena/      core: API, engine, agent runner, cost caps, ratings, statistics, memory, chronicle, `arena` command
-games/      one package per game: toy, liars_deck, poker, werewolf, civ (data, map, economy)
+games/      one package per game: toy, liars_deck, poker, werewolf, civ (data, map, economy, armies)
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)

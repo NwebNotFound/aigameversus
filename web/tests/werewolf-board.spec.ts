@@ -84,7 +84,8 @@ test('spoilers off turn every role into a question mark', async ({ page, request
 	await expect(page.getByTestId('seat')).toHaveCount(6);
 	await expect(page.getByTestId('role')).toHaveCount(6);
 
-	await page.getByLabel('Show spoilers').uncheck();
+	await page.getByRole('link', { name: 'Spoiler-free' }).click();
+	await expect(page).toHaveURL(/view=spoiler-free/);
 
 	await expect(page.getByTestId('role')).toHaveCount(0);
 	await expect(page.getByTestId('secret')).toHaveCount(6);

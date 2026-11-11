@@ -401,7 +401,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
   liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
   poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
   werewolf/     Werewolf: plugin, abilities, roles, templates, selection
-  civ/          Throne of Tokens, in parts: data, map, fog of war, economy
+  civ/          Throne of Tokens, in parts: data, map, fog of war, economy, armies
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -528,7 +528,9 @@ What the UI draws comes from the plugin's `render_spec(state)`, a plain JSON
 dict with a `layout` (`card_table`, `poker_table`, `player_circle`) and a list
 of `seats`, each with a `player`. Until a game has its own table in `web/`,
 the generic board shows the other fields as text; it hides the fields `hand`,
-`cards` and `role` when the spectator switches spoilers off. A game without
+`cards` and `role` in the spoiler-free view. A spoiler-free page gets its board
+through an allowlist per layout in `web/src/lib/server/redact.ts`: a new layout
+or field shows nothing there until it is listed as public. A game without
 `render_spec` shows its events only.
 
 ### A model
@@ -627,7 +629,7 @@ which effects still wait for their system.
 
 ### The Throne of Tokens map
 
-The game is built in parts (roadmap steps 7.1 and 7.2 so far; there is no
+The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
 - `games/civ/world.py`: `generate_map(players, data, rng)` returns a
@@ -642,35 +644,52 @@ The size of the map, the terrain mix, the rare tiles and the tiles around a
 capital are numbers under `map` in `games/civ/data/balance.yaml`; the README
 next to it says what each does and what the generator guarantees.
 
-### The Throne of Tokens economy
+### The Throne of Tokens economy and armies
 
-- `games/civ/state.py`: `CivState` holds the map, one `Nation` per player (its
-  stock of the four resources, its count of hungry rounds) and the cities in
-  founding order. `new_game(players, data)` is the state before the map is
-  drawn. Later steps add their part of the state here.
+- `games/civ/state.py`: `CivState` holds the round number, the map, one
+  `Nation` per player (its stock of the four resources, its count of hungry
+  rounds), the cities in founding order and the armies. `new_game(players,
+  data)` is the state before the map is drawn. Later steps add their part of
+  the state here.
 - `games/civ/economy.py`: the rules of cities. Questions about the state
   (`city_yields`, `worked_tiles`, `building_slots`, `city_viewpoints` for the
   fog, `upkeep`, `units_lost_to_hunger`), orders with a check each
   (`build_problem` and `build`, `demolish_problem` and `demolish`,
   `focus_problem` and `set_focus`; `found_city`) and the steps of a round
-  (`finish_construction`, `produce`, `grow`). The module docstring shows the
-  order of a round.
+  (`finish_construction`, `produce`, `grow`).
+- `games/civ/armies.py`: the rules of armies. Questions (`movement`,
+  `reachable`, `training_cost`, `army_viewpoints`), orders with a check each
+  (`train`, `move`, `split`, `merge`, `disband`, `settle`),
+  `deploy_start_units` for the setup and the round step `starve`.
+- `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
+  through which every event changes the state. Its docstring has the order
+  of the steps of a round.
 
-How it follows the engine's rules, and what the next systems should copy:
+How these follow the engine's rules, and what the next systems should copy:
 
 - A function that changes something takes the `TurnContext` and emits events;
-  only `apply_event` touches the state. The turn flow (step 7.6) passes the
-  plugin's context and routes events to `apply_event`.
-- An event carries the outcome (the cost paid, the new stock), so applying it
-  reads no game data, and every event is private to the nation it concerns:
-  what others learn about a city comes from their fog view.
+  only the functions in a module's `APPLIERS` touch the state, and
+  `turn.apply_event` routes each event to its applier. The plugin (step 7.6)
+  passes its context through and calls `turn.apply_event`.
+- An event carries the outcome (the cost paid, the new stock, the path
+  walked, which units were lost), so applying it reads no game data. Every
+  event except `round_started` is private to the nation it concerns: what
+  others learn about a city or an army comes from their fog view.
 - A `*_problem` function returns `None` or a message for the player. The
   order itself raises `ValueError` when it is not legal, so whoever resolves
   a round checks each order again at that moment: trades and other orders
   come first and may have used up what it needs.
-- Until armies are in the state (step 7.3), `produce` gets the units of each
-  nation as an argument, and removing the units `units_lost_to_hunger` counts
-  is left to that step.
+- Randomness: `ctx.rng("hunger", state.round, player)`. Every stream name
+  carries the round, because a stream can be asked for once per match.
+- "Once per round" is kept in the state, not left to the caller: an army
+  remembers the round of its last move, units split off from it and an army
+  it is merged into inherit that, and `move_problem` refuses a second move.
+  Do the same for any later rule of this kind.
+- A new system: a module with its functions and `APPLIERS`, its part of the
+  state in `state.py`, one line in `turn.py`. Tests drive it through `Realm`
+  in `games/civ/tests/realm.py`, which is as strict as the engine about
+  random streams and event data; `games/civ/tests/test_sessions.py` plays
+  random legal orders of all systems and should learn the new orders.
 
 ### A system
 

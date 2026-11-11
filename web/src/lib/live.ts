@@ -1,54 +1,8 @@
 /**
- * What the live view does with a match log: which column an event goes to,
- * how it reads, and which parts of the board are spoilers.
+ * What the live view does with a match log: merging the stream, which parts of the
+ * board are spoilers, and how cost reads. The words of an event come from the transcript.
  */
 import type { MatchEvent } from './api.js';
-
-/** Middle column: what every player sees. Right column: thoughts and private events. */
-export type Column = 'public' | 'behind';
-
-export function columnOf(event: MatchEvent): Column {
-	return event.visible_to === null ? 'public' : 'behind';
-}
-
-/** The players an event is about: its author or subject, and who may see it. */
-export function playersOf(event: MatchEvent): string[] {
-	const players = new Set(event.visible_to ?? []);
-	for (const key of ['player', 'caller', 'target']) {
-		const value = event.data[key];
-		if (typeof value === 'string') players.add(value);
-	}
-	return [...players];
-}
-
-export type Line =
-	| { kind: 'message'; player: string; text: string }
-	| { kind: 'thought'; player: string; text: string }
-	| { kind: 'narration'; text: string }
-	| { kind: 'event'; player: string | null; title: string; details: string };
-
-/** One event as the live view shows it. Player text stays text: it is never rendered as HTML. */
-export function describe(event: MatchEvent): Line {
-	const { type, data } = event;
-	const player = typeof data.player === 'string' ? data.player : null;
-	const text = typeof data.text === 'string' ? data.text : null;
-	if (type === 'message' && player && text !== null) return { kind: 'message', player, text };
-	if (type === 'thought' && player && text !== null) return { kind: 'thought', player, text };
-	if (type === 'narration' && text !== null) return { kind: 'narration', text };
-	const rest = Object.entries(data).filter(([key]) => key !== 'player');
-	return {
-		kind: 'event',
-		player,
-		title: type.replaceAll('_', ' '),
-		details: rest.map(([key, value]) => `${key.replaceAll('_', ' ')}: ${show(value)}`).join(' · ')
-	};
-}
-
-function show(value: unknown): string {
-	if (Array.isArray(value)) return value.map(show).join(', ');
-	if (value !== null && typeof value === 'object') return JSON.stringify(value);
-	return String(value);
-}
 
 /**
  * The log with `incoming` added: every position once, in order.

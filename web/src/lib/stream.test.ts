@@ -18,9 +18,9 @@ class FakeSocket {
 	}
 }
 
-function open(lastSeen = -1) {
+function open(lastSeen = -1, onlyPublic = false) {
 	const sockets: { url: string; socket: FakeSocket }[] = [];
-	const stream = relay('ws://arena/matches/m1/events', lastSeen, (url) => {
+	const stream = relay('ws://arena/matches/m1/events', lastSeen, onlyPublic, (url) => {
 		const socket = new FakeSocket();
 		sockets.push({ url, socket });
 		return socket as unknown as WebSocket;
@@ -91,6 +91,23 @@ describe('relay', () => {
 		sockets[0].socket.close(1000);
 
 		expect(await readAll(stream)).toBe('retry: 2000\n\nevent: end\ndata: {}\n\n');
+	});
+
+	it('sends only public events to a spoiler-free page', async () => {
+		const { stream, sockets } = open(-1, true);
+		const { socket } = sockets[0];
+
+		socket.receive({ seq: 0, type: 'match_started', data: { seed: 7 }, visible_to: [] });
+		socket.receive({ seq: 1, type: 'thought', data: { text: 'I bluff' }, visible_to: [] });
+		socket.receive({ seq: 2, type: 'hand_dealt', data: { cards: ['K1'] }, visible_to: ['p1'] });
+		socket.receive({ seq: 3, type: 'cards_played', data: { count: 1 }, visible_to: null });
+		socket.close(1000);
+
+		const body = await readAll(stream);
+		expect(body).toContain('id: 3\n');
+		for (const secret of ['seed', 'I bluff', 'K1', 'id: 0', 'id: 1', 'id: 2']) {
+			expect(body).not.toContain(secret);
+		}
 	});
 
 	it('closes the arena socket when the browser goes away', async () => {
