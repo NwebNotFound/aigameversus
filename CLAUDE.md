@@ -693,6 +693,14 @@ next to it says what each does and what the generator guarantees.
   `reachable`, `training_cost`, `army_viewpoints`), orders with a check each
   (`train`, `move`, `split`, `merge`, `disband`, `settle`),
   `deploy_start_units` for the setup and the round step `starve`.
+- `games/civ/diplomacy.py`: messages, treaties (offer, answer, break, expire),
+  wars, reputation, tributes and trade. Questions for combat and the turn flow
+  (`at_war`, `may_attack`, `allies`, `open_borders`, `wars_of`, `trade_fee`),
+  orders with a check each (`message`, `propose_treaty`, `respond_treaty`,
+  `propose_trade`, `respond_trade`, `break_treaty`, `declare_war`) and the round
+  steps `expire` (start) and `settle` (the trade step). Offers and trades are
+  private to the two nations; signed, broken and expired treaties and wars are
+  public.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.
