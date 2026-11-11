@@ -1250,7 +1250,7 @@ Each entry: date, decision, why, alternatives considered.
   plugin); one component per game chosen by game id (breaks for variants that
   share a layout).
 
-## D-059 · The Poker spectator spec carries side pots and win chances
+## D-068 · The Poker spectator spec carries side pots and win chances
 
 - **Date:** 2026-11-11
 - **Decision:** `Poker.render_spec` adds `side_pots` (the main pot and side pots as
