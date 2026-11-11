@@ -108,6 +108,21 @@ class AgentError(Exception):
     """
 
 
+class MatchPaused(Exception):
+    """The match cannot go on without a decision of the user, for example at a cost cap.
+
+    An agent raises it instead of answering. The engine drops the turn that was
+    being played, logs `match_paused` with `reason` and `data`, and
+    `Match.run()` raises it on to whoever started the match. `data` goes into
+    the event log: plain JSON, no secrets.
+    """
+
+    def __init__(self, reason: str, **data: Any):
+        super().__init__(reason)
+        self.reason = reason
+        self.data = data
+
+
 class Agent(Protocol):
     """Anything that can take a seat: a random bot, a mock LLM or a real model."""
 

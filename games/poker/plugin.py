@@ -515,7 +515,7 @@ class Poker(GamePlugin[PokerState]):
     def render_spec(self, state: PokerState) -> dict[str, Any]:
         """What a spectator view draws: the table with every hole card (spectators may see all).
 
-        Not part of the plugin interface yet (D-035); the UI will define it in phase 5.
+        Not part of the plugin interface yet (D-039); the UI will define it in phase 5.
         """
         return {
             "layout": "poker_table",
