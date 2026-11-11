@@ -11,19 +11,23 @@ AIGameVersus is an arena, not a single game. AI models play turn-based games
 against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
-**State of the build:** roadmap step 1.5. The engine runs complete matches of
-any plugin, stores their event logs in Postgres and rebuilds the state from a
-log. A seat is played by a random bot or by the agent runner, which prompts a
-model and reads its answer; in tests and CI that model is the mock LLM. Model
-calls are counted against cost caps, and a match pauses at a cap.
+**State of the build:** roadmap step 1.6, the end of phase 1. The engine runs
+complete matches of any plugin, stores their event logs in Postgres and
+rebuilds the state from a log. A seat is played by a random bot or by the
+agent runner, which prompts a model and reads its answer; in tests and CI that
+model is the mock LLM. Model calls are counted against cost caps, and a match
+pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models, but nothing
-starts a match with a real model yet (no CLI or match API before step 1.6, no
-API key before phase 2). There is one playable game, High Card (`games/toy`). The arena API exposes
-`GET /health` (it migrates the database at startup) and the Werewolf setup
-endpoints, the worker is a heartbeat placeholder, the web UI (`web/`,
-SvelteKit) has a home page and placeholders for the other pages. Sections below
-marked *not built yet* describe the target from the spec and get filled in as
-their phase lands.
+starts a match with a real model yet: the `arena` command and `POST /matches`
+seat random bots only, and there is no API key before phase 2. Three games can
+be played: High Card (`games/toy`), the reference plugin, Liar's Deck
+(`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
+matches, lists them and streams their events over WebSocket, next to
+`GET /health` (it migrates the database at startup), the leaderboard and the
+Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
+(`web/`, SvelteKit) has a home page and placeholders for the other pages.
+Sections below marked *not built yet* describe the target from the spec and
+get filled in as their phase lands.
 
 ## Architecture
 
@@ -72,7 +76,33 @@ the other players of the turn, drops the turn, logs `match_paused` and lets
 plays that turn from its start, so a paused game continues exactly as it would
 have without the pause.
 
-*Not built yet:* streaming to the UI (step 1.6).
+### Running matches
+
+Two ways, both with random bots in every seat for now:
+
+- `arena run --game toy --bots` (`arena/cli.py`) plays a match in its own
+  process and prints every event. It needs no server and no database, and
+  stores nothing. `arena games` lists the games.
+- `POST /matches` (`arena/api/matches.py`) starts a match as a task inside the
+  API process (`arena/api/live.py`). Its record is a row in `matches`
+  (`running`, `finished`, `failed`, or `interrupted` when the server stopped
+  under it), its events go to the event store turn by turn.
+  `WS /matches/{id}/events` sends the log from its first event, one JSON object
+  per event with its position `seq`, waits for further turns while the match
+  runs and closes when it stops; a finished match is sent in one go.
+  `GET /matches/{id}/events` returns the same log as a list. `turn_delay` in
+  the request makes the match wait between turns so that people can follow.
+  The server plays at most 10 matches at a time (`MAX_RUNNING`) and answers
+  429 to a start beyond that; a match that never ends stops at its turn limit
+  and is marked `failed`.
+
+The API shows a match as a spectator sees it, thoughts and hidden cards
+included. It has no authentication and listens on localhost only.
+
+Games are found by folder (`arena/games.py`): `games/<id>/plugin.py` with one
+`GamePlugin` class whose `id` is the folder name. A folder without `plugin.py`
+is data for a game that is not written yet; a folder that breaks the rule
+stops the start.
 
 ### Agents
 
@@ -179,10 +209,10 @@ the server's error on a correction).
 A match is a list of `Event`s. Engine events (`match_started`, `thought`,
 `action_accepted`, `action_rejected`, `action_fallback`, `agent_failed`,
 `match_paused`, `match_resumed`, `turn_limit_reached`, `match_finished`) are
-bookkeeping. Game events come from the plugin through
-`ctx.emit` and are the only thing that changes the game state: `emit` records
-the event and passes it to the plugin's `apply_event` at once. Replaying the
-game events over `initial_state` therefore rebuilds the exact state.
+bookkeeping. Game events come from the plugin through `ctx.emit` and are the
+only thing that changes the game state: `emit` records the event and passes it
+to the plugin's `apply_event` at once. Replaying the game events over
+`initial_state` therefore rebuilds the exact state.
 
 Every event says who may see it: `visible_to=None` is public, a list of
 players is private to them, an empty list is spectators only. The seed,
@@ -194,7 +224,10 @@ and broken Unicode are dropped, NaN and infinity become null.
 
 Event data must be plain JSON (lists, not tuples; string keys), because a
 stored event has to come back exactly as it was applied. The engine stops a
-match that emits anything else.
+match that emits anything else. Never read anything from the order of keys in
+event data: Postgres stores a JSON object without it. Where order matters, use
+a list. `tests/test_games.py` replays a bot match of every game with the keys
+reversed.
 
 ### Storage and replay
 
@@ -248,14 +281,16 @@ shift the game's randomness.
 
 ```
 arena/
-  api/          FastAPI app (HTTP now, WebSocket later)
+  api/          FastAPI app: matches and their event stream, leaderboard, setup
   engine/       turn loop, plugin interface, seeded RNG, event log
   agents/       agent runner, prompts, model calls, mock LLM
   memory/       profiles and the three memory layers
   gamemaster/   match setup, scheduling, narrator
   db/           connection pool, SQL migrations, event store, spend ledger
   ratings/      multiplayer Elo, statistics, profile and rating store
+  cli.py        the `arena` command
   config.py     loader of config/models.yaml (limits, models, prices)
+  games.py      finds the games under games/
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
@@ -278,6 +313,16 @@ uv run ruff check .           # lint
 uv run ruff format .          # format
 docker compose up --build     # whole stack: API 8100, web 3100, Postgres 5433, Redis 6380
 docker compose down           # stop it (--volumes also deletes the database)
+uv run arena games            # the games that can be played
+uv run arena run --game toy --bots --seed 7   # a bot match in the terminal
+```
+
+The same in the running stack, and a match through the API:
+
+```bash
+docker compose exec arena arena run --game toy --bots
+curl -X POST http://127.0.0.1:8100/matches -H "content-type: application/json" \
+  -d '{"game": "toy", "turn_delay": 1}'
 ```
 
 Web UI (`web/`, Node 24):
@@ -334,11 +379,14 @@ Copy the shape of `games/toy/`, the smallest complete game.
    prompt: short and complete. The prompt puts the game's `name` above it, so
    the text does not need the title.
 2. Define the state as a Pydantic model and subclass `GamePlugin`
-   (`arena/engine/plugin.py`). Set `id`, `name`, `version`, `min_players`,
-   `max_players`, `turn_mode` and `max_turns`: the most turns a match can take
-   under the rules, with room to spare (the default is 10 000). A turn is one
-   round of asking the active players. `name` is the title people and models read,
-   and the only place where it is written.
+   (`arena/engine/plugin.py`), once, in `plugin.py`. Set `id` (the folder
+   name), `name`, `version`, `min_players`, `max_players`, `turn_mode` and
+   `max_turns`: the most turns a match can take under the rules, with room to
+   spare (the default is 10 000). A turn is one round of asking the active
+   players. The class must be creatable without arguments. That is all the
+   registration there is: `arena games` and `GET /games` then list the game.
+   `name` is the title people and models read, and the only place where it is
+   written.
 3. `initial_state` builds the state before anything happened, without
    randomness, and raises `ValueError` for bad settings. `setup` emits the
    opening events (deal, assign roles).
@@ -359,8 +407,7 @@ Copy the shape of `games/toy/`, the smallest complete game.
    actions carry a useful message. Add a match with mock-LLM players, as in
    `tests/agents/test_model_match.py`.
 
-*Not built yet:* the registry that finds games by id (step 1.6), and what the
-UI needs to draw a game (phase 5).
+*Not built yet:* what the UI needs to draw a game (phase 5).
 
 ### A model
 

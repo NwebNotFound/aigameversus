@@ -1,10 +1,12 @@
-"""Fixtures for tests that go through the real LiteLLM library, without any network."""
+"""Shared fixtures: LiteLLM without any network, and a `games` folder a test writes itself."""
 
 import asyncio
 import socket
+import sys
 
 import pytest
 
+import games
 from arena.agents.litellm_model import LiteLLMModel
 from arena.agents.model import ModelError
 
@@ -48,3 +50,27 @@ def answer_with(litellm, monkeypatch):
         return sent
 
     return install
+
+
+@pytest.fixture
+def fake_games(tmp_path, monkeypatch):
+    """Replace the `games` folder: `fake_games(name=source_of_plugin_py, other=None)`.
+
+    A source of None gives a package without a plugin module.
+    """
+    installed = []
+
+    def install(**plugins):
+        for name, source in plugins.items():
+            package = tmp_path / name
+            package.mkdir()
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            if source is not None:
+                (package / "plugin.py").write_text(source, encoding="utf-8")
+            installed.append(name)
+        monkeypatch.setattr(games, "__path__", [str(tmp_path)])
+
+    yield install
+    for name in installed:
+        sys.modules.pop(f"games.{name}.plugin", None)
+        sys.modules.pop(f"games.{name}", None)

@@ -6,7 +6,6 @@ const MATCH: MatchSummary = {
 	game: 'poker',
 	status: 'running',
 	players: ['ann', 'bob'],
-	round: 3,
 	started_at: '2026-11-11T02:00:00Z'
 };
 
@@ -27,15 +26,15 @@ describe('listMatches', () => {
 		const result = await createArenaClient('http://arena:8000/', fetchFn).listMatches();
 
 		expect(result).toEqual({ state: 'ok', matches: [MATCH] });
-		expect(calls).toEqual(['http://arena:8000/matches']);
+		expect(calls).toEqual(['http://arena:8000/matches?status=running']);
 	});
 
-	it('treats a missing endpoint as no running matches', async () => {
+	it('reports a server without the endpoint as unreachable', async () => {
 		const { fetchFn } = fakeFetch(() => new Response('not found', { status: 404 }));
 
 		const result = await createArenaClient('http://arena:8000', fetchFn).listMatches();
 
-		expect(result).toEqual({ state: 'ok', matches: [] });
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena answered 404' });
 	});
 
 	it('reports a refused connection as unreachable', async () => {
