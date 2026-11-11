@@ -12,7 +12,7 @@ flowchart LR
     PLG["2. Game plugins<br/>games/*<br/>(High Card, Liar's Deck, Poker, Werewolf built)"]
     AGT["3. Agent runner<br/>arena/agents<br/>(random bot, model agent, mock LLM built)"]
     LLM["Model provider<br/>(via LiteLLM; not wired to matches yet)"]
-    MEM["4. Memory and profiles<br/>arena/memory<br/>(planned)"]
+    MEM["4. Memory and profiles<br/>arena/memory<br/>(relationships)"]
     GM["5. Game master<br/>arena/gamemaster<br/>(planned)"]
     DB[("PostgreSQL<br/>match_events")]
     UI -. "WebSocket, planned" .-> SRV
@@ -26,12 +26,12 @@ flowchart LR
 
 | Block | Where | State |
 | --- | --- | --- |
-| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (role list and selection check for the new-match dialog), `arena/api/matches.py` and `live.py` (start, list, stream and control matches, board and cost), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats planned |
+| 1. Arena server | `arena/engine/` (turn loop, replay, seeded RNG), `arena/api/app.py` (FastAPI, `GET /health`, migrates the database at startup), `arena/api/werewolf.py` (roles, templates per table size and the selection check for the new-match form), `arena/api/setup.py` (`GET /setup`: models, personalities, cost caps), `arena/api/matches.py` and `live.py` (start, list, stream and control matches, board and cost), `arena/games.py` (finds the games), `arena/cli.py` (the `arena` command) | built for matches of random bots; model seats planned |
 | 2. Game plugins | `games/<id>/`; `games/toy` is the reference game | High Card, Liar's Deck (`games/liars_deck`, both variants), Poker (`games/poker`, tournament and duplicate mode) and Werewolf (`games/werewolf`, all 16 roles, captain, narrator) play full matches; Throne of Tokens has its data, map generation, fog of war and city economy (`games/civ`), no plugin yet |
 | 3. Agent runner | `arena/agents/`: `random_bot.py`, `runner.py` (`ModelAgent`), `prompt.py`, `model.py` (the model-call boundary), `mock_llm.py`, `litellm_model.py` | built, with cost caps (`budget.py`); nothing starts a match with a real model yet (phase 2, when a key exists) |
-| 4. Memory and profiles | `arena/memory/` | planned (empty package) |
+| 4. Memory and profiles | `arena/memory/`: `facts.py` (what each player saw others do, per game), `trust.py` (rules from `config/memory/trust.yaml`), `store.py` (relationships in Postgres); `GET /profiles/{id}/relations` (`arena/api/memory.py`) | relationships built: the server sets trust after every rated match; match memories, the prompt block and reset planned |
 | 5. Game master | `arena/gamemaster/` | planned (empty package) |
-| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, live view of a match, leaderboard with game tabs, player profiles; New match and Replays are placeholders |
+| 6. Spectator UI | `web/` (SvelteKit on Node; pages load API data server-side through `web/src/lib/api.ts`) | home page with game cards and running matches, new-match form, live view of a match, leaderboard with game tabs, player profiles; Replays is a placeholder |
 
 ## Engine
 
@@ -141,12 +141,13 @@ flowchart LR
 - `arena/ratings/`: multiplayer Elo (`elo.update_ratings`, `overall_rating`),
   count-based statistics (`stats`), and `RatingStore` on the `player_profiles`,
   `ratings` and `rated_matches` tables. `apply_match_result(match_id, game_id,
-  placements)` counts each match once and stores every player's rank and rating
-  change in `match_placements`. `GET /leaderboard?game=` and
-  `GET /profiles/{id}` (`arena/api/ratings.py`) read them, and
+  placements, seats)` counts each match once and stores every player's rank and
+  rating change in `match_placements`, and which seat of the log each profile
+  played in `match_seats`. `GET /leaderboard?game=`, `GET /profiles/{id}` and
+  `GET /profiles/{id}/stats?game=` (`arena/api/ratings.py`) read them; the stats
+  replay the logs of a profile's seats through `arena/stats` (`STATS`).
   `python -m arena.ratings.demo_seed` fills them with DEMO random-bot data.
-  Nothing rates real matches yet; match setup (1.6)
-  and profiles with memory (phase 6) will.
+  A finished API match rates its random bots (D-052).
 
 ## Matches over the API
 
@@ -195,6 +196,11 @@ sequenceDiagram
   `state/+server.ts` returns record, board, cost and controls, and runs a
   control; the page reloads it after new events, at most about three times a
   second.
+- Replays (`web/src/routes/replays`) list `GET /replays` (finished matches with
+  winners and cost) and step through a stored log one event per step. The board
+  of a step is `GET /matches/{id}/board?events=N`, the state after the first N
+  events; the columns are the live view's `MatchColumns`. `?step=N` in the
+  address is the share link; `export.json` is the record with the whole log.
 - `arena run` (`arena/cli.py`) does not use any of this: it runs the engine in
   its own process and prints the events. With `--models` it seats real models
   behind a `Budget` and writes the match, its events and the ledger to the

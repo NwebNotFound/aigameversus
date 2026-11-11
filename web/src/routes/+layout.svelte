@@ -24,7 +24,6 @@
 					<li>
 						<a href={item.href} aria-current={page.url.pathname === item.href ? 'page' : undefined}>
 							{item.label}
-							{#if item.soon}<span class="soon">soon</span>{/if}
 						</a>
 					</li>
 				{/each}
@@ -107,16 +106,6 @@
 		color: var(--bg);
 		background: var(--accent);
 		font-weight: 600;
-	}
-
-	.soon {
-		font-size: 0.65rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		padding: 0.05rem 0.4rem;
-		border-radius: 999px;
-		border: 1px solid currentColor;
-		opacity: 0.7;
 	}
 
 	main {

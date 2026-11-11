@@ -23,10 +23,13 @@ seats random bots only. Three games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 (`games/liars_deck`) and Poker (`games/poker`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
-`GET /health` (it migrates the database at startup), the leaderboard and the
-Werewolf setup endpoints. The worker is a heartbeat placeholder, the web UI
+`GET /health` (it migrates the database at startup), the leaderboard, player
+profiles with their game statistics (`GET /profiles/{id}/stats`), the
+Werewolf setup endpoints and `GET /setup` (models, personalities and cost
+caps for the form). The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the
-live view of a match (`/matches/<id>`); New match and Replays are placeholders.
+new-match form (`/matches/new`), the live view of a match (`/matches/<id>`)
+and replays (`/replays`, `/replays/<id>`).
 Sections below marked *not built yet* describe the target from the spec and
 get filled in as their phase lands.
 
@@ -506,6 +509,21 @@ missing. A role without new abilities needs none.
 `games/werewolf/templates.yaml` (role counts per template, `fill` for villagers)
 and `games/werewolf/options.yaml` (captain, role visibility). Same test command.
 
+### A trust rule
+
+After every rated match the server turns what each player saw into facts
+(`arena/memory/facts.py`, one extractor per game) and the facts into trust
+between profiles (-100 to +100, clamped) with a short note each
+(`arena/memory/store.py`, once per match id). How much a fact is worth, and its
+note, is data: `config/memory/trust.yaml`. A fact is read only from the events
+its observer could see, so it never carries another player's secret. A new kind
+of fact needs its extractor case, its name in `KINDS` and a rule in the file;
+the loader refuses a fact without a rule and a rule without a fact.
+
+```bash
+uv run pytest tests/memory
+```
+
 ### A personality
 
 One YAML file in `config/personalities/<id>.yaml`, checked against
@@ -531,8 +549,9 @@ uv run pytest games/liars_deck
 ```
 
 A new Werewolf role already shows up in the role selection
-(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles` and
-`POST /games/werewolf/selection/validate`): give it a `team`, `unique` and a
+(`games/werewolf/selection.py`, served at `GET /games/werewolf/roles`,
+`GET /games/werewolf/templates?players=N` and
+`POST /games/werewolf/selection/validate`, and shown in the new-match form): give it a `team`, `unique` and a
 balance `weight`.
 
 ### A unit, building or event

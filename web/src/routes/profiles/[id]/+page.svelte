@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { gameName } from '#lib/games.js';
-	import { percent, placement, rating, signed } from '#lib/format.js';
+	import { percent, placement, rating, signed, statLabel, statValue } from '#lib/format.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const profile = $derived(data.result.state === 'ok' ? data.result.data : null);
+	const relations = $derived(data.relations.state === 'ok' ? data.relations.data.relations : []);
+	const gameStats = $derived(
+		data.stats.state === 'ok' ? data.stats.data.games.filter((g) => g.stats !== null) : []
+	);
 
 	// Bars span 800 to 1200 rating, the range most players stay in; values outside are capped.
 	const BAR_MIN = 800;
@@ -92,11 +96,69 @@
 		{/if}
 	</section>
 
+	<section aria-labelledby="game-stats">
+		<h2 id="game-stats">Game statistics</h2>
+		{#if data.stats.state === 'unreachable'}
+			<p class="muted">The statistics could not be loaded ({data.stats.reason}).</p>
+		{:else if gameStats.length === 0}
+			<p class="muted" data-testid="no-game-stats">
+				No statistics yet: they come from rated matches of Liar's Deck, Poker and Werewolf.
+			</p>
+		{:else}
+			<div class="game-stats">
+				{#each gameStats as game (game.game_id)}
+					<table data-testid="game-stats" data-game={game.game_id}>
+						<caption
+							>{gameName(game.game_id)} · {game.matches}
+							{game.matches === 1 ? 'match' : 'matches'}</caption
+						>
+						<tbody>
+							{#each Object.entries(game.stats ?? {}).filter(([field]) => field !== 'matches') as [field, value] (field)}
+								<tr>
+									<th scope="row">{statLabel(field)}</th>
+									<td>{statValue(field, value)}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{/each}
+			</div>
+		{/if}
+	</section>
+
+	<section aria-labelledby="relations-title">
+		<h2 id="relations-title">Trust</h2>
+		{#if data.relations.state === 'unreachable'}
+			<p class="muted">The relations could not be loaded ({data.relations.reason}).</p>
+		{:else if relations.length === 0}
+			<p class="muted" data-testid="no-relations">
+				Nobody yet: trust grows from what happens in matches against others.
+			</p>
+		{:else}
+			<ul class="trust" data-testid="relations">
+				{#each relations as other (other.profile_id)}
+					<li data-trust={other.trust}>
+						<a href="/profiles/{other.profile_id}">{other.name}</a>
+						<span class="meter" aria-hidden="true">
+							<span
+								class="fill"
+								class:negative={other.trust < 0}
+								style:width="{Math.abs(other.trust) / 2}%"
+							></span>
+						</span>
+						<span class="value" class:up={other.trust > 0} class:down={other.trust < 0}>
+							{other.trust > 0 ? '+' : ''}{other.trust}
+						</span>
+						{#if other.notes[0]}<small class="muted">{other.notes[0].text}</small>{/if}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+
 	<section aria-labelledby="later" class="later">
-		<h2 id="later">Relations and memory</h2>
-		<p class="muted">
-			Trust between players and what each one remembers: {profile.relations.note}.
-		</p>
+		<h2 id="later">Memory</h2>
+		<p class="muted">What each player remembers of past matches: {profile.memory.note}.</p>
 	</section>
 {/if}
 
@@ -234,5 +296,92 @@
 			grid-template-columns: 1fr 3rem;
 			grid-template-areas: 'game num' 'track track' 'meta meta';
 		}
+	}
+
+	.game-stats {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+		gap: 1rem;
+	}
+
+	.game-stats table {
+		width: 100%;
+		border-collapse: collapse;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
+
+	.game-stats caption {
+		text-align: left;
+		font-weight: 600;
+		padding: 0 0 0.4rem;
+	}
+
+	.game-stats th,
+	.game-stats td {
+		padding: 0.35rem 0.75rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.game-stats th {
+		text-align: left;
+		font-weight: 400;
+		color: var(--muted);
+	}
+
+	.game-stats td {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.trust {
+		display: grid;
+		gap: 0.4rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.trust li {
+		display: grid;
+		grid-template-columns: minmax(6rem, 10rem) 1fr 3rem;
+		align-items: center;
+		gap: 0.2rem 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: var(--radius);
+		background: var(--surface);
+		border: 1px solid var(--border);
+	}
+
+	.trust small {
+		grid-column: 1 / -1;
+	}
+
+	/* The bar grows from the middle: right for trust, left for distrust. */
+	.meter {
+		position: relative;
+		height: 0.5rem;
+		border-radius: 999px;
+		background: var(--surface-raised);
+	}
+
+	.fill {
+		position: absolute;
+		left: 50%;
+		height: 100%;
+		border-radius: 999px;
+		background: #7ad69a;
+	}
+
+	.fill.negative {
+		left: auto;
+		right: 50%;
+		background: var(--danger);
+	}
+
+	.value {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 </style>

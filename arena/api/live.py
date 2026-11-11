@@ -18,6 +18,7 @@ from arena.db.match_store import MatchRecord, MatchStore
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import Event, Placement
+from arena.memory.store import MemoryStore
 from arena.ratings.store import RatingStore
 
 log = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ class LiveMatches:
         self._events = EventStore(pool)
         self.ledger = Ledger(pool)
         self._ratings = RatingStore(pool)
+        self._memory = MemoryStore(pool)
         self._running: dict[UUID, _Running] = {}
         self._tasks: set[asyncio.Task] = set()
 
@@ -150,7 +152,7 @@ class LiveMatches:
         try:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
-            await self._rate(match_id, running.match.plugin.id, placements)
+            await self._rate(match_id, running.match, placements)
         except asyncio.CancelledError:
             if not running.aborted:
                 raise  # the server shuts down: the next start marks the match interrupted
@@ -200,17 +202,27 @@ class LiveMatches:
         running.task.cancel()
         await asyncio.gather(running.task, return_exceptions=True)
 
-    async def _rate(self, match_id: UUID, game_id: str, placements: Sequence[Placement]) -> None:
-        """Rate the bots of a finished match. A rating problem never fails the match."""
+    async def _rate(self, match_id: UUID, match: Match, placements: Sequence[Placement]) -> None:
+        """Rate the bots of a finished match and add it to their relationships.
+
+        A rating or memory problem never fails the match.
+        """
+        game_id = match.plugin.id
         try:
             profiles = await self._ratings.bot_profiles([p.player for p in placements])
             await self._ratings.apply_match_result(
                 match_id,
                 game_id,
                 [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+                seats=profiles,
             )
         except Exception:
             log.exception("Rating of match %s failed", match_id)
+            return
+        try:
+            await self._memory.remember_match(match_id, game_id, match.events, profiles)
+        except Exception:
+            log.exception("Remembering match %s failed", match_id)
 
     async def log(self, match_id: UUID) -> list[Event]:
         """The log of a match so far: its completed turns."""
