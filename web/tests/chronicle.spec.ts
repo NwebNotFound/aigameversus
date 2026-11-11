@@ -124,11 +124,15 @@ test('with spoilers off the chronicle stays closed until the viewer shows them',
 	].filter((role) => !['villager', 'werewolf'].includes(role)); // 'werewolf' is the game's name too
 
 	await page.goto(`/replays/${id}`);
-	await page.getByLabel('Show spoilers').uncheck();
+	await page.getByRole('link', { name: 'Spoiler-free' }).click();
+	await expect(page).toHaveURL(/view=spoiler-free/);
 	await page.getByTestId('tab-chronicle').click();
 
-	// The switch is still there on this tab, the story is closed and no role name is on the page.
-	await expect(page.getByLabel('Show spoilers')).not.toBeChecked();
+	// The view switch says spoiler-free on this tab, the story is closed and no role name is on the page.
+	await expect(page.getByRole('link', { name: 'Spoiler-free' })).toHaveAttribute(
+		'aria-current',
+		'true'
+	);
 	await expect(page.getByTestId('chronicle-spoilers')).toContainText('names hidden roles');
 	await expect(page.getByTestId('chronicle-story')).toHaveCount(0);
 	await expect(page.getByTestId('chronicle-download')).toHaveCount(0);
@@ -137,7 +141,8 @@ test('with spoilers off the chronicle stays closed until the viewer shows them',
 
 	await page.getByTestId('chronicle-reveal').click();
 
-	await expect(page.getByLabel('Show spoilers')).toBeChecked();
+	await expect(page).not.toHaveURL(/view=spoiler-free/);
+	await expect(page).toHaveURL(/tab=chronicle/);
 	await expect(page.getByTestId('chronicle-story')).toBeVisible();
 	await expect(page.getByTestId('chronicle-download')).toBeVisible();
 	const story = (await page.getByTestId('chronicle-story').innerText()).toLowerCase();

@@ -7,11 +7,16 @@
 	--muted: #a59eb8;
 	--accent: #f0b35a;
 	--accent-2: #7fb8ff;
-	--danger: #ff7a7a;
+	--danger: #ff6b6b;
+	--ok: #6ee7a8;
+	/* Thoughts and everything only spectators see. */
+	--thought: #b79cff;
 	--radius: 14px;
 	--gap: clamp(1rem, 3vw, 1.75rem);
 	--content: 72rem;
 	--font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	/* The narrator's voice: headings and narration in the commentary. */
+	--font-narrator: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
 
 	color-scheme: dark;
 }
@@ -76,4 +81,17 @@ h3 {
 
 .notice.error strong {
 	color: var(--danger);
+}
+
+/* Text for screen readers only. */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
 }

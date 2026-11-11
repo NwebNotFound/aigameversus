@@ -73,7 +73,8 @@ test('spoilers off turn hole cards into backs and hide the win chances', async (
 	await expect(page.getByTestId('win-chance').first()).toContainText('% to win');
 	await expect(page.getByTestId('secret')).toHaveCount(0);
 
-	await page.getByLabel('Show spoilers').uncheck();
+	await page.getByRole('link', { name: 'Spoiler-free' }).click();
+	await expect(page).toHaveURL(/view=spoiler-free/);
 
 	await expect(page.getByTestId('win-chance')).toHaveCount(0);
 	await expect(page.getByTestId('seat').first().locator('.card.face')).toHaveCount(0);

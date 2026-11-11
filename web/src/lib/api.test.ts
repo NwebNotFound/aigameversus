@@ -126,6 +126,13 @@ describe('leaderboard', () => {
 		await createArenaClient('http://arena:8000', fetchFn).leaderboard();
 
 		expect(calls).toEqual(['http://arena:8000/leaderboard']);
+		calls.length = 0;
+		await createArenaClient('http://arena:8000', fetchFn).leaderboard('toy', 'bots');
+		await createArenaClient('http://arena:8000', fetchFn).leaderboard(undefined, 'all');
+		expect(calls).toEqual([
+			'http://arena:8000/leaderboard?game=toy&kind=bots',
+			'http://arena:8000/leaderboard?kind=all'
+		]);
 	});
 
 	it('rejects a body without rows', async () => {

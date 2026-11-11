@@ -316,8 +316,14 @@ def test_match_that_could_not_be_recorded_does_not_keep_its_place(client, monkey
     assert start(client)["status"] == "running"
 
 
+def seat_rows(client):
+    """The leaderboard with every random-bot seat as its own row."""
+    params = {"game": "toy", "kind": "all", "group_bots": False}
+    return client.get("/leaderboard", params=params).json()["rows"]
+
+
 def leaderboard_games(client):
-    rows = client.get("/leaderboard", params={"game": "toy"}).json()["rows"]
+    rows = seat_rows(client)
     return {row["name"]: row["games_played"] for row in rows}
 
 
@@ -325,7 +331,7 @@ def test_finished_match_rates_its_bots_once(client):
     match = start(client, players=3, seed=1)
     follow(client, match["id"])
 
-    rows = client.get("/leaderboard", params={"game": "toy"}).json()["rows"]
+    rows = seat_rows(client)
     assert {row["name"]: row["games_played"] for row in rows} == {
         "Random Bot p1": 1,
         "Random Bot p2": 1,
@@ -346,7 +352,7 @@ def test_finished_match_rates_its_bots_once(client):
 def test_applying_the_same_match_again_changes_nothing(client):
     match = start(client, players=2, seed=4)
     follow(client, match["id"])
-    before = client.get("/leaderboard", params={"game": "toy"}).json()
+    before = client.get("/leaderboard", params={"game": "toy", "kind": "all"}).json()
 
     async def again():
         pool = await connect(os.environ["DATABASE_URL"])
@@ -362,4 +368,4 @@ def test_applying_the_same_match_again_changes_nothing(client):
             await pool.close()
 
     assert asyncio.run(again()) is None
-    assert client.get("/leaderboard", params={"game": "toy"}).json() == before
+    assert client.get("/leaderboard", params={"game": "toy", "kind": "all"}).json() == before

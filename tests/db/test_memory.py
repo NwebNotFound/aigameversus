@@ -1,7 +1,7 @@
 """Long-term memory in Postgres: match summaries, the memory block, memory off and reset."""
 
 import asyncio
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,7 +15,7 @@ from arena.engine.match import Match
 from arena.engine.types import Event, EventSource
 from arena.memory.block import MEMORY_CHARS, memory_block
 from arena.memory.store import MemoryStore
-from arena.ratings.store import RatingStore
+from arena.ratings.store import BOT_MODEL_ID, RatingStore
 from games.toy.plugin import ToyGame
 from tests.db.test_matches_api import follow, start
 
@@ -187,9 +187,12 @@ def client(database_url, monkeypatch):
         yield client
 
 
-def bots(client, game_id):
-    rows = client.get("/leaderboard", params={"game": game_id}).json()["rows"]
-    return {row["name"].removeprefix("Random Bot "): row["profile_id"] for row in rows}
+def bots(client, game_id, seats=8):
+    """The profile of the random bot on each seat (the store derives them from the seat)."""
+    return {
+        f"p{n}": str(uuid5(NAMESPACE_URL, f"aigameversus/bot/{BOT_MODEL_ID}/p{n}"))
+        for n in range(1, seats + 1)
+    }
 
 
 def test_a_match_with_memory_off_remembers_nothing(client):

@@ -21,7 +21,8 @@ export interface MatchSummary {
 
 /** A match as `GET /matches/{id}` returns it. */
 export interface MatchRecord extends MatchSummary {
-	seed: number;
+	/** null on a spoiler-free page: the seed gives every hidden draw away. */
+	seed: number | null;
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
@@ -65,6 +66,47 @@ export interface ReplaySummary {
 export interface Cost {
 	total_micro_eur: number;
 	players: Record<string, number>;
+}
+
+/** What a transcript line is, for drawing it (arena/transcript/common.py). */
+export type LineKind =
+	| 'heading'
+	| 'action'
+	| 'speech'
+	| 'whisper'
+	| 'thought'
+	| 'reveal'
+	| 'result'
+	| 'narration'
+	| 'info';
+
+/** One readable line of `GET /matches/{id}/transcript`: the only text the UI shows for an event. */
+export interface TranscriptLine {
+	/** The position of the event the line tells, or null for a line of its own. */
+	seq: number | null;
+	kind: LineKind;
+	/** The seat id of whoever acts or speaks. */
+	actor: string | null;
+	text: string;
+	detail: string | null;
+	/** 1 bookkeeping, 2 normal, 3 highlight. */
+	importance: 1 | 2 | 3;
+	raw: Record<string, unknown>;
+}
+
+/** Who sits in a seat; both null for random bots and unrated matches. */
+export interface Seat {
+	name: string | null;
+	model: string | null;
+}
+
+export interface Transcript {
+	game: string;
+	lang: 'en' | 'de';
+	spoilers: boolean;
+	lines: TranscriptLine[];
+	/** seat -> name and model, in seat order; missing on arenas that do not send it yet. */
+	players?: Record<string, Seat>;
 }
 
 /** Everything the live view shows next to the event log. */
@@ -174,13 +216,32 @@ export interface Standing {
 
 export interface LeaderboardRow extends Standing {
 	rank: number;
+	/** A real model, or a random bot. */
+	kind: 'model' | 'bot';
+	/** Who makes the model, from config/models.yaml; null for bots and unknown models. */
+	vendor: string | null;
+	/** Profiles in this row: more than 1 for the grouped seats of random bots. */
+	members: number;
+	/** Average cost of one rated game, in millionths of a euro; null without booked calls. */
+	cost_per_game_micro_eur: number | null;
+	/** Share of answers the server refused (a wrong tool or an illegal move). */
+	tool_error_rate: number | null;
 }
+
+/** Who the leaderboard shows: real models (the default), random bots, or both. */
+export type LeaderboardKind = 'models' | 'bots' | 'all';
 
 export interface Leaderboard {
 	/** The game shown, or null for the overall rating. */
 	game: string | null;
 	/** Every game with at least one rated match. */
 	games: string[];
+	/** Who is shown. */
+	kind: LeaderboardKind;
+	/** True when real models were asked for by default but none is rated: everyone is shown. */
+	fallback: boolean;
+	/** Rows per kind with the other filters applied. */
+	counts: { models: number; bots: number };
 	rows: LeaderboardRow[];
 }
 
@@ -229,7 +290,7 @@ export type MatchesResult = { state: 'ok'; matches: MatchSummary[] } | Unreachab
 export interface ArenaClient {
 	health(): Promise<boolean>;
 	listMatches(): Promise<MatchesResult>;
-	leaderboard(game?: string): Promise<ApiResult<Leaderboard>>;
+	leaderboard(game?: string, kind?: LeaderboardKind): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
@@ -244,6 +305,8 @@ export interface ArenaClient {
 	events(id: string): Promise<ApiResult<MatchEvent[]>>;
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
+	/** The readable play-by-play; without `spoilers`, only what every player could see. */
+	transcript(id: string, spoilers: boolean, lang: 'en' | 'de'): Promise<ApiResult<Transcript>>;
 	games(): Promise<ApiResult<GameInfo[]>>;
 	werewolfRoles(): Promise<ApiResult<WerewolfRole[]>>;
 	werewolfTemplates(players: number): Promise<ApiResult<WerewolfTemplate[]>>;
@@ -313,8 +376,11 @@ export function createArenaClient(
 			return { state: 'ok', matches: result.data };
 		},
 
-		leaderboard(game) {
-			const query = game ? `?game=${encodeURIComponent(game)}` : '';
+		leaderboard(game, kind) {
+			const params = new URLSearchParams();
+			if (game) params.set('game', game);
+			if (kind) params.set('kind', kind);
+			const query = params.size ? `?${params}` : '';
 			return getJson<Leaderboard>(
 				`/leaderboard${query}`,
 				(body) => isObject(body) && Array.isArray(body.rows) && Array.isArray(body.games)
@@ -412,6 +478,15 @@ export function createArenaClient(
 			return getJson<Board>(
 				`/matches/${encodeURIComponent(id)}/board?events=${encodeURIComponent(events)}`,
 				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
+			);
+		},
+
+		transcript(id, spoilers, lang) {
+			const query = new URLSearchParams({ spoilers: String(spoilers), lang, format: 'json' });
+			return getJson<Transcript>(
+				`/matches/${encodeURIComponent(id)}/transcript?${query}`,
+				(body) => isObject(body) && Array.isArray(body.lines),
 				[404, 422]
 			);
 		},

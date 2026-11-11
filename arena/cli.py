@@ -34,6 +34,7 @@ from arena.engine.replay import replay
 from arena.engine.types import Event, MatchPaused, Placement
 from arena.games import load_games
 from arena.memory.store import MemoryStore
+from arena.ratings.store import RatingStore
 from arena.transcript import (
     RENDERERS,
     Transcriber,
@@ -278,6 +279,9 @@ async def _play_models(
             await matches.close(match_id, "finished", placements)
             if args.raw:
                 print(_result(placements))
+            note = await _rate_models(pool, match_id, plugin.id, seats, placements)
+            if note:
+                print(note)
 
         costs = await ledger.match_costs(match_id)
         stored = await log.load(match_id)
@@ -312,6 +316,32 @@ async def _play_models(
         return 0 if placements is not None else STOPPED_AT_CAP
     finally:
         await pool.close()
+
+
+async def _rate_models(
+    pool: Any, match_id: UUID, game: str, seats: dict[str, str], placements: Sequence[Placement]
+) -> str | None:
+    """Rate a finished model match: one profile per model, the same in every match (D-081).
+
+    Returns a sentence when the match is not rated, else None. A profile is rated once
+    per match, so a model in several seats leaves the match unrated.
+    """
+    models = list(seats.values())
+    if len(set(models)) != len(models):
+        repeated = sorted({m for m in models if models.count(m) > 1})
+        return (
+            f"Not rated: {', '.join(repeated)} sits in several seats, "
+            "and a model is rated once per match"
+        )
+    store = RatingStore(pool)
+    profiles = {seat: await store.model_profile(model) for seat, model in seats.items()}
+    await store.apply_match_result(
+        match_id,
+        game,
+        [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+        seats=profiles,
+    )
+    return None
 
 
 def _match(plugin: GamePlugin, agents: dict, options: dict[str, Any], sink: Any) -> Match:
