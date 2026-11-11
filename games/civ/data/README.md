@@ -48,7 +48,9 @@ Append an entry to `units.yaml`:
 
 Optional flags (`ranged`, `first_strike`, `city_defense`, `vs_walls_multiplier`,
 `founds_city`, `vision_bonus`, `auto_retreat`) default to off. `counters` and
-`trained_in` must name existing ids.
+`trained_in` must name existing ids. In play so far: `cost`, `movement`,
+`upkeep`, `trained_in`, `founds_city` and `vision_bonus`; the rest waits for
+combat.
 
 ## Add a building
 
@@ -58,9 +60,11 @@ Append to `buildings.yaml` with `cost` and `effects`. Available effects:
 `requires_adjacent_terrain` lists terrain ids of which one must lie next to
 the city. `max_per_city` (default 1) is how many a city can have.
 
-In play so far (`games/civ/economy.py`): cost, slots, `yields`,
-`requires_adjacent_terrain`, `max_per_city`, `famine_delay_rounds` and
-`vision_bonus`. The other effects wait for units, combat and trade.
+In play so far (`games/civ/economy.py`, `games/civ/armies.py`): cost, slots,
+`yields`, `requires_adjacent_terrain`, `max_per_city`, `famine_delay_rounds`,
+`vision_bonus`, `training_cost_modifier` and `trained_unit_strength_bonus`
+(kept on each unit; combat will read it). `city_defense` and
+`trade_fee_modifier` wait for combat and trade.
 
 ## Add an event
 

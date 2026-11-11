@@ -1,13 +1,13 @@
 """The economy of Throne of Tokens: cities, what they yield, buildings, upkeep and growth.
 
 Every function that changes something does it by emitting an event, private to
-the nation it concerns; ``apply_event`` is the only code that touches the state.
-One round, in the order the turn flow will call it:
+the nation it concerns; the functions in ``APPLIERS`` are the only code here
+that touches the state. Its part of a round (``turn.py`` has the whole order):
 
     finish_construction(state, ctx)  # sites from earlier rounds become buildings
     if (problem := build_problem(state, data, "ada", "c1", "farm")) is None:
         build(state, data, ctx, "ada", "c1", "farm")  # also: demolish, set_focus
-    produce(state, data, ctx, units)  # yields in, population and units fed
+    produce(state, data, ctx)  # yields in, population and units fed
     grow(state, data, ctx)  # cities with enough surplus food gain population
 
 All numbers come from ``data/balance.yaml`` (``city``, ``army``),
@@ -16,12 +16,11 @@ All numbers come from ``data/balance.yaml`` (``city``, ``army``),
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping
 from decimal import Decimal
 from typing import Any, get_args
 
 from arena.engine.plugin import TurnContext
-from arena.engine.types import Event
 from games.civ.data_loader import CivData, Resource
 from games.civ.state import City, CivState, Site, Stock
 from games.civ.world import Hex, distance
@@ -107,7 +106,7 @@ def found_city(state: CivState, ctx: TurnContext, owner: str, tile: Hex) -> str:
 def build_problem(
     state: CivState, data: CivData, player: str, city_id: str, building_id: str
 ) -> str | None:
-    if problem := _not_their_city(state, player, city_id):
+    if problem := not_their_city(state, player, city_id):
         return problem
     building = data.buildings.get(building_id)
     if building is None:
@@ -129,18 +128,14 @@ def build_problem(
     beside = [tile for tile in state.world.within(city.tile, 1) if tile != city.tile]
     if needs and not any(state.world.terrain(tile) in needs for tile in beside):
         return f"A {building_id} needs {' or '.join(needs)} next to the city; {city_id} has none."
-    stock = state.nations[player].stock
-    if any(stock[resource] < amount for resource, amount in building.cost.items()):
-        have = {resource: stock[resource] for resource in building.cost}
-        return f"A {building_id} costs {_text(building.cost)}; you have {_text(have)}."
-    return None
+    return cannot_pay(state.nations[player].stock, building.cost, f"A {building_id} costs")
 
 
 def build(
     state: CivState, data: CivData, ctx: TurnContext, player: str, city_id: str, building_id: str
 ) -> None:
     """Pay for a building and start it. It takes a slot now and works once it is finished."""
-    _must_be_legal(build_problem(state, data, player, city_id, building_id))
+    must_be_legal(build_problem(state, data, player, city_id, building_id))
     ctx.emit(
         "building_started",
         {
@@ -154,7 +149,7 @@ def build(
 
 
 def demolish_problem(state: CivState, player: str, city_id: str, building_id: str) -> str | None:
-    if problem := _not_their_city(state, player, city_id):
+    if problem := not_their_city(state, player, city_id):
         return problem
     standing = state.city(city_id).buildings
     if building_id not in standing:
@@ -169,7 +164,7 @@ def demolish(
     state: CivState, data: CivData, ctx: TurnContext, player: str, city_id: str, building_id: str
 ) -> None:
     """Tear a finished building down for a share of its cost. The slot is free at once."""
-    _must_be_legal(demolish_problem(state, player, city_id, building_id))
+    must_be_legal(demolish_problem(state, player, city_id, building_id))
     share = Decimal(str(data.building_rules.demolish_refund))
     cost = data.buildings[building_id].cost
     refund = {resource: int(amount * share) for resource, amount in cost.items()}  # rounded down
@@ -183,7 +178,7 @@ def demolish(
 def focus_problem(
     state: CivState, data: CivData, player: str, city_id: str, focus: str
 ) -> str | None:
-    if problem := _not_their_city(state, player, city_id):
+    if problem := not_their_city(state, player, city_id):
         return problem
     choices = list(data.balance.city.focus_yields)
     if focus not in choices:
@@ -195,11 +190,11 @@ def set_focus(
     state: CivState, data: CivData, ctx: TurnContext, player: str, city_id: str, focus: str
 ) -> None:
     """Choose which resource the city's population adds, from this round's production on."""
-    _must_be_legal(focus_problem(state, data, player, city_id, focus))
+    must_be_legal(focus_problem(state, data, player, city_id, focus))
     ctx.emit("city_focus_set", {"city": city_id, "focus": focus}, visible_to=[player])
 
 
-def _not_their_city(state: CivState, player: str, city_id: str) -> str | None:
+def not_their_city(state: CivState, player: str, city_id: str) -> str | None:
     own = [city.id for city in state.cities if city.owner == player]
     if city_id in own:
         return None
@@ -207,7 +202,15 @@ def _not_their_city(state: CivState, player: str, city_id: str) -> str | None:
     return f"You have no city '{city_id}'. Your cities: {', '.join(own) or 'none'}."
 
 
-def _must_be_legal(problem: str | None) -> None:
+def cannot_pay(stock: Stock, cost: Mapping[Resource, int], what: str) -> str | None:
+    """None if the stock covers the cost, otherwise "`what` 4 wood, 3 gold; you have ..."."""
+    if all(stock[resource] >= amount for resource, amount in cost.items()):
+        return None
+    have = {resource: stock[resource] for resource in cost}
+    return f"{what} {_text(cost)}; you have {_text(have)}."
+
+
+def must_be_legal(problem: str | None) -> None:
     if problem is not None:
         raise ValueError(problem)
 
@@ -229,23 +232,21 @@ def finish_construction(state: CivState, ctx: TurnContext) -> None:
             ctx.emit("construction_progressed", {"city": city.id}, visible_to=[city.owner])
 
 
-def upkeep(data: CivData, units: Sequence[str]) -> dict[Resource, int]:
-    """What these units cost per round."""
+def upkeep(data: CivData, units: Iterable[str]) -> dict[Resource, int]:
+    """What units of these kinds cost per round."""
     due = _amounts({})
     for unit in units:
         _add(due, data.units[unit].upkeep)
     return {resource: amount for resource, amount in due.items() if amount}
 
 
-def produce(
-    state: CivState, data: CivData, ctx: TurnContext, units: Mapping[str, Sequence[str]]
-) -> None:
+def produce(state: CivState, data: CivData, ctx: TurnContext) -> None:
     """The production step: every nation takes in its yields and feeds population and units.
 
-    `units` are the unit ids each nation keeps. Yields go to the nation's
-    stock. The population eats first, then the units take their upkeep; what
-    the stock cannot cover is not paid. A round in which upkeep was not paid
-    in full counts as hungry (``units_lost_to_hunger``).
+    Yields go to the nation's stock. The population eats first, then the
+    units take their upkeep; what the stock cannot cover is not paid. A round
+    in which upkeep was not paid in full counts as hungry
+    (``units_lost_to_hunger``).
 
     The food a city makes beyond what its own population eats also counts
     towards that city's growth.
@@ -253,7 +254,7 @@ def produce(
     hunger = data.balance.city.food_per_population
     for player, nation in state.nations.items():
         cities = [city for city in state.cities if city.owner == player]
-        due = upkeep(data, units.get(player, ()))
+        due = upkeep(data, state.units_of(player))
         if not cities and not due and not nation.hungry_rounds:
             continue
         yields, stored = _amounts({}), {}
@@ -320,11 +321,6 @@ def grow(state: CivState, data: CivData, ctx: TurnContext) -> None:
 # rebuilds its state even after the numbers in the data files have changed.
 
 
-def apply_event(state: CivState, event: Event) -> None:
-    """Apply one event of this module to the state. Nothing else in here changes it."""
-    _APPLY[event.type](state, event.data)
-
-
 def _city_founded(state: CivState, data: dict[str, Any]) -> None:
     state.cities.append(
         City(id=data["city"], owner=data["owner"], col=data["col"], row=data["row"])
@@ -375,7 +371,7 @@ def _city_grew(state: CivState, data: dict[str, Any]) -> None:
     city.food = data["food"]
 
 
-_APPLY: dict[str, Callable[[CivState, dict[str, Any]], None]] = {
+APPLIERS: dict[str, Callable[[CivState, dict[str, Any]], None]] = {
     "city_founded": _city_founded,
     "city_focus_set": _city_focus_set,
     "building_started": _building_started,
