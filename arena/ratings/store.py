@@ -15,6 +15,15 @@ BOT_MODEL_ID = "random-bot"
 
 
 @dataclass(frozen=True)
+class Usage:
+    """What a profile cost and how often the server refused its answers, in rated matches."""
+
+    cost_micro_eur: int = 0
+    accepted: int = 0  # answers the server took
+    rejected: int = 0  # answers the server refused (a wrong tool, bad arguments, an illegal move)
+
+
+@dataclass(frozen=True)
 class GameRating:
     rating: float
     games_played: int
@@ -78,6 +87,23 @@ class RatingStore:
             "VALUES ($1, $2, $3, $4)",
             profile_id,
             name,
+            model_id,
+            personality_id,
+        )
+        return profile_id
+
+    async def model_profile(self, model_id: str, personality_id: str | None = None) -> UUID:
+        """The profile of a model with a personality, created on first use (D-081).
+
+        One profile per model and personality, the same in every match and every seat, so
+        its rating, statistics and cost add up. The id derives from both, so it never changes.
+        """
+        profile_id = uuid5(NAMESPACE_URL, f"aigameversus/model/{model_id}/{personality_id or ''}")
+        await self._pool.execute(
+            "INSERT INTO player_profiles (id, name, model_id, personality_id) "
+            "VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING",
+            profile_id,
+            model_id,
             model_id,
             personality_id,
         )
@@ -189,6 +215,42 @@ class RatingStore:
         for row in rows:
             played.setdefault(row["game_id"], []).append((row["match_id"], row["seat"]))
         return played
+
+    async def usage(self, game_id: str | None = None) -> dict[UUID, Usage]:
+        """Cost and answer counts per profile, from the ledger and the stored event logs.
+
+        Counts the rated matches of `game_id`, or of every game. Cost is the sum of the booked
+        model calls of the profile's seats; answers are the engine's `action_accepted` and
+        `action_rejected` events of those seats. Profiles without a seat are left out.
+        """
+        rows = await self._pool.fetch(
+            "WITH seats AS ("
+            "  SELECT s.match_id, s.seat, s.profile_id FROM match_seats s "
+            "  JOIN rated_matches rm ON rm.match_id = s.match_id "
+            "  WHERE $1::text IS NULL OR rm.game_id = $1), "
+            "cost AS ("
+            "  SELECT s.profile_id, sum(c.cost_micro_eur) AS cost FROM seats s "
+            "  JOIN model_calls c ON c.match_id = s.match_id AND c.player = s.seat "
+            "  GROUP BY s.profile_id), "
+            "tools AS ("
+            "  SELECT s.profile_id, "
+            "    count(*) FILTER (WHERE e.type = 'action_accepted') AS accepted, "
+            "    count(*) FILTER (WHERE e.type = 'action_rejected') AS rejected "
+            "  FROM seats s JOIN match_events e ON e.match_id = s.match_id "
+            "    AND e.type IN ('action_accepted', 'action_rejected') "
+            "    AND e.data->>'player' = s.seat "
+            "  GROUP BY s.profile_id) "
+            "SELECT s.profile_id, coalesce(cost.cost, 0) AS cost, "
+            "  coalesce(tools.accepted, 0) AS accepted, coalesce(tools.rejected, 0) AS rejected "
+            "FROM (SELECT DISTINCT profile_id FROM seats) s "
+            "LEFT JOIN cost ON cost.profile_id = s.profile_id "
+            "LEFT JOIN tools ON tools.profile_id = s.profile_id",
+            game_id,
+        )
+        return {
+            row["profile_id"]: Usage(int(row["cost"]), int(row["accepted"]), int(row["rejected"]))
+            for row in rows
+        }
 
     async def rated_games(self) -> list[str]:
         """Ids of the games that have at least one rated match, sorted."""

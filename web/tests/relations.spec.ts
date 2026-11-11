@@ -12,7 +12,9 @@ test("a bot's profile lists who it trusts and why", async ({ page, request }) =>
 	await expect
 		.poll(async () => (await (await request.get(`${ARENA}/matches/${match.id}`)).json()).status)
 		.toBe('finished');
-	const board = await (await request.get(`${ARENA}/leaderboard?game=werewolf`)).json();
+	const board = await (
+		await request.get(`${ARENA}/leaderboard?game=werewolf&kind=all&group_bots=false`)
+	).json();
 	const bot = board.rows.find((row: { name: string }) => row.name === 'Random Bot p1');
 	const { relations } = await (
 		await request.get(`${ARENA}/profiles/${bot.profile_id}/relations`)

@@ -164,13 +164,32 @@ export interface Standing {
 
 export interface LeaderboardRow extends Standing {
 	rank: number;
+	/** A real model, or a random bot. */
+	kind: 'model' | 'bot';
+	/** Who makes the model, from config/models.yaml; null for bots and unknown models. */
+	vendor: string | null;
+	/** Profiles in this row: more than 1 for the grouped seats of random bots. */
+	members: number;
+	/** Average cost of one rated game, in millionths of a euro; null without booked calls. */
+	cost_per_game_micro_eur: number | null;
+	/** Share of answers the server refused (a wrong tool or an illegal move). */
+	tool_error_rate: number | null;
 }
+
+/** Who the leaderboard shows: real models (the default), random bots, or both. */
+export type LeaderboardKind = 'models' | 'bots' | 'all';
 
 export interface Leaderboard {
 	/** The game shown, or null for the overall rating. */
 	game: string | null;
 	/** Every game with at least one rated match. */
 	games: string[];
+	/** Who is shown. */
+	kind: LeaderboardKind;
+	/** True when real models were asked for by default but none is rated: everyone is shown. */
+	fallback: boolean;
+	/** Rows per kind with the other filters applied. */
+	counts: { models: number; bots: number };
 	rows: LeaderboardRow[];
 }
 
@@ -220,7 +239,7 @@ export type MatchesResult = { state: 'ok'; matches: MatchSummary[] } | Unreachab
 export interface ArenaClient {
 	health(): Promise<boolean>;
 	listMatches(): Promise<MatchesResult>;
-	leaderboard(game?: string): Promise<ApiResult<Leaderboard>>;
+	leaderboard(game?: string, kind?: LeaderboardKind): Promise<ApiResult<Leaderboard>>;
 	profile(id: string): Promise<ApiResult<Profile>>;
 	profileStats(id: string): Promise<ApiResult<ProfileStats>>;
 	relations(id: string): Promise<ApiResult<Relations>>;
@@ -303,8 +322,11 @@ export function createArenaClient(
 			return { state: 'ok', matches: result.data };
 		},
 
-		leaderboard(game) {
-			const query = game ? `?game=${encodeURIComponent(game)}` : '';
+		leaderboard(game, kind) {
+			const params = new URLSearchParams();
+			if (game) params.set('game', game);
+			if (kind) params.set('kind', kind);
+			const query = params.size ? `?${params}` : '';
 			return getJson<Leaderboard>(
 				`/leaderboard${query}`,
 				(body) => isObject(body) && Array.isArray(body.rows) && Array.isArray(body.games)

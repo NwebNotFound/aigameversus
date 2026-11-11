@@ -1559,6 +1559,23 @@ Each entry: date, decision, why, alternatives considered.
   small); a formatter in the browser (a second wording to keep in sync); hide
   thoughts by default (hides the project's main attraction).
 
+## D-081 · A model has one rating profile, whatever seat it sits in
+
+- **Date:** 2026-11-11
+- **Decision:** A finished `arena run --models` match is rated. Each model gets
+  one profile per personality (`RatingStore.model_profile`; the id derives from
+  model id and personality, so it is the same in every match and every seat; no
+  personality is chosen from the command line yet). Its rating, statistics and
+  cost therefore add up across matches. A profile is rated once per match, so a
+  match with the same model in several seats is left unrated and the command says
+  so. Random bots keep one profile per seat, as the log needs a seat per profile
+  (D-052); the leaderboard groups them by kind when it shows them.
+- **Why:** The leaderboard compares models, not seats: a model that sat in seat 3
+  yesterday and seat 1 today is the same player. Rating the same profile twice in
+  one match would break the match's placements.
+- **Alternatives:** rating the model's best seat, or splitting its placements
+  (arbitrary); one profile per model and seat (the old way: no comparison).
+
 ## D-082 · Model seats in POST /matches, off by default and confirmed per match
 
 - **Date:** 2026-11-11
@@ -1598,6 +1615,28 @@ Each entry: date, decision, why, alternatives considered.
   "you" (would change what was said); marking every event that names the
   reader anywhere (marks votes against the player as theirs).
 
+## D-087 · Prompts have versions: a game's rules and summary per `prompt_version`
+
+- **Date:** 2026-11-11
+- **Decision:** Each game keeps its prompt text next to its plugin
+  (`games/<game>/prompt.py`, `rules.md` for the first version, `rules_v2.md` for
+  the second) and names versions `<game>-p1`, `<game>-p2`. The match setting
+  `prompt_version` chooses one (an unknown one is refused when the match is
+  created); the plugin reports it through `prompt_version(settings)`, so it can
+  be recorded with the match. Version p2 has new rules text (rules in short, the
+  tools with an example call each, how to play well, with the numbers a model
+  would otherwise have to work out) and a short situation summary built from the
+  observation alone (`situation_summary`), shown above the full data. Version p1
+  is unchanged, so experiments can compare the two. The default stays p1 until a
+  comparison says otherwise. The rules texts state the default stacks, blinds and
+  similar numbers, so a match with other settings reads wrong numbers there.
+- **Why:** A change of prompt changes how every model plays; without a version in
+  the log nobody can tell which prompt produced a result. The summary only
+  restates and computes from what the player already sees, so it cannot leak.
+- **Alternatives:** one prompt that is edited in place (no comparison, old logs
+  mean different things over time); summaries written by a model (costs money,
+  varies from run to run).
+
 ## D-093 · The runner takes the prompt version from the match settings
 
 - **Date:** 2026-11-11
@@ -1620,3 +1659,23 @@ Each entry: date, decision, why, alternatives considered.
   would not show up in the log, and the default may change); a summary in
   the system message (that one is meant to be the server's words, not game
   data).
+
+## D-097 · The leaderboard ranks models; random bots are one row
+
+- **Date:** 2026-11-11
+- **Decision:** `GET /leaderboard` takes `kind=models|bots|all`. Without it, real
+  models are shown, or everyone when no model is rated yet (`fallback: true`);
+  `counts` gives the rows per kind. The per-seat profiles of random bots ("Random
+  Bot p3", D-052) are grouped into one "Random Bot" row with their ratings,
+  win rates and placements averaged by games played (`members` says how many
+  seats); `group_bots=false` lists every seat, for tests and the profile pages.
+  Each row also has the vendor (from `config/models.yaml`), the average cost of
+  one rated game (the ledger's booked calls of the profile's seats over its
+  rated games) and the tool-error rate: refused answers over all answers
+  (`action_rejected` / (`action_accepted` + `action_rejected`) of its seats).
+  The web page filters by kind and keeps the game tab.
+- **Why:** The board compares models; a bot has no identity beyond its kind, and
+  a per-kind profile cannot hold several seats of one match (a profile is rated
+  once per match), so the grouping is done where the board is read.
+- **Alternatives:** one stored profile per bot kind (impossible with several bot
+  seats per match); hiding bots altogether (the demo needs them).
