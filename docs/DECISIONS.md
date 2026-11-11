@@ -1575,6 +1575,7 @@ Each entry: date, decision, why, alternatives considered.
   one match would break the match's placements.
 - **Alternatives:** rating the model's best seat, or splitting its placements
   (arbitrary); one profile per model and seat (the old way: no comparison).
+
 ## D-082 · Model seats in POST /matches, off by default and confirmed per match
 
 - **Date:** 2026-11-11
