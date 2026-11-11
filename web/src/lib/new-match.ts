@@ -14,7 +14,8 @@ export const DEFAULT_TURN_DELAY = 1;
 
 export const BOT = 'random_bot';
 
-export type Field = 'game' | 'players' | 'seats' | 'seed' | 'language' | 'turn_delay' | 'roles';
+export type Field =
+	'game' | 'players' | 'seats' | 'seed' | 'language' | 'turn_delay' | 'roles' | 'confirm_spend';
 
 /** The Werewolf role selection: a template id, or CUSTOM for the counts of the checklist. */
 export const CUSTOM = 'custom';
@@ -27,9 +28,14 @@ export type Parsed =
 
 /**
  * Read the submitted form. Every problem is reported at its field; the arena
- * checks again (settings, player counts) and its refusal is shown too.
+ * checks again (settings, player counts, the cost caps) and its refusal is
+ * shown too.
+ *
+ * `models` are the model ids a seat may take on this server; empty when the
+ * server plays bots only. A match is all bots or all models: the arena does not
+ * mix them yet. A model match needs the "spends money" box ticked.
  */
-export function parseForm(form: FormData, games: GameInfo[]): Parsed {
+export function parseForm(form: FormData, games: GameInfo[], models: string[] = []): Parsed {
 	const errors: Partial<Record<Field, string>> = {};
 	const text = (name: string) => String(form.get(name) ?? '').trim();
 
@@ -44,8 +50,23 @@ export function parseForm(form: FormData, games: GameInfo[]): Parsed {
 	}
 
 	const seats = form.getAll('seat').map(String);
-	if (seats.some((seat) => seat !== BOT)) {
-		errors.seats = 'Models cannot take a seat yet; every seat is a random bot for now.';
+	const modelSeats = seats.filter((seat) => seat !== BOT);
+	let seatModels: string[] | undefined;
+	if (modelSeats.length) {
+		if (!models.length) {
+			errors.seats = 'This server plays random bots only; models cannot take a seat here.';
+		} else if (modelSeats.some((seat) => !models.includes(seat))) {
+			errors.seats = 'Choose a model from the list for every seat.';
+		} else if (modelSeats.length !== seats.length) {
+			errors.seats = 'Choose a model for every seat, or a bot for every seat: no mixed tables yet.';
+		} else if (Number.isInteger(players) && seats.length !== players) {
+			errors.seats = 'Choose one model per player.';
+		} else {
+			seatModels = modelSeats;
+			if (form.get('confirm_spend') === null) {
+				errors.confirm_spend = 'A match of models spends real money: tick the box to start it.';
+			}
+		}
 	}
 
 	let seed: number | undefined;
@@ -86,7 +107,8 @@ export function parseForm(form: FormData, games: GameInfo[]): Parsed {
 			players,
 			...(seed === undefined ? {} : { seed }),
 			settings,
-			turn_delay: turnDelay
+			turn_delay: turnDelay,
+			...(seatModels ? { models: seatModels, confirm_spend: true } : {})
 		}
 	};
 }

@@ -114,6 +114,19 @@ class Ledger:
                 cost,
             )
 
+    async def month_spent(self, now: datetime) -> int:
+        """What every call of the calendar month of `now` (UTC) cost, in millionths of a euro.
+
+        Raises LedgerUnavailable when the ledger cannot be read: never a 0 that is not true.
+        """
+        month = now.astimezone(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        async with _reading():
+            return await self._pool.fetchval(
+                "SELECT coalesce(sum(cost_micro_eur), 0)::bigint FROM model_calls "
+                "WHERE called_at >= $1",
+                month,
+            )
+
     async def match_costs(self, match_id: UUID) -> dict[PlayerId, int]:
         """What each player of a match has cost so far, in millionths of a euro."""
         async with _reading():
@@ -134,6 +147,17 @@ class Ledger:
             )
         spent = {row["match_id"]: int(row["cost"]) for row in rows}
         return {match_id: spent.get(match_id, 0) for match_id in match_ids}
+
+    async def seat_costs(self, match_ids: Sequence[UUID]) -> dict[tuple[UUID, PlayerId], int]:
+        """What each seat of these matches has cost, keyed by (match, player); seats without
+        calls are left out."""
+        async with _reading():
+            rows = await self._pool.fetch(
+                "SELECT match_id, player, sum(cost_micro_eur) AS cost FROM model_calls "
+                "WHERE match_id = ANY($1::uuid[]) GROUP BY match_id, player",
+                list(match_ids),
+            )
+        return {(row["match_id"], row["player"]): int(row["cost"]) for row in rows}
 
     async def settle(self, call_id: int, input_tokens: int, output_tokens: int, cost: int) -> None:
         """Replace the upper bound of a booked call by what it was billed for."""
