@@ -23,16 +23,17 @@ from uuid import UUID, uuid4
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
-from arena.config import display_name, load_config, missing_keys
-from arena.db.database import connect, migrate
+from arena.config import display_name, load_config, load_keys
+from arena.db.database import connect, ledger_url, migrate
 from arena.db.event_store import EventStore
-from arena.db.ledger import Ledger
+from arena.db.ledger import Ledger, LedgerUnavailable
 from arena.db.match_store import MatchStore, Seat
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.replay import replay
 from arena.engine.types import Event, MatchPaused, Placement
 from arena.games import load_games
+from arena.ratings.store import RatingStore
 from arena.transcript import (
     RENDERERS,
     Transcriber,
@@ -182,7 +183,7 @@ async def _play_models(
             f"unknown model {', '.join(unknown)}; config/models.yaml has: "
             f"{', '.join(config.models)}"
         )
-    if missing := missing_keys(config, model_ids):
+    if missing := load_keys(config, model_ids):
         raise _WrongCall(
             f"--models needs {', '.join(missing)} in the environment, the provider's API key. "
             "Nothing was sent or booked"
@@ -195,9 +196,14 @@ async def _play_models(
     seats = {f"p{seat}": model_id for seat, model_id in enumerate(model_ids, start=1)}
     match_id = uuid4()
     pool = await connect(url)
+    ledger_pool = pool if ledger_url(url) == url else await connect(ledger_url(url), min_size=0)
     try:
         await migrate(pool)
-        matches, log, ledger = MatchStore(pool), EventStore(pool), Ledger(pool)
+        matches, log, ledger = MatchStore(pool), EventStore(pool), Ledger(ledger_pool)
+        try:
+            await ledger.check(await matches.model_matches())
+        except LedgerUnavailable as down:
+            raise _WrongCall(f"{down} Nothing was sent or booked") from down
         budget = Budget(ledger, match_id, config)
 
         async def store_and_print(first_seq: int, events: Sequence[Event]) -> None:
@@ -206,7 +212,7 @@ async def _play_models(
 
         show = _printer(plugin.id, labels(seats), args)
         agents = {
-            player: ModelAgent(budget.model(player, model_id), plugin)
+            player: ModelAgent(budget.model(player, model_id), plugin, settings=options["settings"])
             for player, model_id in seats.items()
         }
         match = _match(plugin, agents, options, store_and_print)
@@ -220,6 +226,7 @@ async def _play_models(
                 player: Seat(name=display_name(config, model), model_id=model, kind="model")
                 for player, model in seats.items()
             },
+            prompt_version=plugin.prompt_version(match.settings),
         )
         print(f"{plugin.name} ({plugin.id}), match {match_id}, seed {match.seed}")
         print("Seats: " + "  ".join(f"{player} {model}" for player, model in seats.items()))
@@ -240,6 +247,9 @@ async def _play_models(
             await matches.close(match_id, "finished", placements)
             if args.raw:
                 print(_result(placements))
+            note = await _rate_models(pool, match_id, plugin.id, seats, placements)
+            if note:
+                print(note)
 
         costs = await ledger.match_costs(match_id)
         stored = await log.load(match_id)
@@ -260,6 +270,7 @@ async def _play_models(
                 "version": plugin.version,
                 "seed": match.seed,
                 "settings": match.settings,
+                "prompt_version": plugin.prompt_version(match.settings),
                 "seats": seats,
                 "status": "finished" if placements is not None else "stopped_at_cost_cap",
                 "placements": [placement.model_dump() for placement in placements or []],
@@ -272,7 +283,35 @@ async def _play_models(
             return 1
         return 0 if placements is not None else STOPPED_AT_CAP
     finally:
+        if ledger_pool is not pool:
+            await ledger_pool.close()
         await pool.close()
+
+
+async def _rate_models(
+    pool: Any, match_id: UUID, game: str, seats: dict[str, str], placements: Sequence[Placement]
+) -> str | None:
+    """Rate a finished model match: one profile per model, the same in every match (D-081).
+
+    Returns a sentence when the match is not rated, else None. A profile is rated once
+    per match, so a model in several seats leaves the match unrated.
+    """
+    models = list(seats.values())
+    if len(set(models)) != len(models):
+        repeated = sorted({m for m in models if models.count(m) > 1})
+        return (
+            f"Not rated: {', '.join(repeated)} sits in several seats, "
+            "and a model is rated once per match"
+        )
+    store = RatingStore(pool)
+    profiles = {seat: await store.model_profile(model) for seat, model in seats.items()}
+    await store.apply_match_result(
+        match_id,
+        game,
+        [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
+        seats=profiles,
+    )
+    return None
 
 
 def _match(plugin: GamePlugin, agents: dict, options: dict[str, Any], sink: Any) -> Match:

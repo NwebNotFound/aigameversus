@@ -1009,6 +1009,7 @@ Each entry: date, decision, why, alternatives considered.
   "no data" is `None`, never 0.
 - **Alternatives:** counting in the plugin state (changes the plugins, and old
   logs would have no numbers); storing the numbers per match in a table.
+
 ## D-054 · Poker statistics: definitions
 
 - **Date:** 2026-11-11
@@ -1027,6 +1028,7 @@ Each entry: date, decision, why, alternatives considered.
   tests check on real bot matches).
 - **Alternatives:** counting a showdown loss only when the hand was weak
   (needs a notion of a "strong" hand); counting every all-in as aggressive.
+
 ## D-055 · Werewolf statistics: definitions
 
 - **Date:** 2026-11-11
@@ -1559,6 +1561,23 @@ Each entry: date, decision, why, alternatives considered.
   small); a formatter in the browser (a second wording to keep in sync); hide
   thoughts by default (hides the project's main attraction).
 
+## D-081 · A model has one rating profile, whatever seat it sits in
+
+- **Date:** 2026-11-11
+- **Decision:** A finished `arena run --models` match is rated. Each model gets
+  one profile per personality (`RatingStore.model_profile`; the id derives from
+  model id and personality, so it is the same in every match and every seat; no
+  personality is chosen from the command line yet). Its rating, statistics and
+  cost therefore add up across matches. A profile is rated once per match, so a
+  match with the same model in several seats is left unrated and the command says
+  so. Random bots keep one profile per seat, as the log needs a seat per profile
+  (D-052); the leaderboard groups them by kind when it shows them.
+- **Why:** The leaderboard compares models, not seats: a model that sat in seat 3
+  yesterday and seat 1 today is the same player. Rating the same profile twice in
+  one match would break the match's placements.
+- **Alternatives:** rating the model's best seat, or splitting its placements
+  (arbitrary); one profile per model and seat (the old way: no comparison).
+
 ## D-082 · Model seats in POST /matches, off by default and confirmed per match
 
 - **Date:** 2026-11-11
@@ -1567,7 +1586,10 @@ Each entry: date, decision, why, alternatives considered.
   server refuses model seats unless it was started with
   `ARENA_ALLOW_MODEL_SEATS=1`, the request must carry `confirm_spend: true`,
   and the provider's key must be set; otherwise nothing is recorded or sent.
-  A cost cap ends the match as `interrupted`. Model matches are not rated yet.
+  A cost cap ends the match as `interrupted`. Model matches are not rated
+  yet. That is a step, not the rule: model matches are rated, one profile per
+  model and personality (D-081), and the API rates them as soon as those
+  profiles are on main.
   Every match records who sat where (`seats`: name, model id, kind) and
   whether it was played here or imported (`origin`).
 - **Why:** The project owner wants to start and watch real matches from the
@@ -1578,6 +1600,122 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** Authentication (a bigger change, not needed on loopback
   yet); model seats always on (any local script could spend); a separate
   table for seats (the record is read with the match anyway).
+
+## D-083 · The prompt names the player's own seat where the model reads it
+
+- **Date:** 2026-11-11
+- **Decision:** Besides the first line of the system message, the prompt now
+  says once more that every mention of the seat is the player, ends the ask
+  with "You are p8.", and starts every event line that the player did (its
+  `player`, `caller` or `from` is the reader) with `[you]`. Events that only name the reader in
+  another field (a vote against them) are not marked: the player did not do
+  them. Other players' words stay as they were written.
+- **Why:** In the first real Werewolf match the seer (seat p8) wrote about
+  "p7 and p8" as if they were others, attacked its own seer claim in public
+  and tried to vote for itself; another model called its own seat suspicious
+  in its thought. Both had read their seat once, at the top of a long
+  prompt, and then met it many times as a plain id among other ids.
+- **Alternatives:** Names instead of seat ids (needs player info in every
+  game's events, planned for the UI); rewriting other players' words to say
+  "you" (would change what was said); marking every event that names the
+  reader anywhere (marks votes against the player as theirs).
+
+## D-084 · Throne of Tokens armies: movement, training, and what a settler may do
+
+- **Date:** 2026-11-11
+- **Decision:** An army is a list of units on a tile, with an id that is
+  never used twice. Where the spec is silent:
+  - **Movement.** An army has the movement points of its slowest unit.
+    Entering a tile costs the tile's movement cost; leaving a river tile costs
+    the crossing on top. An army with points left may always take one more
+    step, and a tile that costs more than it has left ends its move. A move
+    order names a tile the army can reach this round; the server picks the
+    way that leaves the most points, the shorter of two equal ones. An order
+    lasts one round, and an army moves once per round: it remembers the round
+    of its last move, and so do units split off from it and an army it is
+    merged into. Armies of different nations may pass each other and stand on
+    one tile until combat (step 7.4) says what happens then.
+  - **Training.** One order trains 1 to 10 units of one kind. They are paid at
+    once and stand in the city at once, as a new army. Discounts (barracks)
+    apply to the whole order and each resource is rounded up, so a single
+    swordsman costs its full 3 iron and five cost 12. A forge marks the units
+    trained in its city with +1 strength; units without strength (settlers)
+    get no mark.
+  - **Organising.** `split` names kinds and takes the first units of each
+    kind; it must leave a unit behind. `merge` joins armies on one tile into
+    the first named, up to 10 units. `disband` removes a whole army.
+  - **Founding.** A settler founds a city on the tile where its army stands
+    and is used up. The tile must be at least `city.min_distance` (2) steps
+    from every other city, so no city stands in another's first ring.
+  - **Hunger.** The units a hungry nation loses are drawn from all its units
+    with the same chance each, from a random stream named by round and
+    nation.
+  - The state has a round number, set by the event `round_started`, and all
+    events are applied through `games/civ/turn.py`, which replaces the
+    per-module `apply_event` of the state decision.
+- **Why:** With the spec's costs (forest and hills 2) and its units (most
+  move 1), a rule without the free last step would lock most armies out of
+  most of the map. Naming a tile within reach keeps a move something the
+  server can check against what the player sees, and keeps orders from
+  running on for rounds after the plan changed. Rounding a discount up means
+  it can never make a unit free. New armies instead of joining a garrison
+  keep `train` free of surprises about army sizes. Two steps between cities
+  is what makes the "nearest city works the tile" rule safe for first rings.
+- **Alternatives:** Movement points carried over or spent exactly (slow
+  units could not enter forest); orders to far targets that persist (need
+  path memory and a cancel order); training that takes a round like building
+  (the spec gives building a time and units none); units with ids of their
+  own (longer prompts for little gain; an army's units are told apart by
+  kind); splitting by position in the army (models count badly).
+
+## D-086 · The watch screen: spoiler-free by allowlist in the web server, playback by moments
+
+- **Date:** 2026-11-11
+- **Decision:** The live view and the replay share one component
+  (`WatchScreen`): the cast, the board and a commentary column made of
+  transcript lines (D-078), drawn by `kind`. Bookkeeping (importance 1) is
+  folded unless the viewer shows it. In the spoiler-free view
+  (`?view=spoiler-free`), the SvelteKit server drops every event that is not
+  public from the log and the live stream. It removes the seed. It passes each
+  board through an allowlist per layout (`web/src/lib/server/redact.ts`):
+  hidden cards become placeholders, roles become null, and an unknown field or
+  layout is dropped. The transcript is fetched with `spoilers=false`. Switching
+  the view is a page load that keeps the event shown. Replay play and step
+  move from moment to moment (lines of importance 2 and up, chapter headings)
+  instead of event by event, or from highlight to highlight. A chapter button
+  is drawn for every numbered heading (round, hand, night, day).
+- **Why:** Nothing hidden may reach the browser in the spoiler-free view, and
+  an allowlist keeps a new secret field hidden by default, where a list of
+  secret names would leak it. Stepping by events showed long runs of
+  bookkeeping, which the audit found to be the main reason why replays felt
+  slow and unreadable.
+- **Alternatives:** A `spoilers=false` parameter on the arena's board and
+  events endpoints (cleaner, but a change to the core; the web filter can stay
+  as a second guard when it comes). Hiding the hidden data with CSS (it would
+  still be in the page). Playback by fixed time per event (spends most of the
+  time on bookkeeping).
+
+## D-087 · Prompts have versions: a game's rules and summary per `prompt_version`
+
+- **Date:** 2026-11-11
+- **Decision:** Each game keeps its prompt text next to its plugin
+  (`games/<game>/prompt.py`, `rules.md` for the first version, `rules_v2.md` for
+  the second) and names versions `<game>-p1`, `<game>-p2`. The match setting
+  `prompt_version` chooses one (an unknown one is refused when the match is
+  created); the plugin reports it through `prompt_version(settings)`, so it can
+  be recorded with the match. Version p2 has new rules text (rules in short, the
+  tools with an example call each, how to play well, with the numbers a model
+  would otherwise have to work out) and a short situation summary built from the
+  observation alone (`situation_summary`), shown above the full data. Version p1
+  is unchanged, so experiments can compare the two. The default stays p1 until a
+  comparison says otherwise. The rules texts state the default stacks, blinds and
+  similar numbers, so a match with other settings reads wrong numbers there.
+- **Why:** A change of prompt changes how every model plays; without a version in
+  the log nobody can tell which prompt produced a result. The summary only
+  restates and computes from what the player already sees, so it cannot leak.
+- **Alternatives:** one prompt that is edited in place (no comparison, old logs
+  mean different things over time); summaries written by a model (costs money,
+  varies from run to run).
 
 ## D-090 · Experiments are registered as files before their first paid match
 
@@ -1609,3 +1747,89 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** random seatings and seeds (more matches for the same
   precision); a full round robin of all 70 tables of four (5 times the cost);
   plans as prose only (nothing to check a schedule against).
+
+## D-093 · The runner takes the prompt version from the match settings
+
+- **Date:** 2026-11-11
+- **Decision:** `ModelAgent` gets the match settings. It asks the game for
+  `rules(settings)` once and for `situation_summary(observation, settings)`
+  every turn, and puts the summary in a `<summary>` block above
+  `<situation>`; the system message then names that block too. The match
+  records `prompt_version(settings)` in `match_started` and in its record
+  (column `matches.prompt_version`, also in `/replays`), and `arena run
+  --save` writes it into the export. A `-p2` version always means its rules
+  and its summary together, so the id says exactly what the models read. Without a summary the prompt is the one
+  from before, byte for byte (the p1 golden files check it).
+- **Why:** Poker and Werewolf have a second prompt version (new rules, a
+  summary of the turn), and an A/B comparison needs every match to say which
+  one its models read. The summary comes first because models read the top
+  and the end of a prompt most closely; it is built from the observation, so
+  it cannot leak what the player may not see.
+- **Alternatives:** The summary inside `<situation>` (mixes text with the
+  JSON a mock model parses); the version only in the settings (a default
+  would not show up in the log, and the default may change); a summary in
+  the system message (that one is meant to be the server's words, not game
+  data).
+
+## D-095 · The spend ledger in a database of its own, the key in a file
+
+- **Date:** 2026-11-11
+- **Decision:** The ledger (`model_calls`) lives where `LEDGER_DATABASE_URL`
+  points, by default the match database. The stack keeps it in a Postgres
+  container of its own (`aigv-ledger`, not in the Compose project), dumped
+  daily by `scripts/backup-ledger.sh`. The server starts without the ledger;
+  a model match starts only when the ledger answers and is not empty beside
+  finished model matches played here (503 otherwise; imported matches booked
+  elsewhere). While it is down `/matches/{id}/cost` answers 503 and
+  `/replays` shows every cost as null: the replay list stays usable, and an
+  unknown cost is not shown as 0. The stack gets the provider key as a read-only file
+  (`OPENROUTER_API_KEY_FILE`), read at every start of a model match; model
+  seats, ledger URL and key come in one override file,
+  `docker-compose.models.yml`, and the plain stack has no key.
+- **Why:** The month cap is a sum over the ledger. In the stack's database
+  it would be reset by `docker compose down -v`, and a stack pointed at a new
+  database would see an empty month and could spend the cap again. An empty
+  ledger beside finished model matches is exactly that case. A key in the
+  environment of Compose shows up in `docker inspect`; a file can be replaced
+  without a restart.
+- **Alternatives:** The ledger in the stack's database (reset with its
+  volume); a check of the month against the provider's bill (needs a second
+  key with billing rights, and comes late); refusing to start without the
+  ledger (bot matches would stop too); a ledger migration set of its own (the
+  ledger database gets all tables instead, unused ones stay empty).
+
+## D-097 · The leaderboard ranks models; random bots are one row
+
+- **Date:** 2026-11-11
+- **Decision:** `GET /leaderboard` takes `kind=models|bots|all`. Without it, real
+  models are shown, or everyone when no model is rated yet (`fallback: true`);
+  `counts` gives the rows per kind. The per-seat profiles of random bots ("Random
+  Bot p3", D-052) are grouped into one "Random Bot" row with their ratings,
+  win rates and placements averaged by games played (`members` says how many
+  seats); `group_bots=false` lists every seat, for tests and the profile pages.
+  Each row also has the vendor (from `config/models.yaml`), the average cost of
+  one rated game (the ledger's booked calls of the profile's seats over its
+  rated games) and the tool-error rate: refused answers over all answers
+  (`action_rejected` / (`action_accepted` + `action_rejected`) of its seats).
+  The web page filters by kind and keeps the game tab.
+- **Why:** The board compares models; a bot has no identity beyond its kind, and
+  a per-kind profile cannot hold several seats of one match (a profile is rated
+  once per match), so the grouping is done where the board is read.
+- **Alternatives:** one stored profile per bot kind (impossible with several bot
+  seats per match); hiding bots altogether (the demo needs them).
+
+## D-098 · A model page is the profile of a model without a personality
+
+- **Date:** 2026-11-11
+- **Decision:** `GET /models/{id}` (and `/models/[id]` in the UI) takes the id of a
+  model in `config/models.yaml` and describes its profile without a personality
+  (D-081): rating per game, cost per game, tool-error rate (also per game), the
+  latest rated matches with links to their replay and live view, and the game
+  statistics read from the logs (`/profiles/{profile_id}/stats`). Profiles of the
+  same model with a personality are listed and linked to their profile page. A
+  configured model that has not played gives an empty page, an unknown id is 404.
+- **Why:** The leaderboard names models, and a model's seat changes from match to
+  match, so the page must not depend on a seat. Keeping personalities apart keeps
+  their ratings comparable.
+- **Alternatives:** summing all personalities of a model (hides what a personality
+  changes); keying the page by profile id (the profile page already does that).

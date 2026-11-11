@@ -18,8 +18,15 @@
 	let {
 		spec,
 		spoilers,
-		events = []
-	}: { spec: Record<string, unknown>; spoilers: boolean; events?: MatchEvent[] } = $props();
+		events = [],
+		names = {}
+	}: {
+		spec: Record<string, unknown>;
+		spoilers: boolean;
+		events?: MatchEvent[];
+		names?: Record<string, string>;
+	} = $props();
+	const label = (seat: string) => names[seat] ?? seat;
 
 	interface Seat {
 		player: string;
@@ -120,7 +127,7 @@
 			class:turn={seat.player === spec.turn}
 			style="left: {point.left}%; top: {point.top}%"
 			data-testid="seat"
-			aria-label={seat.player}
+			aria-label={label(seat.player)}
 		>
 			<svg class="avatar" viewBox="0 0 40 40" aria-hidden="true">
 				<circle
@@ -138,7 +145,7 @@
 					<path d="M10 10 L30 30 M30 10 L10 30" stroke="var(--danger)" stroke-width="2.5" />
 				{/if}
 			</svg>
-			<span class="name">{seat.player}</span>
+			<span class="name">{label(seat.player)}</span>
 			{#if hideRoles}
 				<span class="role" data-testid="secret">?</span>
 			{:else}

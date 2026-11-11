@@ -1,6 +1,9 @@
 <script lang="ts">
+	import type { LeaderboardKind } from '#lib/api.js';
 	import { gameName } from '#lib/games.js';
 	import { percent, placement, rating } from '#lib/format.js';
+	import { euros } from '#lib/live.js';
+	import { page } from '$app/state';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -10,8 +13,23 @@
 		{ id: null, label: 'Overall' },
 		...(board?.games ?? []).map((id) => ({ id, label: gameName(id) }))
 	]);
-	const tabHref = (id: string | null) =>
-		id ? `/leaderboard?game=${encodeURIComponent(id)}` : '/leaderboard';
+	// The kind filter and the game tab are kept when the other one is changed.
+	const href = (id: string | null, kind: LeaderboardKind | null) => {
+		const params = new URLSearchParams();
+		if (id) params.set('game', id);
+		if (kind) params.set('kind', kind);
+		return params.size ? `/leaderboard?${params}` : '/leaderboard';
+	};
+	const kindFromUrl = $derived(page.url.searchParams.get('kind') as LeaderboardKind | null);
+	const kinds = $derived([
+		{ id: 'models' as const, label: 'Real models', count: board?.counts.models ?? 0 },
+		{ id: 'bots' as const, label: 'Bots', count: board?.counts.bots ?? 0 },
+		{
+			id: 'all' as const,
+			label: 'All',
+			count: (board?.counts.models ?? 0) + (board?.counts.bots ?? 0)
+		}
+	]);
 </script>
 
 <svelte:head>
@@ -19,7 +37,9 @@
 </svelte:head>
 
 <h1>Leaderboard</h1>
-<p class="lead">Elo per game and overall. Everyone starts at 1000.</p>
+<p class="lead">
+	Elo per game and overall. Everyone starts at 1000. A model is one player in every match and seat.
+</p>
 
 {#if data.board.state === 'unreachable'}
 	<div class="notice error" role="status" data-testid="arena-unreachable">
@@ -27,9 +47,25 @@
 		<span>The arena API did not answer ({data.board.reason}). Is the stack running?</span>
 	</div>
 {:else if board}
+	<nav class="tabs" aria-label="Who">
+		{#each kinds as kind (kind.id)}
+			<a
+				href={href(data.game, kind.id)}
+				aria-current={kind.id === board.kind ? 'page' : undefined}
+				data-testid="kind-{kind.id}"
+			>
+				{kind.label} <span class="count">{kind.count}</span>
+			</a>
+		{/each}
+	</nav>
+	{#if board.fallback}
+		<p class="muted" role="status" data-testid="kind-fallback">
+			No real model is rated yet, so everyone is shown.
+		</p>
+	{/if}
 	<nav class="tabs" aria-label="Games">
 		{#each tabs as tab (tab.id ?? 'overall')}
-			<a href={tabHref(tab.id)} aria-current={tab.id === data.game ? 'page' : undefined}>
+			<a href={href(tab.id, kindFromUrl)} aria-current={tab.id === data.game ? 'page' : undefined}>
 				{tab.label}
 			</a>
 		{/each}
@@ -59,6 +95,8 @@
 						<th scope="col" class="num">Games</th>
 						<th scope="col" class="num">Win rate</th>
 						<th scope="col" class="num wide">Avg place</th>
+						<th scope="col" class="num wide">Cost per game</th>
+						<th scope="col" class="num wide">Tool errors</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -66,14 +104,26 @@
 						<tr>
 							<td class="num rank">{row.rank}</td>
 							<td>
-								<a href="/profiles/{row.profile_id}">{row.name}</a>
+								{#if row.members > 1}
+									{row.name} <span class="model">({row.members} seats)</span>
+								{:else if row.kind === 'model'}
+									<a href="/models/{encodeURIComponent(row.model_id)}">{row.name}</a>
+								{:else}
+									<a href="/profiles/{row.profile_id}">{row.name}</a>
+								{/if}
 								<span class="narrow model">{row.model_id}</span>
 							</td>
-							<td class="wide model">{row.model_id}</td>
+							<td class="wide model">
+								{row.model_id}{#if row.vendor}<span class="vendor"> · {row.vendor}</span>{/if}
+							</td>
 							<td class="num strong">{rating(row.rating)}</td>
 							<td class="num">{row.games_played}</td>
 							<td class="num">{percent(row.win_rate)}</td>
 							<td class="num wide">{placement(row.average_placement)}</td>
+							<td class="num wide" data-testid="cost">
+								{row.cost_per_game_micro_eur === null ? '–' : euros(row.cost_per_game_micro_eur)}
+							</td>
+							<td class="num wide" data-testid="tool-errors">{percent(row.tool_error_rate)}</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -181,6 +231,17 @@
 
 	.narrow {
 		display: none;
+	}
+
+	.count {
+		margin-left: 0.25rem;
+		opacity: 0.7;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.muted {
+		margin: 0 0 0.75rem;
+		color: var(--muted);
 	}
 
 	.visually-hidden {

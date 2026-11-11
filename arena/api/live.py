@@ -90,11 +90,11 @@ class _Running:
 class LiveMatches:
     """Starts matches as tasks of the server process, stores them and streams their events."""
 
-    def __init__(self, pool: asyncpg.Pool, games: Mapping[str, GamePlugin]):
+    def __init__(self, pool: asyncpg.Pool, games: Mapping[str, GamePlugin], ledger: Ledger):
         self.games = games
         self.matches = MatchStore(pool)
         self._events = EventStore(pool)
-        self.ledger = Ledger(pool)
+        self.ledger = ledger
         self._ratings = RatingStore(pool)
         self._memory = MemoryStore(pool)
         self._running: dict[UUID, _Running] = {}
@@ -115,7 +115,9 @@ class LiveMatches:
         Every seat is a random bot, or with `models` (seat -> model id from
         config/models.yaml) the model of that seat, behind one Budget for the
         match: every call is booked before it is sent, and a call that would
-        pass a cap is not sent and ends the match as `interrupted`.
+        pass a cap is not sent and ends the match as `interrupted`. A match
+        with models starts only when the ledger answers and is the one earlier
+        model matches were booked in (LedgerUnavailable otherwise).
 
         Between two turns the match waits `turn_delay` seconds, so that
         people can follow it. Raises ValueError for a player count or settings
@@ -139,10 +141,12 @@ class LiveMatches:
             agents = random_bots(plugin, players, seed)
             seats = bot_seats(players)
         else:
+            await self.ledger.check(await self.matches.model_matches())
             config = load_config()
             budget = Budget(self.ledger, match_id, config)
             agents = {
-                seat: ModelAgent(budget.model(seat, models[seat]), plugin) for seat in players
+                seat: ModelAgent(budget.model(seat, models[seat]), plugin, settings=settings)
+                for seat in players
             }
             seats = {
                 seat: Seat(
@@ -167,6 +171,7 @@ class LiveMatches:
                 seed,
                 match.settings,
                 seats=seats,
+                prompt_version=plugin.prompt_version(match.settings),
             )
         except BaseException:
             del self._running[match_id]
@@ -181,7 +186,7 @@ class LiveMatches:
         try:
             placements = await running.match.run()
             await self.matches.close(match_id, "finished", placements)
-            if rated:  # bots only: profiles for model seats are not built yet
+            if rated:  # bots only until model profiles reach the API (D-082)
                 await self._rate(match_id, running.match, placements)
         except MatchPaused as pause:
             # Nobody here can allow more money: a cap ends the match. Its log says why.

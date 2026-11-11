@@ -7,8 +7,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from arena.config import load_config
 from arena.db.event_store import EventStore
-from arena.ratings.store import RatingStore, Standing
+from arena.ratings.store import BOT_MODEL_ID, RatingStore, Standing, Usage
 from arena.stats import STATS
 
 router = APIRouter(tags=["ratings"])
@@ -45,11 +46,25 @@ class StandingOut(BaseModel):
 
 class LeaderboardRow(StandingOut):
     rank: int = Field(description="Position on the board, 1 = highest rating")
+    kind: Literal["model", "bot"] = Field(description="A real model, or a random bot")
+    vendor: str | None = Field(None, description="Who makes the model, from config/models.yaml")
+    members: int = Field(1, description="Profiles in this row: more than 1 for grouped bot seats")
+    cost_per_game_micro_eur: int | None = Field(
+        None, description="Average cost of one rated game, in millionths of a euro"
+    )
+    tool_error_rate: float | None = Field(
+        None, description="Share of answers the server refused (a wrong tool or an illegal move)"
+    )
 
 
 class Leaderboard(BaseModel):
     game: str | None = Field(description="The game shown, or null for the overall rating")
     games: list[str] = Field(description="Every game with at least one rated match")
+    kind: Literal["models", "bots", "all"] = Field(description="Who is shown")
+    fallback: bool = Field(
+        False, description="True when real models were asked for but none is rated yet: all shown"
+    )
+    counts: dict[str, int] = Field(description="Rows per kind with the other filters applied")
     rows: list[LeaderboardRow]
 
 
@@ -82,20 +97,115 @@ class ProfileOut(BaseModel):
     memory: NotAvailable = Field(default_factory=NotAvailable)
 
 
+def vendor_of(model_id: str) -> str | None:
+    """The maker of a model, from its provider name in config/models.yaml: "z-ai/glm" is z-ai."""
+    configured = load_config().models.get(model_id)
+    return configured.model.split("/", 1)[0] if configured and "/" in configured.model else None
+
+
+def is_seat_bot(standing: Standing) -> bool:
+    """The per-seat profile of a random bot ("Random Bot p3"), as `bot_profiles` makes them."""
+    return standing.model_id == BOT_MODEL_ID and standing.name.startswith("Random Bot ")
+
+
+def group_seat_bots(standings: list[Standing], usage: dict[UUID, Usage]):
+    """One row for all random-bot seats, since a bot has no identity beyond its kind.
+
+    Rating, win rate and placement are averaged over the games each seat played.
+    Returns the grouped standing (or None without bots) and the rest.
+    """
+    bots = [s for s in standings if is_seat_bot(s)]
+    rest = [s for s in standings if not is_seat_bot(s)]
+    if not bots:
+        return None, rest
+    games = sum(s.games_played for s in bots)
+
+    def weighted(value) -> float | None:
+        pairs = [(value(s), s.games_played) for s in bots if value(s) is not None]
+        total = sum(weight for _, weight in pairs)
+        return sum(v * w for v, w in pairs) / total if total else None
+
+    grouped = Standing(
+        profile_id=bots[0].profile_id,
+        name="Random Bot",
+        model_id=BOT_MODEL_ID,
+        rating=weighted(lambda s: s.rating) or 1000.0,
+        games_played=games,
+        win_rate=weighted(lambda s: s.win_rate),
+        average_placement=weighted(lambda s: s.average_placement),
+    )
+    combined = Usage(
+        sum(usage.get(s.profile_id, Usage()).cost_micro_eur for s in bots),
+        sum(usage.get(s.profile_id, Usage()).accepted for s in bots),
+        sum(usage.get(s.profile_id, Usage()).rejected for s in bots),
+    )
+    usage[grouped.profile_id] = combined
+    return (grouped, len(bots)), rest
+
+
 @router.get("/leaderboard")
 async def leaderboard(
     store: Store,
     game: Annotated[str | None, Query(description="A game id; omit for the overall rating")] = None,
+    kind: Annotated[
+        Literal["models", "bots", "all"] | None,
+        Query(description="Real models, random bots or all; default real models, or all if none"),
+    ] = None,
+    group_bots: Annotated[
+        bool, Query(description="One row for all random-bot seats; false lists every seat")
+    ] = True,
 ) -> Leaderboard:
-    """Players by rating, best first: in one game, or overall across all games."""
+    """Players by rating, best first: in one game, or overall across all games.
+
+    By default only real models are ranked; when none is rated yet everyone is shown and
+    `fallback` is true. The seats of random bots are grouped into one "Random Bot" row
+    unless `group_bots=false`.
+    """
     standings = await store.leaderboard(game)
+    usage = await store.usage(game)
+    grouped, others = group_seat_bots(standings, usage) if group_bots else (None, standings)
+    entries: list[tuple[Standing, str, int]] = [
+        (s, "bot" if s.model_id == BOT_MODEL_ID else "model", 1) for s in others
+    ]
+    if grouped:
+        entries.append((grouped[0], "bot", grouped[1]))
+    counts = {
+        "models": sum(1 for _, k, _ in entries if k == "model"),
+        "bots": sum(1 for _, k, _ in entries if k == "bot"),
+    }
+    shown, fallback = kind or "models", False
+    if kind is None and counts["models"] == 0:
+        shown, fallback = "all", True
+    wanted = {"models": ("model",), "bots": ("bot",), "all": ("model", "bot")}[shown]
+    entries = sorted(
+        (e for e in entries if e[1] in wanted), key=lambda e: (-e[0].rating, e[0].name)
+    )
+    rows = []
+    for position, (s, row_kind, members) in enumerate(entries, start=1):
+        used = usage.get(s.profile_id, Usage())
+        answers = used.accepted + used.rejected
+        rows.append(
+            LeaderboardRow(
+                rank=position,
+                kind=row_kind,
+                vendor=vendor_of(s.model_id) if row_kind == "model" else None,
+                members=members,
+                cost_per_game_micro_eur=(
+                    round(used.cost_micro_eur / s.games_played)
+                    if s.games_played and used.cost_micro_eur
+                    else None
+                ),
+                tool_error_rate=used.rejected / answers if answers else None,
+                **StandingOut.of(s).model_dump(),
+            )
+        )
     return Leaderboard(
         game=game,
         games=await store.rated_games(),
-        rows=[
-            LeaderboardRow(rank=position, **StandingOut.of(s).model_dump())
-            for position, s in enumerate(standings, start=1)
-        ],
+        kind=shown,
+        fallback=fallback,
+        counts=counts,
+        rows=rows,
     )
 
 

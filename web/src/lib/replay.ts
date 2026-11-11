@@ -12,17 +12,21 @@ export function stepFromQuery(value: string | null, length: number): number {
 	return clampStep(Number(value), length);
 }
 
-/** Playback speeds: milliseconds between two steps. */
+/** Playback speeds: milliseconds between two moments (bookkeeping is skipped, not timed). */
 export const PLAY_SPEEDS = [
-	{ label: '0.5×', ms: 1000 },
-	{ label: '1×', ms: 500 },
-	{ label: '2×', ms: 250 },
-	{ label: '4×', ms: 125 }
+	{ label: '0.5×', ms: 2400 },
+	{ label: '1×', ms: 1200 },
+	{ label: '2×', ms: 600 },
+	{ label: '4×', ms: 300 }
 ];
 
-export const DEFAULT_PLAY_MS = 500;
-
-/** The link to a replay at a step, for sharing. */
-export function shareLink(origin: string, id: string, step: number): string {
-	return `${origin}/replays/${encodeURIComponent(id)}?step=${step}`;
+/** The link to a replay at a step, for sharing; a spoiler-free link stays spoiler-free. */
+export function shareLink(
+	origin: string,
+	id: string,
+	step: number,
+	view: 'spectator' | 'spoiler-free' = 'spectator'
+): string {
+	const mode = view === 'spoiler-free' ? '&view=spoiler-free' : '';
+	return `${origin}/replays/${encodeURIComponent(id)}?step=${step}${mode}`;
 }

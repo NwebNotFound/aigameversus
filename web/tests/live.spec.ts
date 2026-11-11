@@ -39,12 +39,9 @@ async function waitUntilStopped(request: APIRequestContext, id: string) {
 		.not.toBe('running');
 }
 
-/** Every position shown in both feeds, sorted. */
-async function shownPositions(page: Page): Promise<number[]> {
-	const seqs = await page
-		.locator('[data-testid$="-feed"] li')
-		.evaluateAll((items) => items.map((item) => Number(item.getAttribute('data-seq'))));
-	return seqs.sort((a, b) => a - b);
+/** How many events the page holds: the stream merges every position once. */
+async function shownEvents(page: Page): Promise<number> {
+	return Number(await page.getByTestId('watch').getAttribute('data-events'));
 }
 
 test('the live view follows a running match to its end, every event once', async ({
@@ -60,14 +57,14 @@ test('the live view follows a running match to its end, every event once', async
 	await expect(page.getByTestId('connection')).toHaveText('live');
 	await expect(page.getByTestId('board')).toHaveAttribute('data-layout', 'card_table');
 	await expect(page.getByTestId('seat')).toHaveCount(match.players.length);
-	await expect(page.getByTestId('public-feed').locator('li').first()).toBeVisible();
-	await expect(page.getByTestId('behind-feed').locator('li').first()).toBeVisible();
+	await expect(page.getByTestId('commentary').locator('li[data-kind]').first()).toBeVisible();
 
 	await expect(page.getByTestId('status')).toHaveText('finished', { timeout: 60_000 });
 	await expect(page.getByTestId('connection')).toHaveText('whole log loaded');
 	const log = await storedLog(request, match.id);
-	expect(await shownPositions(page)).toEqual(log.map((event) => event.seq));
+	await expect.poll(() => shownEvents(page)).toBe(log.length);
 	await expect(page.getByTestId('cost')).toContainText('0.0000 €');
+	await expect(page.getByRole('link', { name: 'Watch the replay →' })).toBeVisible();
 	await expect(page.getByRole('group', { name: 'Controls' })).toHaveCount(0);
 });
 
@@ -110,7 +107,7 @@ ${events.join('')}`
 	await expect(page.getByTestId('connection')).toHaveText('whole log loaded');
 	expect(reconnects).toBeGreaterThanOrEqual(1);
 	const log = await storedLog(request, match.id);
-	expect(await shownPositions(page)).toEqual(log.map((event) => event.seq));
+	await expect.poll(() => shownEvents(page)).toBe(log.length);
 });
 
 test('joining a finished match shows its whole log from the start', async ({ page, request }) => {
@@ -121,7 +118,7 @@ test('joining a finished match shows its whole log from the start', async ({ pag
 
 	await expect(page.getByTestId('connection')).toHaveText('whole log loaded');
 	const log = await storedLog(request, match.id);
-	expect(await shownPositions(page)).toEqual(log.map((event) => event.seq));
+	await expect.poll(() => shownEvents(page)).toBe(log.length);
 	// High Card has no board yet; the page says so instead of drawing nothing.
 	await expect(page.getByTestId('no-board')).toBeVisible();
 });
@@ -134,21 +131,21 @@ test('pause, speed and abort control the running match', async ({ page, request 
 	await controls.getByRole('button', { name: 'Pause' }).click();
 	await expect(page.getByTestId('status')).toHaveText('paused');
 	// At most the turn that was being played comes in: wait until the shown positions stop changing.
-	let previous: number[] = [];
+	let previous = -1;
 	await expect
 		.poll(
 			async () => {
-				const now = await shownPositions(page);
-				const settled = JSON.stringify(now) === JSON.stringify(previous);
+				const now = await shownEvents(page);
+				const settled = now === previous;
 				previous = now;
 				return settled;
 			},
 			{ intervals: [1300], timeout: 20_000 }
 		)
 		.toBe(true);
-	const atPause = await shownPositions(page);
+	const atPause = await shownEvents(page);
 	await page.waitForTimeout(2000);
-	expect(await shownPositions(page)).toEqual(atPause);
+	expect(await shownEvents(page)).toBe(atPause);
 
 	await controls.getByRole('button', { name: 'Resume' }).click();
 	await expect(page.getByTestId('status')).toHaveText('running');
@@ -169,7 +166,7 @@ test('pause, speed and abort control the running match', async ({ page, request 
 	expect(record.status).toBe('aborted');
 });
 
-test('behind the scenes filters by player, and spoilers can be switched off', async ({
+test('the commentary filters by player, and spoiler-free hides roles and thoughts', async ({
 	page,
 	request
 }) => {
@@ -177,28 +174,26 @@ test('behind the scenes filters by player, and spoilers can be switched off', as
 	await waitUntilStopped(request, match.id);
 	await page.goto(`/matches/${match.id}`);
 	await expect(page.getByTestId('connection')).toHaveText('whole log loaded');
-	const behind = page.getByTestId('behind-feed').locator('li');
-	const all = await behind.count();
+	const lines = page.getByTestId('commentary').locator('li[data-kind]');
+	await expect(lines.first()).toBeVisible();
+	const all = await lines.count();
 
-	await page.getByLabel('Player').selectOption('p1');
+	await page.getByTestId('commentary-player').selectOption('p1');
 
-	const players = await behind.evaluateAll((items) =>
-		items.map((item) => item.getAttribute('data-players')?.split(' ') ?? [])
-	);
-	expect(players.length).toBeGreaterThan(0);
-	expect(players.length).toBeLessThan(all);
-	for (const involved of players) expect(involved).toContain('p1');
+	const actors = await lines.evaluateAll((items) => items.map((i) => i.getAttribute('data-actor')));
+	expect(actors.length).toBeGreaterThan(0);
+	expect(actors.length).toBeLessThan(all);
+	for (const actor of actors) expect(actor).toBe('p1');
 
-	// Spectators see every role; with spoilers off the roles and the private feed are hidden.
+	// Spectators see every role; spoiler-free shows none, and no private line.
 	await expect(page.getByTestId('secret')).toHaveCount(0);
-	await page.getByLabel('Show spoilers').uncheck();
+	await page.getByRole('link', { name: 'Spoiler-free' }).click();
+	await expect(page).toHaveURL(/view=spoiler-free/);
 
 	await expect(page.getByTestId('secret')).toHaveCount(8);
-	await expect(page.getByTestId('spoilers-off')).toBeVisible();
-	await expect(page.getByTestId('behind-feed')).toHaveCount(0);
-	await expect(
-		page.getByTestId('public-feed').locator('li[data-kind="message"]').first()
-	).toBeVisible();
+	await expect(page.getByTestId('tab-thoughts')).toHaveCount(0);
+	await expect(page.locator('[data-kind="whisper"], [data-kind="thought"]')).toHaveCount(0);
+	await expect(lines.first()).toBeVisible();
 });
 
 test('a running match on the home page opens its live view', async ({ page, request }) => {

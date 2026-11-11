@@ -8,6 +8,7 @@
  *
  * Any other close (the arena restarted, the network broke) just ends the response.
  * The EventSource then reconnects by itself and the relay resumes after `lastSeen`.
+ * With `onlyPublic`, events that not every player could see are not sent at all.
  */
 
 const UNKNOWN_MATCH = 4404;
@@ -16,6 +17,7 @@ const RETRY_MS = 2000;
 export function relay(
 	url: string,
 	lastSeen: number,
+	onlyPublic = false,
 	connect: (url: string) => WebSocket = (u) => new WebSocket(u)
 ): ReadableStream<Uint8Array> {
 	const encoder = new TextEncoder();
@@ -37,13 +39,15 @@ export function relay(
 			socket = connect(url);
 			socket.onmessage = (message) => {
 				const text = String(message.data);
-				let seq: unknown;
+				let event: { seq?: unknown; visible_to?: unknown };
 				try {
-					seq = JSON.parse(text).seq;
+					event = JSON.parse(text);
 				} catch {
 					return;
 				}
+				const seq = event.seq;
 				if (typeof seq !== 'number' || seq <= lastSeen) return;
+				if (onlyPublic && event.visible_to !== null) return;
 				send(`id: ${seq}\nevent: event\ndata: ${text}\n\n`);
 			};
 			socket.onclose = (closed) => {

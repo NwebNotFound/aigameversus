@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.types import MESSAGE, Action, Event, Placement, PlayerId, ToolSpec, TurnMode
+from games.liars_deck import prompt
 from games.liars_deck.variants import Variant, load_variants
 
 RANKS = ("king", "queen", "ace")
@@ -165,10 +166,26 @@ class LiarsDeck(GamePlugin[LiarsState]):
 
     # --- setup -------------------------------------------------------------
 
+    def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
+        """The prompt version of a match, recorded with it (see `prompt.py` next to this file)."""
+        return prompt.version_of(settings)
+
+    def rules(self, settings: Mapping[str, Any] | None = None) -> str:
+        return prompt.rules_text(prompt.version_of(settings))
+
+    def situation_summary(
+        self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
+    ) -> str | None:
+        """A short text for the top of the turn's prompt; only version p2 has one."""
+        if prompt.version_of(settings) == "liars_deck-p1":
+            return None
+        return prompt.situation_summary(observation)
+
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> LiarsState:
-        unknown = set(settings) - {"variant"}
+        unknown = set(settings) - {"variant", "prompt_version"}
         if unknown:
             raise ValueError(f"Unknown settings for liars_deck: {sorted(unknown)}")
+        prompt.version_of(settings)  # refuses an unknown prompt version
         variant_id = settings.get("variant", "base")
         if variant_id not in self._variants:
             raise ValueError(

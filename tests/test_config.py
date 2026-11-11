@@ -1,9 +1,10 @@
+import os
 from decimal import Decimal
 
 import pytest
 import yaml
 
-from arena.config import CONFIG_PATH, ConfigError, load_config
+from arena.config import CONFIG_PATH, Config, ConfigError, load_config, load_keys
 
 VALID = {
     "limits": {
@@ -100,3 +101,39 @@ def test_reasoning_effort_can_be_left_to_the_model(tmp_path):
 def test_missing_file_is_a_config_error(tmp_path):
     with pytest.raises(ConfigError, match="cannot read file"):
         load_config(tmp_path / "nowhere.yaml")
+
+
+@pytest.fixture
+def key_environment(monkeypatch, tmp_path):
+    """OPENROUTER_API_KEY set to `env-key` and _FILE naming a file that does not exist yet."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "env-key")
+    key_file = tmp_path / "key"
+    monkeypatch.setenv("OPENROUTER_API_KEY_FILE", str(key_file))
+    return key_file
+
+
+def test_key_file_wins_over_the_variable_and_is_read_again(key_environment):
+    config = Config.model_validate(VALID)
+
+    key_environment.write_text(" first-key\n", encoding="utf-8")
+    assert load_keys(config, ["some-model"]) == []
+    assert os.environ["OPENROUTER_API_KEY"] == "first-key"
+    key_environment.write_text("second-key", encoding="utf-8")
+    assert load_keys(config, ["some-model"]) == []
+    assert os.environ["OPENROUTER_API_KEY"] == "second-key"
+
+
+@pytest.mark.parametrize("content", [None, "", "  \n"])
+def test_missing_or_empty_key_file_means_no_key(key_environment, content):
+    if content is not None:
+        key_environment.write_text(content, encoding="utf-8")
+
+    assert load_keys(Config.model_validate(VALID), ["some-model"]) == ["OPENROUTER_API_KEY"]
+    assert "OPENROUTER_API_KEY" not in os.environ
+
+
+def test_key_variable_alone_still_works(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "env-key")
+    monkeypatch.delenv("OPENROUTER_API_KEY_FILE", raising=False)
+
+    assert load_keys(Config.model_validate(VALID), ["some-model"]) == []
