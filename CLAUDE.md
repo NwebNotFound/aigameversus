@@ -124,7 +124,13 @@ Three ways:
   `arena ratings backfill` rates the earlier ones. Every match record has `seats` (seat ->
   `{name, model_id, kind}`; the name is `name` in `config/models.yaml`, else
   the id; bots are "Random Bot pN") and `origin` (`played` or `imported`);
-  `GET /replays` adds `real`.
+  `GET /replays` adds `real`. `"batch": {"id", "label", "index", "of"}` in
+  `POST /matches` puts a match into a batch (an experiment stage, a league;
+  unknown keys are refused), the record keeps it, and `GET /matches?batch=<id>`
+  lists every match of one. `arena batches backfill <started.jsonl> --id ...
+  --label ... --of N --first-order K [--schedule CSV]` tags matches played
+  before the field, from a batch runner's log (idempotent, never moves a match
+  to another batch, checks seeds against the schedule).
 - A running match can be paused, resumed, sped up or slowed down and aborted:
   `POST /matches/{id}/pause`, `/resume`, `/abort`, `PUT /matches/{id}/speed`,
   state in `GET /matches/{id}/control`. A pause takes effect between turns,

@@ -16,7 +16,7 @@ from starlette.websockets import WebSocketDisconnect
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
 from arena.config import load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
-from arena.db.match_store import MatchRecord, Origin, Seat, Status
+from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 
@@ -61,6 +61,9 @@ class NewMatch(BaseModel):
         True,
         description="False: a fair benchmark. The match neither reads nor writes any memory "
         "(relationships, match summaries).",
+    )
+    batch: Batch | None = Field(
+        None, description="The batch this match belongs to, e.g. an experiment stage or a league"
     )
 
 
@@ -107,6 +110,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
             turn_delay=new.turn_delay,
             models=models,
             memory=new.memory,
+            batch=new.batch,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
@@ -151,9 +155,10 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
 async def list_matches(
     live: Live,
     status: Annotated[list[Status] | None, Query(description="Only these statuses")] = None,
+    batch: Annotated[str | None, Query(description="Only the matches of this batch id")] = None,
 ) -> list[MatchRecord]:
-    """The newest 100 matches, newest first."""
-    return await live.matches.recent(status)
+    """The newest 100 matches, newest first; with `batch`, every match of that batch."""
+    return await live.matches.recent(status, batch)
 
 
 @router.get("/matches/{match_id}")
