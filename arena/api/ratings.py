@@ -83,6 +83,7 @@ class RecentMatch(BaseModel):
     match_id: UUID
     game_id: str
     rated_at: datetime
+    played_at: datetime = Field(description="When the match itself ended")
     rank: int
     players: int
     rating_change: float
@@ -239,6 +240,7 @@ async def profile(profile_id: UUID, store: Store) -> ProfileOut:
                 match_id=m.match_id,
                 game_id=m.game_id,
                 rated_at=m.rated_at,
+                played_at=m.played_at,
                 rank=m.rank,
                 players=m.players,
                 rating_change=round(m.rating_change, 1),

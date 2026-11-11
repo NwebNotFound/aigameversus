@@ -54,6 +54,7 @@ class MatchResult:
     match_id: UUID
     game_id: str
     rated_at: datetime
+    played_at: datetime  # when the match itself ended (not when its rating was applied)
     rank: int
     players: int
     rating_change: float
@@ -386,9 +387,11 @@ class RatingStore:
         )
         matches = await self._pool.fetch(
             "SELECT rm.match_id, rm.game_id, rm.rated_at, mp.rank, mp.players, "
-            "mp.rating_before, mp.rating_after "
+            "mp.rating_before, mp.rating_after, "
+            "coalesce(m.finished_at, m.started_at, rm.rated_at) AS played_at "
             "FROM match_placements mp JOIN rated_matches rm ON rm.match_id = mp.match_id "
-            "WHERE mp.profile_id = $1 ORDER BY rm.rated_at DESC, rm.match_id LIMIT $2",
+            "LEFT JOIN matches m ON m.id = rm.match_id "
+            "WHERE mp.profile_id = $1 ORDER BY played_at DESC, rm.match_id LIMIT $2",
             profile_id,
             recent,
         )
@@ -404,6 +407,7 @@ class RatingStore:
                     match_id=m["match_id"],
                     game_id=m["game_id"],
                     rated_at=m["rated_at"],
+                    played_at=m["played_at"],
                     rank=m["rank"],
                     players=m["players"],
                     rating_change=m["rating_after"] - m["rating_before"],

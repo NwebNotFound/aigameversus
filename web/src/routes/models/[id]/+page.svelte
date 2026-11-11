@@ -112,7 +112,7 @@
 				{#each page.recent_matches as match (match.match_id)}
 					<li>
 						<span>{gameName(match.game_id)}</span>
-						<span class="muted" data-testid="match-date">{when(match.rated_at)}</span>
+						<span class="muted" data-testid="match-date">{when(match.played_at)}</span>
 						<span>place {match.rank} of {match.players}</span>
 						<span class:up={match.rating_change > 0} class:down={match.rating_change < 0}>
 							{signed(match.rating_change)}
