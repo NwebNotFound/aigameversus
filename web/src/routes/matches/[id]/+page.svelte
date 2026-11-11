@@ -174,7 +174,7 @@
 	<div class="columns">
 		<section aria-labelledby="board-title">
 			<h2 id="board-title">Board</h2>
-			<Board spec={live.board.spec} {spoilers} />
+			<Board spec={live.board.spec} {spoilers} events={log} />
 		</section>
 
 		<section aria-labelledby="public-title">
