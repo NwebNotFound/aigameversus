@@ -820,7 +820,7 @@ Each entry: date, decision, why, alternatives considered.
 - **Alternatives:** simultaneous night actions; a strict-majority day vote;
   hidden roles after death; a random tie-break for the pack.
 
-## D-041 · Werewolf day: captain, narrator and language
+## D-047 · Werewolf day: captain, narrator and language
 
 - **Date:** 2026-11-11
 - **Decision:**
