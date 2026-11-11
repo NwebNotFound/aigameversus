@@ -78,6 +78,20 @@ class MatchStore:
         row = await self._pool.fetchrow(f"SELECT {_COLUMNS} FROM matches WHERE id = $1", match_id)
         return None if row is None else MatchRecord(**row)
 
+    async def finished_with_cost(self, limit: int = 100) -> list[tuple[MatchRecord, int]]:
+        """The newest finished matches, newest first, each with its model cost in micro-euros."""
+        rows = await self._pool.fetch(
+            f"SELECT {_COLUMNS}, coalesce(c.cost, 0) AS cost FROM matches "
+            "LEFT JOIN (SELECT match_id, sum(cost_micro_eur) AS cost FROM model_calls "
+            "GROUP BY match_id) c ON c.match_id = matches.id "
+            "WHERE status = 'finished' ORDER BY finished_at DESC, id LIMIT $1",
+            limit,
+        )
+        return [
+            (MatchRecord(**{k: v for k, v in row.items() if k != "cost"}), int(row["cost"]))
+            for row in rows
+        ]
+
     async def recent(self, statuses: Sequence[Status] | None = None) -> list[MatchRecord]:
         """The newest 100 matches, newest first; only those in `statuses` if given."""
         rows = await self._pool.fetch(

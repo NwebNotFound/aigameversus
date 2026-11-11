@@ -35,20 +35,6 @@ test('the web reaches the arena and lists its running matches', async ({ page })
 	await expect(section.getByTestId('arena-unreachable')).toHaveCount(0);
 });
 
-for (const [label, title] of [
-	['New match', 'New match'],
-	['Replays', 'Replays']
-]) {
-	test(`${label} is a coming-soon page`, async ({ page }) => {
-		await page.goto('/');
-
-		await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: label }).click();
-
-		await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
-		await expect(page.getByText('Coming soon', { exact: true })).toBeVisible();
-	});
-}
-
 test('nothing overflows the viewport horizontally', async ({ page }) => {
 	await page.goto('/');
 
