@@ -208,3 +208,18 @@ def test_finished_match_cannot_run_again():
         asyncio.run(match.run())
 
     assert match.events == events
+
+
+def test_paused_turn_does_not_count_towards_the_turn_limit():
+    bo = Scripted(CAP_REACHED, add(1), CAP_REACHED, add(2))
+    agents = {"ada": Scripted(add(1), add(2)), "bo": bo}
+    match = Match(SequentialCounter(), agents, seed=1, max_turns=4)  # the game needs four turns
+
+    async def scenario():
+        for _ in range(2):
+            with pytest.raises(MatchPaused):
+                await match.run()
+        return await match.run()
+
+    assert len(asyncio.run(scenario())) == 2
+    assert types(match)[-1] == "match_finished"
