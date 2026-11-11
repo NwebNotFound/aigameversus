@@ -2014,7 +2014,9 @@ Each entry: date, decision, why, alternatives considered.
   again, and the fallback reason. The tokens come from the agent's `Reply`
   (`stats`); the time from a `clock` the `Match` gets from the API and the
   command, and is null without one. Bot moves leave no event. The ledger
-  keeps latency and reasoning tokens per call (migration 0013).
+  keeps latency and reasoning tokens per call (migration 0013); a ledger
+  that lacks those columns still gets the cost, without them, so a call
+  that was paid never costs its turn over a statistic.
 - **Why:** The analytics view (thinking time per move, cost and tokens per
   player, fallback markers) is built from the event log, like everything
   else, so replays show it too. A separate event leaves the events players

@@ -1,6 +1,7 @@
 """The spend ledger: what model calls have cost, per match and per month."""
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -10,6 +11,8 @@ import asyncpg
 
 from arena.db.database import migrate
 from arena.engine.types import MatchPaused, PlayerId
+
+log = logging.getLogger(__name__)
 
 _LEDGER_LOCK = 7_240_002  # advisory lock id: one booking at a time, across processes
 _READ_TIMEOUT = 10  # seconds; a ledger that does not answer by then counts as unreachable
@@ -169,20 +172,38 @@ class Ledger:
         latency_ms: int | None = None,
         reasoning_tokens: int | None = None,
     ) -> None:
-        """Replace the upper bound of a booked call by what it was billed for."""
-        await self._pool.execute(
-            "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, cost_micro_eur = $4, "
-            "latency_ms = $5, reasoning_tokens = $6 WHERE id = $1",
-            call_id,
-            input_tokens,
-            output_tokens,
-            cost,
-            latency_ms,
-            reasoning_tokens,
-        )
+        """Replace the upper bound of a booked call by what it was billed for.
+
+        A ledger without the columns of migration 0013 still gets the cost: the call was
+        sent and paid, and its turn must not be lost over a statistic.
+        """
+        try:
+            await self._pool.execute(
+                "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, "
+                "cost_micro_eur = $4, latency_ms = $5, reasoning_tokens = $6 WHERE id = $1",
+                call_id,
+                input_tokens,
+                output_tokens,
+                cost,
+                latency_ms,
+                reasoning_tokens,
+            )
+        except asyncpg.UndefinedColumnError:
+            log.warning("The ledger lacks migration 0013: the call's time is not kept")
+            await self._pool.execute(
+                "UPDATE model_calls SET input_tokens = $2, output_tokens = $3, "
+                "cost_micro_eur = $4 WHERE id = $1",
+                call_id,
+                input_tokens,
+                output_tokens,
+                cost,
+            )
 
     async def timed(self, call_id: int, latency_ms: int) -> None:
         """How long a call took that reported no tokens; its booking stays the upper bound."""
-        await self._pool.execute(
-            "UPDATE model_calls SET latency_ms = $2 WHERE id = $1", call_id, latency_ms
-        )
+        try:
+            await self._pool.execute(
+                "UPDATE model_calls SET latency_ms = $2 WHERE id = $1", call_id, latency_ms
+            )
+        except asyncpg.UndefinedColumnError:
+            log.warning("The ledger lacks migration 0013: the call's time is not kept")

@@ -485,3 +485,25 @@ def test_each_call_keeps_how_long_it_took_and_how_much_it_thought(database_url):
     rows = with_pool(database_url, scenario)
 
     assert rows == [(2500, 12, 120 * 1 + 30 * 2), (250, None, UPPER_BOUND)]
+
+
+def test_a_ledger_without_the_time_columns_still_settles_the_cost(database_url):
+    async def scenario(pool):
+        await pool.execute("ALTER TABLE model_calls DROP COLUMN latency_ms")
+        await pool.execute("ALTER TABLE model_calls DROP COLUMN reasoning_tokens")
+        call = budget_of(pool).meter(
+            "p1",
+            "cheap",
+            MockLLM(
+                tool_call("play_card", {"card": 3}, usage=Usage(120, 30, reasoning_tokens=12)),
+                ModelReply(text="no usage reported"),
+            ),
+        )
+        first = await call(MESSAGES, TOOLS)
+        await call(MESSAGES, TOOLS)
+        return first, await booked(pool)
+
+    first, rows = with_pool(database_url, scenario)
+
+    assert first.tool_calls  # the answer came through: the turn is not lost
+    assert [row[-1] for row in rows] == [120 * 1 + 30 * 2, UPPER_BOUND]
