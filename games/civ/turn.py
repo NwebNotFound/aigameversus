@@ -5,11 +5,12 @@ The steps of a round, in the order they must run:
     begin_round(state, ctx)
     diplomacy.expire(state, ctx)
     economy.finish_construction(state, ctx)
-    # diplomacy phase: diplomacy.message, propose_treaty, respond_treaty, propose_trade,
-    #                  respond_trade, break_treaty, declare_war
+    # orders, in this order:
+    #   diplomacy: diplomacy.message, propose_treaty, respond_treaty, propose_trade,
+    #              respond_trade, declare_war, break_treaty
+    #   cities:    economy.build, demolish, set_focus; armies.train
+    #   armies:    armies.disband, split, merge, settle, move
     diplomacy.settle(state, data, ctx)  # the trade step: tributes and agreed trades
-    # orders for cities: economy.build, demolish, set_focus; armies.train
-    # orders for armies: armies.disband, split, merge, settle, move
     economy.produce(state, data, ctx)
     armies.starve(state, data, ctx)
     economy.grow(state, data, ctx)
