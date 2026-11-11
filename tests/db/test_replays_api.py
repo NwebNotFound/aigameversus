@@ -51,6 +51,7 @@ def test_replays_are_the_finished_matches_newest_first(client, database_url):
         },
         "origin": "played",
         "real": False,
+        "prompt_version": "liars_deck-p1",
     }
     assert replays[1]["cost_micro_eur"] == 0
     assert len(top["winners"]) == 1

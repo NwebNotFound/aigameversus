@@ -1009,6 +1009,7 @@ Each entry: date, decision, why, alternatives considered.
   "no data" is `None`, never 0.
 - **Alternatives:** counting in the plugin state (changes the plugins, and old
   logs would have no numbers); storing the numbers per match in a table.
+
 ## D-054 · Poker statistics: definitions
 
 - **Date:** 2026-11-11
@@ -1027,6 +1028,7 @@ Each entry: date, decision, why, alternatives considered.
   tests check on real bot matches).
 - **Alternatives:** counting a showdown loss only when the hand was weak
   (needs a notion of a "strong" hand); counting every all-in as aggressive.
+
 ## D-055 · Werewolf statistics: definitions
 
 - **Date:** 2026-11-11
@@ -1584,7 +1586,10 @@ Each entry: date, decision, why, alternatives considered.
   server refuses model seats unless it was started with
   `ARENA_ALLOW_MODEL_SEATS=1`, the request must carry `confirm_spend: true`,
   and the provider's key must be set; otherwise nothing is recorded or sent.
-  A cost cap ends the match as `interrupted`. Model matches are not rated yet.
+  A cost cap ends the match as `interrupted`. Model matches are not rated
+  yet. That is a step, not the rule: model matches are rated, one profile per
+  model and personality (D-081), and the API rates them as soon as those
+  profiles are on main.
   Every match records who sat where (`seats`: name, model id, kind) and
   whether it was played here or imported (`origin`).
 - **Why:** The project owner wants to start and watch real matches from the
@@ -1614,6 +1619,54 @@ Each entry: date, decision, why, alternatives considered.
   game's events, planned for the UI); rewriting other players' words to say
   "you" (would change what was said); marking every event that names the
   reader anywhere (marks votes against the player as theirs).
+
+## D-084 · Throne of Tokens armies: movement, training, and what a settler may do
+
+- **Date:** 2026-11-11
+- **Decision:** An army is a list of units on a tile, with an id that is
+  never used twice. Where the spec is silent:
+  - **Movement.** An army has the movement points of its slowest unit.
+    Entering a tile costs the tile's movement cost; leaving a river tile costs
+    the crossing on top. An army with points left may always take one more
+    step, and a tile that costs more than it has left ends its move. A move
+    order names a tile the army can reach this round; the server picks the
+    way that leaves the most points, the shorter of two equal ones. An order
+    lasts one round, and an army moves once per round: it remembers the round
+    of its last move, and so do units split off from it and an army it is
+    merged into. Armies of different nations may pass each other and stand on
+    one tile until combat (step 7.4) says what happens then.
+  - **Training.** One order trains 1 to 10 units of one kind. They are paid at
+    once and stand in the city at once, as a new army. Discounts (barracks)
+    apply to the whole order and each resource is rounded up, so a single
+    swordsman costs its full 3 iron and five cost 12. A forge marks the units
+    trained in its city with +1 strength; units without strength (settlers)
+    get no mark.
+  - **Organising.** `split` names kinds and takes the first units of each
+    kind; it must leave a unit behind. `merge` joins armies on one tile into
+    the first named, up to 10 units. `disband` removes a whole army.
+  - **Founding.** A settler founds a city on the tile where its army stands
+    and is used up. The tile must be at least `city.min_distance` (2) steps
+    from every other city, so no city stands in another's first ring.
+  - **Hunger.** The units a hungry nation loses are drawn from all its units
+    with the same chance each, from a random stream named by round and
+    nation.
+  - The state has a round number, set by the event `round_started`, and all
+    events are applied through `games/civ/turn.py`, which replaces the
+    per-module `apply_event` of the state decision.
+- **Why:** With the spec's costs (forest and hills 2) and its units (most
+  move 1), a rule without the free last step would lock most armies out of
+  most of the map. Naming a tile within reach keeps a move something the
+  server can check against what the player sees, and keeps orders from
+  running on for rounds after the plan changed. Rounding a discount up means
+  it can never make a unit free. New armies instead of joining a garrison
+  keep `train` free of surprises about army sizes. Two steps between cities
+  is what makes the "nearest city works the tile" rule safe for first rings.
+- **Alternatives:** Movement points carried over or spent exactly (slow
+  units could not enter forest); orders to far targets that persist (need
+  path memory and a cancel order); training that takes a round like building
+  (the spec gives building a time and units none); units with ids of their
+  own (longer prompts for little gain; an army's units are told apart by
+  kind); splitting by position in the army (models count badly).
 
 ## D-086 · The watch screen: spoiler-free by allowlist in the web server, playback by moments
 
@@ -1695,8 +1748,10 @@ Each entry: date, decision, why, alternatives considered.
   `rules(settings)` once and for `situation_summary(observation, settings)`
   every turn, and puts the summary in a `<summary>` block above
   `<situation>`; the system message then names that block too. The match
-  records `prompt_version(settings)` in `match_started`, and `arena run
-  --save` writes it into the export. Without a summary the prompt is the one
+  records `prompt_version(settings)` in `match_started` and in its record
+  (column `matches.prompt_version`, also in `/replays`), and `arena run
+  --save` writes it into the export. A `-p2` version always means its rules
+  and its summary together, so the id says exactly what the models read. Without a summary the prompt is the one
   from before, byte for byte (the p1 golden files check it).
 - **Why:** Poker and Werewolf have a second prompt version (new rules, a
   summary of the turn), and an A/B comparison needs every match to say which
@@ -1708,6 +1763,33 @@ Each entry: date, decision, why, alternatives considered.
   would not show up in the log, and the default may change); a summary in
   the system message (that one is meant to be the server's words, not game
   data).
+
+## D-095 · The spend ledger in a database of its own, the key in a file
+
+- **Date:** 2026-11-11
+- **Decision:** The ledger (`model_calls`) lives where `LEDGER_DATABASE_URL`
+  points, by default the match database. The stack keeps it in a Postgres
+  container of its own (`aigv-ledger`, not in the Compose project), dumped
+  daily by `scripts/backup-ledger.sh`. The server starts without the ledger;
+  a model match starts only when the ledger answers and is not empty beside
+  finished model matches played here (503 otherwise; imported matches booked
+  elsewhere). While it is down `/matches/{id}/cost` answers 503 and
+  `/replays` shows every cost as null: the replay list stays usable, and an
+  unknown cost is not shown as 0. The stack gets the provider key as a read-only file
+  (`OPENROUTER_API_KEY_FILE`), read at every start of a model match; model
+  seats, ledger URL and key come in one override file,
+  `docker-compose.models.yml`, and the plain stack has no key.
+- **Why:** The month cap is a sum over the ledger. In the stack's database
+  it would be reset by `docker compose down -v`, and a stack pointed at a new
+  database would see an empty month and could spend the cap again. An empty
+  ledger beside finished model matches is exactly that case. A key in the
+  environment of Compose shows up in `docker inspect`; a file can be replaced
+  without a restart.
+- **Alternatives:** The ledger in the stack's database (reset with its
+  volume); a check of the month against the provider's bill (needs a second
+  key with billing rights, and comes late); refusing to start without the
+  ledger (bot matches would stop too); a ledger migration set of its own (the
+  ledger database gets all tables instead, unused ones stay empty).
 
 ## D-097 · The leaderboard ranks models; random bots are one row
 

@@ -64,10 +64,23 @@ rounded down.
 | settler | 6 food, 2 wood | 0 | 1 | 1 food | founds a city, any city |
 | scout | 2 food, 1 gold | 1 | 3 | — | vision +2, flees, any city |
 
-Units without "any city" need a barracks. An army holds up to 10 units. Upkeep
-is paid every round after your population has eaten. In a round in which you
-cannot pay it in full you lose a random unit. A granary covers the first 2
-such rounds in a row; several granaries do not add up.
+Units without "any city" need a barracks in the city that trains them. One
+order trains 1 to 10 units of a kind; they are paid at once and stand in the
+city as a new army. A barracks takes 20 % off the whole order, rounded up.
+
+An army is a stack of up to 10 units on one tile. You can split units off as
+a new army, merge armies that stand on one tile, and disband an army. An army
+moves once per round and is as fast as its slowest unit. Entering a tile
+costs its move cost, leaving a river 1 more; an army with points left may
+always take one more step, so every army gets at least one tile far.
+Mountains and water cannot be entered.
+
+A settler founds a city on the tile where its army stands and is used up. The
+tile must be at least 2 steps from every other city.
+
+Upkeep is paid every round after your population has eaten. In a round in
+which you cannot pay it in full you lose a random unit. A granary covers the
+first 2 such rounds in a row; several granaries do not add up.
 
 ## Combat
 

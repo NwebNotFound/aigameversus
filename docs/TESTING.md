@@ -110,6 +110,10 @@ fixtures from `tests/conftest.py`, which answer with LiteLLM's own mock
 responses and refuse every name lookup, so a test fails if anything tries to
 reach the network.
 
+A ledger in a database of its own is a second empty schema, the
+`other_database_url` fixture; a ledger that is down is a URL on a local port
+where nothing listens (`tests/db/test_ledger_database.py`).
+
 ## Secret scan
 
 CI scans the full git history with gitleaks:
