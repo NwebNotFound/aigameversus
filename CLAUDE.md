@@ -304,7 +304,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
   liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
   poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
   werewolf/     Werewolf: plugin, abilities, roles, templates, selection
-  civ/          Throne of Tokens, in parts: data, map generation, fog of war
+  civ/          Throne of Tokens, in parts: data, map, fog of war, economy
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -492,13 +492,14 @@ balance `weight`.
 
 An entry in `games/civ/data/units.yaml` or `buildings.yaml`, or a new file in
 `games/civ/data/events/`; no code. `games/civ/data/README.md` lists the fields;
-`uv run python -m games.civ.data_loader` checks the result. The systems that
-use the data land in phase 7.
+`uv run python -m games.civ.data_loader` checks the result. A building's cost,
+yields and the other fields the economy reads work at once; the README says
+which effects still wait for their system.
 
 ### The Throne of Tokens map
 
-Built so far of the game itself (roadmap step 7.1; there is no plugin yet, so
-`arena games` does not list it):
+The game is built in parts (roadmap steps 7.1 and 7.2 so far; there is no
+plugin yet, so `arena games` does not list it). The map:
 
 - `games/civ/world.py`: `generate_map(players, data, rng)` returns a
   `WorldMap`: rows of terrain ids and one `Start` per nation. A tile is
@@ -511,6 +512,36 @@ Built so far of the game itself (roadmap step 7.1; there is no plugin yet, so
 The size of the map, the terrain mix, the rare tiles and the tiles around a
 capital are numbers under `map` in `games/civ/data/balance.yaml`; the README
 next to it says what each does and what the generator guarantees.
+
+### The Throne of Tokens economy
+
+- `games/civ/state.py`: `CivState` holds the map, one `Nation` per player (its
+  stock of the four resources, its count of hungry rounds) and the cities in
+  founding order. `new_game(players, data)` is the state before the map is
+  drawn. Later steps add their part of the state here.
+- `games/civ/economy.py`: the rules of cities. Questions about the state
+  (`city_yields`, `worked_tiles`, `building_slots`, `city_viewpoints` for the
+  fog, `upkeep`, `units_lost_to_hunger`), orders with a check each
+  (`build_problem` and `build`, `demolish_problem` and `demolish`,
+  `focus_problem` and `set_focus`; `found_city`) and the steps of a round
+  (`finish_construction`, `produce`, `grow`). The module docstring shows the
+  order of a round.
+
+How it follows the engine's rules, and what the next systems should copy:
+
+- A function that changes something takes the `TurnContext` and emits events;
+  only `apply_event` touches the state. The turn flow (step 7.6) passes the
+  plugin's context and routes events to `apply_event`.
+- An event carries the outcome (the cost paid, the new stock), so applying it
+  reads no game data, and every event is private to the nation it concerns:
+  what others learn about a city comes from their fog view.
+- A `*_problem` function returns `None` or a message for the player. The
+  order itself raises `ValueError` when it is not legal, so whoever resolves
+  a round checks each order again at that moment: trades and other orders
+  come first and may have used up what it needs.
+- Until armies are in the state (step 7.3), `produce` gets the units of each
+  nation as an argument, and removing the units `units_lost_to_hunger` counts
+  is left to that step.
 
 ### A system
 
