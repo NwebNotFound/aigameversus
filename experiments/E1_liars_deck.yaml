@@ -10,7 +10,7 @@
 id: E1
 title: "Liar's Deck: a league of cheap models, reasoning effort, and stronger guests"
 version: 1
-status: proposed          # proposed -> approved -> running -> closed; approved only when every stage is
+status: approved          # approved by Nils 2026-11-11 (stage B, C after A); -> running -> closed
 registered: "2026-11-11"
 author: Arena Researcher
 amendments: []
@@ -20,8 +20,17 @@ approvals:
     date: "2026-11-11"
     by: "project owner, passed on by Arena Lead"
     scope: "8 pilot matches up to 0.30 EUR, then the league of 112 matches with a run budget of 3.00 EUR, stopped at 90 %"
-# Stages B and C (together at most 12.00 EUR) are not approved. They are shown
-# to the owner with their estimates and budgets before anything of them is played.
+  - stages: [B, C]
+    date: "2026-11-11"
+    by: "project owner, passed on by Arena Lead"
+    scope: >
+      After stage A ran clean (every model below 10 % fallback turns, no cap
+      reached), one stage after the other: B with 4.50 EUR, C with 7.50 EUR,
+      each stopped at 90 % of its budget, one match at a time through the
+      arena API. The match cap stays 0.50 EUR: the plan expects about 0.05
+      (B) and 0.08 EUR (C) per match and asks for no higher cap. The four
+      guest models start only after Arena Builder has checked their ids,
+      tool support and prices.
 
 question: >
   Three questions, one game. A: do the eight cheap roster models differ in

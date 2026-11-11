@@ -7,8 +7,8 @@ experiment has been played.
 
 Two kinds of matches are analysed with the same tools: matches of a
 registered experiment, and any match somebody starts by hand in the UI or on
-the command line. Every paid run needs the project owner's own yes; of
-experiment 1 he has approved the pilot and stage A.
+the command line. Every paid run needs the project owner's own yes; he has
+approved all of experiment 1: the pilot and stage A first, then B and C.
 
 State: 2026-11-11, `main` at `b8dc53e`.
 
@@ -76,8 +76,8 @@ the cap stays unplanned.
 | --- | --- | --- | --- |
 | Spent before | 6 | | 0.18 |
 | E1 stage A: league of the 8 cheap models, Liar's Deck (approved; pilot of 8 matches up to 0.30, stop at 90 %) | 112 | 2.20 | 3.00 |
-| E1 stage B: one model at high and low reasoning effort (not approved) | 96 | 4.20 | 4.50 |
-| E1 stage C: 4 stronger models as guests among cheap hosts (not approved) | 96 | 7.20 | 7.50 |
+| E1 stage B: one model at high and low reasoning effort (approved, after A) | 96 | 4.20 | 4.50 |
+| E1 stage C: 4 stronger models as guests among cheap hosts (approved, after A) | 96 | 7.20 | 7.50 |
 | Poker in duplicate mode, cheap roster (own plan, later; not approved) | 48 | 2.60 | 2.80 |
 | Not assigned | | | 2.02 |
 | Reserve, 20 % | | | 5.00 |
