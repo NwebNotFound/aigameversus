@@ -46,7 +46,7 @@ The stack has five services, each with a healthcheck:
 
 | Service | Address | Notes |
 | --- | --- | --- |
-| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, leaderboard and player profiles; New match and Replays are "soon" placeholders |
+| Web UI | <http://127.0.0.1:3100> | SvelteKit spectator UI: home page, live view of a match, leaderboard and player profiles; New match and Replays are "soon" placeholders |
 | Arena API | <http://127.0.0.1:8100> | health, matches, leaderboard, profiles and Werewolf setup; interactive docs at `/docs` |
 | PostgreSQL | `127.0.0.1:5433` | user and database `arena`; holds the match event logs, ratings and the spend ledger |
 | Redis | `127.0.0.1:6380` | match queue; today only the worker pings it |

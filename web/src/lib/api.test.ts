@@ -191,3 +191,145 @@ describe('profileStats', () => {
 		});
 	});
 });
+
+const RECORD = {
+	...MATCH,
+	seed: 7,
+	settings: {},
+	finished_at: null,
+	placements: null
+};
+
+/** Answers like the arena for match m1: record, board, cost and, if `running`, control. */
+function arena(running: boolean) {
+	return (url: string) => {
+		const path = new URL(url).pathname;
+		if (path === '/matches/m1') return Response.json(RECORD);
+		if (path === '/matches/m1/board')
+			return Response.json({ game: 'poker', events: 3, spec: null });
+		if (path === '/matches/m1/cost') return Response.json({ total_micro_eur: 0, players: {} });
+		if (path === '/matches/m1/control') {
+			return running
+				? Response.json({ paused: false, turn_delay: 1 })
+				: Response.json({ detail: 'not running' }, { status: 409 });
+		}
+		return new Response('', { status: 404 });
+	};
+}
+
+describe('liveState', () => {
+	it('gathers record, board, cost and control of a running match', async () => {
+		const { calls, fetchFn } = fakeFetch(arena(true));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m1');
+
+		expect(result).toEqual({
+			state: 'ok',
+			data: {
+				match: RECORD,
+				board: { game: 'poker', events: 3, spec: null },
+				cost: { total_micro_eur: 0, players: {} },
+				control: { paused: false, turn_delay: 1 }
+			}
+		});
+		expect(calls.sort()).toEqual([
+			'http://arena:8000/matches/m1',
+			'http://arena:8000/matches/m1/board',
+			'http://arena:8000/matches/m1/control',
+			'http://arena:8000/matches/m1/cost'
+		]);
+	});
+
+	it('has no control for a match that is not running', async () => {
+		const { fetchFn } = fakeFetch(arena(false));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m1');
+
+		expect(result).toMatchObject({ state: 'ok', data: { control: null } });
+	});
+
+	it('reports an unknown match as not found', async () => {
+		const { calls, fetchFn } = fakeFetch(arena(true));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m2');
+
+		expect(result).toEqual({ state: 'not_found' });
+		expect(calls).toEqual(['http://arena:8000/matches/m2']);
+	});
+
+	it('reports a failing part as unreachable', async () => {
+		const { fetchFn } = fakeFetch((url) =>
+			url.endsWith('/cost') ? new Response('boom', { status: 500 }) : arena(true)(url)
+		);
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).liveState('m1');
+
+		expect(result).toEqual({ state: 'unreachable', reason: 'the arena answered 500' });
+	});
+});
+
+describe('control', () => {
+	function recording() {
+		const requests: { url: string; method: string; body: unknown }[] = [];
+		const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			requests.push({
+				url: String(input),
+				method: init?.method ?? 'GET',
+				body: init?.body ? JSON.parse(String(init.body)) : null
+			});
+			return Response.json({ paused: true, turn_delay: 1 });
+		}) as typeof fetch;
+		return { requests, fetchFn };
+	}
+
+	it('posts pause, resume and abort', async () => {
+		const { requests, fetchFn } = recording();
+		const client = createArenaClient('http://arena:8000', fetchFn);
+
+		for (const action of ['pause', 'resume', 'abort'] as const)
+			await client.control('m1', { action });
+
+		expect(requests).toEqual(
+			['pause', 'resume', 'abort'].map((action) => ({
+				url: `http://arena:8000/matches/m1/${action}`,
+				method: 'POST',
+				body: null
+			}))
+		);
+	});
+
+	it('puts a new speed', async () => {
+		const { requests, fetchFn } = recording();
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).control('m1', {
+			action: 'speed',
+			turn_delay: 0.25
+		});
+
+		expect(requests).toEqual([
+			{ url: 'http://arena:8000/matches/m1/speed', method: 'PUT', body: { turn_delay: 0.25 } }
+		]);
+		expect(result).toEqual({ state: 'ok', data: { paused: true, turn_delay: 1 } });
+	});
+
+	it('reports a match that is not running as not found', async () => {
+		const { fetchFn } = fakeFetch(() => Response.json({ detail: 'x' }, { status: 409 }));
+
+		const result = await createArenaClient('http://arena:8000', fetchFn).control('m1', {
+			action: 'pause'
+		});
+
+		expect(result).toEqual({ state: 'not_found' });
+	});
+});
+
+describe('eventsUrl', () => {
+	it('is the WebSocket of the match on the arena', () => {
+		expect(createArenaClient('http://arena:8000/').eventsUrl('m1')).toBe(
+			'ws://arena:8000/matches/m1/events'
+		);
+		expect(createArenaClient('https://arena.example').eventsUrl('a/b')).toBe(
+			'wss://arena.example/matches/a%2Fb/events'
+		);
+	});
+});

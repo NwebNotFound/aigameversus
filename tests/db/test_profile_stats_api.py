@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from arena.api import ratings
 from arena.api.app import app
 from arena.stats import STATS
 from tests.db.test_matches_api import as_events, follow, start
@@ -76,3 +77,16 @@ def test_unknown_profile_has_no_stats(client):
     response = client.get("/profiles/00000000-0000-0000-0000-000000000000/stats")
 
     assert response.status_code == 404
+
+
+def test_only_the_newest_matches_of_a_game_count(client, monkeypatch):
+    logs = [play(client, game="liars_deck", seed=seed) for seed in (7, 8, 9)]
+    p1 = bot(client, "liars_deck", "p1")
+    monkeypatch.setattr(ratings, "MAX_STATS_MATCHES", 2)
+
+    game = client.get(f"/profiles/{p1}/stats").json()["games"][0]
+
+    liars = STATS["liars_deck"]
+    newest = liars.aggregate([liars.match_stats(log)["p1"] for log in logs[1:]])
+    assert game["matches"] == 2
+    assert game["stats"] == newest.model_dump()
