@@ -2,10 +2,11 @@
 	import { onMount } from 'svelte';
 	import type { ControlAction, LiveState, MatchEvent, Transcript } from '#lib/api.js';
 	import ViewSwitch from '#lib/components/ViewSwitch.svelte';
+	import AnalyticsPanel from '#lib/components/analytics/AnalyticsPanel.svelte';
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS, euros, merge } from '#lib/live.js';
-	import { langOf, mergeSeats, namedLines } from '#lib/viewer.js';
+	import { colourKey, langOf, mergeSeats, namedLines, seatName } from '#lib/viewer.js';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -24,6 +25,7 @@
 		'connecting'
 	);
 	let confirmAbort = $state(false);
+	let tab = $state<'watch' | 'analytics'>('watch');
 	let busy = $state(false);
 	let problem = $state<string | null>(null);
 
@@ -129,69 +131,92 @@
 		</div>
 		<div class="bar">
 			<ViewSwitch {view} />
+			<div class="tabs" role="tablist" aria-label="Match views">
+				<button role="tab" aria-selected={tab === 'watch'} onclick={() => (tab = 'watch')}
+					>Watch</button
+				>
+				<button
+					role="tab"
+					aria-selected={tab === 'analytics'}
+					onclick={() => (tab = 'analytics')}
+					data-testid="tab-analytics">Analytics</button
+				>
+			</div>
 			{#if view === 'spectator'}<span class="muted" data-testid="seed">seed {live.match.seed}</span
 				>{/if}
 		</div>
 		{#if problem}<p class="problem" role="alert">{problem}</p>{/if}
 	</header>
 
-	<WatchScreen
-		spec={live.board.spec}
-		{view}
-		events={log}
-		lines={namedLines(transcript?.lines ?? [], players)}
-		seats={live.match.players}
-		{players}
-		costs={live.cost.players}
-		active={typeof turn === 'string' ? turn : null}
-		placements={live.match.placements}
-		ended={live.match.status === 'finished'}
-	>
-		{#snippet controls()}
-			{#if live.control}
-				<div class="controls" role="group" aria-label="Controls">
-					{#if live.control.paused}
-						<button class="primary" disabled={busy} onclick={() => command({ action: 'resume' })}
-							>Resume</button
-						>
-					{:else}
-						<button disabled={busy} onclick={() => command({ action: 'pause' })}>Pause</button>
-					{/if}
-					<label>
-						Speed
-						<select
-							disabled={busy}
-							value={live.control.turn_delay}
-							onchange={(e) =>
-								command({ action: 'speed', turn_delay: Number(e.currentTarget.value) })}
-						>
-							{#if !SPEEDS.some((s) => s.turn_delay === live.control?.turn_delay)}
-								<option value={live.control.turn_delay}>{live.control.turn_delay} s</option>
-							{/if}
-							{#each SPEEDS as speed (speed.turn_delay)}
-								<option value={speed.turn_delay}>{speed.label} ({speed.turn_delay} s)</option>
-							{/each}
-						</select>
-					</label>
-					{#if confirmAbort}
-						<span class="confirm">
-							Abort for good?
-							<button class="danger" disabled={busy} onclick={() => command({ action: 'abort' })}>
-								Yes, abort
+	{#if tab === 'analytics'}
+		<div class="analytics-tab">
+			<AnalyticsPanel
+				id={params.id}
+				{view}
+				version={log.length}
+				names={Object.fromEntries(live.match.players.map((s) => [s, seatName(s, players)]))}
+				colours={Object.fromEntries(live.match.players.map((s) => [s, colourKey(s, players)]))}
+			/>
+		</div>
+	{:else}
+		<WatchScreen
+			spec={live.board.spec}
+			{view}
+			events={log}
+			lines={namedLines(transcript?.lines ?? [], players)}
+			seats={live.match.players}
+			{players}
+			costs={live.cost.players}
+			active={typeof turn === 'string' ? turn : null}
+			placements={live.match.placements}
+			ended={live.match.status === 'finished'}
+		>
+			{#snippet controls()}
+				{#if live.control}
+					<div class="controls" role="group" aria-label="Controls">
+						{#if live.control.paused}
+							<button class="primary" disabled={busy} onclick={() => command({ action: 'resume' })}
+								>Resume</button
+							>
+						{:else}
+							<button disabled={busy} onclick={() => command({ action: 'pause' })}>Pause</button>
+						{/if}
+						<label>
+							Speed
+							<select
+								disabled={busy}
+								value={live.control.turn_delay}
+								onchange={(e) =>
+									command({ action: 'speed', turn_delay: Number(e.currentTarget.value) })}
+							>
+								{#if !SPEEDS.some((s) => s.turn_delay === live.control?.turn_delay)}
+									<option value={live.control.turn_delay}>{live.control.turn_delay} s</option>
+								{/if}
+								{#each SPEEDS as speed (speed.turn_delay)}
+									<option value={speed.turn_delay}>{speed.label} ({speed.turn_delay} s)</option>
+								{/each}
+							</select>
+						</label>
+						{#if confirmAbort}
+							<span class="confirm">
+								Abort for good?
+								<button class="danger" disabled={busy} onclick={() => command({ action: 'abort' })}>
+									Yes, abort
+								</button>
+								<button disabled={busy} onclick={() => (confirmAbort = false)}>No</button>
+							</span>
+						{:else}
+							<button class="danger" disabled={busy} onclick={() => (confirmAbort = true)}>
+								Abort
 							</button>
-							<button disabled={busy} onclick={() => (confirmAbort = false)}>No</button>
-						</span>
-					{:else}
-						<button class="danger" disabled={busy} onclick={() => (confirmAbort = true)}>
-							Abort
-						</button>
-					{/if}
-				</div>
-			{:else if live.match.status === 'finished'}
-				<a class="replay-link" href="/replays/{params.id}{viewQuery}">Watch the replay →</a>
-			{/if}
-		{/snippet}
-	</WatchScreen>
+						{/if}
+					</div>
+				{:else if live.match.status === 'finished'}
+					<a class="replay-link" href="/replays/{params.id}{viewQuery}">Watch the replay →</a>
+				{/if}
+			{/snippet}
+		</WatchScreen>
+	{/if}
 {/if}
 
 <style>
@@ -324,5 +349,31 @@
 
 	.problem {
 		color: var(--danger);
+	}
+	.tabs {
+		display: inline-flex;
+		gap: 0.25rem;
+	}
+
+	.tabs button {
+		font: inherit;
+		font-size: 0.875rem;
+		min-height: auto;
+		color: var(--muted);
+		background: none;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		border-radius: 0;
+		padding: 0.3rem 0.5rem;
+		cursor: pointer;
+	}
+
+	.tabs button[aria-selected='true'] {
+		color: var(--text);
+		border-bottom-color: var(--accent);
+	}
+
+	.analytics-tab {
+		padding-block: 0.75rem 2rem;
 	}
 </style>
