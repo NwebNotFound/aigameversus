@@ -63,14 +63,33 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         raise ConfigError(f"{path.name}: {problems}") from invalid
 
 
-def missing_keys(config: Config, model_ids: Iterable[str]) -> list[str]:
-    """The key variables that the providers of these models need and the environment lacks.
+def load_keys(config: Config, model_ids: Iterable[str]) -> list[str]:
+    """Put the keys these models need into the environment; return the variables still missing.
 
+    A key comes from its variable (`OPENROUTER_API_KEY`) or from the file that
+    `<variable>_FILE` names, which wins and is read on every call, so a
+    replaced file counts from the next match. LiteLLM reads the variable.
     Without its key every seat would fail at its first call, after that call
     was booked, and random bots would play on under the models' names.
     """
     needed = {KEY_VARIABLES[config.models[model_id].provider] for model_id in model_ids}
+    for name in needed:
+        _read_key_file(name)
     return sorted(name for name in needed if not os.environ.get(name))
+
+
+def _read_key_file(variable: str) -> None:
+    path = os.environ.get(f"{variable}_FILE")
+    if not path:
+        return
+    try:
+        key = Path(path).read_text(encoding="utf-8").strip()
+    except OSError:
+        key = ""
+    if key:
+        os.environ[variable] = key
+    else:  # a key file that is gone or empty means no key, not the one read before
+        os.environ.pop(variable, None)
 
 
 def display_name(config: Config, model_id: str) -> str:

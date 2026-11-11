@@ -14,7 +14,8 @@ from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect
 
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
-from arena.config import load_config, missing_keys
+from arena.config import load_config, load_keys
+from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
@@ -132,7 +133,7 @@ def _model_seats(new: NewMatch) -> dict[str, str]:
             f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
             f"{', '.join(config.models)}",
         )
-    if missing := missing_keys(config, new.models):
+    if missing := load_keys(config, new.models):
         raise HTTPException(
             503,
             f"The server lacks {', '.join(missing)}, the provider's API key. Nothing was started.",
@@ -212,7 +213,9 @@ class Replay(BaseModel):
     winners: list[str] = Field(description="The players with rank 1")
     started_at: datetime
     finished_at: datetime
-    cost_micro_eur: int = Field(description="What its model calls cost; 0 for bots")
+    cost_micro_eur: int | None = Field(
+        description="What its model calls cost; 0 for bots, null while the ledger cannot be read"
+    )
     seats: dict[str, Seat] | None = Field(description="Who played each seat; null for old rows")
     origin: Origin
     real: bool = Field(description="Whether a model played any seat")
@@ -310,7 +313,15 @@ async def get_cost(match_id: UUID, live: Live) -> Cost:
 
 @router.get("/replays")
 async def list_replays(live: Live) -> list[Replay]:
-    """The newest 100 finished matches, newest first, with winners and cost."""
+    """The newest 100 finished matches, newest first, with winners and cost.
+
+    While the ledger cannot be read the list still answers, with every cost null.
+    """
+    records = await live.matches.finished()
+    try:
+        costs = await live.ledger.costs([record.id for record in records])
+    except LedgerUnavailable:  # the list stays readable; the costs are unknown, not 0
+        costs = {}
     return [
         Replay(
             id=record.id,
@@ -319,10 +330,10 @@ async def list_replays(live: Live) -> list[Replay]:
             winners=[p.player for p in record.placements or [] if p.rank == 1],
             started_at=record.started_at,
             finished_at=record.finished_at,
-            cost_micro_eur=cost,
+            cost_micro_eur=costs.get(record.id),
             seats=record.seats,
             origin=record.origin,
             real=record.real,
         )
-        for record, cost in await live.matches.finished_with_cost()
+        for record in records
     ]

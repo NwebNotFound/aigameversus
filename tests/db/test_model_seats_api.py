@@ -165,6 +165,63 @@ def test_bot_match_names_its_seats_as_random_bots(client):
     assert KEY not in response.text
 
 
+def rated_rows(database_url):
+    """Rows of every table that rating and memory write, per table."""
+    tables = (
+        "player_profiles",
+        "ratings",
+        "rated_matches",
+        "match_seats",
+        "relationships",
+        "remembered_matches",
+    )
+
+    async def read():
+        pool = await connect(database_url)
+        try:
+            return {table: await pool.fetchval(f"SELECT count(*) FROM {table}") for table in tables}
+        finally:
+            await pool.close()
+
+    return asyncio.run(read())
+
+
+def test_a_finished_model_match_is_not_rated(client, database_url, answer_with):
+    """Model profiles are not built in the API yet (D-082): no rating, no profile, no memory."""
+    answer_with(**PLAY_3)
+
+    response = client.post(
+        "/matches", json={"game": "toy", "models": MODELS, "confirm_spend": True}
+    )
+
+    match = finish(client, response.json()["id"])
+    assert match["status"] == "finished"
+    assert set(rated_rows(database_url).values()) == {0}
+    assert client.get("/leaderboard").json()["rows"] == []
+    bots = finish(client, client.post("/matches", json={"game": "toy"}).json()["id"])
+    assert bots["status"] == "finished"
+    assert rated_rows(database_url)["rated_matches"] == 1  # a bot match is rated
+
+
+def test_key_is_read_from_its_file_at_every_start(client, answer_with, monkeypatch, tmp_path):
+    answer_with(**PLAY_3)
+    key_file = tmp_path / "openrouter_api_key"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    monkeypatch.setenv("OPENROUTER_API_KEY_FILE", str(key_file))
+    body = {"game": "toy", "models": MODELS, "confirm_spend": True}
+
+    key_file.write_text(KEY + "\n", encoding="utf-8")
+    started = client.post("/matches", json=body)
+    played = finish(client, started.json()["id"])
+    key_file.write_text("", encoding="utf-8")  # emptied: the key read before no longer counts
+    refused = client.post("/matches", json=body)
+
+    assert (started.status_code, played["status"]) == (201, "finished")
+    assert refused.status_code == 503
+    assert "OPENROUTER_API_KEY" in refused.json()["detail"]
+    assert KEY not in started.text + refused.text
+
+
 def test_model_seats_get_the_prompt_version_of_the_settings(client, answer_with):
     sent = answer_with(
         mock_response="Check.",
