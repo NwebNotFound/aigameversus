@@ -1,4 +1,5 @@
 import asyncio
+import random
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -211,3 +212,36 @@ def test_new_profile_has_no_games_yet(database_url):
     assert profile.overall is None
     assert profile.per_game == {}
     assert profile.recent_matches == []
+
+
+def test_concurrent_and_repeated_matches_neither_deadlock_nor_lose_updates(database_url):
+    """120 overlapping calls: 60 matches among 8 profiles, each applied twice, in random order."""
+    rng = random.Random(2026)
+
+    async def scenario(store, pool):
+        ids = await profiles(store, 8)
+        jobs = []
+        placements_total = 0
+        for _ in range(60):
+            players = rng.sample(ids, rng.randint(2, 6))
+            ranks = [rng.randint(1, len(players)) for _ in players]
+            placements_total += len(players)
+            match_id = uuid4()
+            jobs += [(match_id, placed(players, ranks)), (match_id, placed(players, ranks))]
+        rng.shuffle(jobs)
+        results = await asyncio.gather(
+            *(store.apply_match_result(m, "poker", p) for m, p in jobs), return_exceptions=True
+        )
+        rows = await pool.fetch("SELECT rating, games_played FROM ratings")
+        rated = await pool.fetchval("SELECT count(*) FROM rated_matches")
+        return results, rows, rated, placements_total
+
+    results, rows, rated, placements_total = run(database_url, scenario)
+
+    errors = [r for r in results if isinstance(r, BaseException)]
+    assert errors == []
+    assert sum(r is not None for r in results) == 60
+    assert rated == 60
+    # Zero-sum: every point won was lost by someone, so the ratings still average 1000.
+    assert sum(row["rating"] - 1000 for row in rows) == pytest.approx(0, abs=1e-6)
+    assert sum(row["games_played"] for row in rows) == placements_total
