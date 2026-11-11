@@ -1,6 +1,6 @@
 import { ARENA_API_URL } from '$app/env/private';
 import { createArenaClient } from '#lib/api.js';
-import { matchLine } from '#lib/match-line.js';
+import { groupByBatch, matchLine } from '#lib/match-line.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
@@ -29,5 +29,21 @@ export const load: PageServerLoad = async ({ fetch }) => {
 					})
 				)
 			: [];
-	return { matches, lines, playable };
+	const running = matches.state === 'ok' ? matches.matches : [];
+	const entries = groupByBatch(
+		running.map((match, index) => ({ match, line: lines[index] })),
+		(item) => item.match.batch
+	);
+	const summaries = Object.fromEntries(
+		await Promise.all(
+			entries
+				.filter((entry) => entry.batch !== null)
+				.map(async (entry) => {
+					const id = entry.batch!.id;
+					const summary = await arena.batch(id);
+					return [id, summary.state === 'ok' ? summary.data : null] as const;
+				})
+		)
+	);
+	return { matches, entries, summaries, playable };
 };

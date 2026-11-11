@@ -19,6 +19,31 @@ export interface MatchSummary {
 	started_at: string;
 	/** Who sits where: set for every match since model seats (D-082). */
 	seats?: Record<string, RecordSeat>;
+	/** The batch it was played in (a league, an experiment stage); null or missing: none. */
+	batch?: MatchBatch | null;
+}
+
+/** A match's batch, as `POST /matches` took it. */
+export interface MatchBatch {
+	id: string;
+	label: string;
+	index: number | null;
+	of: number | null;
+	budget_eur: number | null;
+}
+
+/** `GET /batches/{id}`: how far a batch is and what it cost. */
+export interface BatchSummary {
+	id: string;
+	label: string;
+	of: number | null;
+	budget_eur: number | null;
+	matches: number;
+	statuses: Partial<Record<MatchStatus, number>>;
+	/** null while the ledger cannot be read. */
+	cost_micro_eur: number | null;
+	first_started_at: string;
+	last_started_at: string;
 }
 
 /** A match as `GET /matches/{id}` returns it. */
@@ -381,6 +406,7 @@ export interface ArenaClient {
 	/** The board after the stored turns, and what the match cost so far. */
 	board(id: string): Promise<ApiResult<Board>>;
 	cost(id: string): Promise<ApiResult<Cost>>;
+	batch(id: string): Promise<ApiResult<BatchSummary>>;
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
 	/** The readable play-by-play; without `spoilers`, only what every player could see. */
@@ -521,6 +547,13 @@ export function createArenaClient(
 				`/matches/${encodeURIComponent(id)}/cost`,
 				(body) => isObject(body) && isObject(body.players),
 				[404, 422]
+			);
+		},
+
+		batch(id) {
+			return getJson<BatchSummary>(
+				`/batches/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && isObject(body.statuses)
 			);
 		},
 

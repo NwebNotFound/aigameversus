@@ -109,3 +109,36 @@ test('a running match reads as its players, kind and round, never as seat ids', 
 		await request.post(`${arena}/matches/${id}/abort`);
 	}
 });
+
+test('the running matches of one batch are one row that says how far the batch is', async ({
+	page,
+	request
+}) => {
+	const arena = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
+	const setup = await request.get(`${arena}/batches/none-yet`);
+	test.skip(
+		!(await setup.text()).includes('No match is in batch'),
+		'this arena has no batches yet'
+	);
+	const id = `pw-${test.info().project.name}-${Date.now()}`;
+	const batch = { id, label: 'Test league', of: 5, budget_eur: 1 };
+	const ids: string[] = [];
+	for (const index of [1, 2]) {
+		const started = await request.post(`${arena}/matches`, {
+			data: { game: 'liars_deck', players: 3, turn_delay: 2, batch: { ...batch, index } }
+		});
+		expect(started.ok()).toBe(true);
+		ids.push((await started.json()).id);
+	}
+	try {
+		await page.goto('/');
+
+		const row = page.locator(`[data-testid="batch-row"][data-batch="${id}"]`);
+		await expect(row.getByTestId('batch-line')).toHaveText(
+			/^Test league · 0 of 5 done, 2 running · 0\.0000 € of 1\.00 €$/
+		);
+		await expect(row.getByTestId('running-match')).toHaveCount(2);
+	} finally {
+		await Promise.all(ids.map((match) => request.post(`${arena}/matches/${match}/abort`)));
+	}
+});

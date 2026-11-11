@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { MatchSummary } from './api.js';
-import { matchLine, progressOf } from './match-line.js';
+import type { BatchSummary, MatchSummary } from './api.js';
+import { batchLine, groupByBatch, matchLine, progressOf } from './match-line.js';
 
 const ROSTER = [
 	{
@@ -79,5 +79,67 @@ describe('matchLine', () => {
 
 	it('keeps the row when the cost is not known', () => {
 		expect(matchLine(match({ p1: bot('p1') }), null, null).cost_micro_eur).toBeNull();
+	});
+});
+
+const LEAGUE = {
+	id: 'E1-A2',
+	label: 'E1 league A2',
+	index: 14,
+	of: 120,
+	budget_eur: 3
+};
+
+function summary(changes: Partial<BatchSummary> = {}): BatchSummary {
+	return {
+		id: 'E1-A2',
+		label: 'E1 league A2',
+		of: 120,
+		budget_eur: 3,
+		matches: 18,
+		statuses: { finished: 14, running: 4 },
+		cost_micro_eur: 310_000,
+		first_started_at: '2026-11-11T18:00:00Z',
+		last_started_at: '2026-11-11T21:00:00Z',
+		...changes
+	};
+}
+
+describe('batchLine', () => {
+	it('says how far the batch is and what it spent of its budget', () => {
+		expect(batchLine(LEAGUE, summary(), 4)).toBe(
+			'E1 league A2 · 14 of 120 done, 4 running · 0.3100 € of 3.00 €'
+		);
+	});
+
+	it('leaves out what it does not know', () => {
+		const open = { ...LEAGUE, of: null, budget_eur: null };
+		expect(batchLine(open, summary({ of: null, budget_eur: null }), 4)).toBe(
+			'E1 league A2 · 14 done, 4 running · 0.3100 €'
+		);
+		expect(batchLine(LEAGUE, summary({ cost_micro_eur: null }), 4)).toBe(
+			'E1 league A2 · 14 of 120 done, 4 running'
+		);
+		// Without the summary only the running matches on this page are known.
+		expect(batchLine(LEAGUE, null, 3)).toBe('E1 league A2 · 3 running');
+	});
+});
+
+describe('groupByBatch', () => {
+	it('puts the matches of one batch together where its first one was', () => {
+		const items = [
+			{ id: 'a', batch: LEAGUE },
+			{ id: 'b', batch: null },
+			{ id: 'c', batch: LEAGUE },
+			{ id: 'd', batch: { ...LEAGUE, id: 'E9' } }
+		];
+
+		const entries = groupByBatch(items, (item) => item.batch);
+
+		expect(entries.map((e) => [e.batch?.id ?? null, e.items.map((i) => i.id)])).toEqual([
+			['E1-A2', ['a', 'c']],
+			[null, ['b']],
+			['E9', ['d']]
+		]);
 	});
 });
