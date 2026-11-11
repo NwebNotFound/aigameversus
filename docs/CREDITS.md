@@ -52,5 +52,7 @@ licence; none is modified.
 ## Models
 
 Real models are reached only through OpenRouter, only from the `arena` command,
-and only inside the cost caps. No model output is committed to the repository
-unless a file says so.
+and only inside the cost caps. The only model output in the repository is
+`docs/examples/*.json`: unedited logs of three matches played through
+OpenRouter inside the cost caps (which models: see `docs/examples/README.md`).
+Everything else, including every screenshot and GIF, comes from random bots.
