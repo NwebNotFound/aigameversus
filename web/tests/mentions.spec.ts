@@ -30,8 +30,10 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	await page.route(`**/matches/${match.id}/transcript*`, async (route) => {
 		const response = await route.fetch();
 		const body = await response.json();
-		const line = (seq: number, text: string, kind: string) => ({
-			seq,
+		// Lines of their own (no log position): the commentary shows them at any moment, so the
+		// live playout never holds them back.
+		const line = (_id: number, text: string, kind: string) => ({
+			seq: null,
 			kind,
 			actor: 'p1',
 			text: `p1: "${text}"`,
@@ -51,7 +53,13 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 
 	await page.goto(`/matches/${match.id}`);
 
-	const speech = page.getByTestId('commentary').locator('li[data-seq="100000"] .bubble');
+	const bubble = (kind: string, words: string) =>
+		page
+			.getByTestId('commentary')
+			.locator(`li[data-kind="${kind}"]`)
+			.filter({ hasText: words })
+			.locator('.bubble');
+	const speech = bubble('speech', 'two kings with your history');
 	await expect(speech).toBeVisible({ timeout: 15_000 });
 	const name = (await page
 		.locator('[data-testid="cast"] li[data-seat="p2"] strong')
@@ -63,12 +71,12 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	await expect(speech).not.toContainText('p2,');
 
 	// A seat that is not in the match stays as written; one that is becomes a chip.
-	const thought = page.getByTestId('commentary').locator('li[data-seq="100001"] .bubble');
+	const thought = bubble('thought', 'p9 is not here');
 	await expect(thought).toContainText('p9 is not here');
 	await expect(thought.getByTestId('mention')).toHaveAttribute('data-seat', 'p3');
 
 	// What a language glues to an id stays after the chip: "p4s" is p4's chip and an "s".
-	const german = page.getByTestId('commentary').locator('li[data-seq="100002"] .bubble');
+	const german = bubble('speech', 'Frage');
 	await expect(german.getByTestId('mention')).toHaveCount(2);
 	await expect(german.getByTestId('mention').first()).toHaveAttribute('data-seat', 'p4');
 	await expect(german.getByTestId('mention').last()).toHaveAttribute('data-seat', 'p3');
@@ -77,7 +85,7 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	await expect(german).toContainText("'s vote zählt.");
 
 	// Markup is drawn, never shown as asterisks: step labels, bold with a chip inside, a list.
-	const steps = page.getByTestId('commentary').locator('li[data-seq="100003"] .bubble');
+	const steps = bubble('thought', 'Casting My Vote');
 	await expect(steps.getByTestId('step-label')).toHaveText([
 		'Casting My Vote',
 		'Analyzing the Voting Dynamics'
@@ -87,7 +95,7 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 	await expect(steps.getByRole('listitem')).toHaveCount(2);
 
 	// What a model writes is never markup of the page: tags show as their characters.
-	const tags = page.getByTestId('commentary').locator('li[data-seq="100004"] .bubble');
+	const tags = bubble('speech', 'onerror');
 	await expect(tags).toContainText('<img src=x onerror=alert(1)>');
 	await expect(tags.locator('img, b')).toHaveCount(0);
 	await expect(tags.locator('strong')).toHaveText('<b>bold?</b>');
