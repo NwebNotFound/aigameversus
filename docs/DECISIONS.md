@@ -1009,7 +1009,6 @@ Each entry: date, decision, why, alternatives considered.
   "no data" is `None`, never 0.
 - **Alternatives:** counting in the plugin state (changes the plugins, and old
   logs would have no numbers); storing the numbers per match in a table.
-
 ## D-054 · Poker statistics: definitions
 
 - **Date:** 2026-11-11
