@@ -4,6 +4,7 @@ Built from the stored log on every request (`arena.analytics`), so a running mat
 answers with its turns so far. Without `spoilers` only public events are read.
 """
 
+from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from arena.analytics import NoAnalytics, match_analytics
 from arena.api.live import LiveMatches
+from arena.db.ledger import LedgerUnavailable
 
 router = APIRouter(tags=["analytics"])
 
@@ -41,4 +43,20 @@ async def analytics(
     result["meta"]["seats"] = {
         seat: seats[seat].model_id if seat in seats else None for seat in record.players
     }
+    if "report" in result:
+        glance = result["report"]["at_a_glance"]
+        end = record.finished_at or datetime.now(UTC)
+        glance["duration_s"] = round((end - record.started_at).total_seconds())
+        try:
+            costs = await live.ledger.match_costs(match_id)
+            glance["cost_micro_eur"] = sum(costs.values())
+            for row in result["report"]["ranking"]:
+                row["cost_micro_eur"] = costs.get(row["player"], 0)
+        except LedgerUnavailable:  # the report stays readable; the cost is unknown, not 0
+            glance["cost_micro_eur"] = None
+            for row in result["report"]["ranking"]:
+                row["cost_micro_eur"] = None
+        result["report"]["columns"].append(
+            {"key": "cost_micro_eur", "label": {"en": "Cost", "de": "Kosten"}, "kind": "micro_eur"}
+        )
     return result

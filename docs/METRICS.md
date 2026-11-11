@@ -66,6 +66,36 @@ reads public events only (`arena/analytics/situation.py`).
   alive** (village, wolves, on their own) only with spoilers: roles are private
   until a player dies.
 
+## Report (`report`), every game with one
+
+The stats screen in one object, so the web does no maths (`arena/analytics/report.py`;
+Liar's Deck, Poker, Werewolf):
+
+- **`at_a_glance`:** `over`, `winners` (rank 1 of `match_finished`), `players`,
+  `length` (`rounds`, `hands` or `days`), `moves`, `refused`, `fallbacks`
+  (engine events private to a player: spoilers only, else null),
+  `response_ms_mean` and `tokens` (from the per-move `decision` events, null
+  until a log has them), `turning_point` (a key moment, or null). The API adds
+  `duration_s` (start to end, or to now while running) and `cost_micro_eur`
+  (null while the ledger cannot be read).
+- **`columns`:** one entry per ranking field, `{key, label{en,de}, kind}` with
+  kind `number`, `rate` (0..1), `bool`, `text`, `role`, `roles` or `micro_eur`;
+  `spoilers: true` marks a field that is null without spoilers, `heuristic: true`
+  one read from speech.
+- **`ranking`:** one row per player in rank order: `player`, `rank`, the game's
+  fields, the engine counts and `cost_micro_eur`. Liar's Deck: plays, lies,
+  lie rate, liar calls, calls right, trigger pulls, highest risk taken. Poker:
+  chips, pots won, biggest pot, the hand a player went out in. Werewolf: role
+  (spoilers, or once revealed at death), survived, died (phase), accused by
+  others, accusations made, roles claimed, votes on wolves.
+- **`key_moments`:** `{seq, kind, importance 1-3, text{en,de}}` in log order.
+  Liar's Deck: a wrong call, a player caught lying, each elimination, the win.
+  Poker: each elimination, the three biggest pots. Werewolf: each death and
+  execution, a claim a death disproved, a counterclaim of a unique role.
+- **Turning point:** Liar's Deck: the elimination that decided the match.
+  Poker: the biggest pot. Werewolf: the first execution of a village player
+  in a match the wolves won (null otherwise, for now).
+
 ## Behaviour (`behaviour`), Liar's Deck so far
 
 Per player: `tags` (descriptive style tags with their evidence), `too_early`,
