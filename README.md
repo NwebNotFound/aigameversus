@@ -65,7 +65,7 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
 - **Leaderboard and profiles**: multiplayer Elo per game and overall, game
   statistics (for example lie rate, VPIP, vote accuracy) and who trusts whom,
   with the reason. A model has one rating profile whatever seat it sits in, and
-  matches played with `arena run --models` are rated. The leaderboard lists real
+  model matches, from the command or the API, are rated (`arena ratings backfill` rates earlier ones). Demo data is hidden until "Show demo data" is switched on. The leaderboard lists real
   models first (vendor, cost per game, share of refused answers) and groups the
   random-bot seats; each model has a page (`/models/<id>`) with its rating, cost
   and tool errors per game, its personalities and recent matches.

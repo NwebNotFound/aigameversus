@@ -34,6 +34,7 @@ from arena.engine.replay import replay
 from arena.engine.types import Event, MatchPaused, Placement
 from arena.games import load_games
 from arena.memory.store import MemoryStore
+from arena.ratings.backfill import backfill_model_ratings
 from arena.ratings.store import RatingStore
 from arena.transcript import (
     RENDERERS,
@@ -65,6 +66,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     reset.add_argument("--profile", metavar="ID", help="only what this profile remembers")
     reset.add_argument(
         "--yes", action="store_true", help="really forget; needed, it cannot be undone"
+    )
+    ratings = commands.add_parser("ratings", help="the ratings of players")
+    ratings_commands = ratings.add_subparsers(dest="ratings_command", required=True)
+    ratings_commands.add_parser(
+        "backfill", help="rate the finished model matches that no rating has counted yet"
     )
     show = commands.add_parser(
         "transcript", help="print a stored match, or a saved match file, as a readable play-by-play"
@@ -137,6 +143,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             return asyncio.run(_reset_memory(args.profile, args.yes))
         except _WrongCall as error:
             parser.error(str(error))
+    if args.command == "ratings":
+        try:
+            return asyncio.run(_backfill_ratings())
+        except _WrongCall as error:
+            parser.error(str(error))
     if args.command == "games":
         for game in games.values():
             print(f"{game.id:<12} {game.name} ({game.min_players} to {game.max_players} players)")
@@ -167,6 +178,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         return asyncio.run(_play_models(plugin, args.models.split(","), options, args.save, args))
     except _WrongCall as error:
         parser.error(str(error))
+
+
+async def _backfill_ratings() -> int:
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise _WrongCall("ratings backfill needs DATABASE_URL")
+    pool = await connect(url)
+    try:
+        await migrate(pool)
+        done = await backfill_model_ratings(pool)
+    finally:
+        await pool.close()
+    print(f"Rated {done.rated} model match(es).")
+    for note in done.unrated:
+        print(f"Left unrated: {note}")
+    return 0
 
 
 async def _reset_memory(profile: str | None, yes: bool) -> int:
@@ -329,27 +356,9 @@ async def _play_models(
 async def _rate_models(
     pool: Any, match_id: UUID, game: str, seats: dict[str, str], placements: Sequence[Placement]
 ) -> str | None:
-    """Rate a finished model match: one profile per model, the same in every match (D-081).
-
-    Returns a sentence when the match is not rated, else None. A profile is rated once
-    per match, so a model in several seats leaves the match unrated.
-    """
-    models = list(seats.values())
-    if len(set(models)) != len(models):
-        repeated = sorted({m for m in models if models.count(m) > 1})
-        return (
-            f"Not rated: {', '.join(repeated)} sits in several seats, "
-            "and a model is rated once per match"
-        )
-    store = RatingStore(pool)
-    profiles = {seat: await store.model_profile(model) for seat, model in seats.items()}
-    await store.apply_match_result(
-        match_id,
-        game,
-        [Placement(player=str(profiles[p.player]), rank=p.rank) for p in placements],
-        seats=profiles,
-    )
-    return None
+    """Rate a finished model match (D-081). Returns a sentence when it is not rated."""
+    result = await RatingStore(pool).rate_model_match(match_id, game, seats, placements)
+    return result if isinstance(result, str) else None
 
 
 def _match(plugin: GamePlugin, agents: dict, options: dict[str, Any], sink: Any) -> Match:

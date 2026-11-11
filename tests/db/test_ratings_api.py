@@ -48,6 +48,8 @@ def test_empty_leaderboard(client):
         "kind": "all",
         "fallback": True,
         "counts": {"models": 0, "bots": 0},
+        "show_demo": False,
+        "demo_hidden": 0,
         "rows": [],
     }
 
@@ -250,3 +252,24 @@ def test_grouped_bots_cost_is_unknown_when_a_seat_cost_is_unknown():
 
     assert (members, rest) == (2, [])
     assert usage[grouped.profile_id] == Usage(None, 4, 1)
+
+
+def test_demo_profiles_are_hidden_unless_asked_for(database_url, client):
+    from arena.ratings.demo_seed import seed_demo
+
+    async def seed():
+        pool = await connect(database_url)
+        try:
+            await seed_demo(pool, matches=8, seed=2)
+        finally:
+            await pool.close()
+
+    asyncio.run(seed())
+
+    hidden = client.get("/leaderboard", params={"kind": "all"}).json()
+    shown = client.get("/leaderboard", params={"kind": "all", "demo": True}).json()
+
+    assert hidden["rows"] == [] and hidden["show_demo"] is False
+    assert hidden["demo_hidden"] == 6
+    assert shown["show_demo"] is True and shown["demo_hidden"] == 0
+    assert {row["name"].startswith("DEMO ") for row in shown["rows"]} == {True}

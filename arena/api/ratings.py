@@ -68,6 +68,8 @@ class Leaderboard(BaseModel):
         False, description="True when real models were asked for but none is rated yet: all shown"
     )
     counts: dict[str, int] = Field(description="Rows per kind with the other filters applied")
+    show_demo: bool = Field(False, description="Whether the demo profiles are included")
+    demo_hidden: int = Field(0, description="Demo profiles left out, when `show_demo` is false")
     rows: list[LeaderboardRow]
 
 
@@ -153,6 +155,9 @@ async def leaderboard(
     group_bots: Annotated[
         bool, Query(description="One row for all random-bot seats; false lists every seat")
     ] = True,
+    demo: Annotated[
+        bool, Query(description="Include the demo profiles (random bots from demo_seed)")
+    ] = False,
 ) -> Leaderboard:
     """Players by rating, best first: in one game, or overall across all games.
 
@@ -160,7 +165,7 @@ async def leaderboard(
     `fallback` is true. The seats of random bots are grouped into one "Random Bot" row
     unless `group_bots=false`.
     """
-    standings = await store.leaderboard(game)
+    standings = await store.leaderboard(game, demo=demo)
     live: LiveMatches = request.app.state.live
     usage = await store.usage(live.ledger, game)
     grouped, others = group_seat_bots(standings, usage) if group_bots else (None, standings)
@@ -205,6 +210,8 @@ async def leaderboard(
         kind=shown,
         fallback=fallback,
         counts=counts,
+        show_demo=demo,
+        demo_hidden=0 if demo else await store.demo_profiles(),
         rows=rows,
     )
 
