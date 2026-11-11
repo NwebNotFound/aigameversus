@@ -46,7 +46,7 @@ def test_shipped_config_has_the_project_caps_and_a_roster():
     config = load_config()
 
     assert CONFIG_PATH.name == "models.yaml"
-    assert (config.limits.match_eur, config.limits.month_eur) == (Decimal("0.50"), Decimal("5"))
+    assert (config.limits.match_eur, config.limits.month_eur) == (Decimal("0.50"), Decimal("25"))
     # A dollar never counts for less than a euro's worth of cap by default.
     assert config.limits.usd_to_eur >= 1
     # Reasoning models are kept short: their thinking is billed and can crowd out the move.
