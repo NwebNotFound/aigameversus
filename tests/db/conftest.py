@@ -6,6 +6,7 @@ are skipped locally and fail in CI.
 
 import asyncio
 import os
+import socket
 from uuid import uuid4
 
 import asyncpg
@@ -45,3 +46,12 @@ def database_url():
 def other_database_url():
     """A second empty schema, for a database of its own such as the spend ledger."""
     yield from _empty_schema()
+
+
+@pytest.fixture
+def closed_port_url():
+    """A Postgres URL on a local port where nothing listens."""
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    return f"postgresql://arena:arena@127.0.0.1:{port}/arena"

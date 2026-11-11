@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import ROUND_CEILING
+from decimal import ROUND_CEILING, Decimal
 from typing import Any
 from uuid import UUID
 
@@ -86,8 +86,14 @@ class Budget:
         return metered
 
     def _cost(self, model: Model, input_tokens: int, output_tokens: int) -> int:
-        micro_usd = (
-            input_tokens * model.input_usd_per_mtok + output_tokens * model.output_usd_per_mtok
-        )
-        micro_eur = micro_usd * self._config.limits.usd_to_eur
-        return int(micro_eur.to_integral_value(rounding=ROUND_CEILING))
+        return cost_micro_eur(self._config, model, input_tokens, output_tokens)
+
+
+def cost_micro_eur(config: Config, model: Model, input_tokens: float, output_tokens: float) -> int:
+    """What a call of `model` with these tokens costs, in millionths of a euro, rounded up."""
+    micro_usd = (
+        Decimal(input_tokens) * model.input_usd_per_mtok
+        + Decimal(output_tokens) * model.output_usd_per_mtok
+    )
+    micro_eur = micro_usd * config.limits.usd_to_eur
+    return int(micro_eur.to_integral_value(rounding=ROUND_CEILING))
