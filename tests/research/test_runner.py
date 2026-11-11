@@ -379,3 +379,18 @@ def test_a_match_that_ran_when_the_runner_stopped_is_waited_for_not_started_agai
 def test_parallel_must_be_between_1_and_8(tmp_path):
     with pytest.raises(PlanError, match="1 to 8"):
         league(tmp_path, FakeArena(), parallel=9)
+
+
+def test_a_drain_file_stops_new_starts_and_lets_running_matches_finish(tmp_path):
+    arena = FakeArena(cost=1_000, polls=2)
+    (tmp_path / "DRAIN").write_text("", encoding="utf-8")
+    first = league(tmp_path, arena, parallel=2)
+    first.start(first.matches[0])  # one match was already running
+
+    with pytest.raises(RunStopped, match="drained"):
+        league(tmp_path, arena, parallel=2).run()
+    assert len(arena.started) == 1 and len(_lines(tmp_path)) == 1
+
+    (tmp_path / "DRAIN").unlink()  # resume
+    reports = league(tmp_path, arena, parallel=2).run()
+    assert len(reports) == 120 and len(arena.started) == 120

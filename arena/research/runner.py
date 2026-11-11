@@ -18,6 +18,10 @@ The budget is the stage's (`budget_eur`), or the pilot's (`pilot_budget_eur`)
 with `--pilot`. These stops come on top of the arena's caps per match and per
 month, which the server enforces on every call.
 
+Drain and resume (e.g. for a rebuild of the arena): create `<out>/DRAIN`; the
+runner starts nothing more, waits for the running matches and stops. Delete the
+file and start the runner again; it continues from runs.jsonl and started.jsonl.
+
 `--bots` plays the same schedule with random bots, for free: a dry run of the
 runner against a live server.
 """
@@ -324,6 +328,9 @@ class Runner:
         pending = [m for m in self.matches if m.order not in finished and m.order not in busy]
         stop: RunStopped | None = None
         while running or (pending and stop is None):
+            if stop is None and pending and self.drain_path.exists():
+                stop = RunStopped(f"drained: {self.drain_path} exists; no new match started")
+                self.say(f"draining: waiting for {len(running)} running matches")
             while stop is None and pending and len(running) < self.parallel:
                 load = Counter(
                     seat.split("@")[0] for match, _ in running.values() for seat in match.seats
@@ -383,6 +390,11 @@ class Runner:
             ok = status == 200 and isinstance(cost, dict)
             costs.append(cost["total_micro_eur"] if ok else self.match_bound)
         return costs
+
+    @property
+    def drain_path(self) -> Path:
+        """While this file exists the run starts no match; running ones play to the end."""
+        return self.out / "DRAIN"
 
     @property
     def started_path(self) -> Path:
