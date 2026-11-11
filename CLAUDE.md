@@ -341,6 +341,7 @@ arena/
   ratings/      multiplayer Elo, statistics, profile and rating store
   research/     experiment plans, balanced seatings, match schedules, power
   chronicle/    the chronicler: a finished match as a story (templates, styles, languages)
+  transcript/   the one readable play-by-play of a match: a renderer per game, de and en
   cli.py        the `arena` command
   config.py     loader of config/models.yaml (limits, models, prices)
   games.py      finds the games under games/
@@ -460,7 +461,13 @@ Copy the shape of `games/toy/`, the smallest complete game.
 7. If players can talk, emit their words as
    `ctx.emit(MESSAGE, {"player": author, "text": words}, visible_to=...)` and
    put player-written text in no other event.
-8. Tests, as in `games/toy/tests/`: full bot matches for every player count,
+8. A renderer for the transcript, `arena/transcript/<id>.py`: a class with one
+   `handle_<event type>` method per event the plugin emits (and register it in
+   `RENDERERS`). It returns a line in English and German, an importance (1
+   bookkeeping, 2 normal, 3 highlight) and a kind; a test fails when a plugin
+   emits an event type that has no method. The CLI, the API, the live view,
+   replays and exports all show these lines; do not write a second formatter.
+9. Tests, as in `games/toy/tests/`: full bot matches for every player count,
    same seed gives the same events and state, observations do not depend on
    other players' hidden information, private events are private, rejected
    actions carry a useful message. Add a match with mock-LLM players, as in

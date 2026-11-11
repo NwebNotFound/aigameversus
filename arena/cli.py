@@ -1,4 +1,4 @@
-"""The `arena` command: play a match in this process and print its event log.
+"""The `arena` command: play a match in this process and print it as a readable play-by-play.
 
 With `--bots` every seat is a random bot. That needs no server and no
 database, and it costs nothing.
@@ -18,7 +18,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
@@ -33,6 +33,16 @@ from arena.engine.plugin import GamePlugin
 from arena.engine.replay import replay
 from arena.engine.types import Event, MatchPaused, Placement
 from arena.games import load_games
+from arena.transcript import (
+    RENDERERS,
+    Transcriber,
+    TranscriptError,
+    from_export,
+    labels,
+    render_match,
+    to_markdown,
+    to_text,
+)
 
 STOPPED_AT_CAP = 3  # exit code of a match that a cost cap ended early
 
@@ -45,7 +55,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="arena", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("games", help="list the games that can be played")
-    run = commands.add_parser("run", help="play one match and print every event")
+    show = commands.add_parser(
+        "transcript", help="print a stored match, or a saved match file, as a readable play-by-play"
+    )
+    show.add_argument("source", help="a match id from the database, or a saved match JSON file")
+    show.add_argument("--lang", choices=("en", "de"), default="en")
+    show.add_argument(
+        "--spoilers", action="store_true", help="include hidden cards, roles, thoughts, whispers"
+    )
+    show.add_argument(
+        "--all", action="store_true", help="also bookkeeping lines (hand-overs, deals)"
+    )
+    show.add_argument("--format", choices=("text", "markdown", "json"), default="text")
+    show.add_argument(
+        "--follow", action="store_true", help="a match id only: keep printing while it is played"
+    )
+    run = commands.add_parser("run", help="play one match and print it play-by-play")
     run.add_argument("--game", required=True, help="id of the game, see `arena games`")
     seats = run.add_mutually_exclusive_group(required=True)
     seats.add_argument(
@@ -76,6 +101,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         metavar="SECONDS",
         help="how long one turn may take, corrections included (default: 60)",
     )
+    run.add_argument("--lang", choices=("en", "de"), default="en", help="language of the lines")
+    run.add_argument(
+        "--no-spoilers", action="store_true", help="print only what every player could see"
+    )
+    run.add_argument(
+        "--all", action="store_true", help="also bookkeeping lines (hand-overs, deals)"
+    )
+    run.add_argument("--raw", action="store_true", help="print the raw events, as stored")
     run.add_argument(
         "--save",
         metavar="FILE",
@@ -93,6 +126,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"{game.id:<12} {game.name} ({game.min_players} to {game.max_players} players)")
         return 0
 
+    if args.command == "transcript":
+        try:
+            return asyncio.run(_transcript(args))
+        except (TranscriptError, _WrongCall) as error:
+            parser.error(str(error))
+
     if args.game not in games:
         parser.error(f"unknown game {args.game!r}; choose from: {', '.join(games)}")
     plugin = games[args.game]
@@ -106,25 +145,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.models is None:
             if args.save:
                 raise _WrongCall("--save goes with --models; a bot match is printed, not stored")
-            return _play_bots(plugin, args.players, options)
+            return _play_bots(plugin, args.players, options, args)
         if args.players is not None:
             raise _WrongCall("--players goes with --bots; with --models every model takes a seat")
-        return asyncio.run(_play_models(plugin, args.models.split(","), options, args.save))
+        return asyncio.run(_play_models(plugin, args.models.split(","), options, args.save, args))
     except _WrongCall as error:
         parser.error(str(error))
 
 
-def _play_bots(plugin: GamePlugin, count: int | None, options: dict[str, Any]) -> int:
+def _play_bots(
+    plugin: GamePlugin, count: int | None, options: dict[str, Any], args: argparse.Namespace
+) -> int:
     players = [f"p{seat}" for seat in range(1, (count or plugin.min_players) + 1)]
     seed = options["seed"]
-    match = _match(plugin, random_bots(plugin, players, seed), options, _print_events)
+    match = _match(
+        plugin, random_bots(plugin, players, seed), options, _printer(plugin.id, players, args)
+    )
     print(f"{plugin.name} ({plugin.id}), players {' '.join(players)}, seed {seed}")
-    print(_result(asyncio.run(match.run())))
+    placements = asyncio.run(match.run())
+    if args.raw:  # the play-by-play already ends with the result
+        print(_result(placements))
     return 0
 
 
 async def _play_models(
-    plugin: GamePlugin, model_ids: Sequence[str], options: dict[str, Any], save: str | None
+    plugin: GamePlugin,
+    model_ids: Sequence[str],
+    options: dict[str, Any],
+    save: str | None,
+    args: argparse.Namespace,
 ) -> int:
     config = load_config()
     unknown = [model_id for model_id in model_ids if model_id not in config.models]
@@ -157,8 +206,9 @@ async def _play_models(
 
         async def store_and_print(first_seq: int, events: Sequence[Event]) -> None:
             await log.append(match_id, first_seq, events)
-            await _print_events(first_seq, events)
+            await show(first_seq, events)
 
+        show = _printer(plugin.id, labels(seats), args)
         agents = {
             player: ModelAgent(budget.model(player, model_id), plugin)
             for player, model_id in seats.items()
@@ -182,7 +232,8 @@ async def _play_models(
             raise
         else:
             await matches.close(match_id, "finished", placements)
-            print(_result(placements))
+            if args.raw:
+                print(_result(placements))
 
         costs = await ledger.match_costs(match_id)
         stored = await log.load(match_id)
@@ -247,8 +298,30 @@ def _settings(pairs: Sequence[str]) -> dict[str, Any]:
     return settings
 
 
+def _printer(game: str, players: Any, args: argparse.Namespace) -> Any:
+    """The sink that prints the events of each turn: play-by-play lines, or raw with --raw."""
+    if args.raw:
+        return _print_events
+    transcriber = Transcriber(game, players, args.lang, not args.no_spoilers)
+    state = {"started": False}
+
+    async def show(first_seq: int, events: Sequence[Event]) -> None:
+        for seq, event in enumerate(events, start=first_seq):
+            line = transcriber.line(event, seq)
+            if line is None or (line.importance < 2 and not args.all):
+                continue
+            if line.kind == "heading" and state["started"]:
+                print()
+            state["started"] = True
+            print(line.text)
+            if line.detail:
+                print(f"    {line.detail}")
+
+    return show
+
+
 async def _print_events(first_seq: int, events: Sequence[Event]) -> None:
-    """Print the events of one turn, one line each: position, type, data, who may see it."""
+    """Print the events of one turn raw, one line each: position, type, data, who may see it."""
     for seq, event in enumerate(events, start=first_seq):
         if event.visible_to is None:
             audience = ""
@@ -258,6 +331,71 @@ async def _print_events(first_seq: int, events: Sequence[Event]) -> None:
             audience = "  [spectators only]"
         data = json.dumps(event.data, ensure_ascii=False)
         print(f"{seq:>4}  {event.type:<16} {data}{audience}")
+
+
+async def _transcript(args: argparse.Namespace) -> int:
+    """`arena transcript`: a saved match file or a stored match, printed once or followed."""
+    path = Path(args.source)
+    if path.is_file():
+        if args.follow:
+            raise _WrongCall("--follow needs a match id; a file does not change")
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError as error:
+            raise _WrongCall(f"{args.source} is not JSON: {error}") from error
+        game, events, names = from_export(data)
+        _print_transcript(game, events, names, args)
+        return 0
+    try:
+        match_id = UUID(args.source)
+    except ValueError:
+        raise _WrongCall(f"{args.source!r} is neither a file nor a match id") from None
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise _WrongCall("a match id needs DATABASE_URL, the database the match is stored in")
+    pool = await connect(url)
+    try:
+        matches, log = MatchStore(pool), EventStore(pool)
+        record = await matches.get(match_id)
+        if record is None:
+            raise _WrongCall(f"no match {match_id} in the database")
+        if record.game not in RENDERERS:
+            raise _WrongCall(f"no transcript for {record.game}")
+        names = {**{p: p for p in record.players}, **await matches.seat_names(match_id)}
+        if not args.follow:
+            _print_transcript(record.game, await log.load(match_id), names, args)
+            return 0
+        shown_as = argparse.Namespace(
+            raw=False, lang=args.lang, no_spoilers=not args.spoilers, all=args.all
+        )
+        printer = _printer(record.game, names, shown_as)
+        shown = 0
+        while True:
+            events = await log.load(match_id)
+            await printer(shown, events[shown:])
+            shown = len(events)
+            current = await matches.get(match_id)
+            if current is None or current.status != "running":
+                if len(await log.load(match_id)) == shown:
+                    return 0
+                continue
+            await asyncio.sleep(1.0)
+    finally:
+        await pool.close()
+
+
+def _print_transcript(
+    game: str, events: Sequence[Event], names: Any, args: argparse.Namespace
+) -> None:
+    lines = render_match(events, names, args.lang, args.spoilers, game=game)
+    minimum = 1 if args.all else 2
+    if args.format == "json":
+        shown = [line for line in lines if line.importance >= minimum]
+        print(json.dumps([line.model_dump() for line in shown], ensure_ascii=False, indent=1))
+    elif args.format == "markdown":
+        print(to_markdown(lines, minimum), end="")
+    else:
+        print(to_text(lines, minimum), end="")
 
 
 if __name__ == "__main__":
