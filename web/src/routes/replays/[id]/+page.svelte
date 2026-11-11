@@ -9,7 +9,8 @@
 	import WatchScreen from '#lib/components/WatchScreen.svelte';
 	import { gameName } from '#lib/games.js';
 	import { euros } from '#lib/live.js';
-	import { PLAY_SPEEDS, clampStep, shareLink, stepFromQuery } from '#lib/replay.js';
+	import { dwellMs, SPEEDS } from '#lib/pacing.js';
+	import { clampStep, shareLink, stepFromQuery } from '#lib/replay.js';
 	import {
 		linesUpTo,
 		marks,
@@ -45,7 +46,7 @@
 	// svelte-ignore state_referenced_locally
 	let step = $state(stepFromQuery(page.url.searchParams.get('step'), log.length));
 	let playing = $state(false);
-	let playMs = $state(PLAY_SPEEDS[1].ms);
+	let speed = $state(1);
 	let highlightsOnly = $state(false);
 	let copied = $state(false);
 	// svelte-ignore state_referenced_locally
@@ -126,17 +127,23 @@
 		};
 	});
 
-	// Playback: from moment to moment (bookkeeping is skipped), or highlight to highlight.
+	// Playback: moment to moment (bookkeeping is skipped), or highlight to highlight. Each
+	// moment stays as long as the playout director says for what it shows (reading time for
+	// words, longer for highlights), not as long as the models took: replays run in
+	// normalised time.
 	$effect(() => {
 		if (!playing) return;
-		const timer = setInterval(
-			() => {
-				if (step >= log.length) playing = false;
-				else step = nextStop(highlightsOnly ? highlights : moments, step, log.length);
-			},
-			highlightsOnly ? playMs * 2 : playMs
-		);
-		return () => clearInterval(timer);
+		const at = step;
+		const from = at === 0 ? -1 : log[at - 1].seq;
+		const before = previousStop(highlightsOnly ? highlights : moments, at);
+		const since = before === 0 ? -1 : log[before - 1].seq;
+		const showing = lines.filter((l) => l.seq !== null && l.seq > since && l.seq <= from);
+		const hold = at === 0 ? 300 : dwellMs(showing, speed);
+		const timer = setTimeout(() => {
+			if (step >= log.length) playing = false;
+			else step = nextStop(highlightsOnly ? highlights : moments, step, log.length);
+		}, hold);
+		return () => clearTimeout(timer);
 	});
 
 	// The address follows the step, so reloading or copying it keeps the place.
@@ -313,9 +320,9 @@
 						<button onclick={() => go(log.length)} aria-label="To the end">⏭</button>
 						<label>
 							<span class="sr-only">Speed</span>
-							<select bind:value={playMs} aria-label="Speed">
-								{#each PLAY_SPEEDS as speed (speed.ms)}
-									<option value={speed.ms}>{speed.label}</option>
+							<select bind:value={speed} aria-label="Speed">
+								{#each SPEEDS as option (option.factor)}
+									<option value={option.factor}>{option.label}</option>
 								{/each}
 							</select>
 						</label>

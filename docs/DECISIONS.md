@@ -112,3 +112,4 @@ with `python scripts/decisions.py adopt`.
 - [D-107](decisions/D-107-the-analytics-tab-draws-the-arena-s-numbers-with-its-own.md) · The Analytics tab draws the arena's numbers with its own small SVG charts
 - [D-108](decisions/D-108-every-model-move-says-what-it-took-in-a-spectators-only.md) · Every model move says what it took, in a spectators-only event
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
+- [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
