@@ -179,8 +179,7 @@ def test_golden_prompt_of_version_p2_has_the_new_rules_and_the_summary():
     request = a_request()
     plugin = Poker()
     settings = {"prompt_version": "poker-p2"}
-    messages = build_messages("Poker", plugin.rules(settings), request)
     summary = plugin.situation_summary(request.observation, settings)
+    messages = build_messages("Poker", plugin.rules(settings), request, summary)
 
-    text = "\n=====\n".join(m["content"] for m in messages)
-    check_golden("poker-p2.txt", f"{text}\n=====\n<summary>\n{summary}\n</summary>\n")
+    check_golden("poker-p2.txt", "\n=====\n".join(m["content"] for m in messages) + "\n")
