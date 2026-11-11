@@ -32,6 +32,7 @@ city:
   work_radius: 1
   expanded_work_radius: 2
   expanded_at_population: 5
+  min_distance: 2 # steps between a new city and any other; 2 = not side by side
   growth_food: 10 # surplus food for +1 population
   food_per_population: 1
   building_slots: {base: 3, population_divisor: 2, max: 8} # 3 + population / 2, rounded down
