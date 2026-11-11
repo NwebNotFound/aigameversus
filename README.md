@@ -163,7 +163,7 @@ second and third try, then a random legal move is played and the log says so.
 Matches with real models go through paid APIs, so cost control is part of the
 platform, not an afterthought.
 
-- **Hard caps:** €0.50 per match and €5 per calendar month by default, set in
+- **Hard caps:** €0.50 per match and €25 per calendar month by default, set in
   [config/models.yaml](config/models.yaml) next to the models and their
   prices.
 - **Counted before it is spent:** every model call is written to a ledger in

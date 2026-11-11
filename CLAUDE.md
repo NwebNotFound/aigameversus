@@ -200,7 +200,7 @@ Failures:
 
 ### Cost caps
 
-`config/models.yaml` holds the limits (0.50 € per match, 5 € per calendar
+`config/models.yaml` holds the limits (0.50 € per match, 25 € per calendar
 month, token limits per call, how long reasoning models may think) and the
 models with their prices.
 `arena/config.py` loads and checks it.

@@ -16,6 +16,12 @@ class LiteLLMModel:
     LiteLLM reads the provider's API key from the environment. Every call can
     cost money: matches get this class only through `Budget.model`, which
     counts the cost, and tests and CI use the mock LLM instead.
+
+    The budget books one call once, before it is sent. A request refused with
+    one of `_REFUSED_STATUS` goes out a second time without the extra options,
+    under that same booking. That is safe only because a refused request is not
+    billed, so at most one of the two can cost money. Never add a status to
+    that set for which a provider may bill.
     """
 
     def __init__(self, model: str, *, max_output_tokens: int, reasoning_effort: str | None = None):
