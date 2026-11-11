@@ -201,6 +201,7 @@ arena/
   memory/       profiles and the three memory layers
   gamemaster/   match setup, scheduling, narrator
   db/           connection pool, SQL migrations, event store
+  ratings/      multiplayer Elo, statistics, profile and rating store
   worker.py     match worker process
 games/          one package per game: plugin.py, rules.md, data, tests/
   toy/          High Card, the reference plugin
