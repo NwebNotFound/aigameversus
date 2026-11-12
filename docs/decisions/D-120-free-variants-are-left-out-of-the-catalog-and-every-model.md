@@ -10,7 +10,11 @@
   moves; else `ok`; with the reason, the number of moves, and warnings that
   are not failures (answers cut off at the output limit, often rate-limited).
   An unreliable model stays selectable. The tool rule (`tools` and
-  `tool_choice`) is unchanged; verdicts are reused for 60 seconds.
+  `tool_choice`) is unchanged; verdicts are reused for 60 seconds. The
+  thresholds are `reliability` in `config/models.yaml`. A model in two seats
+  of one match counts that match once. Cut-off and rate-limit figures rest
+  only on moves that report them (logs before the counters say nothing, they
+  are not zeros), and the answer says how many moves did (`telemetry_moves`).
 - **Why:** The owner's run seated a free Gemma variant whose route refused
   every call, so the random bot played all its moves. Its tools were fine; its
   route was not. A verdict from what happened here tells that apart from a
