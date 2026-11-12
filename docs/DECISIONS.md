@@ -121,3 +121,9 @@ with `python scripts/decisions.py adopt`.
 - [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
 - [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
 - [D-124](decisions/D-124-the-throne-of-tokens-board-draws-the-hex-map-in-svg-with-a.md) · The Throne of Tokens board draws the hex map in SVG, with a nation's fog on request
+- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
+- [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
+- [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
+- [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
+- [D-120](decisions/D-120-free-variants-are-left-out-of-the-catalog-and-every-model.md) · Free variants are left out of the catalog, and every model says how reliably it has played here
+- [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule

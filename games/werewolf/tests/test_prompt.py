@@ -122,7 +122,7 @@ def test_the_summary_of_a_hand_made_situation():
 
 def test_every_tool_of_every_turn_is_explained_in_the_rules_of_both_versions():
     # the old rules never named `stay_in_bed` and `let_them_die`: that is why p2 exists
-    for version in prompt.VERSIONS[1:]:
+    for version in [v for v in prompt.VERSIONS if not v.startswith("werewolf-p1")]:
         rules = prompt.rules_text(version)
         for seed in range(1, 9):
             for request in requests_of(seed):
