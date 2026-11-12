@@ -211,7 +211,9 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   The runner gets the limits as `ModelAgent(..., output=output_limits(config, model_id))`,
   and the call as `call(messages, tools, max_output_tokens=...)`. The budget books each
   call at its raised limit, so a raise that would pass a cap pauses the match. The
-  `decision` event then has `output_limits`, and the estimate a `worst_case_micro_eur`.
+  `decision` event then has `output_limits`, and the estimate a `worst_case_micro_eur` and
+  `worst_case_fits`. Such a seat gets its turn timeout once per call of its chain
+  (`turn_time_factor`).
 - The AI-written chronicle (`arena/chronicle/ai.py`, D-140).
   - `POST /matches/{id}/chronicle/ai {style, lang, model, confirm_spend}` has a model retell
     the template chronicle of a finished match, in one call. It has the guards of a paid

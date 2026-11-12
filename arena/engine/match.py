@@ -248,7 +248,10 @@ class Match[StateT: BaseModel]:
         reason = "agent_failed"
         if player not in self._failed:
             try:
-                async with asyncio.timeout(self._turn_timeout):
+                # A seat whose answer may be asked again with a larger limit gets the time of
+                # every call of its chain (adaptive_output, D-143); every other seat factor 1.
+                factor = getattr(self._agents[player], "turn_time_factor", 1)
+                async with asyncio.timeout(self._turn_timeout * factor):
                     action = await self._ask(player, observation, tools, trail, answers)
                 if action is not None:
                     if any(stats is not None for stats in answers):  # a model, not a bot

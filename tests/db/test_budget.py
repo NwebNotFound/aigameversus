@@ -1,6 +1,7 @@
 """Cost caps, against a real ledger in Postgres. The models are mocks: nothing here costs money."""
 
 import asyncio
+import contextlib
 import json
 import logging
 import re
@@ -570,3 +571,42 @@ def test_a_raised_output_limit_that_would_pass_the_match_cap_pauses_before_it_is
     reason, sent = with_pool(database_url, scenario)
 
     assert reason == "match_cap" and sent == 1
+
+
+def test_a_raised_call_cut_by_the_turn_timeout_keeps_its_booking_and_the_move_is_random(
+    database_url,
+):
+    from arena.agents.runner import OutputLimits
+
+    async def scenario(pool):
+        plugin = ToyGame()
+        cut = ModelReply(text="thinking", cut_off=True)  # no tokens reported: booking stays
+        mock = MockLLM(cut, HANGS, cut, HANGS, cut, HANGS)
+        budget = budget_of(pool)
+        on = {"adaptive_output": "on"}
+        agents = {
+            "p1": ModelAgent(
+                budget.meter("p1", "cheap", mock),
+                plugin,
+                settings=on,
+                output=OutputLimits(start=MAX_OUTPUT, ceiling=2 * MAX_OUTPUT),
+                sleep=no_pause,
+            ),
+            "p2": ModelAgent(MockLLM(PLAY_3), plugin, sleep=no_pause),
+        }
+        match = Match(plugin, agents, seed=1, settings=on, turn_timeout=0.05)
+        with contextlib.suppress(MatchPaused):  # the cap stops the next turn's calls
+            await match.run()
+        return match, mock, await booked(pool), budget.match_cap
+
+    match, mock, rows, cap = with_pool(database_url, scenario)
+
+    fallbacks = [
+        e for e in match.events if e.type == "action_fallback" and e.data["player"] == "p1"
+    ]
+    assert fallbacks and all(e.data["reason"] == "timeout" for e in fallbacks)
+    assert mock.output_limits[:2] == [None, 2 * MAX_OUTPUT]
+    mine = [row for row in rows if row[1] == "p1"]
+    first, raised = mine[0][-1], mine[1][-1]
+    assert raised - first == MAX_OUTPUT * 2  # the raised call stays booked at its own limit
+    assert sum(row[-1] for row in rows) <= cap  # nothing past the cap

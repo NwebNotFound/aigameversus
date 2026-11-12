@@ -106,6 +106,15 @@ class ModelAgent:
         self._headline = headline_of(settings or {})
         self._output = output if adaptive_output_of(settings or {}) else None
 
+    @property
+    def turn_time_factor(self) -> int:
+        """How many times the turn timeout this seat gets: one per call its answer may need.
+
+        With adaptive_output, the raised calls are the longest; without more time the dearest
+        would be cut off by the turn's timeout after they were booked (D-143).
+        """
+        return len(escalation(self._output)) if self._output else 1
+
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
         messages = build_messages(

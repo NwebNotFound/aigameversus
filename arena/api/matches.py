@@ -273,6 +273,10 @@ class EstimateOut(BaseModel):
     month_cap_micro_eur: int
     seats: dict[str, SeatEstimateOut]
     worst_case_micro_eur: int = Field(description="All seats together, at their worst case")
+    worst_case_fits: bool = Field(
+        description="Whether the worst case fits the match cap and the month left; with "
+        "adaptive_output a match whose worst case does not fit may pause half way"
+    )
     fits: bool = Field(description="Whether the estimate fits the match cap and the month left")
     high_price: list[str] = Field(
         description="Models whose output costs more than 10 USD per million tokens, as booked"
@@ -339,6 +343,7 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
     total = sum(seat.estimate_micro_eur for seat in per_seat.values())
+    worst = sum(seat.worst_case_micro_eur for seat in per_seat.values())
     # The match's own limit, if it sets one, is its cap (the lower of the two), as Budget has it.
     limit = match_budget_of(new.settings)
     cap = int(
@@ -360,7 +365,8 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
             )
             for seat, e in per_seat.items()
         },
-        worst_case_micro_eur=sum(e.worst_case_micro_eur for e in per_seat.values()),
+        worst_case_micro_eur=worst,
+        worst_case_fits=worst <= cap and spent + worst <= month_cap,
         fits=total <= cap and spent + total <= month_cap,
         high_price=sorted(
             {

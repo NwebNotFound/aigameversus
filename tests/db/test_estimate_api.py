@@ -125,3 +125,20 @@ def test_without_the_ledger_there_is_no_estimate(database_url, closed_port_url, 
 
     assert response.status_code == 503
     assert "spend ledger cannot be read" in response.json()["detail"]
+
+
+def test_with_adaptive_output_the_worst_case_can_miss_the_cap_while_the_expected_cost_fits(client):
+    plain = client.post("/matches/estimate", json=BODY).json()
+    limit = (plain["estimate_micro_eur"] + 1) / 1_000_000  # the expected cost just fits
+
+    off = client.post(
+        "/matches/estimate", json={**BODY, "settings": {"match_budget_eur": limit}}
+    ).json()
+    on = client.post(
+        "/matches/estimate",
+        json={**BODY, "settings": {"match_budget_eur": limit, "adaptive_output": "on"}},
+    ).json()
+
+    assert off["fits"] and off["worst_case_fits"]  # no raise: the worst case is the limit
+    assert on["fits"] and not on["worst_case_fits"]
+    assert on["worst_case_micro_eur"] > on["cap_micro_eur"] >= on["estimate_micro_eur"]

@@ -93,3 +93,34 @@ def test_the_estimate_shows_the_worst_case_of_raised_limits_only_when_it_is_on()
     assert on.estimate_micro_eur == off.estimate_micro_eur  # the expected cost: unchanged
     assert off.worst_case_micro_eur == off.estimate_micro_eur  # no history: already the limit
     assert on.worst_case_micro_eur > 3 * off.worst_case_micro_eur  # 1500+3000+6000+8000
+
+
+class Slow:
+    """A model whose raised calls take `seconds`: the first answer is cut off, then it plays."""
+
+    def __init__(self, seconds):
+        self.seconds, self.limits = seconds, []
+
+    async def __call__(self, messages, tools, *, max_output_tokens=None):
+        self.limits.append(max_output_tokens)
+        if max_output_tokens is None:
+            return CUT
+        await asyncio.sleep(self.seconds)
+        return LOWEST(messages, tools)
+
+
+def test_a_seat_with_adaptive_output_gets_the_time_of_every_call_of_its_chain():
+    plugin = ToyGame()
+    slow = Slow(0.15)
+    limits = OutputLimits(start=100, ceiling=200)  # two calls: 0.1 s each, 0.2 s together
+    agents = {
+        "p1": ModelAgent(slow, plugin, settings=ON, output=limits, sleep=no_pause),
+        "p2": ModelAgent(MockLLM(LOWEST), plugin, settings=ON, sleep=no_pause),
+    }
+    match = Match(plugin, agents, seed=3, settings=ON, turn_timeout=0.1)
+    asyncio.run(match.run())
+
+    assert agents["p1"].turn_time_factor == 2 and agents["p2"].turn_time_factor == 1
+    assert slow.limits[:2] == [None, 200]
+    first = of_type(match, "decision", "p1")[0].data
+    assert first["fallback"] is None  # the raised call had its time and played the move
