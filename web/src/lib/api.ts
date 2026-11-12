@@ -131,6 +131,12 @@ export interface TranscriptLine {
 	/** 1 bookkeeping, 2 normal, 3 highlight. */
 	importance: 1 | 2 | 3;
 	raw: Record<string, unknown>;
+	/**
+	 * Spoiler-free only, added by the web server: the move was repaired (tier 1, the call
+	 * read as meant; tier 2, mapped to a legal move by Jev with probability `p`). The
+	 * spectator view reads the same from the bookkeeping lines; nothing else is passed on.
+	 */
+	repair?: { tier: 1 | 2; p: number | null } | null;
 }
 
 /** Who sits in a seat; name and model null for seats nobody named. */
