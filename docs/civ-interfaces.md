@@ -208,6 +208,13 @@ returns only what that nation may know, built from its fog view
   with their parameters (e.g. `move` only when an army can move),
 - `your_plan`: the `plan` the nation sent last round, or `null`.
 
+**Public by rule.** How many cities exist in the world, and how many each
+nation holds, is public: the domination condition is counted against the
+world's total, and the board shows every nation's count. Where those cities
+stand stays hidden by the fog. Likewise public: reputations, treaties, wars,
+the economy countdown, and the scores of the round-limit formula. Nothing else
+of another nation enters an observation unless its fog view shows it.
+
 **Size budget.** An observation and its prompt are what every call pays
 for: 360 calls in a 60-round match of six nations. An observation stays under
 5,000 tokens (17,500 bytes of JSON, counted as the estimate counts: bytes /
