@@ -176,6 +176,7 @@ def test_a_model_whose_seat_gave_up_is_marked_unreliable_and_says_why(client, mo
     assert plays["status"] == "unreliable"
     assert "gave up in 1 of its last 2 matches" in plays["reason"]
     assert plays["agent_failed_recent"] == 1
+    assert {"rejected_rate", "rejected_cut_off", "last_seen", "answers"} <= set(plays)
     assert models["acme/thinks"]["reliability"]["status"] == "unknown"  # never played here
 
 

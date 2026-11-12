@@ -639,7 +639,9 @@ model out (and `:free` variants are listed only with `?free=1`, marked
 `rate_limited_likely`); every entry and model page has `reliability` from
 the arena's own logs (`arena/db/reliability.py`: unreliable after a seat that
 gave up in its last 2 matches or more than half of its last 20 moves by the
-bot, unknown below 20 moves, warnings for cut-off answers and rate limits);
+bot, unknown below 20 moves, warnings for cut-off answers and rate limits, and `rejected_rate` with its counts, `rejected_cut_off`
+(of the refused answers, those that ran into the output limit; null in logs without the counter,
+with a warning when they are most of them) and `last_seen`);
 `catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
