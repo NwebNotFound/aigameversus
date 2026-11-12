@@ -15,6 +15,7 @@ def test_c1_design_is_unapproved_and_keeps_factors_separate():
     assert plan["execution_plan_approved"] is False
     assert plan["execution_approval_evidence"] is None
     assert plan["settings"]["prompt_version"] == "civ-p1"
+    assert plan["expected_history_limit_events"] == 120
     assert plan["settings"]["match_budget_eur"] == 0.20
     assert plan["requested_preset"]["round_limit_api_setting"] == "rounds"
     assert plan["requested_preset"]["rounds"] == 20

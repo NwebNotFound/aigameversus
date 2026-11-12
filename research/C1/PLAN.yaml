@@ -17,6 +17,8 @@ settings: {rounds: 20, prompt_version: civ-p1, strategy_text: 'off', private_pla
 memory: false
 remaining_release: 'Researcher smoke review AND explicit Lead go, reviewed merged client; no automatic release'
 start_build: null
+expected_history_limit_events: 120
+history_limit_approval: 'Lead28c1ca94: Civ120, other games40; direct smoke exception after verified deployment/requote'
 game: civ
 requested_preset:
   nations: 4
