@@ -63,6 +63,12 @@ def city_yields(state: CivState, data: CivData, city_id: str) -> Stock:
     total[rules.focus_yields[city.focus]] += city.population
     for building in city.buildings:
         _add(total, data.buildings[building].effects.yields)
+    for condition in state.conditions:  # a drought and the like, while it holds
+        if condition.until_round >= state.round and (
+            distance(city.tile, (condition.col, condition.row)) <= condition.radius
+        ):
+            for resource, change in condition.modifiers.items():
+                total[resource] += int(Decimal(total[resource]) * Decimal(str(change)))
     return total
 
 

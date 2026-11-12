@@ -794,6 +794,19 @@ next to it says what each does and what the generator guarantees.
   in order) and `weariness`, and `capital` (the city on a nation's start
   tile). `economy.production_modifier` applies war weariness and a lost
   capital to the yields (D-126).
+- `games/civ/events.py`: random events from `data/events/`. `roll` is a round
+  step (one random stream per event and round); `strike` lets one event happen
+  now (also for a spectator's God mode). Plague, gold find and good harvest touch
+  one city or nation, a drought adds a `Condition` that halves the food of the
+  cities in its region for its rounds (`economy.city_yields` reads it), a
+  rebellion makes a recently conquered city (`City.conquered_round`) neutral,
+  barbarians raise a neutral army on a free tile. `NEUTRAL` in `state.py` owns
+  rebel cities and barbarians.
+- `games/civ/victory.py`: `check` is the last round step: the public economic
+  countdown, then domination (at least half the cities and more than anyone),
+  economy (the gold held long enough) or the round limit's score; it emits
+  `victory` with the placements, and `state.victory` is set. `score` and
+  `standings` rank the nations.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.
