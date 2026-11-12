@@ -1,9 +1,14 @@
-# D-138 · Proposed: a start region short of food or gold costs more than one short of iron or wood
+# D-138 · A start region short of food or gold costs more than one short of iron or wood
 
 - **Date:** 2026-11-12
-- **Status:** proposed, not in force. The rules are unchanged until the lead
-  accepts this (research/civ-balance.md has the numbers).
-- **Decision:** Proposed, not in force: give a food-short region one plains instead of one forest (below). Every nation's start region is short of one resource
+- **Status:** accepted by the lead on 2026-11-12, in force from Throne of Tokens
+  version 2 (`CivGame.version`, recorded in `match_started`).
+- **Decision:** A food-short region gets one plains instead of one forest:
+  `food: [plains, forest, hills, hills, river, river]`. Its region now yields as
+  much food as a gold- or iron-short one (6) and less only than a wood-short one
+  (8), so "short of food" is the mildest shortage; a version with 5 food (one
+  plains for a hills and a river) kept it strictly short but changed nothing
+  measurable (2.65 against 2.64). Every nation's start region is short of one resource
   (`balance.yaml`, `map.start_regions`), but the four shortages do not cost the
   same. Over 80 seeds, nations short of food or gold rank 0.4 to 1.0 places
   worse than those short of iron or wood, at every table size (for example
@@ -12,8 +17,7 @@
   iron-short and 8 for wood-short ones; a gold-short region has no gold tile at
   all. Food drives growth, settlers and upkeep, and the round-limit score counts
   population and gold, so those two shortages cost score directly.
-- **Why:** the change would be `food: [plains, forest, hills, hills, river, river]`.
-  In memory, on the same seeds, food-short nations move from 2.64 to 2.33 (four
+- **Why:** In memory, on the same seeds, food-short nations move from 2.64 to 2.33 (four
   nations, 20 rounds) and from 3.30 to 3.06 (five nations); with six nations the
   gap stays (3.92 to 3.79).
 - **Open:** a river instead of one hills for gold-short regions changed nothing

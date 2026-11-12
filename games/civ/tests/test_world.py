@@ -175,11 +175,18 @@ def test_every_nation_starts_with_an_equal_region_that_lacks_one_resource(count,
         assert world.terrain(start.tile) == balance.capital_terrain
         assert ring == sorted(balance.start_regions[start.scarce])
         assert sum(region_yields(world, start.tile).values()) == 12
-        # Short of a resource: less of it than any nation that is short of something else.
-        for other in world.starts:
-            if other.scarce != start.scarce:
-                mine = region_yields(world, start.tile)[start.scarce]
-                assert mine < region_yields(world, other.tile)[start.scarce]
+        # Short of a resource: never more of it than a nation short of something else, and
+        # less than at least one. Food is the soft one: a food-short region has as much food as
+        # a gold- or iron-short one, less only than a wood-short one (D-138).
+        mine = region_yields(world, start.tile)[start.scarce]
+        theirs = [
+            region_yields(world, other.tile)[start.scarce]
+            for other in world.starts
+            if other.scarce != start.scarce
+        ]
+        assert all(mine <= other for other in theirs) and mine < max(theirs)
+        if start.scarce != "food":
+            assert all(mine < other for other in theirs)
     # The shortages are spread over the resources as evenly as the number of nations allows.
     shortages = Counter(start.scarce for start in world.starts)
     assert len(shortages) == 4

@@ -4,7 +4,8 @@ The numbers are in ``data/victory.yaml``. ``check`` is the last step of a round
 (after the events): it moves every nation's economic countdown on, which all
 nations see, and declares the winner of the first condition that is met:
 
-- Domination: a nation holds at least ``city_share`` of all cities and more than
+- Domination: once the world has ``min_cities_per_nation`` cities per nation, a
+  nation holds at least ``city_share`` of all cities and more than
   any other nation (two nations with one city each have not dominated anything).
 - Economy: a nation has held at least ``gold`` for ``hold_rounds`` rounds in a row.
 - Round limit: after ``rounds`` rounds the highest score wins; equal scores share.
@@ -50,10 +51,16 @@ def standings(state: CivState, data: CivData) -> list[dict[str, Any]]:
     return ranked
 
 
+def domination_open(state: CivState, data: CivData) -> bool:
+    """Whether the world has enough cities for a domination to count (D-137)."""
+    least = data.victory.domination.min_cities_per_nation * len(state.nations)
+    return bool(state.cities) and len(state.cities) >= least
+
+
 def dominating(state: CivState, data: CivData) -> str | None:
-    total = len(state.cities)
-    if not total:
+    if not domination_open(state, data):
         return None
+    total = len(state.cities)
     held = {p: sum(1 for c in state.cities if c.owner == p) for p in state.nations}
     share = data.victory.domination.city_share
     leaders = [

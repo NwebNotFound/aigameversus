@@ -174,12 +174,21 @@ def _victory(
         + (max(0, rules.economy.gold - gold) // 40),
     }
     return {
-        "domination": f"{held_cities} of {need} cities needed ({total} exist)",
+        "domination": f"{held_cities} of {need} cities needed ({total} exist)"
+        + (
+            ""
+            if total >= _least(state, data)
+            else f"; it counts once {_least(state, data)} cities exist"
+        ),
         "economy": f"{gold} of {rules.economy.gold} gold, held {held} of "
         f"{rules.economy.hold_rounds} rounds",
         "score": f"{score} now; the highest score wins after round {last} ({left} rounds left)",
         "closest_win": min(gaps, key=lambda kind: gaps[kind]),
     }
+
+
+def _least(state: CivState, data: CivData) -> int:
+    return data.victory.domination.min_cities_per_nation * len(state.nations)
 
 
 def _city(state: CivState, data: CivData, city: City) -> dict[str, Any]:

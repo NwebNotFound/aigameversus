@@ -19,6 +19,7 @@ from collections import Counter
 from typing import Any
 
 from arena.analytics.liars_deck import rate
+from arena.engine.replay import plugin_for, recorded_version
 from arena.engine.types import MESSAGE, Event, EventSource
 from games.civ import combat, victory
 from games.civ.plugin import CivGame
@@ -41,9 +42,10 @@ def analyze(log: Log, spoilers: bool) -> dict[str, Any]:
     start = next((e for e in events if e.type == "match_started"), None)
     players = list(start.data["players"]) if start else []
     settings = dict(start.data.get("settings") or {}) if start else {}
-    plugin = CivGame()
+    # The rules the match was played with, not the newest (D-139).
+    plugin = plugin_for(CivGame(), start) if start else CivGame()
     meta = {
-        "version": start.data.get("version") if start else None,
+        "version": recorded_version(start) if start else None,
         "prompt_version": start.data.get("prompt_version") if start else None,
         "seed": start.data.get("seed") if start else None,  # not in the spoiler-free start
         "settings": settings,
