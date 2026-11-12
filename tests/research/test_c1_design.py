@@ -14,7 +14,7 @@ def test_c1_design_is_unapproved_and_keeps_factors_separate():
     assert plan["approved_budget_eur"] == 1.00
     assert plan["execution_plan_approved"] is False
     assert plan["execution_approval_evidence"] is None
-    assert plan["settings"]["prompt_version"] == "civ-p1.1"
+    assert plan["settings"]["prompt_version"] == "civ-p1"
     assert plan["settings"]["match_budget_eur"] == 0.20
     assert plan["requested_preset"]["round_limit_api_setting"] == "rounds"
     assert plan["requested_preset"]["rounds"] == 20
@@ -22,7 +22,7 @@ def test_c1_design_is_unapproved_and_keeps_factors_separate():
     assert plan["baseline"]["expected_base_calls_upper"] == 80
     assert plan["baseline"]["strategy_text"] == "off"
     assert plan["baseline"]["private_plan"] == "off"
-    assert plan["later_factorial"]["prompt_version"] == "civ-p1.1"
+    assert plan["later_factorial"]["prompt_version"] == "civ-p1"
     assert plan["later_factorial"]["total_cells_including_baseline"] == 16
     assert not (root / "experiments/C1_civ_pilot.yaml").exists()
 

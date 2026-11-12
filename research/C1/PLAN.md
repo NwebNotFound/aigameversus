@@ -93,22 +93,21 @@ before releasing the remaining three. Freeze actual start build/config and
 recheck fresh quotes/ledger before execution. These history-based estimates
 remain uncertain until model-driven Civ observations exist.
 
-## Approved history-window amendment and explicit job data
+## Explicit job data and pending post-hook requote
 
-Lead f4f4fc8f changes the entire unstarted baseline to civ-p1.1: identical p1
-text with a120-event history window. Old civ-p1 stays frozen at40. Approval
-carries over only if new quotes stay within EUR0.20 per match and EUR1.00 total.
+Lead28eae200 supersedes the earlier proposed .1 naming: C1 keeps civ-p1;
+#166 changes the unstarted Civ prompts to120 events while other games stay40.
+There are no civ-p1.1/civ-p2.1 versions. Scope/roster/rotation/budget do not change.
 Until #166 is merged/deployed and Reviewer sends the build GO, start_build and
-the new free_estimate_eur remain null. Old p1 quotes above are superseded prices,
-not a quote for p1.1. No model match has started.
+the post-hook free_estimate_eur remain null. Earlier p1 quotes apply to the older
+build/window, not to the post-hook prompt. No model match has started.
 
 schedule.csv is four cyclic rotations, with all four models sharing each match.
 Top-level settings/budget/max_matches/checkpoint_after fields form the shared
 client job contract requested by Heavy. Scope budget approval is recorded, but
-execution_plan_approved remains false until the outstanding runtime/release
-conditions are met; the dry fixture must not silently enable paid execution.
-The one direct smoke is separately authorized by Lead5664932f after hook GO.
-When the reviewed client later takes over, it must adopt that C1 batch/index1
-from server history and account its ledger cost, never play the first cell twice.
-Remaining three rotations still need smoke review and explicit Lead release;
-the strategy/private-plan factorial remains unapproved.
+execution_plan_approved remains false until outstanding runtime/release conditions
+are met. The one direct smoke is separately authorized by Lead5664932f after
+hook GO and the new quote. When the reviewed client later takes over, it must
+adopt that C1 batch/index1 from server history and account its ledger cost,
+never play the first cell twice. Remaining three rotations need smoke review
+and explicit Lead release; the strategy/private-plan factorial remains unapproved.
