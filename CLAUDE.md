@@ -166,7 +166,9 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   match setting `answer_repair: "v1"`: the default `"off"` reads every call as
   sent, as before. It is the engine's setting, not the game's: `game_settings`
   removes it before the plugin and replay see the settings; `match_started`
-  records it.
+  records it. The same holds for `thought_headline: true`: every tool
+  call also asks for a `headline` (at most 120 characters), which the
+  `thought` event keeps for viewers; default `false`.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
