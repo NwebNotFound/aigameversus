@@ -16,6 +16,7 @@ from arena.analytics.report import report
 from arena.analytics.situation import BUILDERS as SITUATIONS
 from arena.analytics.situation import situation
 from arena.engine.types import Event
+from arena.gamemaster import drama
 from arena.transcript.common import public_settings
 
 # Each analyzer takes (seq, event) pairs: seq is the event's position in the whole log,
@@ -53,6 +54,7 @@ def match_analytics(
         # Speech names seats by their display names too, so the rules need them.
         numbers = werewolf.analyze(log, spoilers, names or {})
         numbers["recap"] = werewolf.recaps(numbers, names or {})
+        numbers["narration"] = drama.narration(log, names or {})
     else:
         numbers = analyze(log, spoilers) if analyze else {"meta": {}}
     if game == "liars_deck":
