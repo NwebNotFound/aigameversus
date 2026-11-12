@@ -199,3 +199,43 @@ def test_poker_analytics_has_hands_chips_moves_and_totals_and_no_hidden_cards_in
     )
     assert public["totals"]["p1"]["vpip"] == full["totals"]["p1"]["vpip"]
     assert "hole_dealt" not in json.dumps(public)
+
+
+def test_the_export_holds_the_whole_match_only_with_spoilers(client):
+    match = start(client, game="liars_deck", seed=3)
+    follow(client, match["id"])
+
+    full = client.get(f"/matches/{match['id']}/export", params={"spoilers": True})
+    public = client.get(f"/matches/{match['id']}/export")
+    full_doc, public_doc = full.json(), public.json()
+
+    assert full_doc["format"] == "aigameversus-match-export/1"
+    assert (full_doc["spoilers"], public_doc["spoilers"]) == (True, False)
+    assert full_doc["match"]["seed"] == 3 and public_doc["match"]["seed"] is None
+    assert len(public_doc["events"]) < len(full_doc["events"])
+    assert [e["seq"] for e in full_doc["events"]] == list(range(len(full_doc["events"])))
+    assert all(
+        e["visible_to"] is None for e in public_doc["events"] if e["type"] != "match_started"
+    )
+    assert "seed" not in public_doc["events"][0]["data"]
+    assert (
+        full_doc["analytics"]["spoilers"] is True and public_doc["analytics"]["spoilers"] is False
+    )
+    assert full_doc["cost"]["total_micro_eur"] == 0
+    assert "cards_hidden" not in json.dumps(public_doc)
+    assert "-full" in full.headers["content-disposition"]
+    assert "-full" not in public.headers["content-disposition"]
+
+
+def test_the_export_of_a_game_without_analytics_has_the_log_and_null_parts(client):
+    toy = start(client, game="toy", seed=1)
+    follow(client, toy["id"])
+
+    document = client.get(f"/matches/{toy['id']}/export").json()
+
+    assert document["events"] and document["analytics"] is None
+    assert document["talk_checks"] is None
+
+
+def test_the_export_of_an_unknown_match_is_404(client):
+    assert client.get("/matches/00000000-0000-0000-0000-000000000000/export").status_code == 404
