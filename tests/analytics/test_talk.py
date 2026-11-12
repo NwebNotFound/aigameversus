@@ -206,3 +206,26 @@ def test_a_bot_match_gives_a_well_formed_answer_with_and_without_spoilers(name, 
         for tag in result["tags"]:
             assert tag["verdict"] in ("true", "false") and tag["seq"] >= 0 and tag["heuristic"]
     assert talk_checks("toy", log, True)["available"] is False
+
+
+def test_private_werewolf_talk_is_never_quoted_without_spoilers():
+    """Pack chat is a message with a visible_to list: no tag may quote it in the public view."""
+    log = werewolf_log()
+    secret = "Pack, listen: tomorrow I am the seer and I checked p3, a villager."
+    private = Event(
+        source=EventSource.GAME,
+        type=MESSAGE,
+        data={"player": "p1", "text": secret},
+        visible_to=["p1", "p2"],
+    )
+    died = game("player_died", {"player": "p1", "cause": "executed", "role": "werewolf"})
+    log = log[:5] + [(5, private)] + [(seq + 1, e) for seq, e in log[5:]] + [(0, died)]
+    log = [(seq, e) for seq, (_, e) in enumerate(log)]
+
+    full = talk_checks("werewolf", log, spoilers=True)["tags"]
+    public = talk_checks("werewolf", log, spoilers=False)["tags"]
+
+    assert any("Pack, listen" in t["quote"] for t in full)
+    assert not any("Pack, listen" in t["quote"] for t in public)
+    by_seq = dict(log)
+    assert all(by_seq[t["seq"]].visible_to is None for t in public)

@@ -107,3 +107,40 @@ def test_talk_checks_of_unknown_match_or_game_are_404(client):
         client.get("/matches/00000000-0000-0000-0000-000000000000/talk-checks").status_code == 404
     )
     assert client.get(f"/matches/{toy['id']}/talk-checks").status_code == 404
+
+
+def test_talk_checks_never_quote_private_werewolf_talk_without_spoilers(client, monkeypatch):
+    from arena.engine.types import MESSAGE, Event, EventSource
+    from tests.analytics.test_talk import werewolf_log
+
+    match = start(client, game="werewolf", players=8, seed=5)
+    follow(client, match["id"])
+    secret = "Pack, listen: tomorrow I am the seer and I checked p3, a villager."
+    events = [e for _, e in werewolf_log()]
+    events.insert(
+        5,
+        Event(
+            source=EventSource.GAME,
+            type=MESSAGE,
+            data={"player": "p1", "text": secret},
+            visible_to=["p1", "p2"],
+        ),
+    )
+    events.append(
+        Event(
+            source=EventSource.GAME,
+            type="player_died",
+            data={"player": "p1", "cause": "executed", "role": "werewolf"},
+        )
+    )
+
+    async def stored(match_id):
+        return events
+
+    monkeypatch.setattr(client.app.state.live, "log", stored)
+
+    public = client.get(f"/matches/{match['id']}/talk-checks").json()
+    full = client.get(f"/matches/{match['id']}/talk-checks", params={"spoilers": True}).json()
+
+    assert "Pack, listen" not in str(public)
+    assert any("Pack, listen" in tag["quote"] for tag in full["tags"])

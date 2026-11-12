@@ -296,8 +296,8 @@ def talk_checks(
 ) -> dict[str, Any]:
     """Every table-talk statement that could be read, with whether the engine's truth agrees.
 
-    `log` holds (seq, event) pairs. Without `spoilers` only Werewolf claims that a death has
-    disproved are given; the other games need hidden cards.
+    `log` holds (seq, event) pairs. Without `spoilers` only public events are read, and only
+    Werewolf claims that a death has disproved are given; the other games need hidden cards.
     """
     if game not in CHECKS:
         return {
@@ -306,6 +306,8 @@ def talk_checks(
             "reason": "no talk check for this game",
             "tags": [],
         }
+    if not spoilers:  # read public events only: a private message (pack chat) is no public talk
+        log = [(seq, e) for seq, e in log if e.visible_to is None or e.type == "match_started"]
     if game == "werewolf":
         tags = _werewolf(log, spoilers, names)
         if not spoilers:
