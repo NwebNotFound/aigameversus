@@ -68,6 +68,7 @@ def test_a_catalog_model_takes_a_seat_at_openrouters_prices(
         "name": "Vendor: acme/plays",
         "model_id": "acme/plays",
         "kind": "model",
+        "personality": None,
     }
     assert {(player, model) for _, player, model in calls(database_url)} == {
         ("p1", "acme/plays"),

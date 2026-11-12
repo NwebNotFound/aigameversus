@@ -42,7 +42,8 @@ export const actions: Actions = {
 					? setup.data.models.map((m) => m.id)
 					: [];
 		const mixed = setup.state === 'ok' && setup.data.mixed_seats === true;
-		const parsed = parseForm(form, games.data, models, mixed);
+		const personalities = setup.state === 'ok' && setup.data.seat_personalities === true;
+		const parsed = parseForm(form, games.data, models, mixed, personalities);
 		if (!parsed.ok) return fail(400, { values, errors: parsed.errors });
 
 		const roles = parsed.match.settings.roles as Record<string, number> | undefined;
