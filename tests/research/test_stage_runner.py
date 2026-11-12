@@ -108,7 +108,11 @@ def approved(tmp_path):
     return folder / "PLAN.yaml"
 
 
+EVIDENCE = {"pre_start_report": "PR #165 comment (test)", "arena_build": "main abc123 (test)"}
+
+
 def client(plan_path, out, arena, **kwargs):
+    kwargs.setdefault("evidence", EVIDENCE)
     runner = StageRunner(
         plan_path, out, arena, poll=0, sleep=lambda s: None, say=lambda m: None, **kwargs
     )
@@ -230,7 +234,7 @@ def test_the_tables_limit_is_held_for_the_next_match_and_a_lost_start_counts_at_
     runner._write({"attempt_id": "a7", "order": 7, "state": "ended", "cost_micro_eur": 320_000})
     arena = arena_for(approved, estimate=1_000)
 
-    with pytest.raises(RunStopped, match="the table's limit 0.40"):
+    with pytest.raises(RunStopped, match="the reserve 0.40"):
         client(approved, tmp_path / "out", arena).gates(runner.matches[7])
     assert arena.posts() == []
     # The lost start is what tips it: counted at 0 the same row would pass.
@@ -283,19 +287,27 @@ def test_a_post_without_an_answer_adopts_the_match_it_started(approved, tmp_path
     assert attempt["match_id"] == "m1" and attempt["state"] == "ended"
 
 
-def test_a_post_that_started_nothing_holds_and_the_next_run_starts_it_once(approved, tmp_path):
+def test_a_post_that_shows_no_match_holds_until_a_person_marks_it_unstarted(approved, tmp_path):
     arena = arena_for(approved)
     arena.lose_post = 2  # no answer, and no match was created
+    out = tmp_path / "out"
 
-    first = client(approved, tmp_path / "out", arena)
-    with pytest.raises(RunStopped, match="run again later"):
+    first = client(approved, out, arena)
+    with pytest.raises(RunStopped, match="--mark-unstarted"):
         first.run()
     assert arena.matches == {}
-    # Not yet decided: a slow start could still show, so this run never calls it unstarted.
-    assert [a["state"] for a in first.attempts().values()] == ["starting"]
-
+    (attempt,) = first.attempts().values()
     arena.lose_post = 0
-    ended = client(approved, tmp_path / "out", arena).run()
+    # Absence from the batch proves nothing: every later run holds, it never reposts.
+    for _ in range(2):
+        with pytest.raises(RunStopped, match="may have started a match"):
+            client(approved, out, arena).run()
+    assert len(arena.posts()) == 1
+
+    with pytest.raises(PlanRefused):
+        client(approved, out, arena).mark_unstarted(attempt["attempt_id"], " ")
+    client(approved, out, arena).mark_unstarted(attempt["attempt_id"], "checked GET /matches")
+    ended = client(approved, out, arena).run()
     assert len(arena.matches) == 8 and len(ended) == 8  # row 1 once, then the rest
 
 
@@ -491,3 +503,183 @@ def test_every_seats_fallback_share_and_the_arenas_setup_are_recorded(approved, 
     first = sorted(runner.attempts().values(), key=lambda a: a["order"])[0]
     assert sorted(first["fallback_shares"]) == [f"p{i}" for i in range(1, 9)]
     assert first["arena_setup"]["caps"] == {"match_eur": 0.5, "month_eur": 25}
+
+
+def test_a_paid_run_needs_the_pre_start_report_and_the_arena_build(approved, tmp_path):
+    arena = arena_for(approved)
+
+    with pytest.raises(PlanRefused, match="--pre-start-report, --arena-build"):
+        client(approved, tmp_path / "out", arena, evidence={}).run()
+    assert arena.posts() == []
+
+
+def test_the_estimate_comes_before_every_start_and_a_dry_run_sends_no_confirm_spend(
+    approved, tmp_path
+):
+    arena = arena_for(approved)
+    client(approved, tmp_path / "out", arena).run()
+    paths = [path for method, path, _ in arena.calls if method == "POST"]
+    assert paths == ["/matches/estimate", "/matches"] * 8  # a fresh quote before each start
+
+    dry = arena_for(approved)
+    client(approved, tmp_path / "dry", dry, dry_run=True).run()
+    assert not any(body and body.get("confirm_spend") for _, _, body in dry.calls)
+    assert all(path != "/matches" for method, path, _ in dry.calls if method == "POST")
+
+
+def test_spend_comes_from_the_arenas_batch_history_so_a_new_folder_resets_nothing(
+    approved, tmp_path
+):
+    arena = arena_for(approved, cost=390_000, estimate=200_000)
+    with pytest.raises(RunStopped):
+        client(approved, tmp_path / "first", arena).run()
+    assert len(arena.posts()) == 7
+
+    # The same arena seen from a fresh out folder: its seven matches are foreign there.
+    with pytest.raises(RunStopped, match="in no attempt of this out folder"):
+        client(approved, tmp_path / "fresh", arena).run()
+    assert len(arena.posts()) == 7
+
+
+def test_two_matches_for_one_table_in_the_batch_hold(approved, tmp_path):
+    arena = arena_for(approved)
+    runner = client(approved, tmp_path / "out", arena)
+    for attempt_id in ("a1", "a2"):
+        status, record = arena("POST", "/matches", runner.body(runner.matches[0], attempt_id))
+        runner._write(
+            {
+                "attempt_id": attempt_id,
+                "order": 1,
+                "state": "ended",
+                "match_id": record["id"],
+                "cost_micro_eur": 1,
+            }
+        )
+
+    with pytest.raises(RunStopped, match="two matches for one table"):
+        runner.gates(runner.matches[1])
+
+
+def test_a_stage_waits_for_the_other_stages_released_checkpoint(approved, tmp_path):
+    plan = yaml.safe_load(approved.read_text(encoding="utf-8"))
+    plan["requires_release_from"] = "C1-out"
+    approved.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    arena = arena_for(approved)
+    out = tmp_path / "W2-out"
+
+    with pytest.raises(RunStopped, match="waits for the reviewed checkpoint"):
+        client(approved, out, arena).run()
+    assert arena.posts() == []
+    (tmp_path / "C1-out").mkdir()
+    (tmp_path / "C1-out/checkpoint.jsonl").write_text(
+        json.dumps({"released_after": 1, "evidence": "review (test)"}) + "\n"
+    )
+    assert len(client(approved, out, arena).run()) == 8
+
+
+def test_a_stricter_reserve_may_be_set_but_never_one_below_the_limit(approved, tmp_path):
+    plan = yaml.safe_load(approved.read_text(encoding="utf-8"))
+    plan["budget"]["reserve_eur"] = 0.5
+    approved.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    assert client(approved, tmp_path / "a", arena_for(approved)).reserve == 500_000
+    plan["budget"]["reserve_eur"] = 0.3
+    approved.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    with pytest.raises(PlanRefused, match="reserve_eur"):
+        client(approved, tmp_path / "b", arena_for(approved))
+
+
+def job_csv(rows):
+    head = "order,game,models,seed,settings,memory,estimate_micro_eur\n"
+    return head + "".join(rows)
+
+
+def job_row(order, models, settings, seed=2104001, game="civ", memory="false"):
+    quoted = lambda v: '"' + json.dumps(v).replace('"', '""') + '"'  # noqa: E731
+    return f"{order},{game},{quoted(models)},{seed},{quoted(settings)},{memory},60000\n"
+
+
+@pytest.fixture
+def c1_job(c1):
+    plan = yaml.safe_load(c1.read_text(encoding="utf-8"))
+    roster = ["glm-flash", "deepseek-flash", "gpt-luna", "claude-haiku"]
+    rotations = [roster[i:] + roster[:i] for i in range(4)]
+    body = job_csv(job_row(i + 1, r, plan["settings"]) for i, r in enumerate(rotations))
+    (c1.parent / "schedule.csv").write_text(body, encoding="utf-8", newline="")
+    plan.update(seed=2104001, models=roster)
+    plan["schedule_sha256"] = __import__("hashlib").sha256(body.encode()).hexdigest()
+    c1.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    return c1
+
+
+def test_the_job_form_csv_plays_its_rows_as_frozen(c1_job, tmp_path):
+    arena = c1_arena(c1_job)
+
+    with pytest.raises(RunStopped, match="review checkpoint"):
+        client(c1_job, tmp_path / "out", arena).run()
+
+    (body,) = arena.posts()
+    assert body["models"] == ["glm-flash", "deepseek-flash", "gpt-luna", "claude-haiku"]
+    assert body["seed"] == 2104001 and body["settings"]["rounds"] == 20
+
+
+@pytest.mark.parametrize(
+    ("change", "says"),
+    [
+        (lambda t: t.replace("1,civ,", "1,poker,", 1), "game poker"),
+        (lambda t: t.replace("2104001", "2104002", 1), "seed"),
+        (lambda t: t.replace('""rounds"": 20', '""rounds"": 60', 1), "frozen"),
+        (lambda t: t.replace(",false,", ",true,", 1), "memory"),
+        (lambda t: t.replace("glm-flash", "qwen-flash", 1), "roster"),
+    ],
+)
+def test_a_job_form_row_that_differs_from_the_frozen_plan_is_refused(
+    c1_job, tmp_path, change, says
+):
+    schedule = c1_job.parent / "schedule.csv"
+    changed = change(schedule.read_text(encoding="utf-8"))
+    schedule.write_text(changed, encoding="utf-8", newline="")
+    plan = yaml.safe_load(c1_job.read_text(encoding="utf-8"))
+    plan["schedule_sha256"] = __import__("hashlib").sha256(changed.encode()).hexdigest()
+    c1_job.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(PlanRefused, match=says):
+        StageRunner(c1_job, tmp_path / "out", c1_arena(c1_job))
+
+
+def test_a_job_form_csv_must_match_its_pinned_bytes(c1_job, tmp_path):
+    schedule = c1_job.parent / "schedule.csv"
+    schedule.write_text(schedule.read_text(encoding="utf-8") + "\n", encoding="utf-8", newline="")
+
+    with pytest.raises(PlanRefused, match="pins"):
+        StageRunner(c1_job, tmp_path / "out", c1_arena(c1_job))
+
+
+def test_run_json_records_hashes_evidence_counts_and_stop_reasons(c1, tmp_path):
+    out = tmp_path / "out"
+    with pytest.raises(RunStopped):
+        client(c1, out, c1_arena(c1)).run()
+
+    summary = json.loads((out / "run.json").read_text())
+    assert len(summary["client_sha256"]) == 64 and summary["plan_sha256"]
+    assert summary["pre_start_report"] == EVIDENCE["pre_start_report"]
+    assert summary["arena_build"] == EVIDENCE["arena_build"]
+    assert "operator-supplied" in summary["arena_build_provenance"]
+    (attempt,) = summary["attempts"]
+    assert attempt["body"]["settings"]["match_budget_eur"] == 0.2
+    assert attempt["estimate_micro_eur"] == 60_000 and attempt["cap_micro_eur"] == 200_000
+    assert set(attempt["seat_counts"]["p1"]) == {
+        "model",
+        "decisions",
+        "fallbacks",
+        "rejected",
+        "agent_failed",
+    }
+
+
+def test_a_job_form_csv_without_a_pinned_hash_is_refused(c1_job, tmp_path):
+    plan = yaml.safe_load(c1_job.read_text(encoding="utf-8"))
+    del plan["schedule_sha256"]
+    c1_job.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(PlanRefused, match="must be pinned"):
+        StageRunner(c1_job, tmp_path / "out", c1_arena(c1_job))

@@ -969,9 +969,15 @@ and estimates only.
 - **After each match:** it holds on a failed match, a failed agent, a fallback share above
   10 % (the guest's, else every model's), a wrong role, or a cost above
   `max_cost_per_match_eur`. It never retries.
-- **Logs:** `<out>/attempts.jsonl` is written before every POST. A restart finds a lost
-  start by its batch label instead of posting again. `<out>/run.json` holds the effective
-  limit, the reserve and the booked costs.
+- **Logs:** `<out>/attempts.jsonl` is written and fsynced before every POST. A restart
+  adopts a lost start by its batch label. If the arena shows none, it holds until
+  `--mark-unstarted ATTEMPT_ID EVIDENCE`; it never posts again on its own.
+- **Spend:** the stage's spend is read from the arena's batch history, so a new out folder
+  resets nothing.
+- **Paid runs:** they need `--pre-start-report` and `--arena-build`.
+- **`<out>/run.json`:** the hashes (client included), the evidence, the effective limit,
+  the reserve, every attempt with its body, quote, month and seat counts, and the stop
+  reasons.
 
 ### A system
 

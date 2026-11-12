@@ -38,8 +38,17 @@ and every attempt's booked cost.
 What it sends is whitelisted: game, seed, the models of the row, the plan's settings,
 memory off, confirm_spend and a batch whose label carries the attempt id. Nothing else
 from the plan (never `expected_roles`). Each attempt is written to `<out>/attempts.jsonl`
-before its POST; after a crash or a POST without an answer the next run finds the match by
-its batch label instead of starting a second one, or holds while it cannot tell.
+before its POST (fsynced); after a crash or a POST without an answer the next run adopts
+the match its batch label shows. If none shows, it holds until a person has checked the
+arena and marks the attempt with `--mark-unstarted ATTEMPT_ID EVIDENCE`: it never reposts.
+
+The stage's spend comes from the arena's batch history plus every local attempt it does not
+show yet (a new out folder cannot reset it; a match in the batch that no attempt knows
+holds). A schedule may also be in the job form (`order,game,models,seed,settings,memory,
+estimate_micro_eur`, pinned by `schedule_sha256`; every row equal to the frozen plan). A
+paid run needs `--pre-start-report` and `--arena-build` (operator-supplied; the arena shows
+no commit); a plan may wait for another stage's released checkpoint
+(`requires_release_from`) and hold a stricter reserve (`budget.reserve_eur`).
 """
 
 from __future__ import annotations
@@ -48,6 +57,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import sys
 import time
 import uuid
@@ -73,6 +83,8 @@ SENT_SETTINGS = (  # the settings a stage may send; nothing else of the plan is 
     "private_plan",
 )
 COLUMNS = {"order", "seed", "guest", "guest_seat", "expected_role"}  # besides p1..pN
+# The self-describing job form of a schedule (Researcher's spec on #165): one table per row.
+JOB_COLUMNS = ["order", "game", "models", "seed", "settings", "memory", "estimate_micro_eur"]
 GUEST_SCHEMA = "explicit_guest_pilot_v1"
 FALLBACK_LIMIT = 0.10
 HOLD_STATUSES = {"failed", "interrupted", "aborted"}
@@ -105,8 +117,12 @@ class StageRunner:
         dry_run: bool = False,
         max_wait: float = 4 * 3600,
         clock: Callable[[], float] = time.monotonic,
+        evidence: Mapping[str, str] | None = None,
     ):
         self.clock = clock
+        # Operator-supplied, recorded in run.json, required for a paid run: the written
+        # pre-start report and the arena build (the arena exposes no commit to check it).
+        self.evidence = dict(evidence or {})
         self.dry_run = dry_run  # every check and estimate, no POST /matches
         self.resume_after_hold = resume_after_hold  # a person decided to go on after a hold
         self.plan_path = plan_path
@@ -124,6 +140,10 @@ class StageRunner:
         # The reserve of a new match, and of a start whose cost is not known: the table's own
         # enforced limit, settings.match_budget_eur (Lead 42080496, superseding 5c29a3f0).
         self.reserve = self.cap
+        if "reserve_eur" in budget:  # a stage may hold more than its limit, never less
+            if _micro(budget["reserve_eur"]) < self.cap:
+                raise PlanRefused("budget.reserve_eur may not be below budget.match_cap_eur")
+            self.reserve = _micro(budget["reserve_eur"])
         self.stop_share = Decimal(str(budget["stop_start_share"]))
         self.month_hold = _micro(budget["notify_and_hold_at_month_eur"])
         cost_stop = budget.get("max_cost_per_match_eur")
@@ -134,6 +154,8 @@ class StageRunner:
         self.cost_jump = None if jump is None else Decimal(str(jump))
         self.max_wait = max_wait  # seconds a match may run before the client holds
         self.batch_id = str(self.plan["id"])
+        # Another stage's out folder whose review checkpoint must be released first.
+        self.after = self.plan.get("requires_release_from")
         self.matches = self._checked_schedule()
 
     # --- the plan ----------------------------------------------------------------------
@@ -157,16 +179,26 @@ class StageRunner:
             raise PlanRefused("settings.match_budget_eur must equal budget.match_cap_eur")
         if plan.get("memory") is not False or plan["budget"].get("automatic_retries") != 0:
             raise PlanRefused("the plan must play with memory off and no automatic retries")
+        pinned = plan.get("schedule_sha256")
+        if pinned and pinned != _sha256(self.schedule_path):
+            raise PlanRefused("the schedule's bytes are not the ones the plan pins")
         with self.schedule_path.open(encoding="utf-8", newline="") as file:
             reader = csv.DictReader(file)
             listed = list(reader)
             columns = list(reader.fieldnames or [])
+        if len(set(columns)) != len(columns):
+            raise PlanRefused("the schedule has a column twice")
+        if columns == JOB_COLUMNS:
+            if not pinned:
+                raise PlanRefused("a job-form schedule must be pinned by plan.schedule_sha256")
+            listed = self._job_rows(listed)
+            columns = ["order", "seed", *[k for k in listed[0] if k[:1] == "p"]] if listed else []
         seats = sorted(
             (c for c in columns if c[:1] == "p" and c[1:].isdigit()), key=lambda c: int(c[1:])
         )
         if not seats or seats != [f"p{i}" for i in range(1, len(seats) + 1)]:
             raise PlanRefused("the schedule needs seat columns p1..pN")
-        if unknown := set(columns) - COLUMNS - set(seats):
+        if unknown := set(columns) - COLUMNS - set(seats) - {"quoted_micro_eur"}:
             raise PlanRefused(f"columns the client does not know: {sorted(unknown)}")
         if [row.get("order") for row in listed] != [str(i) for i in range(1, len(listed) + 1)]:
             raise PlanRefused("the order column must run 1, 2, 3, ... without gaps")
@@ -176,8 +208,48 @@ class StageRunner:
             expected = [{k: str(v) for k, v in row.items()} for row in rows(plan)]
             if listed != expected:
                 raise PlanRefused(f"{self.schedule_path} is not the schedule the plan generates")
+        if len({row["order"] for row in listed}) != len(listed):
+            raise PlanRefused("a table is listed twice")
         self.seats = seats
         return listed
+
+    def _job_rows(self, listed: list[dict[str, str]]) -> list[dict[str, Any]]:
+        """The job form's rows, each checked against the frozen plan, as seat rows."""
+        plan, rows_ = self.plan, []
+        width = None
+        for row in listed:
+            try:
+                models = json.loads(row["models"])
+                settings = json.loads(row["settings"])
+                memory = json.loads(row["memory"])
+                quote = int(row["estimate_micro_eur"])
+                seed = int(row["seed"])
+            except (ValueError, TypeError) as bad:
+                raise PlanRefused(f"row {row.get('order')}: unreadable ({bad})") from None
+            if row["game"] != plan["game"]:
+                raise PlanRefused(f"row {row['order']}: game {row['game']} is not the plan's")
+            if settings != plan["settings"]:
+                raise PlanRefused(f"row {row['order']}: settings are not the plan's frozen ones")
+            if memory is not False:
+                raise PlanRefused(f"row {row['order']}: memory must be off")
+            if "seed" in plan and seed != plan["seed"]:
+                raise PlanRefused(f"row {row['order']}: seed {seed} is not the plan's")
+            if not isinstance(models, list) or not all(isinstance(m, str) for m in models):
+                raise PlanRefused(f"row {row['order']}: models must be a list of ids")
+            if "models" in plan and sorted(models) != sorted(plan["models"]):
+                raise PlanRefused(f"row {row['order']}: the roster is not the plan's")
+            if width not in (None, len(models)):
+                raise PlanRefused("every table must seat the same number of models")
+            width = len(models)
+            rows_.append(
+                {
+                    "order": row["order"],
+                    "seed": str(seed),
+                    **{f"p{i}": m for i, m in enumerate(models, start=1)},
+                    "quoted_micro_eur": quote,
+                }
+            )
+        return rows_
 
     def body(self, row: Mapping[str, str], attempt_id: str) -> dict[str, Any]:
         """Exactly what is sent for a row: nothing from the plan beyond the whitelist."""
@@ -210,6 +282,8 @@ class StageRunner:
         self.out.mkdir(parents=True, exist_ok=True)
         with self.attempts_path.open("a", encoding="utf-8", newline="\n") as log:
             log.write(json.dumps(line, ensure_ascii=False) + "\n")
+            log.flush()
+            os.fsync(log.fileno())  # on disk before the POST it announces
 
     def attempts(self) -> dict[str, dict[str, Any]]:
         """attempt id -> its lines merged, oldest first."""
@@ -226,6 +300,30 @@ class StageRunner:
         total = 0
         for attempt in self.attempts().values():
             if attempt.get("state") == "not_started":
+                continue
+            cost = attempt.get("cost_micro_eur")
+            total += self.reserve if cost is None else cost
+        return total
+
+    def stage_spent(self) -> int:
+        """The stage's spend from the arena's own batch history (so a new output folder or a
+        lost log cannot reset it), plus every local attempt the arena does not show yet: its
+        known cost, or the reserve. A match in the batch that no attempt knows holds."""
+        matches = self._get(f"/matches?batch={self.batch_id}")
+        local = self.attempts()
+        known = {a["match_id"] for a in local.values() if a.get("match_id")}
+        indexes = [((m.get("batch") or {}).get("index")) for m in matches]
+        if len(indexes) != len(set(indexes)):
+            raise RunStopped("the batch holds two matches for one table: reconcile by hand")
+        if foreign := [m["id"] for m in matches if m["id"] not in known]:
+            raise RunStopped(
+                f"match(es) {', '.join(foreign)} in batch {self.batch_id} are in no attempt "
+                "of this out folder: reconcile by hand (wrong folder, or a start not logged)"
+            )
+        total = sum(self._get(f"/matches/{m['id']}/cost")["total_micro_eur"] for m in matches)
+        shown = {m["id"] for m in matches}
+        for attempt in local.values():
+            if attempt.get("state") == "not_started" or attempt.get("match_id") in shown:
                 continue
             cost = attempt.get("cost_micro_eur")
             total += self.reserve if cost is None else cost
@@ -270,7 +368,7 @@ class StageRunner:
             )
         if quote >= self.cap:
             raise RunStopped(f"the estimate {quote / MICRO:.6f} EUR is not below the match cap")
-        spent = self.spent()
+        spent = self.stage_spent()
         if spent + 3 * quote > self.stage * self.stop_share:
             raise RunStopped(
                 f"spent {spent / MICRO:.6f} + 3 x {quote / MICRO:.6f} EUR would pass "
@@ -278,7 +376,7 @@ class StageRunner:
             )
         if spent + self.reserve > self.stage:
             raise RunStopped(
-                f"spent {spent / MICRO:.6f} + the table's limit {self.reserve / MICRO:.2f} "
+                f"spent {spent / MICRO:.6f} + the reserve {self.reserve / MICRO:.2f} "
                 f"EUR would pass the stage's {self.stage / MICRO:.2f} EUR"
             )
         if self.plan.get("guests") and row.get("guest"):
@@ -314,23 +412,35 @@ class StageRunner:
             (m for m in matches if attempt_id in ((m.get("batch") or {}).get("label") or "")), None
         )
 
-    def reconcile(self, *, settle_missing: bool = True) -> None:
-        """An attempt written before its POST without a match id: find the match it may have
-        started. Found: adopt it. Not found: it never started (only with `settle_missing`;
-        right after a POST without an answer the client holds instead, and the next run
-        decides, when a slow start would have shown)."""
+    def reconcile(self) -> None:
+        """An attempt written before its POST without a match id: adopt the match its batch
+        label shows. Not shown is no proof that none was created (it may show later), so
+        the attempt stays undecided and the run holds until a person marks it."""
         for attempt_id, attempt in self.attempts().items():
             if attempt.get("match_id") or attempt.get("state") in ("not_started", "ended"):
                 continue
             found = self._find(attempt_id)
-            if found is None and not settle_missing:
-                continue
-            if found is None:
-                self._write({"attempt_id": attempt_id, "state": "not_started", "at": self._at()})
-                self.say(f"attempt {attempt_id} (row {attempt['order']}) never started a match")
-            else:
+            if found is not None:
                 self._write({"attempt_id": attempt_id, "match_id": found["id"], "state": "started"})
                 self.say(f"attempt {attempt_id} started match {found['id']}: adopted")
+
+    def undecided(self) -> list[dict[str, Any]]:
+        return [
+            a
+            for a in self.attempts().values()
+            if a.get("state") == "starting" and not a.get("match_id")
+        ]
+
+    def mark_unstarted(self, attempt_id: str, evidence: str) -> None:
+        """A person checked the arena and found no match for this attempt: it never started."""
+        if not evidence.strip():
+            raise PlanRefused("marking an attempt unstarted needs the evidence of the check")
+        attempt = self.attempts().get(attempt_id)
+        if attempt is None or attempt.get("match_id") or attempt.get("state") != "starting":
+            raise PlanRefused(f"{attempt_id} is no undecided attempt")
+        self._write(
+            {"attempt_id": attempt_id, "state": "not_started", "manual": evidence, "at": self._at()}
+        )
 
     # --- running ------------------------------------------------------------------------------
 
@@ -364,6 +474,18 @@ class StageRunner:
             line = {"released_after": len(self.ended()), "evidence": evidence, "at": self._at()}
             log.write(json.dumps(line, ensure_ascii=False) + "\n")
 
+    def _after_gate(self) -> None:
+        """A stage that must wait for another's review checkpoint (W2 after the C1 smoke)."""
+        if not self.after:
+            return
+        other = Path(self.after)
+        other = other if other.is_absolute() else self.out.parent / other
+        released = other / "checkpoint.jsonl"
+        if not released.exists() or not released.read_text(encoding="utf-8").strip():
+            raise RunStopped(
+                f"this stage waits for the reviewed checkpoint of {other}: not released yet"
+            )
+
     def _at_checkpoint(self) -> None:
         if self.checkpoint and len(self.ended()) >= self.checkpoint > self.released():
             raise RunStopped(
@@ -378,8 +500,20 @@ class StageRunner:
         )
         return {
             "stage": self.plan["id"],
+            "generated_at": self._at(),
             "plan_sha256": _sha256(self.plan_path),
             "schedule_sha256": _sha256(self.schedule_path),
+            "client_sha256": _sha256(Path(__file__)),
+            "execution_approval_evidence": self.plan.get("execution_approval_evidence"),
+            "pre_start_report": self.evidence.get("pre_start_report"),
+            "arena_build": self.evidence.get("arena_build"),
+            "arena_build_provenance": "operator-supplied; the arena exposes no commit to check",
+            "checkpoint_releases": (
+                [json.loads(x) for x in self.checkpoint_path.read_text().splitlines()]
+                if self.checkpoint_path.exists()
+                else []
+            ),
+            "frozen_settings": self.plan["settings"],
             "match_budget_eur": self.plan["settings"].get("match_budget_eur"),
             "cap_read_back_micro_eur": next(
                 (a["cap_micro_eur"] for a in reversed(attempts) if "cap_micro_eur" in a), None
@@ -390,25 +524,8 @@ class StageRunner:
             "booked_micro_eur": sum(a.get("cost_micro_eur") or 0 for a in attempts),
             "checkpoint_after": self.checkpoint,
             "released_after": self.released(),
-            "attempts": [
-                {
-                    k: a.get(k)
-                    for k in (
-                        "attempt_id",
-                        "order",
-                        "guest",
-                        "state",
-                        "match_id",
-                        "status",
-                        "cost_micro_eur",
-                        "estimate_micro_eur",
-                        "month_spent_micro_eur",
-                        "month_spent_after_micro_eur",
-                        "hold",
-                    )
-                }
-                for a in attempts
-            ],
+            "stop_reasons": [a["hold"] for a in attempts if a.get("hold")],
+            "attempts": attempts,  # every line merged: body, quote, limit, month, counts
         }
 
     def write_summary(self) -> None:
@@ -441,6 +558,11 @@ class StageRunner:
         """Play the open rows in order, one at a time. RunStopped on any hold."""
         if self.dry_run:
             return self.dry()
+        missing = [k for k in ("pre_start_report", "arena_build") if not self.evidence.get(k)]
+        if missing:
+            raise PlanRefused(
+                f"a paid run needs {', '.join('--' + k.replace('_', '-') for k in missing)}"
+            )
         self.out.mkdir(parents=True, exist_ok=True)
         held = [a for a in self.attempts().values() if a.get("hold")]
         if held and not self.resume_after_hold:
@@ -449,6 +571,12 @@ class StageRunner:
                 "--resume-after-hold, after a person decided)"
             )
         self.reconcile()
+        if undecided := self.undecided():
+            raise RunStopped(
+                f"attempt {undecided[0]['attempt_id']} (row {undecided[0]['order']}): its POST "
+                "may have started a match the arena does not show: check the arena, then "
+                "--mark-unstarted ATTEMPT_ID EVIDENCE if none exists"
+            )
         attempts = self.attempts()
         for attempt in attempts.values():  # a match that ran when the client stopped
             if attempt.get("match_id") and attempt.get("state") != "ended":
@@ -459,6 +587,7 @@ class StageRunner:
             if int(row["order"]) in tried:
                 continue  # played or tried once: never again (no retries)
             self._at_checkpoint()
+            self._after_gate()
             checks = self.gates(row)
             attempt_id = uuid.uuid4().hex[:12]
             body = self.body(row, attempt_id)
@@ -479,11 +608,11 @@ class StageRunner:
                 status, record = self.request("POST", "/matches", body)
             except Exception as error:  # noqa: BLE001 - no answer: did it start? reconcile
                 self.say(f"POST for row {row['order']} gave no answer ({type(error).__name__})")
-                self.reconcile(settle_missing=False)
+                self.reconcile()
                 if not self.attempts()[attempt_id].get("match_id"):
                     raise RunStopped(
-                        f"row {row['order']}: no answer to its POST and no match found yet; "
-                        "run again later: the next run decides whether it started"
+                        f"row {row['order']}: no answer to its POST and no match shown: check "
+                        f"the arena, then --mark-unstarted {attempt_id} EVIDENCE if none exists"
                     ) from error
                 record = {"id": self.attempts()[attempt_id]["match_id"]}
                 status = 201
@@ -549,6 +678,16 @@ class StageRunner:
                 "prompt_version": record.get("prompt_version"),
                 "settings_recorded": record.get("settings"),
                 "fallback_shares": {seat: round(v, 4) for seat, v in every.items()},
+                "seat_counts": {
+                    seat: {
+                        "model": row[seat],
+                        "decisions": r.turns,
+                        "fallbacks": r.fallbacks,
+                        "rejected": r.rejected,
+                        "agent_failed": r.agent_failed,
+                    }
+                    for seat, r in reports.items()
+                },
                 "guest_role": dealt,
                 "agent_failed": sorted(p for p, r in reports.items() if r.agent_failed),
                 "ended_at": self._at(),
@@ -608,6 +747,14 @@ def main(argv=None) -> int:
         metavar="EVIDENCE",
         help="record the review at the checkpoint (who, which message), then exit",
     )
+    mode.add_argument(
+        "--mark-unstarted",
+        nargs=2,
+        metavar=("ATTEMPT_ID", "EVIDENCE"),
+        help="after checking the arena by hand: this attempt started no match, then exit",
+    )
+    parser.add_argument("--pre-start-report", help="where the written pre-start report is")
+    parser.add_argument("--arena-build", help="the arena build in use, as the operator knows it")
     parser.add_argument("--poll", type=float, default=10)
     parser.add_argument(
         "--max-wait", type=float, default=4 * 3600, help="seconds a match may run before a hold"
@@ -628,7 +775,15 @@ def main(argv=None) -> int:
             resume_after_hold=args.resume_after_hold,
             dry_run=args.dry_run,
             max_wait=args.max_wait,
+            evidence={
+                "pre_start_report": args.pre_start_report or "",
+                "arena_build": args.arena_build or "",
+            },
         )
+        if args.mark_unstarted:
+            runner.mark_unstarted(*args.mark_unstarted)
+            print(f"Marked {args.mark_unstarted[0]} unstarted")
+            return 0
         if args.release_checkpoint:
             runner.release_checkpoint(args.release_checkpoint)
             print(f"Released after {len(runner.ended())} match(es)")
