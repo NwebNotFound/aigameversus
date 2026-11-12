@@ -252,7 +252,7 @@
 					role="tab"
 					aria-selected={tab === 'analytics'}
 					onclick={() => (tab = 'analytics')}
-					data-testid="tab-analytics">Analytics</button
+					data-testid="tab-analytics">Report</button
 				>
 			</div>
 			{#if view === 'spectator'}<span class="muted" data-testid="seed">seed {live.match.seed}</span
@@ -269,6 +269,7 @@
 				version={log.length}
 				names={Object.fromEntries(live.match.players.map((s) => [s, seatName(s, players)]))}
 				colours={Object.fromEntries(live.match.players.map((s) => [s, colourKey(s, players)]))}
+				costs={live.cost.players}
 			/>
 		</div>
 	{:else}

@@ -1,0 +1,169 @@
+{
+	"game": "civ",
+	"spoilers": false,
+	"events": 49,
+	"situation": null,
+	"meta": {
+		"version": "2",
+		"prompt_version": "civ-p1",
+		"seed": null,
+		"settings": { "rounds": 20, "prompt_version": "civ-p1" },
+		"rounds_total": 20,
+		"seats": {
+			"p1": "glm-flash",
+			"p2": "deepseek-flash-civ",
+			"p3": "gpt-luna",
+			"p4": "claude-haiku"
+		}
+	},
+	"analytics_version": "civ/1",
+	"nations": ["p1", "p2", "p3", "p4"],
+	"series": null,
+	"victory": {
+		"kind": "round_limit",
+		"winners": ["p4"],
+		"round": 20,
+		"standings": [
+			{ "rank": 1, "score": 99, "player": "p4" },
+			{ "rank": 2, "score": 88, "player": "p2" },
+			{ "rank": 3, "score": 82, "player": "p1" },
+			{ "rank": 4, "score": 65, "player": "p3" }
+		],
+		"countdown": []
+	},
+	"battles": null,
+	"conquests": [
+		{ "seq": 483, "round": 10, "city": "c6", "from": "p2", "to": "neutral" },
+		{ "seq": 622, "round": 12, "city": "c6", "from": "neutral", "to": "p2" },
+		{ "seq": 627, "round": 12, "city": "c10", "from": "p2", "to": "neutral" },
+		{ "seq": 753, "round": 14, "city": "c10", "from": "neutral", "to": "p2" },
+		{ "seq": 977, "round": 17, "city": "c12", "from": "p3", "to": "p1" }
+	],
+	"diplomacy": {
+		"timeline": [
+			{
+				"seq": 279,
+				"round": 7,
+				"event": "treaty_signed",
+				"treaty": "t1",
+				"parties": ["p1", "p2"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 280,
+				"round": 7,
+				"event": "treaty_signed",
+				"treaty": "t2",
+				"parties": ["p2", "p3"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 391,
+				"round": 9,
+				"event": "treaty_signed",
+				"treaty": "t3",
+				"parties": ["p1", "p3"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 392,
+				"round": 9,
+				"event": "treaty_signed",
+				"treaty": "t4",
+				"parties": ["p2", "p4"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 783,
+				"round": 15,
+				"event": "war_declared",
+				"by": "p1",
+				"on": "p3",
+				"joined": [],
+				"broken": ["t3"]
+			},
+			{
+				"seq": 919,
+				"round": 17,
+				"event": "treaty_expired",
+				"treaty": "t2",
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 1158,
+				"round": 20,
+				"event": "treaty_signed",
+				"treaty": "t5",
+				"parties": ["p1", "p3"],
+				"treaty_kind": "peace"
+			}
+		],
+		"by_nation": {
+			"p1": {
+				"wars_declared": 1,
+				"treaties_signed": 3,
+				"treaties_broken": 0,
+				"messages_public": 3,
+				"messages_private": null,
+				"offers_sent": null,
+				"offers_received": null,
+				"offers_accepted": null,
+				"offers_declined": null,
+				"offers_lapsed": null
+			},
+			"p2": {
+				"wars_declared": 0,
+				"treaties_signed": 3,
+				"treaties_broken": 0,
+				"messages_public": 11,
+				"messages_private": null,
+				"offers_sent": null,
+				"offers_received": null,
+				"offers_accepted": null,
+				"offers_declined": null,
+				"offers_lapsed": null
+			},
+			"p3": {
+				"wars_declared": 0,
+				"treaties_signed": 3,
+				"treaties_broken": 0,
+				"messages_public": 0,
+				"messages_private": null,
+				"offers_sent": null,
+				"offers_received": null,
+				"offers_accepted": null,
+				"offers_declined": null,
+				"offers_lapsed": null
+			},
+			"p4": {
+				"wars_declared": 0,
+				"treaties_signed": 1,
+				"treaties_broken": 0,
+				"messages_public": 0,
+				"messages_private": null,
+				"offers_sent": null,
+				"offers_received": null,
+				"offers_accepted": null,
+				"offers_declined": null,
+				"offers_lapsed": null
+			}
+		}
+	},
+	"orders": null,
+	"decisions": null,
+	"behaviour": null,
+	"sections": [
+		"situation",
+		"analytics_version",
+		"nations",
+		"series",
+		"victory",
+		"battles",
+		"conquests",
+		"diplomacy",
+		"orders",
+		"decisions",
+		"behaviour"
+	],
+	"numbers": true
+}
