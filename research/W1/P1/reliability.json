@@ -1,0 +1,107 @@
+{
+  "scope": "P1 reliability only; no outcomes analysed",
+  "matches": 8,
+  "cost_micro_eur": 334566,
+  "models": {
+    "glm-flash": {
+      "seat_matches": 8,
+      "distinct_matches": 8,
+      "turns": 69,
+      "rejected_answers": 6,
+      "fallbacks": 0,
+      "failed_matches": 0,
+      "fallback_share": 0.0
+    },
+    "deepseek-flash": {
+      "seat_matches": 8,
+      "distinct_matches": 8,
+      "turns": 67,
+      "rejected_answers": 23,
+      "fallbacks": 2,
+      "failed_matches": 0,
+      "fallback_share": 0.029850746268656716
+    },
+    "gpt-luna": {
+      "seat_matches": 16,
+      "distinct_matches": 8,
+      "turns": 151,
+      "rejected_answers": 1,
+      "fallbacks": 0,
+      "failed_matches": 0,
+      "fallback_share": 0.0
+    },
+    "mistral-small": {
+      "seat_matches": 8,
+      "distinct_matches": 8,
+      "turns": 62,
+      "rejected_answers": 1,
+      "fallbacks": 0,
+      "failed_matches": 0,
+      "fallback_share": 0.0
+    },
+    "llama-scout": {
+      "seat_matches": 8,
+      "distinct_matches": 8,
+      "turns": 35,
+      "rejected_answers": 27,
+      "fallbacks": 6,
+      "failed_matches": 0,
+      "fallback_share": 0.17142857142857143
+    },
+    "claude-haiku": {
+      "seat_matches": 16,
+      "distinct_matches": 8,
+      "turns": 140,
+      "rejected_answers": 2,
+      "fallbacks": 0,
+      "failed_matches": 0,
+      "fallback_share": 0.0
+    }
+  },
+  "errors": {
+    "deepseek-flash": {
+      "Your text has 121 words; say it in at most 120.": 1,
+      "Your answer was cut off at the length limit before it called a tool. Think in one or two short sentences, then call exactly one tool.": 21,
+      "Invalid arguments for 'speak': 'text' is a required property.": 1
+    },
+    "llama-scout": {
+      "Your text has 80 words; say it in at most 40.": 1,
+      "Your text has 79 words; say it in at most 40.": 4,
+      "Your text has 205 words; say it in at most 120.": 1,
+      "Your text has 78 words; say it in at most 40.": 2,
+      "Your text has 50 words; say it in at most 40.": 1,
+      "Your text has 259 words; say it in at most 120.": 1,
+      "Your text has 261 words; say it in at most 120.": 1,
+      "Your text has 263 words; say it in at most 120.": 2,
+      "Your text has 255 words; say it in at most 120.": 1,
+      "Your text has 252 words; say it in at most 120.": 1,
+      "Your text has 82 words; say it in at most 40.": 3,
+      "Your text has 76 words; say it in at most 40.": 2,
+      "Your text has 75 words; say it in at most 40.": 2,
+      "Your text has 147 words; say it in at most 120.": 1,
+      "Your text has 156 words; say it in at most 120.": 1,
+      "Your text has 84 words; say it in at most 40.": 1,
+      "Your text has 258 words; say it in at most 120.": 1,
+      "Your text has 77 words; say it in at most 40.": 1
+    },
+    "glm-flash": {
+      "Your text has 130 words; say it in at most 120.": 1,
+      "Your text has 41 words; say it in at most 40.": 1,
+      "Your text has 52 words; say it in at most 40.": 1,
+      "Your text has 141 words; say it in at most 120.": 1,
+      "Your text has 139 words; say it in at most 120.": 1,
+      "Your text has 147 words; say it in at most 120.": 1
+    },
+    "claude-haiku": {
+      "Your text has 44 words; say it in at most 40.": 1,
+      "Your text has 130 words; say it in at most 120.": 1
+    },
+    "mistral-small": {
+      "Your answer was cut off at the length limit before it called a tool. Think in one or two short sentences, then call exactly one tool.": 1
+    },
+    "gpt-luna": {
+      "Your text has 122 words; say it in at most 120.": 1
+    }
+  },
+  "gate_pass": false
+}
