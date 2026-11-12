@@ -11,7 +11,17 @@ from arena.api.live import LiveMatches
 from arena.config import load_config
 from arena.db.event_store import EventStore
 from arena.ratings.elo import PROVISIONAL_GAMES
-from arena.ratings.store import BOT_MODEL_ID, RatingStore, Standing, Usage
+from arena.ratings.store import (
+    BOT_MODEL_ID,
+    DUPLICATE_MODEL,
+    FEWER_THAN_TWO_MODELS,
+    NOT_RATED,
+    TABLE_REPEATS_A_MODEL,
+    RatingStore,
+    Standing,
+    Unrated,
+    Usage,
+)
 from arena.stats import STATS
 
 router = APIRouter(tags=["ratings"])
@@ -74,6 +84,58 @@ class LeaderboardRow(StandingOut):
     )
 
 
+UNRATED_TEXT = {
+    DUPLICATE_MODEL: {
+        "en": "the model sat in several seats of one match, and a model is rated once per match",
+        "de": "das Modell saß auf mehreren Plätzen eines Spiels; ein Modell zählt je Spiel einmal",
+    },
+    TABLE_REPEATS_A_MODEL: {
+        "en": "another model sat in several seats at this table, so the match is not rated",
+        "de": "ein anderes Modell saß auf mehreren Plätzen: das ganze Spiel wird nicht bewertet",
+    },
+    FEWER_THAN_TWO_MODELS: {
+        "en": "only one model among random bots: there is nobody to rank it against",
+        "de": "nur ein Modell unter Zufallsbots: niemand, gegen den es bewertet werden könnte",
+    },
+    NOT_RATED: {
+        "en": "the match was not rated (the log does not say why)",
+        "de": "das Spiel wurde nicht bewertet (das Log nennt keinen Grund)",
+    },
+}
+
+
+class UnratedOut(BaseModel):
+    """A model that played finished matches in a game that no rating counted. No Elo is given."""
+
+    model_id: str
+    name: str = Field(description="What people read: the name in config/models.yaml, else the id")
+    vendor: str | None
+    game: str
+    matches_played: int = Field(description="Finished matches with the model in a seat")
+    matches_rated: int = Field(description="Of those, the matches a rating counted")
+    matches_unrated: int
+    reason: str = Field(description="The code of the most common reason a match was not rated")
+    reasons: dict[str, int] = Field(description="Reason code -> unrated matches")
+    text: dict[str, str] = Field(description="The most common reason in words: en and de")
+
+    @classmethod
+    def of(cls, unrated: Unrated) -> "UnratedOut":
+        reason = max(unrated.reasons, key=lambda code: (unrated.reasons[code], code))
+        configured = load_config().models.get(unrated.model_id)
+        return cls(
+            model_id=unrated.model_id,
+            name=(configured.name if configured and configured.name else unrated.model_id),
+            vendor=vendor_of(unrated.model_id),
+            game=unrated.game,
+            matches_played=unrated.matches_played,
+            matches_rated=unrated.matches_rated,
+            matches_unrated=sum(unrated.reasons.values()),
+            reason=reason,
+            reasons=unrated.reasons,
+            text=UNRATED_TEXT[reason],
+        )
+
+
 class Leaderboard(BaseModel):
     game: str | None = Field(description="The game shown, or null for the overall rating")
     games: list[str] = Field(
@@ -90,6 +152,11 @@ class Leaderboard(BaseModel):
     show_demo: bool = Field(False, description="Whether the demo profiles are included")
     demo_hidden: int = Field(0, description="Demo profiles left out, when `show_demo` is false")
     rows: list[LeaderboardRow]
+    unrated: list[UnratedOut] = Field(
+        default_factory=list,
+        description="Models that played finished matches no rating counted, per game, with the "
+        "reason; empty for kind=bots. Never an Elo number.",
+    )
 
 
 class GameStanding(StandingOut):
@@ -264,6 +331,9 @@ async def leaderboard(
         show_demo=demo,
         demo_hidden=0 if demo else await store.demo_profiles(),
         rows=rows,
+        unrated=[]
+        if shown == "bots"
+        else [UnratedOut.of(u) for u in await store.unrated_activity(game)],
     )
 
 
