@@ -43,14 +43,19 @@ next to `replaced`; none of them is reported as "no tools".
 
 ## Status values
 
-| Status | When | What to do |
-| --- | --- | --- |
-| `unknown` | fewer than 20 decisions | show it as unknown; never rank it |
-| `declared` | the catalog lists `tools` and `tool_choice` | selectable, marked unverified; this certifies nothing |
-| `qualified` | ≥ 20 decisions, ≤ 10 % bot moves, ≤ 10 % cut off, every error class shown | ranked |
-| `needs-config` | > 10 % of moves cut off, or refused for the output format | raise `max_output_tokens`, set `reasoning_effort` (or `off` where the provider takes none), then count again |
-| `route-unavailable` | the seat failed on rate limits, or > 20 % of calls were throttled | try again later or another route; no capability judgement |
-| `unsupported` | with enough output room it still answers without a tool call in > 50 % of moves | not selectable for this game |
+The protocol and its statuses are the Researcher's
+([research/QUALIFY.md](../research/QUALIFY.md), #128): **qualified**,
+**unqualified** or **unknown**, each with a reason. This page only names the
+reasons the arena's own figures give:
+
+| Status | Reason | When | What to do |
+| --- | --- | --- | --- |
+| unknown | too few moves | fewer than 20 decisions | never rank it |
+| unknown | not tested | the catalog lists `tools` and `tool_choice`, nothing played yet | selectable, marked unverified; a declaration certifies nothing |
+| unknown | route | the seat failed on rate limits, or more than 20 % of calls were throttled | try again later or another route; no capability judgement |
+| unqualified | config | more than 10 % of moves cut off, or refused for the output format | raise `max_output_tokens`, set `reasoning_effort` (or `off`), count again |
+| unqualified | unsupported | with enough output room it still answers without a tool call in more than half its moves | not selectable for this game |
+| qualified | | ≥ 20 decisions, ≤ 10 % bot moves, ≤ 10 % cut off, every error class shown | ranked |
 
 ## Ladder
 
@@ -71,10 +76,10 @@ next to `replaced`; none of them is reported as "no tools".
 
 | Model (route) | Seen in `be2f808a` | Proposal |
 | --- | --- | --- |
-| Tencent Hy3 | 10 of 17 moves had an answer cut off at 1500 tokens; all 17 ended valid | `needs-config`: `max_output_tokens: 4000`; `reasoning_effort: low` if its route takes it, else `off`; re-count |
-| MiMo-V2.6-Pro | 1 cutoff in 6 decisions | `unknown` (too few); same output room as Hy3 for its next pilot |
-| glm-flash | 1 cutoff, 1 missing `card_ids` in 21 | `qualified` stays (E1: 80 matches, no agent failure) |
-| Gemma 4 26B A4B (`:free`) | first call rate-limited 4 times, seat failed, 10 bot moves | `route-unavailable`: a free route under load; judge it only on a paid route or at another hour |
+| Tencent Hy3 | 10 of 17 moves had an answer cut off at 1500 tokens; all 17 ended valid | unqualified (config): `max_output_tokens: 4000`; `reasoning_effort: low` if its route takes it, else `off`; re-count |
+| MiMo-V2.6-Pro | 1 cutoff in 6 decisions | unknown (too few moves); same output room as Hy3 for its next pilot |
+| glm-flash | 1 cutoff, 1 missing `card_ids` in 21 | qualified stays (E1: 80 matches, no agent failure) |
+| Gemma 4 26B A4B (`:free`) | first call rate-limited 4 times, seat failed, 10 bot moves | unknown (route): a free route under load; judge it only on a paid route or at another hour |
 
 A higher output limit raises the booking per call (the budget books the
 model's own limit), so a pilot with 4000 tokens costs more per call before
