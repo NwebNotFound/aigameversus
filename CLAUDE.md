@@ -789,8 +789,6 @@ call, combat rules, state fields, events, the observation and the
 `hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
 build against it, and change it in the same pull request as the code.
 
-The game is built in parts (roadmap steps 7.1 to 7.5 so far; there is no
-plugin yet, so `arena games` does not list it). The map:
 The game is built in parts (roadmap steps 7.1 to 7.6); `games/civ/plugin.py`
 wires them to the engine (below). The map:
 
@@ -869,6 +867,9 @@ next to it says what each does and what the generator guarantees.
   nations through 60 rounds). `render_spec` is the full `hex_map` board for
   spectators, `render_spec_for(state, nation)` what one nation sees
   (`GET /matches/{id}/board?nation=`). The random bot is `bot.random_orders`.
+  The one setting is `rounds` (1 to 60, default 60): the match ends after
+  that round (`state.round_limit`, `victory.round_limit`), and the rules,
+  the observation's `rounds_total` and the board say so (D-133).
 
 How these follow the engine's rules, and what the next systems should copy:
 

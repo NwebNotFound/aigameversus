@@ -22,6 +22,11 @@ from games.civ.data_loader import CivData
 from games.civ.state import CivState
 
 
+def round_limit(state: CivState, data: CivData) -> int:
+    """The last round of this match: the setting `rounds`, else the data's limit."""
+    return state.round_limit or data.victory.round_limit.rounds
+
+
 def score(state: CivState, data: CivData, player: str) -> int:
     rules = data.victory.round_limit.score
     cities = [city for city in state.cities if city.owner == player]
@@ -79,7 +84,7 @@ def check(state: CivState, data: CivData, ctx: TurnContext) -> str | None:
         return _declare(state, data, ctx, "domination", [winner])
     if rich:
         return _declare(state, data, ctx, "economy", sorted(rich, key=list(state.nations).index))
-    if state.round >= data.victory.round_limit.rounds:
+    if state.round >= round_limit(state, data):
         ranked = standings(state, data)
         return _declare(
             state, data, ctx, "round_limit", [r["player"] for r in ranked if r["rank"] == 1]

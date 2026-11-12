@@ -18,7 +18,7 @@ from typing import Any
 
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.types import Action, Event, Placement, PlayerId, ToolSpec, TurnMode
-from games.civ import armies, combat, diplomacy, economy, observation, orders, turn
+from games.civ import armies, combat, diplomacy, economy, observation, orders, turn, victory
 from games.civ.bot import random_orders
 from games.civ.data_loader import CivData, load_civ_data
 from games.civ.state import NEUTRAL, CivState, new_game
@@ -38,16 +38,32 @@ class CivGame(GamePlugin[CivState]):
 
     data: CivData = DATA
 
+    def rules(self, settings: Mapping[str, Any] | None = None) -> str:
+        """rules.md, with the round limit of this match where it names the last round."""
+        text = super().rules(settings)
+        rounds = (settings or {}).get("rounds")
+        if rounds is None:
+            return text
+        default = f"After round {self.data.victory.round_limit.rounds},"
+        return text.replace(default, f"After round {rounds},")
+
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> CivState:
-        if settings:
-            raise ValueError(f"Unknown settings for civ: {sorted(settings)}")
+        unknown = set(settings) - {"rounds"}
+        if unknown:
+            raise ValueError(f"Unknown settings for civ: {sorted(unknown)}; known: rounds")
+        rounds = settings.get("rounds")
+        most = self.data.victory.round_limit.rounds
+        if rounds is not None and (
+            not isinstance(rounds, int) or isinstance(rounds, bool) or not 1 <= rounds <= most
+        ):
+            raise ValueError(f"rounds must be a whole number from 1 to {most}, not {rounds!r}")
         if not self.min_players <= len(players) <= self.max_players:
             raise ValueError(
                 f"Throne of Tokens is for {self.min_players} to {self.max_players} nations"
             )
         if NEUTRAL in players:
             raise ValueError(f"'{NEUTRAL}' is the owner of barbarians, not a seat")
-        return new_game(players, self.data)
+        return new_game(players, self.data, rounds)
 
     def setup(self, state: CivState, ctx: TurnContext) -> None:
         world = generate_map(list(state.nations), self.data, ctx.rng("map"))
@@ -141,7 +157,7 @@ class CivGame(GamePlugin[CivState]):
         return {
             "layout": "hex_map",
             "round": state.round,
-            "rounds_total": data.victory.round_limit.rounds,
+            "rounds_total": victory.round_limit(state, data),
             "cols": len(state.world.rows[0]) if state.world.rows else 0,
             "rows": len(state.world.rows),
             "terrain": ["".join(observation.glyph(t) for t in row) for row in state.world.rows],
