@@ -5,6 +5,7 @@ import {
 	chapterLabel,
 	commentary,
 	langOf,
+	attempts,
 	mentionParts,
 	mergeSeats,
 	namedText,
@@ -388,5 +389,49 @@ describe('mentions with what a language glues to them', () => {
 	it('names plain text by the same rule', () => {
 		expect(namedText('Auf p4s Frage', seats)).toBe('Auf gemini-flash-lites Frage');
 		expect(namedText('P2 calls p9', seats)).toBe('mistral-small calls p9');
+	});
+});
+
+describe('attempts', () => {
+	const at = (kind: TranscriptLine['kind'], type: string, actor = 'p2'): TranscriptLine => ({
+		seq: 0,
+		kind,
+		actor,
+		text: type,
+		detail: null,
+		importance: kind === 'info' ? 2 : 2,
+		raw: { type }
+	});
+
+	it("folds a refused attempt's thought and marks the move that counted", () => {
+		// The shape of gpt-luna's flop check in Nils' Poker match: two refusals, then a check.
+		const lines = [
+			at('thought', 'thought'),
+			at('info', 'action_rejected'),
+			at('thought', 'thought'),
+			at('info', 'action_rejected'),
+			at('thought', 'thought'),
+			at('info', 'action_accepted'),
+			at('action', 'bet_action'),
+			at('thought', 'thought', 'p1'),
+			at('action', 'bet_action', 'p1')
+		];
+		const { hidden, marks } = attempts(lines);
+		expect([...hidden]).toEqual([lines[0], lines[2]]);
+		expect(marks.get(lines[6])).toEqual({ retries: 2, fallback: false });
+		expect(marks.has(lines[8])).toBe(false);
+	});
+
+	it('marks a random fallback', () => {
+		const lines = [
+			at('info', 'action_rejected'),
+			at('info', 'action_fallback'),
+			at('action', 'bet_action'),
+			at('info', 'agent_failed', 'p1'),
+			at('action', 'bet_action', 'p1')
+		];
+		const { marks } = attempts(lines);
+		expect(marks.get(lines[2])).toEqual({ retries: 1, fallback: true });
+		expect(marks.get(lines[4])).toEqual({ retries: 0, fallback: true });
 	});
 });

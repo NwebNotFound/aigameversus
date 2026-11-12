@@ -67,7 +67,7 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
   with the reason. A model has one rating profile whatever seat it sits in, and
   model matches, from the command or the API, are rated (`arena ratings backfill` rates earlier ones). Demo data is hidden until "Show demo data" is switched on. The leaderboard lists real
   models first (vendor, cost per game, share of refused answers) and groups the
-  random-bot seats; each model has a page (`/models/<id>`) with its rating, cost
+  random-bot seats; a rating from fewer than 10 rated games (`PROVISIONAL_GAMES`) carries a "provisional" badge, and a provisional player does not stand above an established one less than 25 points behind; each model has a page (`/models/<id>`) with its rating, cost
   and tool errors per game, its personalities and recent matches.
 - **A readable play-by-play** of every match (`arena/transcript`): one renderer
   per game, in German and English, shared by the API, the `arena` command, the
@@ -79,6 +79,9 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
   the game data. The `prompt_version` setting chooses it (default `-p1`, the
   prompt as before; for models, `arena run ... --setting prompt_version=poker-p2`)
   and is recorded in the match's `match_started` event and in `--save`.
+  Werewolf also has `werewolf-p3`: the p2 summary plus advice for the move, and rules
+  taught by the first real matches (claim Seer results early, silence is no evidence,
+  vote for the player you named). It can be A/B-tested against p1 and p2.
 - **Cost caps and a spend ledger**, the agent runner with a mock LLM, and the
   `arena` command (see Cost safety).
 

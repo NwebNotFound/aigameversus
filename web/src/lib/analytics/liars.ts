@@ -27,6 +27,8 @@ export interface LiarsMove {
 	tokens_out: number | null;
 	reasoning_tokens: number | null;
 	retries: number | null;
+	/** Answers of this move the engine refused before one counted: answer quality, not drama. */
+	rejected?: number | null;
 }
 
 export interface LiarsPull {
@@ -62,6 +64,8 @@ export interface LiarsTotals {
 	pulls: number;
 	pulls_survived: number;
 	fallbacks: number;
+	/** Refused answers over all the player's moves, each fixed on a retry or by a fallback. */
+	rejected: number;
 	response_ms_total: number | null;
 	response_ms_mean: number | null;
 	[more: string]: unknown;
@@ -84,6 +88,26 @@ export interface LiarsAnalytics {
 		>;
 	}[];
 	meta?: Record<string, unknown>;
+}
+
+/**
+ * Whether an analytics body has the numbers the tab draws. A game may answer with its
+ * situation only (`numbers: false`, Poker and Werewolf for now); an arena without that
+ * marker is read by its keys. Anything else is "no numbers for this game", never a crash.
+ */
+export function hasNumbers(body: unknown): body is LiarsAnalytics {
+	if (!body || typeof body !== 'object') return false;
+	const b = body as Record<string, unknown>;
+	if (b.numbers === false || b.game !== 'liars_deck') return false;
+	// `sections` lists the parts present: other games have numbers, but not these tables.
+	const sections = b.sections;
+	if (Array.isArray(sections) && !['moves', 'totals'].every((k) => sections.includes(k)))
+		return false;
+	return (
+		['players', 'moves', 'pulls', 'rounds', 'by_round'].every((key) => Array.isArray(b[key])) &&
+		!!b.totals &&
+		typeof b.totals === 'object'
+	);
 }
 
 /** The analytics as they stood after the event at `lastSeq` (all of them when null). */
@@ -151,6 +175,7 @@ export function totalsOf(
 					pulls: myPulls.length,
 					pulls_survived: myPulls.filter((p) => !p.live).length,
 					fallbacks: mine.filter((m) => m.fallback).length,
+					rejected: mine.reduce((sum, m) => sum + (m.rejected ?? 0), 0),
 					response_ms_total: total,
 					response_ms_mean: total === null ? null : total / times.length
 				}

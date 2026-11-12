@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchEvent } from '../api.js';
-import { circlePoint, currentVotes, isWolf, roleName, tally, themeOf } from './werewolfCircle.js';
+import {
+	causeWords,
+	circlePoint,
+	currentVotes,
+	deathsOf,
+	isWolf,
+	onStage,
+	ranking,
+	roleName,
+	tally,
+	themeOf
+} from './werewolfCircle.js';
 
 const event = (seq: number, type: string, data: Record<string, unknown> = {}): MatchEvent => ({
 	seq,
@@ -82,5 +93,48 @@ describe('tally, roleName and isWolf', () => {
 		expect(roleName(null)).toBe('?');
 		expect(isWolf('white_wolf')).toBe(true);
 		expect(isWolf('seer')).toBe(false);
+	});
+});
+
+describe('deathsOf', () => {
+	it('keeps the announced role and cause of each death, in order', () => {
+		const deaths = deathsOf([
+			event(0, 'player_died', { player: 'p6', role: 'witch', cause: 'wolves' }),
+			event(0, 'player_died', { player: 'p3', role: 'villager', cause: 'executed' })
+		]);
+		expect(deaths.p6).toEqual({ role: 'witch', cause: 'wolves', order: 1 });
+		expect(deaths.p3.order).toBe(2);
+		expect(causeWords(deaths.p6.cause)).toBe('killed at night');
+	});
+});
+
+describe('onStage', () => {
+	const line = (kind: string, type: string, actor: string | null = 'p1') => ({
+		kind,
+		actor,
+		raw: { type }
+	});
+	it('is the newest speech until a scene ends', () => {
+		const a = line('speech', 'message');
+		const b = line('speech', 'message', 'p2');
+		expect(onStage([a, b, line('info', 'action_accepted')])).toBe(b);
+		expect(onStage([a, b, line('result', 'vote_result', null)])).toBeNull();
+		expect(onStage([line('heading', 'day_started', null)])).toBeNull();
+	});
+});
+
+describe('ranking', () => {
+	it('puts the most votes first, then the seat order', () => {
+		const votes = [
+			{ from: 'p1', to: 'p3' },
+			{ from: 'p2', to: 'p4' },
+			{ from: 'p5', to: 'p4' },
+			{ from: 'p4', to: 'p2' }
+		];
+		expect(ranking(votes, ['p1', 'p2', 'p3', 'p4', 'p5'])).toEqual([
+			{ player: 'p4', votes: 2 },
+			{ player: 'p2', votes: 1 },
+			{ player: 'p3', votes: 1 }
+		]);
 	});
 });

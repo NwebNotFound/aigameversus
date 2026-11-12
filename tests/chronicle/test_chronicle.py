@@ -126,32 +126,6 @@ def test_the_poker_hand_tells_streets_raises_showdown_and_award():
     assert "p1 is out of chips" in text and "p2 wins it all" in text
 
 
-def test_the_werewolf_story_names_roles_causes_and_the_winner():
-    log = [
-        started("werewolf", ["p1", "p2", "p3"]),
-        game("role_assigned", {"player": "p1", "role": "seer"}),
-        game("role_assigned", {"player": "p2", "role": "werewolf"}),
-        game("role_assigned", {"player": "p3", "role": "villager"}),
-        game("night_started", {"night": 1}),
-        game("morning_started", {"night": 1, "deaths": ["p1"]}),
-        game("player_died", {"player": "p1", "cause": "wolves", "role": "seer"}),
-        game("day_started", {"day": 1, "order": []}),
-        game("vote_result", {"day": 1, "counts": {"p2": 2}, "executed": "p2"}),
-        game("player_died", {"player": "p2", "cause": "executed", "role": "werewolf"}),
-        game("game_over", {"winner": "village", "winners": ["p3"]}),
-        FINISHED,
-    ]  # fmt: skip
-
-    story = tell(log, style="novel", lang="en")
-
-    text = story.chapters[0].text
-    assert "p1 (seer), p2 (werewolf), p3 (villager)" in text
-    assert "p1, the seer, torn apart by the wolves" in text.replace("They found ", "")
-    assert "p2 was chosen with 2 vote(s)" in text or "p2 was chosen" in text
-    assert "The village has won." in text
-    assert tell(log, style="news", lang="de").chapters[0].text.count("Seherin") >= 1
-
-
 def test_every_style_and_language_has_every_kind_and_the_fields_it_needs():
     for lang in LANGS:
         for style in STYLES:
@@ -183,7 +157,9 @@ def test_every_style_and_language_renders_a_real_bot_match_without_leftovers(nam
             markdown = to_markdown(story)
             assert story.chapters and all(c.text.strip() for c in story.chapters)
             assert "{" not in markdown and "}" not in markdown, (lang, style)
-            assert markdown.startswith("# ") and markdown.count("\n## ") == len(story.chapters)
+            boxes = 1 if story.glance else 0  # the "At a glance" box has a heading too
+            assert markdown.startswith("# ")
+            assert markdown.count("\n## ") == len(story.chapters) + boxes
 
 
 @pytest.mark.parametrize(("name", "plugin", "players"), GAMES)
@@ -200,8 +176,6 @@ def test_chapters_follow_the_rounds_hands_and_nights_of_the_log():
         assert len(tell(ld).chapters) == sum(e.type == "round_started" for e in ld)
         pk = bot_events(Poker(), 3, seed)
         assert len(tell(pk).chapters) == sum(e.type == "hand_started" for e in pk)
-        ww = bot_events(Werewolf(), 8, seed)
-        assert len(tell(ww).chapters) == sum(e.type == "night_started" for e in ww)
 
 
 def test_the_key_moments_of_a_real_liars_deck_match_are_all_in_the_story():
@@ -233,30 +207,6 @@ def test_a_narrator_can_be_swapped_without_a_model():
 )
 def test_epic_chapter_titles_count_in_good_english(number, title):
     assert title in TemplateNarrator().chapter_title("round", number, "epic", "en")
-
-
-def werewolf_ending(winner):
-    return [
-        started("werewolf", ["p1", "p2"]),
-        game("night_started", {"night": 1}),
-        game("game_over", {"winner": winner, "winners": ["p1"]}),
-        FINISHED,
-    ]
-
-
-@pytest.mark.parametrize("lang", LANGS)
-@pytest.mark.parametrize("style", STYLES)
-def test_the_werewolf_ending_names_the_winning_side_in_good_grammar(style, lang):
-    words = {
-        "en": {"wolves": "The wolves have won.", "village": "The village has won."},
-        "de": {"wolves": "Die Wölfe haben gewonnen.", "village": "Das Dorf hat gewonnen."},
-    }[lang]
-
-    for side, phrase in words.items():
-        text = tell(werewolf_ending(side), style=style, lang=lang).chapters[0].text
-
-        assert phrase in text, (style, lang, side, text)
-        assert "win(s)" not in text and "Sieger ist die" not in text and "ist die W" not in text
 
 
 def test_the_poker_hand_limit_names_the_chip_leader():

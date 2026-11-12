@@ -77,7 +77,7 @@ test('after the match roles and deaths on the circle are those of the stored log
 	await expect(page.locator('.seat.dead')).toHaveCount(dead);
 });
 
-test('spoilers off turn every role into a question mark', async ({ page, request }) => {
+test('spoilers off turn every living role into a question mark', async ({ page, request }) => {
 	const id = await start(request, { players: 6, seed: 7 });
 	await finished(request, id);
 	await page.goto(`/matches/${id}`);
@@ -87,8 +87,13 @@ test('spoilers off turn every role into a question mark', async ({ page, request
 	await page.getByRole('link', { name: 'Spoiler-free' }).click();
 	await expect(page).toHaveURL(/view=spoiler-free/);
 
+	// Roles stay hidden, except those the game announced at a death: those are public.
+	const dead = (await log(request, id)).filter(
+		(e: { type: string }) => e.type === 'player_died'
+	).length;
 	await expect(page.getByTestId('role')).toHaveCount(0);
-	await expect(page.getByTestId('secret')).toHaveCount(6);
+	await expect(page.getByTestId('revealed')).toHaveCount(dead);
+	await expect(page.getByTestId('secret')).toHaveCount(6 - dead);
 });
 
 test('the votes of the day are drawn as arrows while the match is watched', async ({
@@ -100,4 +105,36 @@ test('the votes of the day are drawn as arrows while the match is watched', asyn
 
 	await expect(page.getByTestId('vote-arrow').first()).toBeAttached({ timeout: 45_000 });
 	await expect(page.getByTestId('vote-count').first()).toBeVisible();
+});
+
+test('the newest speech stands on the circle, pointing at its speaker, and votes are tallied', async ({
+	page,
+	request
+}) => {
+	const id = await start(request, { players: 8, seed: 3 });
+	await finished(request, id);
+	type Logged = { type: string; visible_to: string[] | null; data: Record<string, string> };
+	const events: Logged[] = await log(request, id);
+	// Replay step n shows the first n events of the spectator log.
+	const said = events.findIndex((e) => e.type === 'message' && e.visible_to === null);
+	await page.goto(`/replays/${id}?step=${said + 1}`);
+	const speech = page.getByTestId('stage-speech');
+	await expect(speech).toBeVisible();
+	await expect(speech).toHaveAttribute('data-seat', events[said].data.player);
+	await expect(speech).toContainText(events[said].data.text);
+	await expect(page.getByTestId('speech-tail')).toBeAttached();
+	await expect(
+		page.locator(`.seat.speaking[data-seat="${events[said].data.player}"]`)
+	).toBeVisible();
+
+	// A vote result ends the scene: no words on stage after it.
+	const result = events.findIndex((e) => e.type === 'vote_result');
+	await page.goto(`/replays/${id}?step=${result}`);
+	await expect(page.getByTestId('tally')).toBeVisible();
+	await page.goto(`/replays/${id}?step=${result + 1}`);
+	await expect(page.getByTestId('stage-speech')).toHaveCount(0);
+	const overflow = await page.evaluate(
+		() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+	);
+	expect(overflow).toBeLessThanOrEqual(0);
 });

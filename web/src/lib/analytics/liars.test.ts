@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import spectator from './fixture-liars-spectator.json';
 import spoilerFree from './fixture-liars-spoiler-free.json';
+import pokerSituation from './fixture-poker-situation-only.json';
 import {
 	byRound,
+	hasNumbers,
 	slowMoves,
 	totalsOf,
 	upTo,
@@ -22,8 +24,13 @@ describe.each(views)('the web sums like the arena (%s)', (_, data) => {
 		const ours = totalsOf(data.players, data.moves, data.pulls, data.spoilers);
 		for (const player of data.players) {
 			for (const [key, value] of Object.entries(ours[player])) {
+				if (key === 'rejected') continue; // the arena sends it as a rate, checked below
 				expect(value, `${player}.${key}`).toEqual(data.totals[player][key]);
 			}
+			const moves = data.moves.filter((m) => m.player === player).length;
+			expect(ours[player].rejected / moves, `${player}.rejected`).toBeCloseTo(
+				data.totals[player].rejected_per_move as number
+			);
 		}
 	});
 
@@ -74,5 +81,31 @@ describe('slowMoves', () => {
 
 	it('marks nothing with too few timed moves', () => {
 		expect(slowMoves([move(0, 100), move(1, 9000)]).size).toBe(0);
+	});
+});
+
+describe('hasNumbers', () => {
+	it("reads Poker's situation-only answer as no numbers, and never throws", () => {
+		// The arena's real output for docs/examples/poker.json (#102): `situation`, no moves.
+		expect(hasNumbers(pokerSituation)).toBe(false);
+		const { numbers: _, ...unmarked } = pokerSituation;
+		expect(hasNumbers(unmarked)).toBe(false); // an arena without the marker
+		// Werewolf (#108) and Poker with its report (#109): numbers, but no Liar's Deck tables.
+		const werewolf = {
+			game: 'werewolf',
+			numbers: true,
+			sections: ['situation', 'players', 'votes', 'claims', 'phases'],
+			players: ['p1', 'p2']
+		};
+		expect(hasNumbers(werewolf)).toBe(false);
+		expect(hasNumbers({ ...spectator, sections: ['situation', 'players'] })).toBe(false);
+		for (const body of [null, undefined, 'x', 3, {}, { game: 'liars_deck' }])
+			expect(hasNumbers(body)).toBe(false);
+	});
+
+	it("takes Liar's Deck with its numbers, in both views", () => {
+		expect(hasNumbers(spectator)).toBe(true);
+		expect(hasNumbers(spoilerFree)).toBe(true);
+		expect(hasNumbers({ ...spectator, numbers: false })).toBe(false);
 	});
 });
