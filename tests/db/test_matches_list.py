@@ -81,7 +81,7 @@ def test_filters_combine_and_each_row_has_its_outcome(client):
 
 
 def test_a_running_match_row_shows_no_result(client, database_url):
-    async def start_one():  # after the app started: it marks matches it finds running as interrupted
+    async def start_one():  # after startup: the app marks matches found running as interrupted
         pool = await connect(database_url)
         try:
             await pool.execute(
