@@ -162,7 +162,7 @@ class Poker(GamePlugin[PokerState]):
         self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
     ) -> str | None:
         """A short text for the top of the turn's prompt; only version p2 has one."""
-        if prompt.version_of(settings) == "poker-p1":
+        if prompt.version_of(settings) in ("poker-p1", "poker-p1.1"):
             return None
         return prompt.situation_summary(observation)
 
