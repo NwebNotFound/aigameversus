@@ -155,13 +155,9 @@ def test_the_scoreboard_is_public_and_built_from_the_state_alone():
     assert board["round"] == 1
     assert board["cities_total"] == 2 and board["cities"] == {"p1": 1, "p2": 1, "p3": 0, "p4": 0}
     assert board["domination_needed"] == 1
-    assert board["gold_countdown"] == {
-        "nation": "p2",
-        "gold": 512,
-        "rounds_held": 2,
-        "rounds_needed": 5,
-    }
-    assert set(board["scores"]) == set(FOUR) and board["reputation"]["p1"] == 50
+    assert board["gold_countdown"] == {"nation": "p2", "rounds_held": 2, "rounds_needed": 5}
+    assert board["reputation"]["p1"] == 50
+    assert "512" not in json.dumps(board)  # neither the gold nor a score that holds it
     assert PLUGIN.get_observation(realm.state, "p3")["scoreboard"] == board
 
 

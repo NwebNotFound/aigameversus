@@ -18,7 +18,7 @@ from typing import Any
 
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.types import Action, Event, Placement, PlayerId, ToolSpec, TurnMode
-from games.civ import armies, combat, diplomacy, economy, observation, orders, turn, victory
+from games.civ import armies, combat, diplomacy, economy, observation, orders, turn
 from games.civ.bot import random_orders
 from games.civ.data_loader import CivData, load_civ_data
 from games.civ.state import NEUTRAL, CivState, new_game
@@ -181,7 +181,10 @@ class CivGame(GamePlugin[CivState]):
 
 
 def scoreboard(state: CivState, data: CivData) -> dict[str, Any]:
-    """What every nation may know of every other (D-128), built from the state alone."""
+    """What every nation may know of every other (D-128), built from the state alone.
+
+    No scores and no gold: a round-limit score holds a nation's gold and population.
+    """
     total = len(state.cities)
     held = {nation: sum(1 for c in state.cities if c.owner == nation) for nation in state.nations}
     economy_rules = data.victory.economy
@@ -196,11 +199,9 @@ def scoreboard(state: CivState, data: CivData) -> dict[str, Any]:
         if leader is None
         else {
             "nation": leader,
-            "gold": state.nations[leader].stock["gold"],
             "rounds_held": state.rich_rounds[leader],
             "rounds_needed": economy_rules.hold_rounds,
         },
-        "scores": {nation: victory.score(state, data, nation) for nation in state.nations},
         "reputation": {nation: n.reputation for nation, n in state.nations.items()},
     }
 
