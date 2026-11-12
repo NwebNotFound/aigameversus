@@ -12,7 +12,9 @@
 #   server/server.key server/server.crt   what nginx uses (the only folder mounted)
 #
 # The phone trusts ca.crt once (docs/LAN.md); after that every renewed server certificate
-# is trusted too. The CA is good for 10 years and only vouches for these names.
+# is trusted too. The CA is good for 10 years and can sign ANY name for a phone that trusts
+# it (no name constraints), so keep ca/ca.key on this computer and install the CA only on
+# your own devices.
 set -euo pipefail
 
 renew=0
