@@ -229,3 +229,45 @@ def test_the_report_awards_the_most_deceptive_and_the_most_accused():
     assert "most_accurate_voter" not in by_id
     hidden = match_analytics("werewolf", example(), False)["report"]["at_a_glance"]["awards"]
     assert "most_deceptive" not in {a["id"] for a in hidden}  # no death disproved a claim
+
+
+def test_suspicion_over_time_counts_each_days_votes_and_accusations_per_player():
+    result = match_analytics("werewolf", example(), False)
+
+    day1, day2 = result["suspicion"]
+    assert [d["day"] for d in result["suspicion"]] == [1, 2]
+    ballots = result["votes"]["days"][0]["votes"]
+    assert day1["received"]["p3"]["votes"] == sum(t == "p3" for t in ballots.values())
+    assert day1["most_suspected"] == ["p3"] and day2["most_suspected"] == ["p8"]
+    for day in result["suspicion"]:
+        for counts in day["received"].values():
+            assert counts["total"] == counts["votes"] + counts["speech"]
+
+
+def test_suspicion_leaves_out_the_night_and_counts_a_vote_reason_once():
+    events = [
+        start(),
+        game("night_started", {"night": 1}),
+        game(MESSAGE, {"player": "p2", "text": "p5 is suspicious, kill p5."}, ["p2", "p4"]),
+        game("day_started", {"day": 1}),
+        game(MESSAGE, {"player": "p1", "text": "I suspect p6, he is lying."}),
+        game("vote_cast", {"player": "p1", "target": "p6"}),
+        game(MESSAGE, {"player": "p1", "text": "p6 is the wolf, I am sure."}),
+    ]
+
+    (day,) = match_analytics("werewolf", events, True)["suspicion"]
+
+    assert day["day"] == 1 and "p5" not in day["received"]  # the wolves' night chat
+    assert day["received"]["p6"] == {"votes": 1, "speech": 1, "total": 2}
+
+
+def test_bussing_shows_how_often_a_wolf_votes_for_a_fellow_wolf_with_spoilers_only():
+    full = match_analytics("werewolf", example(), True)["votes"]
+    public = match_analytics("werewolf", example(), False)["votes"]
+
+    wolves = {"p2", "p4"}  # the example's two wolves
+    assert set(full["bussing"]) == wolves
+    for wolf, share in full["bussing"].items():
+        cast = [d["votes"][wolf] for d in full["days"] if d["votes"].get(wolf)]
+        assert (share["n"], share["of"]) == (sum(t in wolves for t in cast), len(cast))
+    assert public["bussing"] is None

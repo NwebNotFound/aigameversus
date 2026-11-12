@@ -7,6 +7,7 @@ hidden cards. `docs/METRICS.md` ("Model export") defines the columns.
 
 import csv
 import io
+import re
 from typing import Any
 from uuid import UUID
 
@@ -45,6 +46,14 @@ COLUMNS = [
     "memory",
     "batch_id",
 ]
+
+
+def safe(value: Any) -> Any:
+    """A cell a spreadsheet will not run as a formula: text that starts with = + - @ (or a tab or
+    return) gets a leading quote. Numbers stay numbers."""
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", chr(9), chr(13)):
+        return "'" + value
+    return value
 
 
 @router.get("/models/{model_id}/export")
@@ -116,40 +125,40 @@ async def export_model(model_id: str, request: Request) -> Response:
             counted: Any = by_seat.get(key)
             rating: Any = rating_of.get(key)
             rank = rank_of.get(seat)
-            writer.writerow(
-                {
-                    "match_id": m["id"],
-                    "game": m["game"],
-                    "status": m["status"],
-                    "origin": m["origin"],
-                    "started_at": m["started_at"].isoformat(),
-                    "finished_at": m["finished_at"].isoformat() if m["finished_at"] else "",
-                    "seat": seat,
-                    "personality": info.get("personality") or "",
-                    "players": len(seats),
-                    "opponents": ";".join(
-                        sorted(o.get("model_id") or "bot" for s, o in seats.items() if s != seat)
-                    ),
-                    "rank": "" if rank is None else rank,
-                    "won": "" if rank is None else int(rank == 1),
-                    "rated": int(m["rated"]),
-                    "unrated_reason": ""
-                    if m["rated"] or m["status"] != "finished"
-                    else unrated_reason(seat_models, model_id),
-                    "rating_before": "" if rating is None else round(rating["rating_before"], 1),
-                    "rating_after": "" if rating is None else round(rating["rating_after"], 1),
-                    "answers_accepted": counted["accepted"] if counted else 0,
-                    "answers_rejected": counted["rejected"] if counted else 0,
-                    "fallback_moves": counted["fallback"] if counted else 0,
-                    "repaired_answers": counted["repaired"] if counted else 0,
-                    "cost_micro_eur": "" if costs is None else costs.get(key, 0),
-                    "prompt_version": m["prompt_version"] or "",
-                    "memory": int(m["memory"]),
-                    "batch_id": m["batch_id"] or "",
-                }
-            )
+            row = {
+                "match_id": m["id"],
+                "game": m["game"],
+                "status": m["status"],
+                "origin": m["origin"],
+                "started_at": m["started_at"].isoformat(),
+                "finished_at": m["finished_at"].isoformat() if m["finished_at"] else "",
+                "seat": seat,
+                "personality": info.get("personality") or "",
+                "players": len(seats),
+                "opponents": ";".join(
+                    sorted(o.get("model_id") or "bot" for s, o in seats.items() if s != seat)
+                ),
+                "rank": "" if rank is None else rank,
+                "won": "" if rank is None else int(rank == 1),
+                "rated": int(m["rated"]),
+                "unrated_reason": ""
+                if m["rated"] or m["status"] != "finished"
+                else unrated_reason(seat_models, model_id),
+                "rating_before": "" if rating is None else round(rating["rating_before"], 1),
+                "rating_after": "" if rating is None else round(rating["rating_after"], 1),
+                "answers_accepted": counted["accepted"] if counted else 0,
+                "answers_rejected": counted["rejected"] if counted else 0,
+                "fallback_moves": counted["fallback"] if counted else 0,
+                "repaired_answers": counted["repaired"] if counted else 0,
+                "cost_micro_eur": "" if costs is None else costs.get(key, 0),
+                "prompt_version": m["prompt_version"] or "",
+                "memory": int(m["memory"]),
+                "batch_id": m["batch_id"] or "",
+            }
+            writer.writerow({k: safe(v) for k, v in row.items()})
+    plain = re.sub(r"[^A-Za-z0-9._-]", "_", model_id)
     return Response(
         out.getvalue(),
         media_type="text/csv; charset=utf-8",
-        headers={"content-disposition": f'attachment; filename="aigameversus-{model_id}.csv"'},
+        headers={"content-disposition": f'attachment; filename="aigameversus-{plain}.csv"'},
     )

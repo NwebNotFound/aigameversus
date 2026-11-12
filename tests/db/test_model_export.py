@@ -141,3 +141,16 @@ def test_a_configured_model_without_matches_gets_the_header_only(client):
 
 def test_an_unknown_model_is_404(client):
     assert client.get("/models/no-such-model/export").status_code == 404
+
+
+def test_cells_that_look_like_formulas_are_quoted_and_the_file_name_is_plain():
+    from arena.api.model_export import safe
+
+    assert safe("=SUM(A1)") == "'=SUM(A1)" and safe("@x") == "'@x" and safe("-1+2") == "'-1+2"
+    assert safe("glm-flash") == "glm-flash" and safe(5) == 5 and safe("") == ""
+
+
+def test_the_file_name_has_only_plain_characters(client):
+    name = client.get("/models/glm-flash/export").headers["content-disposition"]
+
+    assert name == 'attachment; filename="aigameversus-glm-flash.csv"'
