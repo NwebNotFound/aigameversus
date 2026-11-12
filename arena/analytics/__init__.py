@@ -10,7 +10,7 @@ null. `docs/METRICS.md` defines every number.
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from arena.analytics import behaviour, civ, liars_deck, werewolf
+from arena.analytics import behaviour, civ, liars_deck, poker, werewolf
 from arena.analytics.report import GAMES as REPORTS
 from arena.analytics.report import report
 from arena.analytics.situation import BUILDERS as SITUATIONS
@@ -23,6 +23,7 @@ from arena.transcript.common import public_settings
 # so the UI can jump a replay to a move even when some events are filtered out.
 ANALYZERS: dict[str, Callable[[list[tuple[int, Event]], bool], dict[str, Any]]] = {
     "liars_deck": liars_deck.analyze,
+    "poker": poker.analyze,
     "civ": civ.analyze,
 }
 
@@ -46,11 +47,7 @@ def match_analytics(
     if not spoilers:
         # The start of the match stays, as in the transcript: without the seed (it would
         # give every hidden draw away) and with only the settings anyone may read.
-        log = [
-            (seq, _public_start(e))
-            for seq, e in log
-            if e.visible_to is None or e.type == "match_started"
-        ]
+        log = public_log(log)
     if game == "werewolf":
         # Speech names seats by their display names too, so the rules need them.
         numbers = werewolf.analyze(log, spoilers, names or {})
@@ -77,6 +74,16 @@ def match_analytics(
     # False: a situation only, no numbers yet for this game (Poker today).
     result["numbers"] = result["sections"] != ["situation"]
     return result
+
+
+def public_log(log: list[tuple[int, Event]]) -> list[tuple[int, Event]]:
+    """The (seq, event) pairs a spoiler-free reader may see, seq kept; the match start
+    without its seed and with only the public settings."""
+    return [
+        (seq, _public_start(e))
+        for seq, e in log
+        if e.visible_to is None or e.type == "match_started"
+    ]
 
 
 _HEAD = {"game", "spoilers", "events", "meta", "sections", "numbers"}

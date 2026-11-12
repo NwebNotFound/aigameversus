@@ -25,45 +25,58 @@ All art is original, drawn in SVG and CSS in this repository (listed in
 
 ## Tokens
 
-Defined once in `web/src/app.css`. Components use tokens, never raw colours.
+Defined once in `web/src/app.css`, from the design review (`Shared/AIGameVersus/design/DESIGN-REVIEW.md`,
+sections 3.2 to 3.4). Components use tokens, never raw colours. The older names
+(`--surface-raised`, `--border`, `--accent`, `--accent-2`) are aliases until every component
+uses the new ones.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--bg` | `#0d0c12` | page |
-| `--surface` | `#17151f` | panels |
-| `--surface-raised` | `#211e2c` | cards, bubbles |
-| `--border` | `#2c283a` | hairlines |
-| `--text` | `#efeaf6` | body |
-| `--muted` | `#a59eb8` | secondary (≥ 4.5:1 on `--surface`) |
-| `--accent` | `#f0b35a` | brass: highlights, active seat, pot |
-| `--accent-2` | `#7fb8ff` | links, focus on dark felt |
-| `--danger` | `#ff6b6b` | shot, death, liar call |
-| `--ok` | `#6ee7a8` | survived, honest, won pot |
-| `--thought` | `#b79cff` | thought clouds and the spectator-only marks |
-| `--felt-liars` | `#3a1f1a` → `#170c0a` | Liar's Deck: burgundy bar top |
-| `--felt-poker` | `#14513a` → `#08241a` | Poker: green baize |
-| `--felt-wolf-day` / `--felt-wolf-night` | `#3b4a2a` / `#121a33` | Werewolf: village green / moonlit blue |
+| `--bg` | `#0B0D12` | page (no gradient) |
+| `--sunken` | `#080A0E` | board well, inputs |
+| `--surface` | `#12161F` | cards |
+| `--raised` | `#1A202C` | rows inside cards, active tab |
+| `--line` / `--line-strong` | `#252C3B` / `#39425A` | hairlines / control borders |
+| `--text` | `#E9ECF3` | body |
+| `--muted` | `#9AA4B8` | secondary |
+| `--faint` | `#626C82` | captions and axis labels only |
+| `--brand` | `#F2B84B` | primary button, active tab, "now", warnings about answers |
+| `--info` | `#6CB6FF` | links, neutral data bars |
+| `--ok` | `#4CD4A0` | pact, honest, correct, clean |
+| `--danger` | `#FF6B6B` | war, battle, betrayal, lie, death |
+| `--thought` | `#B79CFF` | private thoughts only |
+| `--p1` … `--p6`, `--p-neutral` | Okabe-Ito, lightened | player slots (below) |
 
-Game colours (home cards, replay list, timeline): Liar's Deck `--accent`,
-Poker `--ok`, Werewolf `--danger`, Throne of Tokens `--accent-2`.
+Players: one identity per player, everywhere (`web/src/lib/players.ts`). The slot is the
+seat order (p1 is slot 1) and gives a colour, a shape and a line dash, so colour is never
+the only cue: 1 sky circle solid, 2 orange diamond long dash, 3 rose triangle dotted,
+4 green square dash-dot, 5 yellow pentagon short dash, 6 vermilion star dash-dot-dot;
+barbarians and rebels a slate cross. Tables of more than six (Werewolf) are not coloured by
+player. Player colours never carry meaning, and red and green are never an identity.
 
-Seat colours: eight hues at equal lightness (OKLCH L 0.75, C 0.12, hue steps
-of 45°), assigned per model so the same model has the same colour in every
-match.
+Shared pieces in `web/src/lib/components/ui/`: `PlayerMark` (emblem), `PlayerName`,
+`Chip` (neutral, war, pact, tag, live, warn), `Segmented`, `Tabs`, `Card` (a question
+as title, a one-line answer under it), `StatTile` (number with its `/ of`), `DataTable`
+(scrolls inside its card).
 
 ## Type
 
-System UI stack for text (no bundled font). Numbers use
-`font-variant-numeric: tabular-nums`. The narrator line uses
-`font-variant-caps: all-small-caps` with `letter-spacing: 0.06em`.
+Text: `Inter, "Segoe UI", system-ui` (no web font request). Every number that is
+compared uses `--font-mono` (`JetBrains Mono`, `Cascadia Mono`, Consolas) with
+`tabular-nums` (the `num` class). The serif narrator face is gone: a narrator line is
+body text at weight 600.
 
-| Step | Size | Use |
-| --- | --- | --- |
-| display | `clamp(1.75rem, 4vw, 2.5rem)` / 700 | match title |
-| h2 | `1.25rem` / 650 | panel titles |
-| body | `1rem` / 400 | feed lines, speech |
-| small | `0.875rem` | detail lines, seat names |
-| micro | `0.75rem` (minimum) | badges, chips; never smaller |
+| Step | Size / line | Weight | Use |
+| --- | --- | --- | --- |
+| display | 22 / 28 | 650 | the one-sentence answer |
+| title | 20 / 26 | 650 | page title |
+| question | 15 / 20 | 600 | card question |
+| body | 14 / 20 | 400 | feed, paragraphs |
+| small | 12.5 / 18 | 400 | tables, meta |
+| caption | 11 / 14, +0.06em, upper | 600 | section labels, table heads (`caption` class) |
+
+Spacing on a 4 px grid (4, 8, 12, 16, 24, 40); radius 6 controls, 10 rows, 14 cards; no
+shadows; motion 150 ms ease-out, off under reduced motion.
 
 ## The watch screen (live and replay)
 

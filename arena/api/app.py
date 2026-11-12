@@ -13,6 +13,7 @@ from arena.api import (
     analytics,
     batches,
     chronicle,
+    export,
     insights,
     matches,
     memory,
@@ -86,6 +87,7 @@ app.include_router(chronicle.router)
 app.include_router(models.router)
 app.include_router(transcript.router)
 app.include_router(analytics.router)
+app.include_router(export.router)
 app.include_router(viewer_help.router)
 app.include_router(batches.router)
 app.include_router(qualify.router)
