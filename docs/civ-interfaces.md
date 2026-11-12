@@ -10,6 +10,11 @@ change to anything here is a change to this file in the same pull request.
 
 ## One round, one call per nation
 
+A match has one setting, `rounds` (1 to 60; default 60, the `round_limit` of
+`victory.yaml`): the round-limit victory is checked after that round instead
+(D-133). Everything that names the last round reads `victory.round_limit(state,
+data)`.
+
 A match of Throne of Tokens is played in **rounds**. Every round is one
 engine turn in which all nations act at once (`turn_mode = simultaneous`):
 each nation is asked once and answers with **one** call, `submit_orders`.

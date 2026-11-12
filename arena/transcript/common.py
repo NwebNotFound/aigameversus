@@ -37,6 +37,7 @@ PUBLIC_SETTINGS = {
     "captain",
     "roles_public",
     "prompt_version",
+    "rounds",
 }
 
 
