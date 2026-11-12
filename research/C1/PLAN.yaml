@@ -1,7 +1,7 @@
 id: C1
 schema: civ_design_only_v1
-version: 1
-status: quoted_default_prompt_waiting_approval_and_prompt_support
+version: 2
+status: quoted_baseline_waiting_approval
 owner: Arena Researcher
 date: '2026-11-12'
 execution_approved: false
@@ -42,7 +42,7 @@ later_factorial:
   note: 'Enhanced civ-p2 context is a separate future experiment, never changed inside this 2x2.'
 budget:
   proposed_stage_eur: 1.00
-  free_estimate_eur: 0.249101
+  free_estimate_eur: 0.246445
   required_estimate_per_match_below_eur: 0.40
   maximum_match_eur: 0.50
   monthly_cap_eur: 25

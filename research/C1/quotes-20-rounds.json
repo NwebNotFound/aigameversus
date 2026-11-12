@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-11-12T07:44:09.190620+00:00",
+  "checked_at": "2026-11-12T08:17:40.297734+00:00",
   "quotes": [
     {
       "rotation": 0,
@@ -13,12 +13,15 @@
         ],
         "settings": {
           "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
           "answer_repair": "off",
           "match_budget_eur": 0.2
         }
       },
       "response": {
-        "estimate_micro_eur": 62185,
+        "estimate_micro_eur": 61522,
         "cap_micro_eur": 200000,
         "month_spent_micro_eur": 3756279,
         "month_cap_micro_eur": 25000000,
@@ -26,25 +29,25 @@
           "p1": {
             "model_id": "glm-flash",
             "calls": 20,
-            "estimate_micro_eur": 6737,
+            "estimate_micro_eur": 6646,
             "basis": "ledger history"
           },
           "p2": {
             "model_id": "deepseek-flash",
             "calls": 20,
-            "estimate_micro_eur": 21204,
+            "estimate_micro_eur": 21088,
             "basis": "ledger history"
           },
           "p3": {
             "model_id": "gpt-luna",
             "calls": 20,
-            "estimate_micro_eur": 17306,
+            "estimate_micro_eur": 17078,
             "basis": "ledger history"
           },
           "p4": {
             "model_id": "claude-haiku",
             "calls": 20,
-            "estimate_micro_eur": 16938,
+            "estimate_micro_eur": 16710,
             "basis": "ledger history"
           }
         },
@@ -64,12 +67,15 @@
         ],
         "settings": {
           "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
           "answer_repair": "off",
           "match_budget_eur": 0.2
         }
       },
       "response": {
-        "estimate_micro_eur": 62360,
+        "estimate_micro_eur": 61696,
         "cap_micro_eur": 200000,
         "month_spent_micro_eur": 3756279,
         "month_cap_micro_eur": 25000000,
@@ -77,25 +83,25 @@
           "p1": {
             "model_id": "deepseek-flash",
             "calls": 20,
-            "estimate_micro_eur": 21530,
+            "estimate_micro_eur": 21414,
             "basis": "ledger history"
           },
           "p2": {
             "model_id": "gpt-luna",
             "calls": 20,
-            "estimate_micro_eur": 16694,
+            "estimate_micro_eur": 16466,
             "basis": "ledger history"
           },
           "p3": {
             "model_id": "claude-haiku",
             "calls": 20,
-            "estimate_micro_eur": 17724,
+            "estimate_micro_eur": 17495,
             "basis": "ledger history"
           },
           "p4": {
             "model_id": "glm-flash",
             "calls": 20,
-            "estimate_micro_eur": 6412,
+            "estimate_micro_eur": 6321,
             "basis": "ledger history"
           }
         },
@@ -115,12 +121,15 @@
         ],
         "settings": {
           "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
           "answer_repair": "off",
           "match_budget_eur": 0.2
         }
       },
       "response": {
-        "estimate_micro_eur": 62287,
+        "estimate_micro_eur": 61622,
         "cap_micro_eur": 200000,
         "month_spent_micro_eur": 3756279,
         "month_cap_micro_eur": 25000000,
@@ -128,25 +137,25 @@
           "p1": {
             "model_id": "gpt-luna",
             "calls": 20,
-            "estimate_micro_eur": 17333,
+            "estimate_micro_eur": 17104,
             "basis": "ledger history"
           },
           "p2": {
             "model_id": "claude-haiku",
             "calls": 20,
-            "estimate_micro_eur": 17112,
+            "estimate_micro_eur": 16884,
             "basis": "ledger history"
           },
           "p3": {
             "model_id": "glm-flash",
             "calls": 20,
-            "estimate_micro_eur": 6726,
+            "estimate_micro_eur": 6635,
             "basis": "ledger history"
           },
           "p4": {
             "model_id": "deepseek-flash",
             "calls": 20,
-            "estimate_micro_eur": 21116,
+            "estimate_micro_eur": 20999,
             "basis": "ledger history"
           }
         },
@@ -166,12 +175,15 @@
         ],
         "settings": {
           "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
           "answer_repair": "off",
           "match_budget_eur": 0.2
         }
       },
       "response": {
-        "estimate_micro_eur": 62269,
+        "estimate_micro_eur": 61605,
         "cap_micro_eur": 200000,
         "month_spent_micro_eur": 3756279,
         "month_cap_micro_eur": 25000000,
@@ -179,25 +191,25 @@
           "p1": {
             "model_id": "claude-haiku",
             "calls": 20,
-            "estimate_micro_eur": 17750,
+            "estimate_micro_eur": 17522,
             "basis": "ledger history"
           },
           "p2": {
             "model_id": "glm-flash",
             "calls": 20,
-            "estimate_micro_eur": 6482,
+            "estimate_micro_eur": 6391,
             "basis": "ledger history"
           },
           "p3": {
             "model_id": "deepseek-flash",
             "calls": 20,
-            "estimate_micro_eur": 21517,
+            "estimate_micro_eur": 21400,
             "basis": "ledger history"
           },
           "p4": {
             "model_id": "gpt-luna",
             "calls": 20,
-            "estimate_micro_eur": 16520,
+            "estimate_micro_eur": 16292,
             "basis": "ledger history"
           }
         },

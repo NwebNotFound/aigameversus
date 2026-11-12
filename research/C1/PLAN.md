@@ -76,3 +76,19 @@ Lead has not approved that ceiling or a paid match. Begin with one approved
 match, review reliability/cost, then decide whether to release the other three.
 The historical availability/pending-contract paragraphs above describe earlier
 checks and are superseded by these successful deployed rounds probes.
+
+## Exact baseline prompt requote, deployed main 99c4ac8
+
+The intended baseline settings are now accepted: rounds=20, civ-p1,
+strategy_text off, private_plan off, answer_repair off, match_budget_eur 0.20.
+The planned GLM/DeepSeek/GPT Luna/Haiku rotations quote EUR 0.061522,
+0.061696, 0.061622 and 0.061605: EUR 0.246445 total. This supersedes the earlier
+EUR 0.249101 default-prompt quote and closes the prompt-support prerequisite.
+Saved response payloads report the effective cap as EUR 0.20. The two factor
+flags are deployed, but their later factorial stages remain separately unapproved.
+
+No model call was made. Lead still must approve the proposed EUR 1.00 ceiling
+and release the first EUR 0.20-bounded match; inspect its reliability and cost
+before releasing the remaining three. Freeze actual start build/config and
+recheck fresh quotes/ledger before execution. These history-based estimates
+remain uncertain until model-driven Civ observations exist.
