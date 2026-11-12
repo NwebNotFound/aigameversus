@@ -106,6 +106,7 @@ def approved(tmp_path):
     plan = yaml.safe_load(PLAN.read_text(encoding="utf-8"))
     plan["execution_plan_approved"] = True
     plan["execution_approval_evidence"] = "Lead message 23b25e1b (test)"
+    plan["budget"]["cost_jump_factor"] = 2.0  # a paid run needs one
     (folder / "PLAN.yaml").write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
     shutil.copy(PLAN.parent / plan["schedule"], folder / plan["schedule"])
     return folder / "PLAN.yaml"
@@ -369,6 +370,7 @@ def c1(tmp_path):
             "notify_and_hold_at_month_eur": 20,
             "automatic_retries": 0,
             "max_cost_per_match_eur": 0.16,
+            "cost_jump_factor": 2.0,
         },
     }
     (folder / "PLAN.yaml").write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
@@ -765,3 +767,20 @@ def test_an_adopted_match_must_be_its_rows_match_in_this_batch(c1, tmp_path):
 
     with pytest.raises(PlanRefused, match="is not row 1"):
         client(c1, tmp_path / "out", arena).run()
+
+
+@pytest.mark.parametrize("factor", [None, 0.5])
+def test_a_paid_run_needs_a_cost_jump_factor_of_at_least_one_a_dry_run_does_not(
+    approved, tmp_path, factor
+):
+    plan = yaml.safe_load(approved.read_text(encoding="utf-8"))
+    plan["budget"].pop("cost_jump_factor")
+    if factor is not None:
+        plan["budget"]["cost_jump_factor"] = factor
+    approved.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    arena = arena_for(approved)
+
+    with pytest.raises(PlanRefused, match="cost_jump_factor"):
+        client(approved, tmp_path / "out", arena).run()
+    assert arena.posts() == []
+    assert len(client(approved, tmp_path / "dry", arena, dry_run=True).run()) == 8

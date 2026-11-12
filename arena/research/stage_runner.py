@@ -30,7 +30,7 @@ Before every start, all of these must hold, or it holds and reports (exit 3):
 After every match it holds on a failed, interrupted or aborted match, a failed agent, a
 fallback share above 10 % (the guest's, or with no guest column every model's), a guest
 not dealt its planned role (with `expected_role`), or a match that cost more than
-`budget.max_cost_per_match_eur`, or more than `budget.cost_jump_factor` x the estimate it
+`budget.max_cost_per_match_eur`, or more than `budget.cost_jump_factor` (required for a paid run, >= 1) x the estimate it
 started with (a cost jump); a match still running after `--max-wait` holds too.
 `<out>/run.json` keeps the effective limit, the reserve
 and every attempt's booked cost.
@@ -618,6 +618,11 @@ class StageRunner:
         if missing:
             raise PlanRefused(
                 f"a paid run needs {', '.join('--' + k.replace('_', '-') for k in missing)}"
+            )
+        if self.cost_jump is None or self.cost_jump < 1:
+            raise PlanRefused(
+                "a paid run needs budget.cost_jump_factor of at least 1: without it a match "
+                "billed far above its estimate would not hold"
             )
         self.out.mkdir(parents=True, exist_ok=True)
         hashes = (_sha256(self.plan_path), _sha256(self.schedule_path))
