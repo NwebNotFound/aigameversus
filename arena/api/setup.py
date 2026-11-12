@@ -1,20 +1,15 @@
 """What the new-match form offers: models, personalities, cost caps and this month's spend."""
 
-import json
 import os
 from datetime import UTC, datetime
-from pathlib import Path
 
-import yaml
 from fastapi import APIRouter, Request
-from jsonschema import ValidationError, validate
 from pydantic import BaseModel, Field
 
 from arena.agents.budget import MICRO
 from arena.api.matches import ALLOW_MODEL_SEATS
-from arena.config import CONFIG_PATH, display_name, load_config, load_keys
-
-PERSONALITIES_DIR = CONFIG_PATH.parent / "personalities"
+from arena.config import display_name, load_config, load_keys
+from arena.personalities import Personality, load_personalities
 
 router = APIRouter(tags=["setup"])
 
@@ -25,12 +20,6 @@ class ModelOption(BaseModel):
     name: str = Field(description="What people read; the id when models.yaml gives no name")
     input_usd_per_mtok: float = Field(description="Price per million input tokens, US dollars")
     output_usd_per_mtok: float = Field(description="Price per million output tokens, US dollars")
-
-
-class Personality(BaseModel):
-    id: str
-    name: str
-    description: str
 
 
 class Caps(BaseModel):
@@ -44,27 +33,16 @@ class SetupOptions(BaseModel):
         "ARENA_ALLOW_MODEL_SEATS=1 and has the providers' API keys. Otherwise every seat is "
         "a random bot."
     )
+    seat_personalities: bool = Field(
+        True, description="Whether a model seat in `seats` may name a personality"
+    )
+    mixed_seats: bool = Field(
+        True,
+        description="Whether POST /matches takes `seats`, so models and random bots share a table",
+    )
     models: list[ModelOption]
     personalities: list[Personality]
     caps: Caps
-
-
-def load_personalities(directory: Path = PERSONALITIES_DIR) -> list[Personality]:
-    """Every personality file, checked against its schema, in file-name order."""
-    schema = json.loads((directory / "personality.schema.json").read_text(encoding="utf-8"))
-    personalities = []
-    for path in sorted(directory.glob("*.yaml")):
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        try:
-            validate(data, schema)
-        except ValidationError as error:
-            raise ValueError(f"{path.name}: {error.message}") from None
-        if data["id"] != path.stem:
-            raise ValueError(f"{path.name}: id {data['id']!r} must match the file name")
-        personalities.append(
-            Personality(id=data["id"], name=data["name"], description=data["description"].strip())
-        )
-    return personalities
 
 
 @router.get("/setup")

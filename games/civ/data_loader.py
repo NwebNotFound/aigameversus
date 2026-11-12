@@ -337,6 +337,7 @@ class TradeBalance(_Model):
     base_fee: Ratio
     low_reputation_below: int
     low_reputation_extra_fee: Ratio
+    max_rounds: Annotated[int, Field(ge=1)] = Field(description="The longest trade one can agree")
 
 
 Step = Literal["trade", "build_and_train", "movement", "combat", "production", "growth", "events"]

@@ -8,11 +8,11 @@ import asyncio
 import os
 import time
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.websockets import WebSocketDisconnect
 
 from arena.agents.budget import MICRO
@@ -24,6 +24,7 @@ from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
+from arena.personalities import load_personalities
 
 router = APIRouter(tags=["matches"])
 
@@ -44,6 +45,26 @@ class Game(BaseModel):
     max_players: int
 
 
+class SeatSpec(BaseModel):
+    """Who takes one seat: a model (paid) or a random bot (free)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["model", "bot"]
+    model: str | None = Field(None, description="For a model seat: an id of GET /models/catalog")
+    personality: str | None = Field(
+        None, description="For a model seat: a personality id of GET /setup, or none"
+    )
+
+    @model_validator(mode="after")
+    def _check(self) -> "SeatSpec":
+        if (self.kind == "model") != (self.model is not None):
+            raise ValueError("a model seat names its model, a bot seat names none")
+        if self.personality is not None and self.kind == "bot":
+            raise ValueError("a random bot plays no personality")
+        return self
+
+
 class NewMatch(BaseModel):
     game: str = Field(description="Game id, see GET /games")
     players: int | None = Field(None, description="Number of seats; default: the game's minimum")
@@ -53,6 +74,12 @@ class NewMatch(BaseModel):
         description="Model ids from config/models.yaml, one per seat in order (p1, p2, ...). "
         "Makes paid model calls inside the cost caps. Only on a server started with "
         "ARENA_ALLOW_MODEL_SEATS=1, and with confirm_spend. Without: every seat is a random bot",
+    )
+    seats: list[SeatSpec] | None = Field(
+        None,
+        min_length=1,
+        description="One entry per seat in order, a model or a bot: a table may mix them. "
+        "Instead of `models`; any model seat needs what `models` needs.",
     )
     confirm_spend: bool = Field(
         False, description="Must be true for a match with model seats: it spends money."
@@ -100,11 +127,38 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
+    if new.models is not None and new.seats is not None:
+        raise HTTPException(422, "Name the seats with `seats` or with `models`, not both.")
     models = None
-    if new.models is None:
+    personalities: dict[str, str] = {}
+    if new.seats is not None:
+        count = len(new.seats)
+        if new.players is not None and new.players != count:
+            raise HTTPException(422, f"players is {new.players}, but {count} seats are named")
+        chosen = {f"p{i}": s.model for i, s in enumerate(new.seats, start=1) if s.kind == "model"}
+        personalities = {
+            f"p{i}": s.personality for i, s in enumerate(new.seats, start=1) if s.personality
+        }
+        known = {p.id for p in load_personalities()}
+        if unknown := sorted(set(personalities.values()) - known):
+            raise HTTPException(
+                422,
+                f"Unknown personality {', '.join(unknown)}. "
+                f"Personalities: {', '.join(sorted(known))}",
+            )
+        if chosen:
+            models = await _model_seats(new, chosen)
+    elif new.models is None:
         count = new.players or plugin.min_players
     else:
-        models = await _model_seats(new)
+        if new.players is not None and new.players != len(new.models):
+            raise HTTPException(
+                422,
+                f"players is {new.players}, but {len(new.models)} models are named: one per seat",
+            )
+        models = await _model_seats(
+            new, {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
+        )
         count = len(models)
     players = [f"p{seat}" for seat in range(1, count + 1)]
     try:
@@ -117,6 +171,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
             models=models,
             memory=new.memory,
             batch=new.batch,
+            personalities=personalities,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
@@ -124,30 +179,26 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         raise HTTPException(429, str(busy)) from busy
 
 
-async def _model_seats(new: NewMatch) -> dict[str, str]:
-    """Seat -> model id, after every check that can refuse a paid match before it starts."""
+async def _model_seats(new: NewMatch, models: dict[str, str]) -> dict[str, str]:
+    """Seat -> model id of the model seats, after every check that can refuse a paid match."""
     if os.environ.get(ALLOW_MODEL_SEATS) != "1":
         raise HTTPException(
             403,
             f"Model seats make paid calls and are off on this server. Start it with "
             f"{ALLOW_MODEL_SEATS}=1 to allow them.",
         )
-    assert new.models is not None
     if not new.confirm_spend:
         raise HTTPException(
             422, "A match with model seats spends money: send confirm_spend: true to start it."
         )
-    if new.players is not None and new.players != len(new.models):
-        raise HTTPException(
-            422, f"players is {new.players}, but {len(new.models)} models are named: one per seat"
-        )
-    config = await _seat_config(new.models)
-    if missing := load_keys(config, new.models):
+    ids = list(models.values())
+    config = await _seat_config(ids)
+    if missing := load_keys(config, ids):
         raise HTTPException(
             503,
             f"The server lacks {', '.join(missing)}, the provider's API key. Nothing was started.",
         )
-    return {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
+    return models
 
 
 async def _seat_config(model_ids: list[str]) -> Config:
@@ -169,8 +220,10 @@ async def _seat_config(model_ids: list[str]) -> Config:
 
 class EstimateRequest(BaseModel):
     game: str = Field(description="Game id, see GET /games")
-    models: list[str] = Field(
-        min_length=1, description="Model ids of GET /models/catalog, one per seat in order"
+    models: list[str | None] = Field(
+        min_length=1,
+        description="Model ids of GET /models/catalog, one per seat in order; null for a bot "
+        "seat, which plays but costs nothing",
     )
     settings: dict[str, Any] = Field(default_factory=dict, description="Settings of the game")
 
@@ -242,9 +295,12 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
-    config = await _seat_config(new.models)
+    ids = [model_id for model_id in new.models if model_id is not None]
+    if not ids:
+        raise HTTPException(422, "Every seat is a bot: a match of bots costs nothing.")
+    config = await _seat_config(ids)
     seats = {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
-    history = await live.ledger.output_tokens(sorted(set(new.models)))
+    history = await live.ledger.output_tokens(sorted(set(ids)))
     spent = await live.ledger.month_spent(datetime.now(UTC))
     try:  # bot matches take a moment of CPU: off the server's event loop
         per_seat = await asyncio.to_thread(
@@ -273,7 +329,7 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
         high_price=sorted(
             {
                 model_id
-                for model_id in new.models
+                for model_id in ids
                 if config.models[model_id].output_usd_per_mtok > HIGH_OUTPUT_USD_PER_MTOK
             }
         ),

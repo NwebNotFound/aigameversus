@@ -79,6 +79,10 @@ spoiler-free view, no role, hand, thought or whisper ever reaches the browser.
   the game data. The `prompt_version` setting chooses it (default `-p1`, the
   prompt as before; for models, `arena run ... --setting prompt_version=poker-p2`)
   and is recorded in the match's `match_started` event and in `--save`.
+  Werewolf also has `werewolf-p3`: the p2 summary plus advice for the move, and rules
+  taught by the first real matches (claim Seer results early, silence is no evidence,
+  vote for the player you named). `werewolf-p4` adds a neutral "think about the whole match"
+  section and the players you can name. All can be A/B-tested against each other.
 - **Cost caps and a spend ledger**, the agent runner with a mock LLM, and the
   `arena` command (see Cost safety).
 

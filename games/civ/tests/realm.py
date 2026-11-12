@@ -6,7 +6,7 @@ import random
 from arena.engine.plugin import TurnContext
 from arena.engine.rng import derive_rng
 from arena.engine.types import Event
-from games.civ import armies, economy
+from games.civ import armies, diplomacy, economy
 from games.civ.data_loader import CivData, load_civ_data
 from games.civ.state import new_game
 from games.civ.turn import apply_event, begin_round
@@ -110,9 +110,11 @@ class Realm:
 
     def start_round(self) -> None:
         begin_round(self.state, self.ctx)
+        diplomacy.expire(self.state, self.ctx)
         economy.finish_construction(self.state, self.ctx)
 
     def end_round(self) -> None:
+        diplomacy.settle(self.state, self.data, self.ctx)
         economy.produce(self.state, self.data, self.ctx)
         armies.starve(self.state, self.data, self.ctx)
         economy.grow(self.state, self.data, self.ctx)

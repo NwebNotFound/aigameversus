@@ -57,6 +57,9 @@ def test_every_model_move_says_its_time_tokens_and_retries_for_spectators_only()
         "rate_limits": 1,  # the retry was a rate limit
         "cutoffs": 0,
         "fallback": None,
+        "repairs": [],
+        "raw_arguments": [],
+        "simple_schema": False,
     }
     position = match.events.index(first)
     assert match.events[position - 1].type == "action_accepted"

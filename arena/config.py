@@ -59,9 +59,20 @@ class CallOptions:
     tool_choice: Literal["required", "auto"]
 
 
+class ReliabilityRules(_Strict):
+    """When a model counts as unreliable here (arena/db/reliability.py)."""
+
+    moves: int = Field(20, gt=0)  # the newest moves a verdict rests on
+    matches: int = Field(2, gt=0)  # a seat that gave up in one of these newest matches
+    fallback_above: Decimal = Field(Decimal("0.5"), ge=0, le=1)  # share of bot moves
+    cut_off_above: Decimal = Field(Decimal("0.1"), ge=0, le=1)  # share of cut-off moves
+    throttled_above: Decimal = Field(Decimal("0.2"), ge=0)  # rate-limited calls per move
+
+
 class Config(_Strict):
     limits: Limits
     models: dict[str, Model]
+    reliability: ReliabilityRules = ReliabilityRules()
 
 
 def load_config(path: Path = CONFIG_PATH) -> Config:

@@ -58,17 +58,25 @@ test('a match of models does not start without the spend box', async ({ page, re
 	await expect(page).toHaveURL('/matches/new');
 });
 
-test('bots and models do not mix at one table', async ({ page, request }) => {
-	const [first] = (await (await request.get(`${ARENA}/setup`)).json()).models;
+test('a table mixes a model and a bot where the arena takes seats, else says why not', async ({
+	page,
+	request
+}) => {
+	const setup = await (await request.get(`${ARENA}/setup`)).json();
+	const [first] = setup.models;
 	await chooseModels(page, [first]);
 	await page.getByLabel('Number of players').fill('2');
 	await page.getByLabel(/I understand that this match spends money/).check();
 
+	if (setup.mixed_seats) {
+		await expect(page.getByText('a table may mix them')).toBeVisible();
+		return; // starting it would make a paid call; the API tests cover the start
+	}
 	await page.getByRole('button', { name: 'Start match (spends money)' }).click();
 
 	await expect(
 		page.getByText(
-			'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.'
+			'A table is all models or all random bots on this server: it cannot mix them yet.'
 		)
 	).toBeVisible();
 	await expect(page).toHaveURL('/matches/new');
@@ -134,4 +142,22 @@ test('a favourite stays a favourite after a reload', async ({ page, request }) =
 
 	await expect(page.getByTestId('picker-p1').locator('li')).toHaveCount(1);
 	await expect(page.getByLabel(`Unmark ${first.name} as favourite`)).toBeVisible();
+});
+
+test('free models wait behind their switch, marked as often rate-limited', async ({
+	page,
+	request
+}) => {
+	const catalog = (await (await request.get(`${ARENA}/models/catalog?free=1`)).json()).models;
+	const free = catalog.find((m: { free: boolean }) => m.free);
+	test.skip(!free, 'this catalog has no free model');
+	await page.goto('/matches/new');
+	await page.getByLabel('Player of p1').click();
+	const picker = page.getByTestId('picker-p1');
+	const row = picker.locator(`li[data-id="${free.id}"]`);
+
+	await expect(row).toHaveCount(0);
+	await picker.getByLabel('Show free models (often rate-limited)').check();
+	await expect(row).toBeVisible();
+	await expect(row).toContainText('free, often rate-limited');
 });

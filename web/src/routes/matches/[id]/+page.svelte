@@ -298,7 +298,11 @@
 						<span class="muted" data-testid="at-live">at live</span>
 					{/if}
 				</div>
-				{#if live.control}
+				{#if live.control && data.readOnly}
+					<p class="watch-only" data-testid="read-only">
+						Watching only: this page cannot pause, speed up or abort the match.
+					</p>
+				{:else if live.control}
 					<div class="controls" role="group" aria-label="Controls">
 						{#if live.control.paused}
 							<button class="primary" disabled={busy} onclick={() => command({ action: 'resume' })}
@@ -467,6 +471,12 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
+	}
+
+	.watch-only {
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--muted);
 	}
 
 	.replay-link {

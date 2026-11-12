@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchEvent } from '../api.js';
-import { circlePoint, currentVotes, isWolf, roleName, tally, themeOf } from './werewolfCircle.js';
+import {
+	causeWords,
+	circlePoint,
+	currentVotes,
+	deathsOf,
+	isWolf,
+	onStage,
+	ranking,
+	recapLabel,
+	recapOf,
+	roleName,
+	tally,
+	themeOf,
+	type Narration
+} from './werewolfCircle.js';
 
 const event = (seq: number, type: string, data: Record<string, unknown> = {}): MatchEvent => ({
 	seq,
@@ -82,5 +96,90 @@ describe('tally, roleName and isWolf', () => {
 		expect(roleName(null)).toBe('?');
 		expect(isWolf('white_wolf')).toBe(true);
 		expect(isWolf('seer')).toBe(false);
+	});
+});
+
+describe('deathsOf', () => {
+	it('keeps the announced role and cause of each death, in order', () => {
+		const deaths = deathsOf([
+			event(0, 'player_died', { player: 'p6', role: 'witch', cause: 'wolves' }),
+			event(0, 'player_died', { player: 'p3', role: 'villager', cause: 'executed' })
+		]);
+		expect(deaths.p6).toEqual({ role: 'witch', cause: 'wolves', order: 1 });
+		expect(deaths.p3.order).toBe(2);
+		expect(causeWords(deaths.p6.cause)).toBe('killed at night');
+	});
+});
+
+describe('onStage', () => {
+	const line = (kind: string, type: string, actor: string | null = 'p1') => ({
+		kind,
+		actor,
+		raw: { type }
+	});
+	it('is the newest speech until a scene ends', () => {
+		const a = line('speech', 'message');
+		const b = line('speech', 'message', 'p2');
+		expect(onStage([a, b, line('info', 'action_accepted')])).toBe(b);
+		expect(onStage([a, b, line('result', 'vote_result', null)])).toBeNull();
+		expect(onStage([line('heading', 'day_started', null)])).toBeNull();
+	});
+});
+
+describe('ranking', () => {
+	it('puts the most votes first, then the seat order', () => {
+		const votes = [
+			{ from: 'p1', to: 'p3' },
+			{ from: 'p2', to: 'p4' },
+			{ from: 'p5', to: 'p4' },
+			{ from: 'p4', to: 'p2' }
+		];
+		expect(ranking(votes, ['p1', 'p2', 'p3', 'p4', 'p5'])).toEqual([
+			{ player: 'p4', votes: 2 },
+			{ player: 'p2', votes: 1 },
+			{ player: 'p3', votes: 1 }
+		]);
+	});
+});
+
+describe('recapOf', () => {
+	const told: Narration[] = [
+		{ seq: 12, key: 'night_falls', text: { en: 'Night 1.', de: 'Nacht 1.' } },
+		{ seq: 40, key: 'morning_deaths', text: { en: 'Morning light falls on Wren.' } }
+	];
+	const line = (seq: number, text: string, key = 'night_falls') => ({
+		kind: 'narration',
+		seq,
+		text,
+		raw: { type: 'narration', data: { key } }
+	});
+
+	it('is the newest dramatic line up to the moment on screen, in the language', () => {
+		expect(recapOf(told, [], 39, 'de', false)).toEqual({
+			seq: 12,
+			key: 'night_falls',
+			text: 'Nacht 1.'
+		});
+		expect(recapOf(told, [], 40, 'de', false)?.text).toBe('Morning light falls on Wren.');
+		expect(recapOf(told, [], 5, 'en', false)).toBeNull();
+	});
+
+	it('gives the stage to a speaker', () => {
+		expect(recapOf(told, [], 50, 'en', true)).toBeNull();
+	});
+
+	it("falls back to the transcript's narration line without the arena's lines", () => {
+		const lines = [line(12, 'Night 1 falls.'), line(40, 'Dawn breaks.', 'morning_deaths')];
+		expect(recapOf(null, lines, 41, 'en', false)).toEqual({
+			seq: 40,
+			key: 'morning_deaths',
+			text: 'Dawn breaks.'
+		});
+	});
+
+	it('labels the scene by its key', () => {
+		expect(recapLabel('morning_quiet')).toBe('Morning');
+		expect(recapLabel('execution')).toBe('The vote');
+		expect(recapLabel('bear_growl')).toBe('The village');
 	});
 });

@@ -131,6 +131,12 @@ export interface TranscriptLine {
 	/** 1 bookkeeping, 2 normal, 3 highlight. */
 	importance: 1 | 2 | 3;
 	raw: Record<string, unknown>;
+	/**
+	 * Spoiler-free only, added by the web server: the move was repaired (tier 1, the call
+	 * read as meant; tier 2, mapped to a legal move by Jev with probability `p`). The
+	 * spectator view reads the same from the bookkeeping lines; nothing else is passed on.
+	 */
+	repair?: { tier: 1 | 2; p: number | null } | null;
 }
 
 /** Who sits in a seat; name and model null for seats nobody named. */
@@ -184,6 +190,10 @@ export interface GameInfo {
 export interface SetupOptions {
 	/** Whether a seat can be a model yet; until then every seat is a random bot. */
 	model_seats: boolean;
+	/** Whether a table may mix models and random bots (`seats` in POST /matches). */
+	mixed_seats?: boolean;
+	/** Whether a model seat in `seats` may name a personality. */
+	seat_personalities?: boolean;
 	models: {
 		id: string;
 		model: string;
@@ -246,7 +256,9 @@ export interface NewMatch {
 	memory: boolean;
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
-	/** Must be true with `models`: the match spends money. */
+	/** One entry per seat, a model or a bot: a table that mixes them. Instead of `models`. */
+	seats?: ({ kind: 'model'; model: string; personality?: string } | { kind: 'bot' })[];
+	/** Must be true with `models` or a model in `seats`: the match spends money. */
 	confirm_spend?: boolean;
 }
 
@@ -269,6 +281,23 @@ export interface CatalogModel {
 	high_price: boolean;
 	/** "config/models.yaml" (checked by hand) or "openrouter list" (booked at the listed price x 1.25). */
 	price_source: string;
+	/** How the model did in this arena lately; missing until the arena reports it. */
+	reliability?: Reliability | null;
+	/** A free variant: its provider limits it hard, a match may stall on it. */
+	rate_limited_likely?: boolean;
+}
+
+/** The arena's own record of a model: unreliable when it failed or was replaced by the bot a lot. */
+export interface Reliability {
+	status: 'ok' | 'unreliable' | 'unknown';
+	/** Why, in words, for the tooltip. */
+	reason?: string | null;
+	fallback_share?: number | null;
+	agent_failed_recent?: number | null;
+	/** How many recent moves the verdict rests on. */
+	n?: number | null;
+	/** Other signs, such as answers cut off at the length limit. */
+	warnings?: string[] | null;
 }
 
 export interface Catalog {
@@ -322,6 +351,10 @@ export interface LeaderboardRow extends Standing {
 	cost_per_game_micro_eur: number | null;
 	/** Share of answers the server refused (a wrong tool or an illegal move). */
 	tool_error_rate: number | null;
+	/** Share of answers that were a garbled call read anyway (answer_repair). */
+	repaired_rate: number | null;
+	/** Share of answers taken exactly as sent; refused + repaired + clean = 1. */
+	clean_rate: number | null;
 }
 
 /** Who the leaderboard shows: real models (the default), random bots, or both. */
@@ -374,6 +407,8 @@ export interface Usage {
 	cost_per_game_micro_eur: number | null;
 	answers: number;
 	tool_error_rate: number | null;
+	repaired_rate: number | null;
+	clean_rate: number | null;
 }
 
 /** `GET /models/{id}`: one model across all its matches and seats. */
@@ -696,8 +731,10 @@ export function createArenaClient(
 		},
 
 		catalog() {
+			// With the free variants: the picker hides them behind a switch. An arena that
+			// does not know `free` lists them anyway.
 			return getJson<Catalog>(
-				'/models/catalog',
+				'/models/catalog?free=1',
 				(body) => isObject(body) && Array.isArray(body.models)
 			);
 		},
