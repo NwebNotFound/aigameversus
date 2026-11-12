@@ -27,6 +27,8 @@ reliability:
   fallback_above: 0.5
   cut_off_above: 0.1
   throttled_above: 0.2
+  cut_off_dominates_above: 0.5
+  cut_off_dominates_min: 3
 
 # Prices in USD per million tokens, as listed by openrouter.ai on 2026-11-11.
 # The caps count with these numbers: check them when you add or keep a model.
