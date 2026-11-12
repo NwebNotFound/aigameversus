@@ -128,7 +128,11 @@ def test_a_real_bot_match_renders_every_event_as_plain_words(game, lang, spoiler
 @pytest.mark.parametrize("game", sorted(GAMES))
 def test_without_spoilers_nothing_private_is_written_but_public_talk_stays(game):
     events = bot_events(game, 2)
-    hidden = {i for i, e in enumerate(events) if e.visible_to is not None}
+    # what the board shows anyway (where a city is founded, who won a battle) is not hidden
+    on_the_board = RENDERERS[game].__dict__.get("BOARD_PUBLIC", set())
+    hidden = {
+        i for i, e in enumerate(events) if e.visible_to is not None and e.type not in on_the_board
+    }
 
     lines = render_match(events, spoilers=False)
     shown = {line.seq for line in lines}

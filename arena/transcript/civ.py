@@ -30,6 +30,52 @@ class Civ(Base):
         self.armies: dict[str, str] = {}  # army id -> owner, learned from army_raised
         self.cities: dict[str, str] = {}  # city id -> owner
         self.offers: dict[str, str] = {}  # offer id -> sender
+        self.tiles: dict[str, tuple[int, int]] = {}  # city id -> tile
+        self.sizes: dict[str, int] = {}  # army id -> units
+        self.nations: set[str] = set()
+
+    # Public by the board (hex_map): where a city is founded and who won a battle. The rest of the
+    # nation's own events stay out of the view without spoilers.
+    BOARD_PUBLIC = {"city_founded", "battle"}
+
+    def line(self, event: Event, seq: int | None = None):
+        self.track(event)
+        if not self.spoilers and event.visible_to is not None and event.type in self.BOARD_PUBLIC:
+            built = super().line(event.model_copy(update={"visible_to": None}), seq)
+            if built is not None:  # no powers and no losses in the raw event
+                keep = {"tile", "winner", "city", "owner", "col", "row"}
+                data = {k: v for k, v in built.raw["data"].items() if k in keep}
+                for side in ("attacker", "defender"):
+                    if side in built.raw["data"]:
+                        data[side] = {"nation": built.raw["data"][side].get("nation")}
+                built = built.model_copy(
+                    update={"raw": {**built.raw, "visible_to": event.visible_to, "data": data}}
+                )
+            return built
+        return super().line(event, seq)
+
+    def track(self, event: Event) -> None:
+        """What later labels and the scoreboard need: where cities stand, how big armies are."""
+        data = event.data
+        if event.type == "city_founded":
+            self.tiles[data["city"]] = (data["col"], data["row"])
+            self.nations.add(data["owner"])
+        elif event.type == "army_raised":
+            self.sizes[data["army"]] = len(data["units"])
+        elif event.type == "army_split":
+            size = self.sizes.get(data["army"], 0)
+            self.sizes[data["new_army"]] = len(data["indexes"])
+            self.sizes[data["army"]] = max(size - len(data["indexes"]), 0)
+        elif event.type == "armies_merged":
+            joined = sum(self.sizes.pop(a, 0) for a in data["armies"])
+            self.sizes[data["into"]] = self.sizes.get(data["into"], 0) + joined
+        elif event.type == "units_lost":
+            left = self.sizes.get(data["army"], 0) - len(data["indexes"])
+            self.sizes[data["army"]] = max(left, 0)
+        elif event.type == "army_disbanded":
+            self.sizes.pop(data["army"], None)
+        elif event.type == "city_conquered":
+            self.nations.add(data["to"])
 
     def learn(self, event: Event) -> None:
         data = event.data
@@ -66,6 +112,32 @@ class Civ(Base):
     def tile(self, tile) -> str:
         return f"({tile[0]}, {tile[1]})"
 
+    def city(self, city_id: str) -> str:
+        """`c3 (Bot 2, (4, 5))`: the id, so lines can be matched, with whose it is and where."""
+        owner, tile = self.cities.get(city_id), self.tiles.get(city_id)
+        if owner is None or tile is None:
+            return city_id
+        return f"{city_id} ({self.who(owner)}, {self.tile(tile)})"
+
+    def army(self, army_id: str) -> str:
+        """`a7 (Bot 3, 4 units)`."""
+        owner, size = self.armies.get(army_id), self.sizes.get(army_id)
+        if not owner or size is None:
+            return army_id
+        units = self.w.number(size, "unit", "units", "Einheit", "Einheiten")
+        return f"{army_id} ({self.who(owner)}, {units})"
+
+    def scoreboard(self) -> str | None:
+        """The public city count of every nation, for the round heading."""
+        held: dict[str, int] = {n: 0 for n in sorted(self.nations)}
+        for city_id, owner in self.cities.items():
+            if city_id in self.tiles:
+                held[owner] = held.get(owner, 0) + 1
+        if not held:
+            return None
+        counts = ", ".join(f"{self.who(n)} {c}" for n, c in held.items() if n != NEUTRAL or c)
+        return self.w.pick(f"Cities: {counts}", f"Städte: {counts}")
+
     def army_owner(self, army: str) -> str | None:
         return self.armies.get(army)
 
@@ -76,7 +148,12 @@ class Civ(Base):
 
     def handle_round_started(self, event: Event):
         n = event.data["round"]
-        return self.out("heading", self.w.pick(f"Round {n}", f"Runde {n}"), importance=2)
+        return self.out(
+            "heading",
+            self.w.pick(f"Round {n}", f"Runde {n}"),
+            detail=self.scoreboard(),
+            importance=2,
+        )
 
     def handle_map_drawn(self, event: Event):
         rows = event.data["rows"]
@@ -121,8 +198,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{self.who(data['owner'])} founds {data['city']} at {where}",
-                f"{self.who(data['owner'])} gründet {data['city']} auf {where}",
+                f"{self.who(data['owner'])} founds {self.city(data['city'])} at {where}",
+                f"{self.who(data['owner'])} gründet {self.city(data['city'])} auf {where}",
             ),
             actor=data["owner"],
         )
@@ -133,8 +210,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['city']} now works for {data['focus']}",
-                f"{data['city']} arbeitet jetzt für {data['focus']}",
+                f"{self.city(data['city'])} now works for {data['focus']}",
+                f"{self.city(data['city'])} arbeitet jetzt für {data['focus']}",
             ),
             actor=owner,
             importance=1,
@@ -145,17 +222,18 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['city']} starts a {data['building']} ({self.amounts(data['cost'])})",
-                f"{data['city']} beginnt {data['building']} ({self.amounts(data['cost'])})",
+                f"{self.city(data['city'])} starts a {data['building']} ({self.amounts(data['cost'])})",
+                f"{self.city(data['city'])} beginnt {data['building']} ({self.amounts(data['cost'])})",
             ),
             actor=self.city_owner(data["city"]),
         )
 
     def handle_construction_progressed(self, event: Event):
         city = event.data["city"]
+        label = self.city(city)
         return self.out(
             "info",
-            self.w.pick(f"Building goes on in {city}", f"In {city} wird weitergebaut"),
+            self.w.pick(f"Building goes on in {label}", f"In {label} wird weitergebaut"),
             actor=self.city_owner(city),
             importance=1,
         )
@@ -165,8 +243,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['city']} finishes its {data['building']}",
-                f"{data['city']} stellt {data['building']} fertig",
+                f"{self.city(data['city'])} finishes its {data['building']}",
+                f"{self.city(data['city'])} stellt {data['building']} fertig",
             ),
             actor=self.city_owner(data["city"]),
         )
@@ -176,8 +254,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['city']} tears down its {data['building']} (back: {self.amounts(data['refund'])})",
-                f"{data['city']} reißt {data['building']} ab (zurück: {self.amounts(data['refund'])})",
+                f"{self.city(data['city'])} tears down its {data['building']} (back: {self.amounts(data['refund'])})",
+                f"{self.city(data['city'])} reißt {data['building']} ab (zurück: {self.amounts(data['refund'])})",
             ),
             actor=self.city_owner(data["city"]),
         )
@@ -200,8 +278,8 @@ class Civ(Base):
         return self.out(
             "info",
             self.w.pick(
-                f"{data['city']} grows to {data['population']}",
-                f"{data['city']} wächst auf {data['population']}",
+                f"{self.city(data['city'])} grows to {data['population']}",
+                f"{self.city(data['city'])} wächst auf {data['population']}",
             ),
             actor=self.city_owner(data["city"]),
             importance=1,
@@ -216,8 +294,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{self.who(data['owner'])} raises {data['army']} ({units})",
-                f"{self.who(data['owner'])} stellt {data['army']} auf ({units})",
+                f"{self.who(data['owner'])} raises {self.army(data['army'])} ({units})",
+                f"{self.who(data['owner'])} stellt {self.army(data['army'])} auf ({units})",
             ),
             actor=data["owner"],
         )
@@ -227,7 +305,10 @@ class Civ(Base):
         to = self.tile(data["path"][-1]) if data["path"] else "?"
         return self.out(
             "action",
-            self.w.pick(f"{data['army']} moves to {to}", f"{data['army']} zieht nach {to}"),
+            self.w.pick(
+                f"{self.army(data['army'])} moves to {to}",
+                f"{self.army(data['army'])} zieht nach {to}",
+            ),
             actor=self.army_owner(data["army"]),
             importance=1,
         )
@@ -238,8 +319,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['new_army']} splits off from {data['army']}",
-                f"{data['new_army']} spaltet sich von {data['army']} ab",
+                f"{self.army(data['new_army'])} splits off from {self.army(data['army'])}",
+                f"{self.army(data['new_army'])} spaltet sich von {self.army(data['army'])} ab",
             ),
             actor=self.army_owner(data["army"]),
             importance=1,
@@ -247,11 +328,12 @@ class Civ(Base):
 
     def handle_armies_merged(self, event: Event):
         data = event.data
-        joined = ", ".join(data["armies"])
+        joined = ", ".join(self.army(a) for a in data["armies"])
         return self.out(
             "action",
             self.w.pick(
-                f"{joined} join {data['into']}", f"{joined} schließen sich {data['into']} an"
+                f"{joined} join {self.army(data['into'])}",
+                f"{joined} schließen sich {self.army(data['into'])} an",
             ),
             actor=self.army_owner(data["into"]),
             importance=1,
@@ -259,9 +341,10 @@ class Civ(Base):
 
     def handle_army_disbanded(self, event: Event):
         army = event.data["army"]
+        label = self.army(army)
         return self.out(
             "action",
-            self.w.pick(f"{army} is disbanded", f"{army} wird aufgelöst"),
+            self.w.pick(f"{label} is disbanded", f"{label} wird aufgelöst"),
             actor=self.army_owner(army),
             importance=1,
         )
@@ -279,7 +362,8 @@ class Civ(Base):
         return self.out(
             "info",
             self.w.pick(
-                f"{data['army']} loses {units} ({why})", f"{data['army']} verliert {units} ({why})"
+                f"{self.army(data['army'])} loses {units} ({why})",
+                f"{self.army(data['army'])} verliert {units} ({why})",
             ),
             actor=self.army_owner(data["army"]),
             importance=1,
@@ -289,7 +373,7 @@ class Civ(Base):
         army = event.data["army"]
         return self.out(
             "action",
-            self.w.pick(f"{army} digs in", f"{army} verschanzt sich"),
+            self.w.pick(f"{self.army(army)} digs in", f"{self.army(army)} verschanzt sich"),
             actor=self.army_owner(army),
             importance=1,
         )
@@ -301,8 +385,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['army']} attacks {self.tile(data['target'])}",
-                f"{data['army']} greift {self.tile(data['target'])} an",
+                f"{self.army(data['army'])} attacks {self.tile(data['target'])}",
+                f"{self.army(data['army'])} greift {self.tile(data['target'])} an",
             ),
             actor=self.army_owner(data["army"]),
         )
@@ -312,8 +396,8 @@ class Civ(Base):
         return self.out(
             "info",
             self.w.pick(
-                f"The attack of {data['army']} is called off ({data['reason']})",
-                f"Der Angriff von {data['army']} fällt aus ({data['reason']})",
+                f"The attack of {self.army(data['army'])} is called off ({data['reason']})",
+                f"Der Angriff von {self.army(data['army'])} fällt aus ({data['reason']})",
             ),
             actor=self.army_owner(data["army"]),
             importance=1,
@@ -333,7 +417,7 @@ class Civ(Base):
                 f"Schlacht bei {self.tile(data['tile'])}: {self.who(a['nation'])} gegen {self.who(d['nation'])}, {self.who(data['winner'])} siegt",
             ),
             actor=a["nation"],
-            detail=lost,
+            detail=lost if self.spoilers else None,
             importance=3,
         )
 
@@ -343,8 +427,8 @@ class Civ(Base):
         return self.out(
             "result",
             self.w.pick(
-                f"{self.who(data['to'])} takes {data['city']} from {self.who(data['from'])}",
-                f"{self.who(data['to'])} erobert {data['city']} von {self.who(data['from'])}",
+                f"{self.who(data['to'])} takes {self.city(data['city'])} from {self.who(data['from'])}",
+                f"{self.who(data['to'])} erobert {self.city(data['city'])} von {self.who(data['from'])}",
             ),
             actor=data["to"],
             importance=3,
@@ -355,8 +439,8 @@ class Civ(Base):
         return self.out(
             "action",
             self.w.pick(
-                f"{data['army']} burns the {data['building']} of {data['city']} (loot: {self.amounts(data['loot'])})",
-                f"{data['army']} brennt {data['building']} in {data['city']} nieder (Beute: {self.amounts(data['loot'])})",
+                f"{self.army(data['army'])} burns the {data['building']} of {self.city(data['city'])} (loot: {self.amounts(data['loot'])})",
+                f"{self.army(data['army'])} brennt {data['building']} in {self.city(data['city'])} nieder (Beute: {self.amounts(data['loot'])})",
             ),
             actor=data["by"],
             importance=3,
