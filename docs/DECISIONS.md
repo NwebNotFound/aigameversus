@@ -115,5 +115,6 @@ with `python scripts/decisions.py adopt`.
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
 - [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
 - [D-111](decisions/D-111-a-model-may-set-its-own-call-options-rate-limits-are-waited.md) · A model may set its own call options; rate limits are waited out longer, within a budget
-- [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
 - [D-113](decisions/D-113-refused-answers-are-answer-quality-a-retry-marker-on-the.md) · Refused answers are answer quality: a retry marker on the move, red only for a random move
+- [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
+- [D-120](decisions/D-120-free-variants-are-left-out-of-the-catalog-and-every-model.md) · Free variants are left out of the catalog, and every model says how reliably it has played here
