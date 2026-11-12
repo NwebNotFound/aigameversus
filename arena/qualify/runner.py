@@ -48,9 +48,11 @@ from arena.qualify.manifest import MANIFEST_VERSION, GameManifest
 PROTOCOL = "research/QUALIFY.md v2"
 SCOPE = "core"
 FRESH_DAYS = 7
-# Refusals of the request itself, as the provider says: the tools or a parameter are not
-# supported. Every other provider failure says nothing about the model and stays unknown.
-REFUSED = {"BadRequestError", "UnsupportedParamsError"}
+# The one explicit refusal of the frozen configuration: a parameter or the tools are not
+# supported. A generic 400 (BadRequestError) is no such evidence: the request, the fixture
+# or the context may be at fault, so it stays unknown with its reason, like every other
+# provider failure (Researcher, #156).
+REFUSED = {"UnsupportedParamsError"}
 TOO_LONG = "PromptTooLong"
 
 
@@ -66,6 +68,7 @@ class CaseResult:
     tool: str | None = None
     validator: str | None = None  # the game's or the schema's refusal, if any
     thought: bool = False
+    thought_profile: str = "optional"  # "required" or "optional", as the case declares
     warning: str | None = None
     cut_off: bool = False
     repairs: list[str] = field(default_factory=list)
@@ -175,6 +178,14 @@ def configuration(
             case: None if f is None else {"seed": f.seed, "sha256": f.sha256}
             for case, f in fixtures.items()
         },
+        # Each case's check and whether its thought is required (the frozen profile).
+        "cases": {
+            case.id: {
+                "check": case.check,
+                "thought": "required" if case.thought_required else "optional",
+            }
+            for case in manifest.cases
+        },
         # The prompt and tool schemas exactly as sent: rules, system text, history.
         "requests": {case: digest(request) for case, request in sorted(sent.items())},
         "model": {
@@ -230,6 +241,7 @@ async def run_case(
     if fixture is None:
         result.reason = "no fixture: no search match reached this situation"
         return result
+    result.thought_profile = "required" if case.thought_required else "optional"
     result.seed, result.fixture_sha256 = fixture.seed, fixture.sha256
     result.offered = [tool.name for tool in fixture.request.tools]
     agent = ModelAgent(call, plugin, settings=settings, sleep=_no_wait, jitter=lambda: 0.0)
@@ -285,6 +297,8 @@ def _provider(result: CaseResult, error: AgentError) -> CaseResult:
     result.reason = {
         RATE_LIMITED: "rate limited",
         TOO_LONG: "prompt longer than max_input_tokens",
+        "BadRequestError": "the provider refused the request (BadRequestError): no evidence "
+        "of unsupported tools or parameters",
     }.get(kind, f"provider unavailable ({kind})")
     return result
 

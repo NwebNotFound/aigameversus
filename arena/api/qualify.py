@@ -68,7 +68,13 @@ class Current(BaseModel):
     badge: str | None
     reason: str | None = Field(description="Why unknown: never tested, expired, changed")
     config_hash: str
-    last: Qualification | None = Field(description="The newest result of this configuration")
+    last: Qualification | None = Field(
+        description="The result the status comes from: the newest decisive one, if any"
+    )
+    latest: Qualification | None = Field(
+        description="The newest attempt of this configuration, whatever its outcome: a later "
+        "unknown shows here, and never refreshes the decisive result or its expiry"
+    )
 
 
 class Jobs:
@@ -249,29 +255,37 @@ def current(rows: list[Qualification], hash_: str, now: datetime) -> Current:
     same = [r for r in rows if r.config_hash == hash_ and r.status != "running"]
     if not same:
         reason = "configuration changed since the last test" if rows else "never tested"
-        return Current(status="unknown", badge=None, reason=reason, config_hash=hash_, last=None)
-    fresh = [r for r in same if r.expires_at is None or r.expires_at > now]
-    decisive = [r for r in fresh if r.status in ("qualified", "unqualified")]
-    if decisive:
-        last = decisive[0]
         return Current(
-            status=last.status, badge=last.badge, reason=None, config_hash=hash_, last=last
+            status="unknown", badge=None, reason=reason, config_hash=hash_, last=None, latest=None
         )
-    last = same[0]
-    if last.expires_at is not None and last.expires_at <= now:
+    latest = same[0]
+    decisive = next((r for r in same if r.status in ("qualified", "unqualified")), None)
+    if decisive is not None:
+        # Its own expiry counts: a later attempt never makes it fresh again.
+        if decisive.expires_at is None or decisive.expires_at > now:
+            return Current(
+                status=decisive.status,
+                badge=decisive.badge,
+                reason=None,
+                config_hash=hash_,
+                last=decisive,
+                latest=latest,
+            )
         return Current(
             status="unknown",
             badge=None,
-            reason=f"expired: last tested {last.status}",
+            reason=f"expired: last tested {decisive.status}",
             config_hash=hash_,
-            last=last,
+            last=decisive,
+            latest=latest,
         )
     return Current(
         status="unknown",
         badge=None,
-        reason=last.reasons[0] if last.reasons else None,
+        reason=latest.reasons[0] if latest.reasons else None,
         config_hash=hash_,
-        last=last,
+        last=latest,
+        latest=latest,
     )
 
 
