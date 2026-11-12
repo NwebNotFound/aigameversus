@@ -238,7 +238,10 @@
 				</p>
 			{/if}
 			<p class="hint">
-				{#if setup?.model_seats}
+				{#if setup?.model_seats && setup.mixed_seats}
+					Each seat is a model (paid) or a random bot (free); a table may mix them. Not possible
+					yet: a personality per seat.
+				{:else if setup?.model_seats}
 					A table is all models (paid) or all random bots (free). Not possible yet: bots and models
 					at one table, and a personality per seat; both need an arena update that is not live.
 				{:else}

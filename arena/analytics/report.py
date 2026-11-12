@@ -65,6 +65,7 @@ def report(
             else None,
             **engine["totals"],
             "tool_errors": engine["totals"]["refused"],
+            "awards": AWARDS[game](numbers, players, name) if game in AWARDS else [],
             "turning_point": (
                 {k: turning[k] for k in ("seq", "kind", "players", "text")}
                 if turning and turning.get("turning")
@@ -491,3 +492,60 @@ def _werewolf(
 
 
 GAMES = {"liars_deck": _liars, "poker": _poker, "werewolf": _werewolf}
+
+
+def _award(award: str, seat: str, en: str, de: str, **evidence: Any) -> dict[str, Any]:
+    return {"id": award, "seat": seat, "text": _label(en, de), **evidence}
+
+
+def _werewolf_awards(numbers: dict, players: list[str], name: Callable[[str], str]) -> list[dict]:
+    """Most deceptive (claims that were lies), most accurate voter (spoilers), most accused."""
+    awards = []
+    lies = Counter(c["player"] for c in numbers["claims"] if c["lie"])
+    if lies:
+        seat = max(players, key=lambda p: (lies[p], -players.index(p)))
+        awards.append(
+            _award(
+                "most_deceptive",
+                seat,
+                f"Most deceptive: {name(seat)}, {lies[seat]} false role claim{'' if lies[seat] == 1 else 's'}",
+                f"Am trügerischsten: {name(seat)}, {lies[seat]} falsche Rollenbehauptung{'' if lies[seat] == 1 else 'en'}",
+                count=lies[seat],
+            )
+        )
+    accuracy = {
+        p: r for p, r in (numbers["votes"]["accuracy"] or {}).items() if r["of"] >= 2 and r["n"] > 0
+    }
+    if accuracy:
+        seat = max(
+            accuracy, key=lambda p: (accuracy[p]["value"], accuracy[p]["of"], -players.index(p))
+        )
+        r = accuracy[seat]
+        awards.append(
+            _award(
+                "most_accurate_voter",
+                seat,
+                f"Sharpest voter: {name(seat)}, {r['n']} of {r['of']} votes on wolves",
+                f"Treffsicherste Stimme: {name(seat)}, {r['n']} von {r['of']} Stimmen gegen Wölfe",
+                n=r["n"],
+                of=r["of"],
+                spoilers=True,
+            )
+        )
+    accused = Counter(a["target"] for a in numbers["accusations"])
+    if accused:
+        seat = max(players, key=lambda p: (accused[p], -players.index(p)))
+        awards.append(
+            _award(
+                "most_accused",
+                seat,
+                f"Most accused: {name(seat)}, {accused[seat]} times",
+                f"Am häufigsten beschuldigt: {name(seat)}, {accused[seat]}-mal",
+                count=accused[seat],
+                heuristic=True,
+            )
+        )
+    return awards
+
+
+AWARDS = {"werewolf": _werewolf_awards}

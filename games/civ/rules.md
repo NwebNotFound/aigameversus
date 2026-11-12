@@ -99,6 +99,42 @@ war, open borders), open_borders (3–30 rounds), tribute (1–20 rounds).
 Reputation runs 0–100, starting at 50. Breaking a treaty costs 20 and everyone
 sees it. Trades carry a 10 % fee, +10 % if your reputation is below 30.
 
+## Orders
+
+You submit all orders of a round in one `submit_orders` call, a list of orders
+(at most 40). Diplomacy orders run first, then cities, then armies. An illegal
+order is dropped with a reason you read next round, and the rest still run.
+
+Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
+
+```json
+{"orders": [
+  {"type": "focus", "city": "c1", "focus": "production"},
+  {"type": "build", "city": "c1", "building": "farm"},
+  {"type": "train", "city": "c1", "unit": "spearman", "count": 2},
+  {"type": "settle", "army": "a2"},
+  {"type": "move", "army": "a1", "to": [4, 3]}
+]}
+```
+
+| Order | Arguments |
+| --- | --- |
+| build, demolish | city, building |
+| focus | city, focus (growth, production, military) |
+| train | city, unit, count (1 to 10) |
+| move | army, to ([col, row], a tile it can reach) |
+| settle | army (its settler founds a city here) |
+| split | army, units (unit ids to take out as a new army) |
+| merge | armies (ids on one tile; they join the first) |
+| disband | army |
+| fortify | army (stays put; +25 % defense from next round) |
+| pillage | army (destroys the newest building of an enemy city next to it) |
+| message | to (nation or null for everyone), text |
+| propose_treaty | to, kind, rounds |
+| respond | offer (id), accept (true/false) |
+| declare_war, break_treaty | on (nation) / treaty (id) |
+| propose_trade | to, gives, wants, rounds |
+
 ## A round
 
 1. Info: up to 8 info tool calls.
