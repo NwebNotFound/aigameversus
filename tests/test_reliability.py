@@ -133,3 +133,13 @@ def test_the_dominance_thresholds_follow_the_rules():
 
     assert any("8 of 12 refused" in w for w in verdict(two_thirds, 0, RULES).warnings)
     assert not any("refused answers ran into" in w for w in verdict(two_thirds, 0, lax).warnings)
+
+
+def test_the_dominance_warning_needs_exactly_the_minimum_of_refused_answers():
+    exactly = verdict(
+        moves(3, answers=2, cutoffs=1) + moves(17), 0, RULES
+    )  # 3 refused, all cut off
+    one_short = verdict(moves(2, answers=2, cutoffs=1) + moves(18), 0, RULES)
+
+    assert any("3 of 3 refused answers ran into" in w for w in exactly.warnings)
+    assert not any("refused answers ran into" in w for w in one_short.warnings)
