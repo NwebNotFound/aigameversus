@@ -667,6 +667,22 @@ support tool calls. No code.
 uv run pytest tests/test_config.py   # validates the file
 ```
 
+Whether a model can play a game here is *qualified* per research/QUALIFY.md,
+for one exact configuration (D-132, `arena/qualify/`).
+- `POST /qualifications {model, game, answer_repair, confirm_spend, max_eur}`
+  starts a core job. It needs the guards of a paid match. The click cap
+  (default EUR 0.01, at most the per-match cap) must hold the job's worst case,
+  or the job is refused.
+- Each case of the game's manifest (`arena/qualify/manifest.py`) sends the model
+  one real turn of p1 from a seeded random-bot match (`fixtures.py`). Only the
+  first answer counts, judged by the engine's own check (`runner.py`).
+- The job is booked in the ledger under its own id. It leaves no match record.
+- `GET /qualifications/current?model=&game=&answer_repair=` gives the status of
+  that configuration now. A result counts only for its configuration hash, and
+  for 7 days.
+- A new game gets a manifest entry with its cases (A to F). A game without one
+  is refused with 422.
+
 ### A Werewolf role
 
 One YAML file in `games/werewolf/roles/<id>.yaml`; the id is snake_case English
