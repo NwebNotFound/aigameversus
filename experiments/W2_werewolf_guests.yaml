@@ -1,6 +1,6 @@
 id: W2
 schema: explicit_guest_pilot_v1
-version: 1
+version: 2
 status: proposed
 registered: '2026-11-12'
 owner: Arena Researcher
@@ -9,7 +9,7 @@ allocation_approval: 'Lead overnight delegation 1fd8b027: guest stage up to EUR3
 execution_plan_approved: false
 execution_approval_evidence: null
 schedule: W2_werewolf_guests_schedule.csv
-settings: {template: classic, language: en, prompt_version: werewolf-p3, answer_repair: 'off'}
+settings: {template: classic, language: en, prompt_version: werewolf-p2, answer_repair: 'off'}
 memory: false
 reasoning_effort_per_model: low
 max_output_tokens_per_model: 1500
@@ -60,17 +60,23 @@ budget:
   month_cap_eur: 25
   notify_and_hold_at_month_eur: 20
   ledger_before_plan_micro_eur: 3756279
-  estimated_eight_matches_eur: 2.652842
+  estimated_eight_matches_eur: 1.724974
   automatic_retries: 0
   accounting: 'Cumulative over every guest-stage attempt/run; a restart or plan revision does not reset the EUR3.50 allowance.'
 free_quotes_micro_eur:
-  openai/gpt-6.1-terra: 204661
-  anthropic/claude-sonnet-5.5: 373920
-  moonshotai/kimi-k3.1-pro: 373920
-  google/gemini-4-carbon: 373920
+  openai/gpt-6.1-terra: 136646
+  anthropic/claude-sonnet-5.5: 241947
+  moonshotai/kimi-k3.1-pro: 241947
+  google/gemini-4-carbon: 241947
 catalog_fetched_at: '2026-11-12T05:16:43.615661Z'
 prerequisites:
   - 'Lead accepts this exact reduced 8-cell plan before any start; allocation alone is not plan acceptance.'
+  - '#144 merged on main and deployed in a verified rebuild; no cap-only workaround authorizes a start.'
+  - 'Every fresh table estimate strictly below EUR0.40; verify settings.match_budget_eur enforcement and record its effective value.'
+  - 'Send Lead a one-line pre-start report; no start from this proposal.'
+  - '#144 merged on main and deployed in a verified rebuild; no cap-only workaround authorizes a start.'
+  - 'Every fresh table estimate strictly below EUR0.40; verify settings.match_budget_eur enforcement and record its effective value.'
+  - 'Send Lead a one-line pre-start report; no start from this proposal.'
   - 'Freeze plan/schedule/config hashes and verify backend role fixture, options and price quote.'
   - 'No other paid research match running; read real month ledger before each start.'
   - 'Explicit CSV client enforces shared budget and both reservation rules; generic E1 runner does not implement this schema.'

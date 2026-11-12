@@ -46,6 +46,9 @@ def test_proposal_does_not_grant_execution_or_increase_allocation(plan):
     assert plan["execution_plan_approved"] is False
     assert plan["execution_approval_evidence"] is None
     assert plan["memory"] is False
+    assert plan["settings"]["prompt_version"] == "werewolf-p2"
+    assert any("#144 merged" in item for item in plan["prerequisites"])
+    assert all(quote < 400_000 for quote in plan["free_quotes_micro_eur"].values())
     assert plan["settings"]["answer_repair"] == "off"
     assert plan["budget"]["stage_eur"] == 3.50
     assert plan["budget"]["match_cap_eur"] <= 0.50
