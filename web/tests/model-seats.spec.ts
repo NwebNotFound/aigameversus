@@ -144,6 +144,23 @@ test('a favourite stays a favourite after a reload', async ({ page, request }) =
 	await expect(page.getByLabel(`Unmark ${first.name} as favourite`)).toBeVisible();
 });
 
+test('a table with a model offers to repair garbled tool calls, ticked by default', async ({
+	page,
+	request
+}) => {
+	const setup = await (await request.get(`${ARENA}/setup`)).json();
+	test.skip(!setup.answer_repair?.includes('v1'), 'this arena has no answer repair');
+	const [first] = setup.models;
+	await page.goto('/matches/new');
+	await expect(page.getByTestId('answer-repair')).toHaveCount(0); // bots only: nothing to repair
+
+	await chooseModels(page, [first, first]);
+
+	const box = page.getByLabel('Repair garbled tool calls');
+	await expect(box).toBeVisible();
+	await expect(box).toBeChecked();
+});
+
 test('free models wait behind their switch, marked as often rate-limited', async ({
 	page,
 	request

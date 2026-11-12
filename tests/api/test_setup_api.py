@@ -75,3 +75,9 @@ def test_model_seats_need_the_server_switch_and_the_key(monkeypatch):
 
     monkeypatch.delenv("OPENROUTER_API_KEY")
     assert client.get("/setup").json()["model_seats"] is False
+
+
+def test_setup_says_which_answer_repair_values_the_arena_takes():
+    options = client.get("/setup").json()
+
+    assert options["answer_repair"] == ["off", "v1"]  # the first is the default

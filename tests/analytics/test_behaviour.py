@@ -214,3 +214,18 @@ def test_a_bot_match_gets_behaviour_for_every_player_in_both_views(seed):
         assert set(found) == set(seats)
         for player in found.values():
             assert all(not tag["spoilers"] or spoilers for tag in player["tags"])
+
+
+def test_cut_off_answers_and_rate_limits_are_their_own_reasons_not_missing_tools():
+    from arena.analytics import behaviour
+
+    many = {"moves": 20, "cutoffs": 6, "rate_limits": 9}
+    cut, throttled = behaviour._cut_off(many), behaviour._throttled(many)
+
+    assert (cut["id"], cut["kind"], cut["n"], cut["of"]) == ("cut_off", "reliability", 6, 20)
+    assert "output limit" in cut["text"]["en"] and "not missing tools" in cut["text"]["en"]
+    assert (throttled["id"], throttled["n"]) == ("throttled", 9)
+    assert "provider route" in throttled["text"]["en"]
+    # Below the thresholds, or with too few moves, nothing is said.
+    assert behaviour._cut_off({"moves": 20, "cutoffs": 1, "rate_limits": 0}) is None
+    assert behaviour._throttled({"moves": 5, "cutoffs": 5, "rate_limits": 5}) is None

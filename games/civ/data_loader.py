@@ -146,7 +146,10 @@ class Event(_Named):
     probability_per_round: Ratio
     target: Literal["city", "region", "nation", "map"]
     region_radius: Annotated[int, Field(ge=1)] | None = None
-    duration_rounds: Annotated[int, Field(ge=1)] = Field(1, description="1 = this round only")
+    duration_rounds: Annotated[int, Field(ge=1)] = Field(
+        1,
+        description="Productions it holds, from the next round on (events strike after production)",
+    )
     only_conquered_within_rounds: Annotated[int, Field(ge=1)] | None = None
     effects: EventEffects
 
