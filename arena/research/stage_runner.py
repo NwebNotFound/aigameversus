@@ -12,7 +12,8 @@ order or a length other than `max_matches` is refused. A guest-pilot plan
 (`schema: explicit_guest_pilot_v1`) must also match the schedule it generates
 (arena/research/guest_schedule.py). Nothing starts unless the plan records its execution
 approval (`execution_plan_approved: true` with `execution_approval_evidence`).
-`--dry-run` runs every check and estimate of the open rows and spends nothing.
+`--dry-run` runs every check and estimate of the open rows and spends nothing; it needs
+no execution approval and never posts a match.
 
 Before every start, all of these must hold, or it holds and reports (exit 3):
 - the month spent (GET /ledger/month) is below `notify_and_hold_at_month_eur`;
@@ -29,7 +30,9 @@ Before every start, all of these must hold, or it holds and reports (exit 3):
 After every match it holds on a failed, interrupted or aborted match, a failed agent, a
 fallback share above 10 % (the guest's, or with no guest column every model's), a guest
 not dealt its planned role (with `expected_role`), or a match that cost more than
-`budget.max_cost_per_match_eur`. `<out>/run.json` keeps the effective limit, the reserve
+`budget.max_cost_per_match_eur`, or more than `budget.cost_jump_factor` x the estimate it
+started with (a cost jump); a match still running after `--max-wait` holds too.
+`<out>/run.json` keeps the effective limit, the reserve
 and every attempt's booked cost.
 
 What it sends is whitelisted: game, seed, the models of the row, the plan's settings,
@@ -100,7 +103,10 @@ class StageRunner:
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         resume_after_hold: bool = False,
         dry_run: bool = False,
+        max_wait: float = 4 * 3600,
+        clock: Callable[[], float] = time.monotonic,
     ):
+        self.clock = clock
         self.dry_run = dry_run  # every check and estimate, no POST /matches
         self.resume_after_hold = resume_after_hold  # a person decided to go on after a hold
         self.plan_path = plan_path
@@ -123,6 +129,10 @@ class StageRunner:
         cost_stop = budget.get("max_cost_per_match_eur")
         self.cost_stop = None if cost_stop is None else _micro(cost_stop)
         self.checkpoint = self.plan.get("checkpoint_after")
+        # Hold when a match is billed more than this many times the estimate it started with.
+        jump = budget.get("cost_jump_factor")
+        self.cost_jump = None if jump is None else Decimal(str(jump))
+        self.max_wait = max_wait  # seconds a match may run before the client holds
         self.batch_id = str(self.plan["id"])
         self.matches = self._checked_schedule()
 
@@ -130,8 +140,9 @@ class StageRunner:
 
     def _checked_schedule(self) -> list[dict[str, Any]]:
         plan = self.plan
-        if plan.get("execution_plan_approved") is not True or not plan.get(
-            "execution_approval_evidence"
+        if not self.dry_run and (
+            plan.get("execution_plan_approved") is not True
+            or not plan.get("execution_approval_evidence")
         ):
             raise PlanRefused(
                 "the plan records no execution approval (execution_plan_approved: true and "
@@ -272,7 +283,11 @@ class StageRunner:
             )
         if self.plan.get("guests") and row.get("guest"):
             self._prices(row["guest"])
+        setup = self._get("/setup")  # the arena's caps and options, as recorded evidence
         return {
+            "arena_setup": {
+                k: setup.get(k) for k in ("caps", "model_seats", "answer_repair", "mixed_seats")
+            },
             "month_spent_micro_eur": month["spent_micro_eur"],
             "estimate_micro_eur": quote,
             "cap_micro_eur": estimate["cap_micro_eur"],
@@ -487,9 +502,15 @@ class StageRunner:
     def _finish(self, attempt_id: str, attempt: dict[str, Any]) -> None:
         match_id = attempt["match_id"]
         record = {"status": "running"}
+        started = self.clock()
         while record["status"] not in ENDED:
             record = self._get(f"/matches/{match_id}")
             if record["status"] not in ENDED:
+                if self.clock() - started > self.max_wait:
+                    raise RunStopped(
+                        f"match {match_id} still {record['status']} after {self.max_wait:g} s: "
+                        "hold; a later run waits for it again"
+                    )
                 self.sleep(self.poll)
         events = self._get(f"/matches/{match_id}/events")
         cost = self._get(f"/matches/{match_id}/cost")
@@ -502,11 +523,12 @@ class StageRunner:
         )
         row = next(r for r in self.matches if int(r["order"]) == int(attempt["order"]))
         reports = seat_reports(events, {seat: row[seat] for seat in self.seats})
-        watched = [row["guest_seat"]] if row.get("guest_seat") else list(self.seats)
-        shares = {
+        every = {
             seat: (reports[seat].fallbacks / reports[seat].turns if reports[seat].turns else 1.0)
-            for seat in watched
+            for seat in self.seats
         }
+        watched = [row["guest_seat"]] if row.get("guest_seat") else list(self.seats)
+        shares = {seat: every[seat] for seat in watched}
         share = max(shares.values())
         dealt = next(
             (
@@ -526,7 +548,7 @@ class StageRunner:
                 "month_spent_after_micro_eur": month["spent_micro_eur"],
                 "prompt_version": record.get("prompt_version"),
                 "settings_recorded": record.get("settings"),
-                "fallback_shares": {seat: round(v, 4) for seat, v in shares.items()},
+                "fallback_shares": {seat: round(v, 4) for seat, v in every.items()},
                 "guest_role": dealt,
                 "agent_failed": sorted(p for p, r in reports.items() if r.agent_failed),
                 "ended_at": self._at(),
@@ -546,6 +568,16 @@ class StageRunner:
             holds.append(f"fallback share {share:.0%} ({worst}: {row[worst]})")
         if row.get("expected_role") and dealt != row["expected_role"]:
             holds.append(f"guest dealt {dealt}, planned {row['expected_role']}")
+        quote = attempt.get("estimate_micro_eur")
+        if (
+            self.cost_jump is not None
+            and quote
+            and cost["total_micro_eur"] > self.cost_jump * quote
+        ):
+            holds.append(
+                f"cost jump: {cost['total_micro_eur'] / MICRO:.6f} EUR is above "
+                f"{self.cost_jump} x the estimate {quote / MICRO:.6f}"
+            )
         if self.cost_stop is not None and cost["total_micro_eur"] > self.cost_stop:
             holds.append(
                 f"cost {cost['total_micro_eur'] / MICRO:.6f} EUR above the stop of "
@@ -578,6 +610,9 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--poll", type=float, default=10)
     parser.add_argument(
+        "--max-wait", type=float, default=4 * 3600, help="seconds a match may run before a hold"
+    )
+    parser.add_argument(
         "--resume-after-hold",
         action="store_true",
         help="go on after a hold, once a person has decided to (the held row is not replayed)",
@@ -592,6 +627,7 @@ def main(argv=None) -> int:
             poll=args.poll,
             resume_after_hold=args.resume_after_hold,
             dry_run=args.dry_run,
+            max_wait=args.max_wait,
         )
         if args.release_checkpoint:
             runner.release_checkpoint(args.release_checkpoint)

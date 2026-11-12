@@ -442,3 +442,52 @@ def test_a_schedule_with_anything_the_client_does_not_know_is_refused(c1, tmp_pa
 
     with pytest.raises(PlanRefused):
         StageRunner(c1, tmp_path / "out", c1_arena(c1))
+
+
+def test_a_dry_run_needs_no_approval_and_never_posts(tmp_path):
+    # The W2 plan as it is on main: no execution approval recorded.
+    arena = arena_for(PLAN)
+
+    report = StageRunner(PLAN, tmp_path / "out", arena, dry_run=True, say=lambda m: None).run()
+
+    assert len(report) == 8 and all(row["ok"] for row in report)
+    assert all(row["cap_micro_eur"] == 400_000 and row["estimate_micro_eur"] for row in report)
+    assert arena.posts() == []
+    assert json.loads((tmp_path / "out/dry-run.json").read_text()) == report
+
+
+def test_a_match_billed_far_above_its_estimate_holds_as_a_cost_jump(approved, tmp_path):
+    plan = yaml.safe_load(approved.read_text(encoding="utf-8"))
+    plan["budget"]["cost_jump_factor"] = 2.0
+    approved.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    arena = arena_for(approved, estimate=100_000, cost=300_000)  # 3 x its quote
+
+    with pytest.raises(RunStopped, match="cost jump"):
+        client(approved, tmp_path / "out", arena).run()
+
+    assert len(arena.posts()) == 1
+    within = arena_for(approved, estimate=100_000, cost=190_000)  # under 2 x: plays on
+    assert len(client(approved, tmp_path / "other", within).run()) == 8
+
+
+def test_a_match_that_never_ends_holds_after_the_maximum_wait(approved, tmp_path):
+    arena = arena_for(approved, status="running")
+    ticks = iter(range(0, 10_000, 600))  # each poll is ten minutes later
+
+    runner = client(approved, tmp_path / "out", arena, max_wait=3600, clock=lambda: next(ticks))
+    with pytest.raises(RunStopped, match="still running after 3600 s"):
+        runner.run()
+
+    (attempt,) = runner.attempts().values()
+    assert attempt["state"] == "started" and len(arena.posts()) == 1  # never posted again
+
+
+def test_every_seats_fallback_share_and_the_arenas_setup_are_recorded(approved, tmp_path):
+    arena = arena_for(approved)
+    runner = client(approved, tmp_path / "out", arena)
+
+    runner.run()
+
+    first = sorted(runner.attempts().values(), key=lambda a: a["order"])[0]
+    assert sorted(first["fallback_shares"]) == [f"p{i}" for i in range(1, 9)]
+    assert first["arena_setup"]["caps"] == {"match_eur": 0.5, "month_eur": 25}
