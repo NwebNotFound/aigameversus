@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { LiveState, MatchEvent } from '../api.js';
+import type { LiveState, MatchEvent, Transcript, TranscriptLine } from '../api.js';
 import {
 	publicBoard,
 	publicEvents,
 	publicSettings,
 	publicState,
-	publicTranscript
+	publicTranscript,
+	withRepairMarks
 } from './redact.js';
 
 // Board specs as the plugins' render_spec writes them (spectator data included).
@@ -166,5 +167,42 @@ describe('publicState', () => {
 		const text = JSON.stringify(publicState(state));
 		expect(text).not.toContain('12345');
 		expect(text).not.toContain('J1');
+	});
+});
+
+describe('withRepairMarks', () => {
+	const line = (seq: number, kind: TranscriptLine['kind'], type: string, data = {}) =>
+		({
+			seq,
+			kind,
+			actor: 'p2',
+			text: `${type} ${seq}`,
+			detail: null,
+			importance: 2,
+			raw: { type, data: { player: 'p2', ...data } }
+		}) as TranscriptLine;
+
+	it('marks the public move line with the tier and probability only', () => {
+		const spectator = [
+			line(4, 'info', 'action_rejected', { error: 'You do not hold the Q♥', arguments: { c: 1 } }),
+			line(5, 'info', 'action_accepted', { repaired_by: 'jev', top_probability: 0.93 }),
+			line(6, 'info', 'decision', { raw_arguments: ['{"cards":[1]}'] }),
+			line(7, 'action', 'cards_played')
+		];
+		const open = {
+			players: {},
+			lines: [line(7, 'action', 'cards_played')]
+		} as unknown as Transcript;
+		const marked = withRepairMarks(open, spectator);
+		expect(marked.lines[0].repair).toEqual({ tier: 2, p: 0.93 });
+		expect(JSON.stringify(marked)).not.toMatch(/Q♥|raw_arguments|cards"|error/);
+	});
+
+	it('leaves a transcript without repairs as it is', () => {
+		const open = {
+			players: {},
+			lines: [line(7, 'action', 'cards_played')]
+		} as unknown as Transcript;
+		expect(withRepairMarks(open, [line(7, 'action', 'cards_played')])).toBe(open);
 	});
 });
