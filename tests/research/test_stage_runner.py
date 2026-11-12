@@ -129,9 +129,20 @@ def arena_for(plan_path, **override):
     return FakeArena(yaml.safe_load(plan_path.read_text(encoding="utf-8")), **override)
 
 
-def test_the_plan_on_main_may_not_start_without_its_execution_approval(tmp_path):
+def test_a_plan_may_not_start_without_its_execution_approval(approved, tmp_path):
+    plan = yaml.safe_load(approved.read_text(encoding="utf-8"))
+    plan["execution_plan_approved"] = False
+    approved.write_text(yaml.safe_dump(plan), encoding="utf-8")
     with pytest.raises(PlanRefused, match="execution approval"):
-        StageRunner(PLAN, tmp_path / "out", arena_for(PLAN))
+        StageRunner(approved, tmp_path / "out", arena_for(approved))
+
+
+def test_published_w2_pins_reviewed_approval_and_cost_stops():
+    plan = yaml.safe_load(PLAN.read_text(encoding="utf-8"))
+    assert plan["execution_plan_approved"] is True
+    assert "e460648f-4457-409f-abcc-91d58f14887c" in plan["execution_approval_evidence"]
+    assert plan["budget"]["cost_jump_factor"] == 2.0
+    assert plan["budget"]["max_cost_per_match_eur"] == 0.40
 
 
 def test_a_schedule_that_is_not_the_plans_own_is_refused(approved, tmp_path):

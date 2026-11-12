@@ -42,9 +42,10 @@ def test_role_fixture_uses_only_random_bots_and_matches_deployed_seed_contract(p
     assert match.state.roles == plan["expected_roles"]
 
 
-def test_proposal_does_not_grant_execution_or_increase_allocation(plan):
-    assert plan["execution_plan_approved"] is False
-    assert plan["execution_approval_evidence"] is None
+def test_execution_has_exact_approval_without_increasing_allocation(plan):
+    assert plan["execution_plan_approved"] is True
+    assert "e460648f-4457-409f-abcc-91d58f14887c" in plan["execution_approval_evidence"]
+    assert "Reviewer live-state confirmation required" in plan["execution_approval_evidence"]
     assert plan["memory"] is False
     assert plan["settings"]["prompt_version"] == "werewolf-p2"
     assert any("#144 merged" in item for item in plan["prerequisites"])

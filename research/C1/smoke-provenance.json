@@ -1,0 +1,13 @@
+{
+  "prestart_plan_commit": "a6eac5a",
+  "match_id": "f12a97d0-458a-4025-8c98-ced72baa6acc",
+  "arena_commit": "01e8b50195aca9931afd0271dbc6063755c0d440",
+  "image_digest": "sha256:7c6b214992239cbc15b843be2f47d831bef77ee72c8b8522aba87ba9a9e3736c",
+  "history_limit_events": 120,
+  "raw_files": {
+    "run.json": "2eecc7b289fd923585f65e42d6ceb5918d34a59411be3b1d0ba689257f360e75",
+    "final-export.json": "90f1333c18d309229c14a318d72eb62c96c859ab1a64909ade621bad2c410b42",
+    "transcript.md": "f6c90b85563af6bd9bc9bd4a6d5ed43ea286b25e2fb264b8973e48dc369e3e7f"
+  },
+  "source_limitations": "Raw exports remain local; commit mapping is Reviewer lock provenance, not signed source-image proof."
+}
