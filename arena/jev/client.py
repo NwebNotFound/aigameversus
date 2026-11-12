@@ -96,7 +96,7 @@ def parse(body: Any, questions: Mapping[str, Mapping[str, Any]]) -> JevResult:
 
 def _a_distribution(answer: ChoiceAnswer, question: Mapping[str, Any]) -> bool:
     """A probability for exactly the options asked, each in [0, 1], summing to 1, and the
-    choice one of the most probable (research/JEV)."""
+    choice one of the most probable (D-123)."""
     options = set(question.get("criteria", {}))
     values = answer.probabilities
     if set(values) != options or answer.choice not in options:

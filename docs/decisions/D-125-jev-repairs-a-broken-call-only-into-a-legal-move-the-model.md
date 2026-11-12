@@ -7,7 +7,7 @@
   question). The engine draws the game's own random legal moves on a stream of their own
   (`"repair"`, so the game's randomness is untouched), checks each, and offers only those;
   speech tools are never options and optional free text is dropped. Nothing is guessed
-  (research/JEV): an amount with more values than `max_options` (a bet) is offered
+  (D-123, research/JEV): an amount with more values than `max_options` (a bet) is offered
   only at the one amount the model itself wrote in its refused calls, else that move is
   not offered; the engine's random amounts never are. The options are the distinct checked
   moves, never cut: more than `max_options` and Jev abstains (`too_many_options`); a single

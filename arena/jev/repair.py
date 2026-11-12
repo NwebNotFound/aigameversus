@@ -67,7 +67,7 @@ def options_of(
 ) -> list[Action] | None:
     """The moves Jev may choose from: speech tools out, optional free text dropped, distinct.
 
-    Nothing is guessed (research/JEV): an amount with more values than `limit` (a
+    Nothing is guessed (D-123, research/JEV): an amount with more values than `limit` (a
     bet) is offered only as the one amount the model itself wrote in its broken calls; a
     move needing an amount the model did not write uniquely is not offered. The engine's
     random amounts never are.

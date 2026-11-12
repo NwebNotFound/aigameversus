@@ -122,12 +122,12 @@ with `python scripts/decisions.py adopt`.
 - [D-117](decisions/D-117-a-headline-for-viewers-is-a-match-flag-thought-headline-not.md) · A headline for viewers is a match flag, thought_headline, not a prompt version
 - [D-118](decisions/D-118-cut-off-answers-and-rate-limits-are-counted-apart-and-a.md) · Cut-off answers and rate limits are counted apart, and a model is qualified per route, game and configuration
 - [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
-- [D-125](decisions/D-125-jev-repairs-a-broken-call-only-into-a-legal-move-the-model.md) · Jev repairs a broken call only into a legal move the model meant, above a threshold, never otherwise
-- [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
 - [D-120](decisions/D-120-free-variants-are-left-out-of-the-catalog-and-every-model.md) · Free variants are left out of the catalog, and every model says how reliably it has played here
+- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
 - [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule
 - [D-123](decisions/D-123-jev.md) · Jev calibration preserves intent and separates human agreement from ground truth
 - [D-124](decisions/D-124-the-throne-of-tokens-board-draws-the-hex-map-in-svg-with-a.md) · The Throne of Tokens board draws the hex map in SVG, with a nation's fog on request
+- [D-125](decisions/D-125-jev-repairs-a-broken-call-only-into-a-legal-move-the-model.md) · Jev repairs a broken call only into a legal move the model meant, above a threshold, never otherwise
 - [D-126](decisions/D-126-throne-of-tokens-combat-what-a-battle-costs-the-ranged-round.md) · Throne of Tokens combat: what a battle costs, the ranged round, and which city is a capital
 - [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
 - [D-128](decisions/D-128-the-throne-of-tokens-scoreboard-is-public-by-rule-positions.md) · The Throne of Tokens scoreboard is public by rule; positions and contents stay fogged
