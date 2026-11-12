@@ -18,7 +18,8 @@ strategy game).
 > can take seats from the command line (`arena run --models`) and, if the
 > server is started with `ARENA_ALLOW_MODEL_SEATS=1`, through `POST /matches`,
 > inside hard cost caps; the first three matches they played are
-> [below](#real-models-first-matches). The fourth game is not playable yet.
+> [below](#real-models-first-matches). The fourth game, Throne of Tokens, plays
+> with random bots and the mock model; it has no prompt for real models yet.
 
 ## Games
 
@@ -27,7 +28,7 @@ strategy game).
 | *Liar's Deck* (2-4 players) | playable; bots in the UI and API, real models from the command line | rules engine, both variants (base, devil card), bar-table board, random bot |
 | Poker, No-Limit Hold'em (2-6) | playable; bots in the UI and API, real models from the command line | betting rounds, side pots, tournament with duplicate mode, poker-table board with win chances, random bot |
 | Werewolf (6-16) | playable; bots in the UI and API, real models from the command line | all sixteen roles, narrator, captain, role selection with templates and balance light, circle board with vote arrows, random bot |
-| *Throne of Tokens* (4-6 nations) | in progress | game data as validated YAML, seeded hex map with fog of war, city economy, armies; no match yet |
+| *Throne of Tokens* (4-6 nations) | playable with bots (`arena run --game civ --bots --players 6`); no model prompt yet | seeded hex map with fog of war, city economy, armies, combat and conquest, diplomacy, random events, barbarians, three ways to win, one `submit_orders` call per nation and round, hex board data |
 
 **Liar's Deck:** bluff with face-down cards, call the lie, pull the trigger of
 your own revolver. The table shows card stands, the table card and a revolver
@@ -97,7 +98,7 @@ model, no cost. Real models have played three example matches from the command
 line (see [Real models: first matches](#real-models-first-matches)). Not built
 yet: choosing models in the new-match form (it starts random bots only; models
 are seated by the command or the API), memory across matches (the profile says
-so), and the Throne of Tokens match.* The pictures are
+so), and the Throne of Tokens board in the UI.* The pictures are
 made by `scripts/make_showcase.sh`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for the building blocks and what is planned.
 
@@ -279,7 +280,7 @@ On Windows, run these in Git Bash with `PYTHONIOENCODING=utf-8`; see
 
 ```
 arena/      core: API, engine, agent runner, cost caps, ratings, statistics, memory, chronicle, `arena` command
-games/      one package per game: toy, liars_deck, poker, werewolf, civ (data, map, economy, armies)
+games/      one package per game: toy, liars_deck, poker, werewolf, civ (Throne of Tokens)
 config/     cost caps, models and personalities (YAML)
 mods/       extra content that overrides or extends game data
 web/        spectator UI (SvelteKit)

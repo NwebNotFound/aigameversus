@@ -13,6 +13,8 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from games.civ.orders import MAX_ORDERS
+
 # the chance, per city or army, that the bot gives it an order this round
 CITY_BUILD = 0.5
 CITY_TRAIN = 0.4
@@ -21,6 +23,7 @@ ARMY_MOVE = 0.6
 ARMY_SPLIT = 0.1
 ARMY_DISBAND = 0.02
 FOCUSES = ("growth", "production", "military")
+MAX_UNITS = 10  # in one army (balance.yaml army.max_units)
 
 
 def random_orders(observation: dict[str, Any], rng: random.Random) -> dict[str, Any]:
@@ -57,9 +60,17 @@ def random_orders(observation: dict[str, Any], rng: random.Random) -> dict[str, 
 
     taken = {tuple(c["tile"]) for c in observation["seen"]["cities"]}
     taken |= {tuple(a["tile"]) for a in observation["seen"]["armies"]}
+    merged = _merges(observation["armies"], MAX_UNITS)
+    orders += [{"type": "merge", "armies": group} for group in merged]
+    leaders = {group[0] for group in merged}
+    joined = {army for group in merged for army in group[1:]}
     for army in observation["armies"]:
+        if army["id"] in joined:
+            continue
         if army["can_settle"]:
             orders.append({"type": "settle", "army": army["id"]})
+            continue
+        if army["id"] in leaders:  # it changes this round: no order that runs before the merge
             continue
         roll = rng.random()
         if roll < ARMY_DISBAND:
@@ -74,4 +85,22 @@ def random_orders(observation: dict[str, Any], rng: random.Random) -> dict[str, 
 
     for offer in observation["offers"]:
         orders.append({"type": "respond", "offer": offer["id"], "accept": rng.random() < 0.5})
-    return {"orders": orders}
+    return {"orders": orders[:MAX_ORDERS]}  # the schema takes no more
+
+
+def _merges(armies: list[dict[str, Any]], most: int) -> list[list[str]]:
+    """Armies that share a tile join up, as many as fit into one army, so they do not pile up."""
+    groups: list[list[str]] = []
+    by_tile: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    for army in armies:
+        by_tile.setdefault(tuple(army["tile"]), []).append(army)
+    for here in by_tile.values():
+        group, size = [], 0
+        for army in here:
+            units = sum(army["units"].values())
+            if size + units <= most:
+                group.append(army["id"])
+                size += units
+        if len(group) > 1:
+            groups.append(group)
+    return groups
