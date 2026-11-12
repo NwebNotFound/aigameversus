@@ -1,4 +1,4 @@
-# D-138 · Proposed: a start region short of food or gold costs more than one short of iron or wood
+# D-138 · A start region short of food or gold costs more than one short of iron or wood
 
 - **Date:** 2026-11-12
 - **Status:** accepted by the lead on 2026-11-12, in force from Throne of Tokens

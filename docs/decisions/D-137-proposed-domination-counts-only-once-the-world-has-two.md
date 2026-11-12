@@ -1,4 +1,4 @@
-# D-137 · Proposed: domination counts only once the world has two cities per nation
+# D-137 · Domination counts only once the world has two cities per nation
 
 - **Date:** 2026-11-12
 - **Status:** accepted by the lead on 2026-11-12, in force from Throne of Tokens

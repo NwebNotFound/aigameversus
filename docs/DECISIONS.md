@@ -138,5 +138,6 @@ with `python scripts/decisions.py adopt`.
 - [D-133](decisions/D-133-throne-of-tokens-has-one-setting-rounds-for-a-shorter-match.md) · Throne of Tokens has one setting, rounds, for a shorter match
 - [D-134](decisions/D-134-the-post-match-referee-judges-five-moments-chosen-by-rule.md) · The post-match referee judges five moments chosen by rule with one Jev call, as unvalidated research tags
 - [D-135](decisions/D-135-civ-prompts-civ-p1-and-civ-p2-with-strategy-text-and-private.md) · Civ prompts: civ-p1 and civ-p2, with strategy_text and private_plan as settings
-- [D-137](decisions/D-137-proposed-domination-counts-only-once-the-world-has-two.md) · Proposed: domination counts only once the world has two cities per nation
-- [D-138](decisions/D-138-proposed-a-start-region-short-of-food-or-gold-costs-more.md) · Proposed: a start region short of food or gold costs more than one short of iron or wood
+- [D-136](decisions/D-136-a-civ-prompt-can-show-120-events-civ-p1-1-and-civ-p2-1.md) · A Civ prompt can show 120 events: civ-p1.1 and civ-p2.1
+- [D-137](decisions/D-137-proposed-domination-counts-only-once-the-world-has-two.md) · Domination counts only once the world has two cities per nation
+- [D-138](decisions/D-138-proposed-a-start-region-short-of-food-or-gold-costs-more.md) · A start region short of food or gold costs more than one short of iron or wood

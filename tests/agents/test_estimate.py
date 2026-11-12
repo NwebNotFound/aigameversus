@@ -85,3 +85,34 @@ def test_each_seat_is_estimated_at_its_most_expensive_trial_match(monkeypatch):
         costs = [single[seed][seat].estimate_micro_eur for seed in single]
         assert got.estimate_micro_eur == max(costs)
         assert len(set(costs)) > 1  # the trial matches differ, so the choice matters
+
+
+def test_the_estimate_counts_the_wider_event_history_of_a_game_that_asks_for_it():
+    """Civ shows 120 events a prompt (D-136): the free estimate that gates a run must price them."""
+    from games.civ.plugin import CivGame
+
+    class NarrowCiv(CivGame):
+        def history_limit(self, settings=None):
+            return 40
+
+    nations = {f"p{i}": "glm-flash" for i in range(1, 5)}
+    settings = {"rounds": 20}
+
+    wide = run(CivGame(), nations, settings)
+    narrow = run(NarrowCiv(), nations, settings)
+
+    assert CivGame().history_limit(settings) == 120
+    assert all(wide[s].estimate_micro_eur > narrow[s].estimate_micro_eur for s in nations)
+    assert wide["p1"].calls == narrow["p1"].calls  # the same turns, longer prompts
+
+
+def test_a_game_with_the_default_window_is_priced_as_before():
+    class Explicit(ToyGame):
+        def history_limit(self, settings=None):
+            return 40
+
+        def rules(self, settings=None):  # rules.md lives next to ToyGame, not here
+            return ToyGame().rules(settings)
+
+    assert ToyGame().history_limit({}) == 40
+    assert run(Explicit()) == run(ToyGame())
