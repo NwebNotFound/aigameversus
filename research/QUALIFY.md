@@ -1,6 +1,6 @@
 # Model qualification protocol
 
-Design v1, 2026-11-12. Owner: Arena Researcher. Implementation: Arena Coder Heavy,
+Design v2, 2026-11-12. Owner: Arena Researcher. Implementation: Arena Coder Heavy,
 after Werewolf/Civ work; runner/ledger changes remain Arena Builder's. This document
 authorizes no paid calls. No mass qualification without Nils' budget approval.
 
@@ -10,7 +10,9 @@ Test whether one exact model/provider/game/configuration can produce legal actio
 through the real arena request path. Separate compatibility, availability, output
 limits and latency from strategic quality. Qualification is not a strength rating
 or a guarantee that future calls work. Never award qualification from catalog tool
-metadata, a bot fallback, a repaired response, or another game's results alone.
+metadata, a bot fallback or another game's results alone. A repaired response
+cannot earn a clean pass; repair-enabled qualification is labelled separately
+under the exact tested configuration, as specified below.
 
 Two scopes prevent a small test from overstating coverage:
 
@@ -37,6 +39,8 @@ effort, temperature/sampling options (including `provider_default`), timeout/ret
 policy, repair version, memory, private-plan and thought-headline settings. Exclude
 keys, account identifiers and volatile timestamps. Match the production request
 builder, validation and accounting; do not build a simplified provider-only probe.
+The status key therefore includes `answer_repair` through this configuration hash:
+`off` and `v1` results are distinct and must never be combined into one verdict.
 
 ## Fixture construction and core cases
 
@@ -105,18 +109,32 @@ planned but unimplemented types as passed or silently omit them from the manifes
 - **qualified** for the named scope: every required case completed a valid action
   on its first model response, without repair, fallback, truncation or rule error;
   expected thought contract passed; latency met the configured turn timeout.
+- **qualified with repair (v1)** is the mandatory badge/substatus of **qualified**
+  when `answer_repair=v1` and at least one otherwise successful required case
+  needed the deployed v1 repair on its first response. All required cases must
+  still yield legal actions without fallback, truncation, rule errors or another
+  model response. This qualifies that repair-enabled configuration, not raw tool
+  compliance. If every first response was clean under v1, report a clean pass
+  for the v1 configuration; the setting does not imply every answer was repaired.
+  Store clean and repaired case counts separately. This is a display distinction
+  within the three-state protocol, not a fourth status that replaces **unknown**.
 - **unqualified** for that configuration: an explicit unsupported tool/parameter
   response, malformed/missing call, missing required thought, cutoff, invalid
   target/rule-dependent move or model turn timeout. Preserve the exact reason.
   A missing optional thought is a separate warning, not failure unless this test
   profile declares thought required. Qualification profiles must say which.
+  With `answer_repair=off`, an answer that requires repair is unqualified, even
+  if a separate diagnostic repair could recover it. With v1, a response the
+  configured repair cannot turn into a legal action is unqualified as well.
 - **unknown**: not tested, incomplete coverage, changed hash, unavailable provider,
   429, network outage, 5xx or budget stop. These do not prove lack of tool ability.
   Report `unknown: rate limited` rather than hiding the cause behind a capability
   failure. Do not overwrite an earlier pass with an unrelated route's outage.
 
 Production correction/retry behavior may still be measured, but an eventual repair
-does not turn a first-response failure into a clean pass. Count all attempts and
+does not turn a first-response failure into a clean pass. Only the first-response
+v1 repair path above can earn the explicitly repair-labelled qualification; later
+corrected model responses cannot rescue a failed required case. Count all attempts and
 costs. No automatic retesting until a pass; a retry of qualification needs a new
 explicit click/approved job, linked to its failed predecessor. Existing historical
 results remain inspectable. Show current runtime reliability beside qualification;
@@ -129,19 +147,36 @@ Target under EUR0.01 per model per game's core click, often EUR0.002-0.01; this 
 a target, not a fixed price or a cap exemption. Price the actual frozen fixtures
 and model first. Reserve worst-case input plus configured output (reasoning
 included) and all permitted transport attempts, with the arena's conservative FX
-and unverified-model margin. Use the existing ledger to reserve/settle every call;
-refused requests follow the existing audited zero-cost policy. Never read the key
+and the explicit 1.25 unverified catalog-model factor (D-102). Use the existing
+Budget/Ledger to reserve/settle every call. A qualification job has its own UUID
+used as the ledger's `match_id`, but it is not a game match: do not insert it into
+match/replay/batch records. The per-job EUR0.50 ceiling applies to the whole job,
+and every call counts in the monthly sum. The smaller approved per-click cap is
+enforced too; it is not reset for each fixture or retry. Existing per-match costs,
+replays and batches remain scoped to actual game matches.
+
+Starting a qualification job is a WRITE endpoint (POST, never GET), with exactly
+the model-seat guards of POST /matches: ARENA_ALLOW_MODEL_SEATS, explicit
+confirm_spend for that click, provider key availability and the durable ledger
+check; use the corresponding 403/422/503 refusals. The read-only LAN proxy and a
+spectator cannot start qualification jobs. A 429 is settled at zero by the existing
+production rule, not a new accounting code path. Never read the key
 in the browser, store it in results, or bypass the arena's money path.
 
 Example only: 6 calls of 800 input/1500 output tokens at USD0.10/0.50 per million,
 with EUR per USD conservatively 1, total at most EUR0.00498 before margins/retries.
+For an unverified catalog model, multiply by 1.25: EUR0.006225 reserved before any
+additional retry allowance or FX adjustment; round reservations up in micro-EUR.
 This says nothing about the cost of stronger models, long prompts or full coverage.
 
 Picker flow: `Test this model` -> review exact model/route, game/scope, call count,
 settings and maximum EUR charge -> explicit confirm -> serial isolated calls ->
 status and itemized results. Default per-click cap EUR0.01. If the reserved bound
 does not fit, do not silently shrink the configured output limit; show the higher
-bound and require the owner's explicit larger budget. Enforce the remaining
+bound and do not run it by default; require the owner's explicit larger budget.
+This also applies to expensive catalog entries, including those above USD10 per
+million output tokens: a displayed entry never grants a default paid test.
+Enforce the remaining
 monthly EUR25 hard cap and usual EUR0.50 per-job/match ceiling; smaller click cap
 wins. Recheck remaining allowance before each call, atomically reserve against
 concurrent matches/tests. No background sweep or fleet testing from a single click.
@@ -159,7 +194,8 @@ research outcomes. Fixtures cannot affect a running match or its RNG.
 
 Required result fields: result id; UTC tested/start/finish timestamps; model id;
 requested/actual provider; config hash and canonical configuration; protocol,
-schema and fixture versions; game/template/role/action scope; status and reasons;
+schema and fixture versions; game/template/role/action scope; status, repair badge
+and reasons; clean/repaired case counts and exact repair version;
 required/passed/missing cases; per case expected predicate, observed tool, schema
 and game-validator result, thought present, finish reason, raw/repair/rejection/
 fallback counts, latency, input/output/reasoning tokens, provider refusals, attempts
@@ -170,7 +206,10 @@ headers, account data or unrelated live-match history.
 Before paid use, free tests must verify identity/hash invalidation, unknown versus
 failure classification, role/fog leaks, zero-argument tools with thought, cutoff
 handling, status precedence, stale-result display, reservation races/caps, and
-that bot/repair output cannot earn a pass. Run the deployed schema/validator on
+that bot output never earns a pass, repair never earns a clean pass, off rejects
+repair-needed answers, and v1 uses its separate key/badge/counts. Verify POST-only
+model-seat guards, whole-job caps and existing zero-cost 429 settlement.
+Run the deployed schema/validator on
 each fixture. Then one separately approved inexpensive live click validates the
 complete UI -> runner -> ledger -> result -> picker flow. Full role/order coverage
 and strategic comparisons require separately priced, approved designs.
