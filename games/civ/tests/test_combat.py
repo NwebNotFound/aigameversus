@@ -6,7 +6,7 @@ from games.civ import combat, diplomacy, economy
 from games.civ.state import NEUTRAL
 from games.civ.tests.realm import CENTER, DATA, RICH, Realm, flat_map, reordered
 from games.civ.turn import apply_event
-from games.civ.world import Start
+from games.civ.world import Start, WorldMap
 
 EAST = (4, 2)  # next to CENTER
 
@@ -52,15 +52,27 @@ def test_a_neutral_army_can_be_attacked_without_a_war():
     assert of_type(realm, "battle")[0].data["defender"]["nation"] == NEUTRAL
 
 
-@pytest.mark.parametrize(
-    ("target", "words"),
-    [((5, 2), "Nothing of another nation"), ((0, 0), "Nothing of another nation")],
-)
-def test_an_attack_on_an_empty_or_far_tile_is_refused(target, words):
+def test_an_attack_on_an_empty_tile_in_sight_is_refused():
     realm = at_war()
     mine = realm.army("ada", CENTER, "swordsman")
 
-    assert words in combat.attack_problem(realm.state, realm.data, "ada", mine, target)
+    problem = combat.attack_problem(realm.state, realm.data, "ada", mine, (5, 2))
+
+    assert "Nothing of another nation stands on (5, 2)" in problem
+
+
+def test_an_unseen_tile_gets_the_same_refusal_whether_an_enemy_stands_there_or_not():
+    def refusal(enemy_there: bool) -> str:
+        realm = Realm(WorldMap(rows=[["plains"] * 12 for _ in range(5)], starts=[]))
+        realm.start_round()
+        diplomacy.declare_war(realm.state, realm.data, realm.ctx, "ada", "bo")
+        mine = realm.army("ada", (1, 2), "swordsman")
+        if enemy_there:
+            realm.army("bo", (10, 2), "spearman")
+        return combat.attack_problem(realm.state, realm.data, "ada", mine, (10, 2))
+
+    assert refusal(True) == refusal(False)
+    assert "You do not see (10, 2)" in refusal(True)
 
 
 def test_an_army_that_moved_cannot_attack_and_another_nations_army_is_not_yours():
@@ -90,6 +102,36 @@ def test_the_stronger_side_wins_takes_the_tile_and_the_loser_loses_units():
     assert all(a.id != theirs for a in realm.state.armies)  # destroyed
     assert realm.state.army(mine).tile == EAST  # the winner takes the empty tile
     assert realm.state.attacks == []
+
+
+def test_a_crushing_attack_clears_the_defence_and_a_close_one_costs_by_the_ratio():
+    crushing = at_war(seed=1)
+    mine = crushing.army("ada", CENTER, *["swordsman"] * 10)
+    crushing.army("bo", EAST, "scout", "scout")
+    fight(crushing, mine)
+    battle = of_type(crushing, "battle")[0].data
+    assert battle["attacker"]["power"] > 10 * battle["defender"]["power"]
+    assert len(battle["defender"]["lost"]) == 2  # nobody survives a 10:1 attack
+    assert crushing.state.army(mine).tile == EAST
+
+    factor = DATA.balance.combat.loser_loss_factor
+    partial = 0
+    for seed in range(12):
+        close = at_war(seed=seed)
+        mine = close.army("ada", CENTER, *["swordsman"] * 6)
+        close.army("bo", EAST, *["swordsman"] * 5)
+        fight(close, mine)
+        data = of_type(close, "battle")[0].data
+        won, lost = (
+            (data["attacker"], data["defender"])
+            if data["winner"] == "ada"
+            else (data["defender"], data["attacker"])
+        )
+        size = 5 if data["winner"] == "ada" else 6
+        expected = max(1, round(min(1.0, won["power"] / lost["power"] * factor) * size))
+        assert len(lost["lost"]) == expected, seed
+        partial += expected < size
+    assert partial  # about 1.2:1: the loser keeps some of its units
 
 
 def test_a_counter_doubles_strength_against_the_unit_it_counters():

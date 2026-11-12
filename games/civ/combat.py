@@ -25,14 +25,12 @@ from typing import Any
 
 from arena.engine.plugin import TurnContext
 from games.civ import diplomacy
-from games.civ.armies import _not_their_army, reachable
+from games.civ.armies import _not_their_army, army_viewpoints, reachable
 from games.civ.data_loader import CivData
-from games.civ.economy import must_be_legal, weary_modifier
+from games.civ.economy import city_viewpoints, must_be_legal, weary_modifier
+from games.civ.fog import visible_tiles
 from games.civ.state import NEUTRAL, Army, City, CivState, Troop
 from games.civ.world import Hex
-
-LOSER_LOSS_FACTOR = 0.5  # the loser loses (winner power / loser power) x this share, at least 1
-RANGED_LOSS_FACTOR = 0.5  # the ranged round: (archers' power / the other side's power) x this
 
 # --- who may fight whom ------------------------------------------------------
 
@@ -65,6 +63,12 @@ def _defenders(
     )
 
 
+def sight(state: CivState, data: CivData, nation: str) -> set[Hex]:
+    """The tiles the nation sees this round, around its cities and armies."""
+    viewpoints = city_viewpoints(state, data, nation) + army_viewpoints(state, data, nation)
+    return visible_tiles(state.world, viewpoints)
+
+
 # --- orders --------------------------------------------------------------------
 
 
@@ -79,9 +83,12 @@ def attack_problem(
     if not _strength(data, army.units):
         return f"{army_id} has no fighting units."
     col, row = target
+    if player != NEUTRAL and tuple(target) not in sight(state, data, player):
+        # The same answer whatever stands there: a refusal must not show what the fog hides.
+        return f"You do not see ({col}, {row}). An attack needs a target in sight: move closer."
     owner, armies, city = _defenders(state, target, player)
     if owner is None:
-        return f"Nothing of another nation that you can see stands on ({col}, {row}). Move there."
+        return f"Nothing of another nation stands on ({col}, {row}). Move there."
     if not hostile(state, player, owner):
         return f"You are not at war with {owner}. Declare war first to attack ({col}, {row})."
     if tuple(target) not in reachable(state, data, army_id):
@@ -227,12 +234,15 @@ def _battle(
     for _ in range(data.balance.combat.ranged_rounds):  # archers fire first
         shot_a, shot_d = powers(ranged_only=True)
         total_a, total_d = powers(ranged_only=False)
-        _take(rng, lost_d, len(held), _share(shot_a, total_d) * RANGED_LOSS_FACTOR)
-        _take(rng, lost_a, len(attackers), _share(shot_d, total_a) * RANGED_LOSS_FACTOR)
+        ranged = data.balance.combat.ranged_loss_factor
+        _take(rng, lost_d, len(held), _share(shot_a, total_d) * ranged)
+        _take(rng, lost_a, len(attackers), _share(shot_d, total_a) * ranged)
     power_a, power_d = powers(ranged_only=False)
     attacker_won = power_a > power_d  # a tie holds the tile
     winner_power, loser_power = max(power_a, power_d), min(power_a, power_d)
-    loser_share = max(_share(winner_power, loser_power) * LOSER_LOSS_FACTOR, 0)
+    # In proportion to the power ratio: 2:1 costs the loser all at a factor of 0.5, 1.2:1 60 %.
+    ratio = winner_power / loser_power if loser_power else math.inf
+    loser_share = min(1.0, ratio * data.balance.combat.loser_loss_factor)
     winner_share = (loser_power / winner_power if winner_power else 0) * (
         data.balance.combat.winner_loss_factor
     )
