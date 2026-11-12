@@ -166,6 +166,22 @@ describe('parseForm', () => {
 			});
 		});
 
+		it('asks for a second tick when an unreliable model takes a seat', () => {
+			const ticked = { ...THREE, confirm_spend: 'on' };
+
+			expect(parseForm(form(ticked), GAMES, MODELS, ['qwen-flash'])).toEqual({
+				ok: false,
+				errors: {
+					confirm_unreliable:
+						'An unreliable model often fails or is replaced by the bot: tick the box to seat it anyway.'
+				}
+			});
+			expect(
+				parseForm(form({ ...ticked, confirm_unreliable: 'on' }), GAMES, MODELS, ['qwen-flash'])
+			).toMatchObject({ ok: true });
+			expect(parseForm(form(ticked), GAMES, MODELS, ['other/model'])).toMatchObject({ ok: true });
+		});
+
 		it('sends no models and no spend for a bot match', () => {
 			const parsed = parseForm(form({ ...LIARS, confirm_spend: 'on' }), GAMES, MODELS);
 
