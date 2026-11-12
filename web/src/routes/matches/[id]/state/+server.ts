@@ -10,7 +10,8 @@ export const GET: RequestHandler = async ({ fetch, params, url }) => {
 	return snapshot(
 		createArenaClient(ARENA_API_URL, fetch),
 		params.id,
-		viewFrom(url.searchParams.get('view'))
+		viewFrom(url.searchParams.get('view')),
+		url.searchParams.get('nation')
 	);
 };
 
@@ -22,15 +23,20 @@ export const POST: RequestHandler = async ({ fetch, params, request, url }) => {
 	const result = await arena.control(params.id, command);
 	// not_found: the match stopped meanwhile; the snapshot shows how it ended.
 	if (result.state === 'unreachable') error(502, `Arena unreachable (${result.reason})`);
-	return snapshot(arena, params.id, viewFrom(url.searchParams.get('view')));
+	return snapshot(
+		arena,
+		params.id,
+		viewFrom(url.searchParams.get('view')),
+		url.searchParams.get('nation')
+	);
 };
 
-/** `?view=spoiler-free` gets the public board and no seed. */
-async function snapshot(arena: ArenaClient, id: string, view: View) {
+/** `?view=spoiler-free` gets the public board (a Civ map through `?nation=`'s eyes), no seed. */
+async function snapshot(arena: ArenaClient, id: string, view: View, nation: string | null) {
 	const result = await arena.liveState(id);
 	if (result.state === 'not_found') error(404, 'No match with this id');
 	if (result.state === 'unreachable') error(502, `Arena unreachable (${result.reason})`);
-	return json(view === 'spoiler-free' ? publicState(result.data) : result.data);
+	return json(view === 'spoiler-free' ? publicState(result.data, nation) : result.data);
 }
 
 function parse(body: unknown): ControlAction | null {

@@ -16,6 +16,7 @@ All numbers come from ``data/balance.yaml`` (``city``, ``army``),
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable, Mapping
 from decimal import Decimal
 from typing import Any, get_args
@@ -246,6 +247,21 @@ def upkeep(data: CivData, units: Iterable[str]) -> dict[Resource, int]:
     return {resource: amount for resource, amount in due.items() if amount}
 
 
+def weary_modifier(data: CivData, rounds: int) -> float:
+    """What so many rounds in a row at war take off production (≤ 0)."""
+    rules = data.balance.war_weariness
+    return max(rules.production_modifier_per_round * rounds, rules.max_production_modifier)
+
+
+def production_modifier(state: CivState, data: CivData, nation: str) -> float:
+    """What war weariness and a lost capital take off a nation's yields (≤ 0)."""
+    kept = state.nations[nation]
+    modifier = weary_modifier(data, kept.weary_rounds)
+    if kept.capital_lost_until is not None and state.round <= kept.capital_lost_until:
+        modifier += data.balance.conquest.capital_lost_production_modifier
+    return max(modifier, -1.0)
+
+
 def produce(state: CivState, data: CivData, ctx: TurnContext) -> None:
     """The production step: every nation takes in its yields and feeds population and units.
 
@@ -255,7 +271,8 @@ def produce(state: CivState, data: CivData, ctx: TurnContext) -> None:
     (``units_lost_to_hunger``).
 
     The food a city makes beyond what its own population eats also counts
-    towards that city's growth.
+    towards that city's growth. War weariness and a lost capital take their share of the
+    yields first (`production_modifier`), rounded down.
     """
     hunger = data.balance.city.food_per_population
     for player, nation in state.nations.items():
@@ -269,6 +286,9 @@ def produce(state: CivState, data: CivData, ctx: TurnContext) -> None:
             _add(yields, made)
             if made["food"] > city.population * hunger:
                 stored[city.id] = made["food"] - city.population * hunger
+        modifier = production_modifier(state, data, player)
+        if modifier:
+            yields = {r: math.floor(n * (1 + modifier)) for r, n in yields.items()}
         eaten = sum(city.population for city in cities) * hunger
         stock = {resource: nation.stock[resource] + yields[resource] for resource in RESOURCES}
         stock["food"] = max(stock["food"] - eaten, 0)

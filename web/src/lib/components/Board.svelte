@@ -3,7 +3,9 @@
 	import { hidden } from '#lib/live.js';
 	import LiarsDeckTable from './LiarsDeckTable.svelte';
 	import PokerTable from './PokerTable.svelte';
+	import HexMap from './HexMap.svelte';
 	import WerewolfCircle from './WerewolfCircle.svelte';
+	import type { HexSpec } from '#lib/boards/hexMap.js';
 
 	/**
 	 * The generic board: any game's render_spec as a header of fields and one card
@@ -77,6 +79,18 @@
 		);
 	}
 
+	/** The Throne of Tokens map needs its terrain rows and the lists it draws. */
+	function isHexMap(spec: Record<string, unknown>): boolean {
+		return (
+			Array.isArray(spec.terrain) &&
+			spec.terrain.every((row) => typeof row === 'string') &&
+			typeof spec.legend === 'object' &&
+			['cities', 'armies', 'nations', 'treaties', 'wars', 'battles'].every((key) =>
+				Array.isArray(spec[key])
+			)
+		);
+	}
+
 	const SEAT_FLAGS = ['player', 'alive', 'folded'];
 
 	const label = (key: string) => key.replaceAll('_', ' ');
@@ -102,6 +116,8 @@
 	<LiarsDeckTable {spec} {spoilers} {names} {colours} {subs} />
 {:else if spec.layout === 'poker_table' && isPokerTable(spec)}
 	<PokerTable {spec} {spoilers} {events} {names} {colours} {subs} />
+{:else if spec.layout === 'hex_map' && isHexMap(spec)}
+	<HexMap spec={spec as unknown as HexSpec} {names} {spoilers} />
 {:else if spec.layout === 'player_circle' && isPlayerCircle(spec)}
 	<WerewolfCircle {spec} {spoilers} {events} {names} {colours} {subs} {lines} {players} />
 {:else}
