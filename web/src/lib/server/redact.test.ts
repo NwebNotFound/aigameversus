@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import hexFixture from '../boards/fixture-hex-map.json';
 import type { LiveState, MatchEvent, Transcript, TranscriptLine } from '../api.js';
 import {
 	publicBoard,
@@ -88,7 +89,7 @@ describe('publicBoard', () => {
 	});
 
 	it('gives no board for a layout without an allowlist', () => {
-		expect(publicBoard({ layout: 'hex_map', tiles: [1, 2] })).toBeNull();
+		expect(publicBoard({ layout: 'unlisted_layout', tiles: [1, 2] })).toBeNull();
 		expect(publicBoard({ cards: ['A1'] })).toBeNull();
 		expect(publicBoard(null)).toBeNull();
 	});
@@ -167,6 +168,84 @@ describe('publicState', () => {
 		const text = JSON.stringify(publicState(state));
 		expect(text).not.toContain('12345');
 		expect(text).not.toContain('J1');
+	});
+});
+
+describe('the Throne of Tokens map, spoiler-free: one nation sees it', () => {
+	type Placed = { id: string; owner: string; tile: [number, number] };
+	const map = hexFixture as unknown as {
+		nations: { id: string }[];
+		cities: Placed[];
+		armies: Placed[];
+		battles: { tile: [number, number] }[];
+		fog: Record<string, string[]>;
+	};
+	/** What `nation` sees, read from the fixture's fog independently of the code under test. */
+	const seenBy = (nation: string, item: { owner?: string; tile: [number, number] }) =>
+		item.owner === nation || map.fog[nation][item.tile[1]][item.tile[0]] === '1';
+	const view = (nation: string | null) =>
+		publicBoard(hexFixture as Record<string, unknown>, nation)!;
+	const ids = (items: unknown) => (items as { id: string }[]).map((i) => i.id).sort();
+
+	it('keeps the land, and only the cities, armies and battles the nation sees', () => {
+		const board = view('p1');
+		expect(board.terrain).toEqual(hexFixture.terrain);
+		expect(ids(board.cities)).toEqual(ids(map.cities.filter((c) => seenBy('p1', c))));
+		expect(ids(board.armies)).toEqual(ids(map.armies.filter((a) => seenBy('p1', a))));
+		expect((board.battles as unknown[]).length).toBe(
+			map.battles.filter((b) => seenBy('p1', b)).length
+		);
+		// The fixture has things p1 does not see; none of them is sent, by id or by tile.
+		const hidden = [...map.cities, ...map.armies].filter((x) => !seenBy('p1', x));
+		expect(hidden.length).toBeGreaterThan(0);
+		const text = JSON.stringify(board);
+		for (const x of hidden) {
+			expect(text).not.toContain(`"id":"${x.id}"`);
+			expect(text).not.toContain(`"tile":[${x.tile[0]},${x.tile[1]}]`);
+		}
+	});
+
+	it('keeps a battle the nation fought even off its seen tiles, and its own fortification', () => {
+		const spec = {
+			...(hexFixture as Record<string, unknown>),
+			battles: [{ tile: [9, 5], winner: 'p2', nations: ['p1', 'p2'], round: 3 }],
+			armies: [
+				{
+					id: 'own',
+					owner: 'p1',
+					tile: [0, 0],
+					strength: 3,
+					units: { spearman: 1 },
+					fortified: true
+				}
+			]
+		};
+		const board = publicBoard(spec, 'p1')!;
+		expect(board.battles).toEqual([{ tile: [9, 5], winner: 'p2' }]);
+		expect((board.armies as Record<string, unknown>[])[0]).toMatchObject({
+			fortified: true,
+			units: { spearman: 1 }
+		});
+		expect(publicBoard(spec, 'p3')!.battles).toEqual(
+			map.fog.p3[5][9] === '1' ? [{ tile: [9, 5], winner: 'p2' }] : []
+		);
+	});
+
+	it('gives its own units and stock only, and its own fog row only', () => {
+		const board = view('p1');
+		for (const army of board.armies as { owner: string; units?: unknown }[])
+			expect(army.units !== undefined).toBe(army.owner === 'p1');
+		for (const nation of board.nations as { id: string; stock?: unknown }[])
+			expect(nation.stock !== undefined).toBe(nation.id === 'p1');
+		expect(Object.keys(board.fog as object)).toEqual(['p1']);
+		expect(board.fog).toEqual({ p1: map.fog.p1 });
+	});
+
+	it('another nation sees another map; no pick, or an unknown one, is the first nation', () => {
+		expect(ids(view('p2').cities)).toEqual(ids(map.cities.filter((c) => seenBy('p2', c))));
+		expect(ids(view('p2').cities)).not.toEqual(ids(view('p1').cities));
+		expect(view(null)).toEqual(view(map.nations[0].id));
+		expect(view('p99')).toEqual(view(map.nations[0].id));
 	});
 });
 

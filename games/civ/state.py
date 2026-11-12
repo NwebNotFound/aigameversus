@@ -111,6 +111,17 @@ class Deal(BaseModel):
     rounds_left: int
 
 
+class Condition(BaseModel):
+    """A lasting effect of a random event on the cities around a tile, such as a drought."""
+
+    event: str
+    col: int
+    row: int
+    radius: int
+    until_round: int  # the last round it holds
+    modifiers: dict[Resource, float]  # relative change of a city's yield, -0.5 = half
+
+
 class CivState(BaseModel):
     round: int = 0  # the round being played; 0 before the first
     world: WorldMap = WorldMap(rows=[], starts=[])
@@ -125,6 +136,9 @@ class CivState(BaseModel):
     deals: list[Deal] = []
     wars: list[list[str]] = []  # pairs of nations at war, each sorted
     attacks: list[dict[str, Any]] = []  # this round's attacks {army, target}, until fought
+    conditions: list[Condition] = []  # from random events, oldest first
+    rich_rounds: dict[str, int] = {}  # rounds in a row a nation held the economic-victory gold
+    victory: dict[str, Any] | None = None  # {kind, winners, placements} once the match is won
 
     def city(self, city_id: str) -> City:
         return next(city for city in self.cities if city.id == city_id)
