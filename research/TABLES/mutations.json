@@ -1,0 +1,22 @@
+[
+  {
+    "mutation": "full-reservation",
+    "test_exit": 1,
+    "killed": true
+  },
+  {
+    "mutation": "three-times",
+    "test_exit": 1,
+    "killed": true
+  },
+  {
+    "mutation": "month-hold",
+    "test_exit": 1,
+    "killed": true
+  },
+  {
+    "mutation": "effective-cap",
+    "test_exit": 1,
+    "killed": true
+  }
+]

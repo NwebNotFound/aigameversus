@@ -1,0 +1,13 @@
+{
+  "stage": "C1",
+  "batch": "C1",
+  "approval": "454cd9d8-f68b-4b1f-ad00-93066d92bfa4",
+  "csv": "C1.csv",
+  "csv_sha256": "f3aa58ed0ce31342702f52fb1c830edc24986a4904bfeef736b5fa9a9a78aaf0",
+  "budget_micro_eur": 1000000,
+  "match_micro_eur": 200000,
+  "reservation_micro_eur": 200000,
+  "smoke": true,
+  "requires_c1_smoke": false,
+  "guest_price_ceilings": {}
+}
