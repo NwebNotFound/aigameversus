@@ -24,7 +24,7 @@ from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
-from arena.engine.types import Event
+from arena.engine.types import MATCH_BUDGET, Event, match_budget_of
 from arena.personalities import load_personalities
 
 router = APIRouter(tags=["matches"])
@@ -128,6 +128,8 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
+    if MATCH_BUDGET in new.settings:
+        _check_match_budget(new.settings[MATCH_BUDGET])
     if new.models is not None and new.seats is not None:
         raise HTTPException(422, "Name the seats with `seats` or with `models`, not both.")
     models = None
@@ -178,6 +180,17 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         raise HTTPException(422, str(refused)) from refused
     except ArenaBusy as busy:
         raise HTTPException(429, str(busy)) from busy
+
+
+def _check_match_budget(value: Any) -> None:
+    """A match's own spend limit: euros above 0, at most the config's per-match cap (422)."""
+    cap = load_config().limits.match_eur
+    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 < value <= cap:
+        raise HTTPException(
+            422,
+            f"{MATCH_BUDGET} is what this match may spend at most: a number of euros above 0 "
+            f"and at most the per-match cap of {cap}, not {value!r}.",
+        )
 
 
 async def _model_seats(new: NewMatch, models: dict[str, str]) -> dict[str, str]:
@@ -242,7 +255,9 @@ class SeatEstimateOut(BaseModel):
 
 class EstimateOut(BaseModel):
     estimate_micro_eur: int = Field(description="All seats together, in millionths of a euro")
-    cap_micro_eur: int = Field(description="The cap of one match")
+    cap_micro_eur: int = Field(
+        description="The cap of this match: the config's, or its own lower match_budget_eur"
+    )
     month_spent_micro_eur: int = Field(description="What this calendar month has cost so far")
     month_cap_micro_eur: int
     seats: dict[str, SeatEstimateOut]
@@ -299,6 +314,8 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     ids = [model_id for model_id in new.models if model_id is not None]
     if not ids:
         raise HTTPException(422, "Every seat is a bot: a match of bots costs nothing.")
+    if MATCH_BUDGET in new.settings:
+        _check_match_budget(new.settings[MATCH_BUDGET])
     config = await _seat_config(ids)
     seats = {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
     history = await live.ledger.output_tokens(sorted(set(ids)))
@@ -310,7 +327,11 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
     total = sum(seat.estimate_micro_eur for seat in per_seat.values())
-    cap = int(config.limits.match_eur * MICRO)
+    # The match's own limit, if it sets one, is its cap (the lower of the two), as Budget has it.
+    limit = match_budget_of(new.settings)
+    cap = int(
+        min(limit, config.limits.match_eur) * MICRO if limit else config.limits.match_eur * MICRO
+    )
     month_cap = int(config.limits.month_eur * MICRO)
     return EstimateOut(
         estimate_micro_eur=total,

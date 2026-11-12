@@ -23,7 +23,8 @@ export type Field =
 	| 'turn_delay'
 	| 'roles'
 	| 'confirm_spend'
-	| 'confirm_unreliable';
+	| 'confirm_unreliable'
+	| 'match_budget_eur';
 
 /** The Werewolf role selection: a template id, or CUSTOM for the counts of the checklist. */
 export const CUSTOM = 'custom';
@@ -138,6 +139,18 @@ export function parseForm(
 			const roles = selectedRoles(form);
 			if (roles === null) errors.roles = 'A role count is a whole number of 0 or more.';
 			else settings.roles = roles;
+		}
+	}
+
+	// An optional spend limit for a match with a model: it can only lower the arena's cap,
+	// which the arena checks (and refuses above it).
+	const limit = text('match_budget_eur');
+	if (limit !== '' && modelSeats.length) {
+		const euros = Number(limit);
+		if (!Number.isFinite(euros) || euros <= 0) {
+			errors.match_budget_eur = 'A spend limit is a number of euros above 0, or empty for the cap.';
+		} else {
+			settings.match_budget_eur = euros;
 		}
 	}
 

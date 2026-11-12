@@ -16,6 +16,7 @@ from arena.engine.rng import derive_rng
 from arena.engine.types import (
     ANSWER_REPAIR,
     ANSWER_REPAIR_VERSIONS,
+    MATCH_BUDGET,
     MESSAGE,
     THOUGHT_HEADLINE,
     Action,
@@ -98,6 +99,11 @@ class Match[StateT: BaseModel]:
             )
         if not isinstance(self.settings.get(THOUGHT_HEADLINE, False), bool):
             raise ValueError(f"{THOUGHT_HEADLINE} is true or false")
+        budget = self.settings.get(MATCH_BUDGET)
+        if budget is not None and (
+            isinstance(budget, bool) or not isinstance(budget, int | float) or not budget > 0
+        ):
+            raise ValueError(f"{MATCH_BUDGET} must be a number of euros above 0, not {budget!r}")
         self.state = plugin.initial_state(players, game_settings(self.settings))
         self.events: list[Event] = []
         self._agents = dict(agents)

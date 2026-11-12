@@ -185,6 +185,33 @@ describe('parseForm', () => {
 			expect(parsed.ok && 'models' in parsed.match).toBe(false);
 		});
 
+		it('sends a spend limit for this match when one is set, else none', () => {
+			const limited = parseForm(
+				form({ ...THREE, confirm_spend: 'on', match_budget_eur: '0.2' }),
+				GAMES,
+				MODELS
+			);
+			const open = parseForm(
+				form({ ...THREE, confirm_spend: 'on', match_budget_eur: '' }),
+				GAMES,
+				MODELS
+			);
+
+			expect(limited.ok && limited.match.settings.match_budget_eur).toBe(0.2);
+			expect(open.ok && 'match_budget_eur' in open.match.settings).toBe(false);
+		});
+
+		it.each(['0', '-1', 'lots'])('refuses the spend limit %o', (limit) => {
+			expect(
+				parseForm(form({ ...THREE, confirm_spend: 'on', match_budget_eur: limit }), GAMES, MODELS)
+			).toEqual({
+				ok: false,
+				errors: {
+					match_budget_eur: 'A spend limit is a number of euros above 0, or empty for the cap.'
+				}
+			});
+		});
+
 		it('still sends an all-model table as models', () => {
 			const parsed = parseForm(form({ ...THREE, confirm_spend: 'on' }), GAMES, MODELS, true);
 

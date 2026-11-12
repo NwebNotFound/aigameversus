@@ -33,7 +33,7 @@ from arena.db.match_store import Batch, MatchStore, Seat
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.replay import replay
-from arena.engine.types import Event, MatchPaused, Placement
+from arena.engine.types import Event, MatchPaused, Placement, match_budget_of
 from arena.games import load_games
 from arena.memory.store import MemoryStore
 from arena.ratings.backfill import backfill_model_ratings
@@ -321,7 +321,7 @@ async def _play_models(
             await ledger.check(await matches.model_matches())
         except LedgerUnavailable as down:
             raise _WrongCall(f"{down} Nothing was sent or booked") from down
-        budget = Budget(ledger, match_id, config)
+        budget = Budget(ledger, match_id, config, match_eur=match_budget_of(options["settings"]))
 
         async def store_and_print(first_seq: int, events: Sequence[Event]) -> None:
             await log.append(match_id, first_seq, events)

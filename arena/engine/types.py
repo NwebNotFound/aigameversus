@@ -1,6 +1,7 @@
 """Value types shared by the engine, game plugins and agents."""
 
 from collections.abc import Mapping
+from decimal import Decimal
 from enum import StrEnum
 from typing import Any, Protocol, Self
 
@@ -90,7 +91,23 @@ ANSWER_REPAIR_VERSIONS = ("off", "v1")
 # Whether every tool call also asks for a `headline`: the thought in a line, for viewers.
 # Not a prompt version: it is the same prompt for every game, turned on or off.
 THOUGHT_HEADLINE = "thought_headline"
-ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE)
+# What one match may spend at most, in euros: lowers the config's per-match cap for this
+# match, never raises it (arena/agents/budget.py). Games never see it either.
+MATCH_BUDGET = "match_budget_eur"
+ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE, MATCH_BUDGET)
+
+
+def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
+    """The match's own spend limit in euros, if it set one. ValueError if it is not euros."""
+    value = settings.get(MATCH_BUDGET)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{MATCH_BUDGET} must be a number of euros, not {value!r}")
+    euros = Decimal(str(value))
+    if not euros.is_finite() or euros <= 0:
+        raise ValueError(f"{MATCH_BUDGET} must be a number of euros above 0, not {value!r}")
+    return euros
 
 
 def repair_of(settings: Mapping[str, Any]) -> str:

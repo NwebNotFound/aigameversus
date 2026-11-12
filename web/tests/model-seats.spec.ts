@@ -58,6 +58,22 @@ test('a match of models does not start without the spend box', async ({ page, re
 	await expect(page).toHaveURL('/matches/new');
 });
 
+test('a match of models takes an optional spend limit up to the cap', async ({ page, request }) => {
+	const setup = await (await request.get(`${ARENA}/setup`)).json();
+	const [first] = setup.models;
+	await chooseModels(page, [first, first]);
+	const limit = page.getByLabel('Spend limit for this match (optional, euros)');
+
+	await expect(limit).toBeVisible();
+	await expect(limit).toHaveAttribute('max', String(setup.caps.match_eur));
+	await limit.fill('0.1');
+	// Without the spend box nothing starts, and the limit is kept for the next try.
+	await page.getByRole('button', { name: 'Start match (spends money)' }).click();
+
+	await expect(page).toHaveURL('/matches/new');
+	await expect(limit).toHaveValue('0.1');
+});
+
 test('a table mixes a model and a bot where the arena takes seats, else says why not', async ({
 	page,
 	request

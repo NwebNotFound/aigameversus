@@ -395,3 +395,103 @@ def test_every_model_move_of_an_api_match_is_timed(client, database_url, answer_
     moves = [e for e in events if e["type"] == "decision"]
     assert moves and all(isinstance(m["data"]["latency_ms"], int) for m in moves)
     assert all(m["visible_to"] == [] for m in moves)
+
+
+def test_a_matchs_own_spend_limit_stops_it_before_a_call_passes_it(
+    client, database_url, answer_with
+):
+    answer_with(**PLAY_3)
+    tiny = 0.000001  # one millionth of a euro: no call fits under it
+
+    response = client.post(
+        "/matches",
+        json={
+            "game": "toy",
+            "models": MODELS,
+            "confirm_spend": True,
+            "seed": 4,
+            "settings": {"match_budget_eur": tiny},
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    match = finish(client, response.json()["id"])
+    assert match["status"] == "interrupted"  # the cap of this match ended it
+    assert match["settings"]["match_budget_eur"] == tiny  # recorded with the match
+    assert calls(database_url) == []  # nothing was booked, nothing was sent
+    started = client.get(f"/matches/{match['id']}/events").json()[0]
+    assert started["data"]["settings"]["match_budget_eur"] == tiny
+
+
+@pytest.mark.parametrize("value", [0, -1, 0.51, "0.2", True])
+def test_a_spend_limit_outside_zero_to_the_cap_is_refused(client, value):
+    response = client.post(
+        "/matches",
+        json={
+            "game": "toy",
+            "models": MODELS,
+            "confirm_spend": True,
+            "settings": {"match_budget_eur": value},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "match_budget_eur" in response.text
+    assert client.get("/matches").json() == []
+
+
+def test_a_spend_limit_that_covers_some_calls_but_not_all_stops_the_match_within_it(
+    client, database_url, litellm, monkeypatch
+):
+    # Answers billed at 2000 input and 1000 output tokens: each call costs near its booking,
+    # so a limit of 0.003 euros lets a few calls through and stops the one that would pass it.
+    real = litellm.acompletion
+
+    async def billed(**arguments):
+        response = await real(**arguments, **PLAY_3)
+        response.usage.prompt_tokens, response.usage.completion_tokens = 2000, 1000
+        response.usage.total_tokens = 3000
+        return response
+
+    monkeypatch.setattr(litellm, "acompletion", billed)
+    limit = 0.003
+
+    response = client.post(
+        "/matches",
+        json={
+            "game": "toy",
+            "models": MODELS,
+            "confirm_spend": True,
+            "seed": 4,
+            "settings": {"match_budget_eur": limit},
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    match = finish(client, response.json()["id"])
+    assert match["status"] == "interrupted"  # paused by its own limit, not by the config's
+    spent = client.get(f"/matches/{match['id']}/cost").json()["total_micro_eur"]
+    booked = calls(database_url)
+    assert 0 < len(booked) < 16  # some calls went out, not the whole match (16 calls)
+    assert 0 < spent <= int(limit * 1_000_000)
+
+
+def test_the_estimate_counts_with_the_matchs_own_limit(client):
+    body = {"game": "toy", "models": MODELS}
+    plain = client.post("/matches/estimate", json=body).json()
+    estimate = plain["estimate_micro_eur"]
+    assert plain["cap_micro_eur"] == 500_000 and plain["fits"]
+
+    below = client.post(
+        "/matches/estimate",
+        json={**body, "settings": {"match_budget_eur": estimate / 2 / 1_000_000}},
+    ).json()
+    above = client.post(
+        "/matches/estimate",
+        json={**body, "settings": {"match_budget_eur": estimate * 2 / 1_000_000}},
+    ).json()
+    refused = client.post("/matches/estimate", json={**body, "settings": {"match_budget_eur": 0.9}})
+
+    assert below["cap_micro_eur"] == estimate // 2 and below["fits"] is False
+    assert above["cap_micro_eur"] == estimate * 2 and above["fits"] is True
+    assert refused.status_code == 422 and "match_budget_eur" in refused.text

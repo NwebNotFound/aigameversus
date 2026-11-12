@@ -35,8 +35,16 @@ class Budget:
         *,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         clock: Callable[[], float] = time.monotonic,
+        match_eur: Decimal | None = None,
     ):
-        self.match_cap = int(config.limits.match_eur * MICRO)
+        """`match_eur`: the match's own limit (settings.match_budget_eur). It can only lower
+        the config's per-match cap, never raise it."""
+        cap = (
+            config.limits.match_eur
+            if match_eur is None
+            else min(match_eur, config.limits.match_eur)
+        )
+        self.match_cap = int(cap * MICRO)
         self.month_cap = int(config.limits.month_eur * MICRO)
         self._ledger = ledger
         self._match_id = match_id

@@ -269,6 +269,13 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   the amounts. The match pauses as described under One turn. To continue,
   whoever runs the match asks the user, sets a higher `budget.match_cap` or
   `budget.month_cap` and calls `run()` again.
+- A match may set its own lower limit: the setting `match_budget_eur`
+  (euros, above 0, at most the config's `match_eur`; `POST /matches`
+  refuses anything else with 422). `Budget(..., match_eur=...)` caps the
+  match at the lower of the two; the month cap is unchanged. Like
+  `answer_repair` it is the engine's setting: the game never sees it, and
+  `match_started` and the match record keep it. The form's optional "Spend
+  limit for this match" field sends it.
 - Money is an integer: millionths of a euro (`*_micro_eur`), rounded up per
   call. Prices in the file are US dollars per million tokens; `usd_to_eur`
   converts.

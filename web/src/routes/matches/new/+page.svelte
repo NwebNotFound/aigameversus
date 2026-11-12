@@ -388,6 +388,19 @@
 							The spending of this month is unknown: a match of models cannot start.
 						</p>
 					{/if}
+					<label class="budget" data-testid="match-budget">
+						<span>Spend limit for this match (optional, euros)</span>
+						<input
+							type="number"
+							name="match_budget_eur"
+							min="0.01"
+							step="0.01"
+							max={setup ? setup.caps.match_eur : undefined}
+							placeholder={setup ? `up to ${setup.caps.match_eur}` : ''}
+							value={form?.values?.match_budget_eur ?? ''}
+						/>
+					</label>
+					{#if errors.match_budget_eur}<p class="field-error">{errors.match_budget_eur}</p>{/if}
 					<label class="row confirm">
 						<input type="checkbox" name="confirm_spend" />
 						<span>I understand that this match spends money, up to {euro(matchCap)}.</span>
