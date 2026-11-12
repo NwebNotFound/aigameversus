@@ -198,3 +198,23 @@ def test_a_seat_that_gave_up_three_matches_ago_no_longer_counts(client, monkeypa
 
     assert plays["agent_failed_recent"] == 0
     assert plays["status"] == "unknown"  # too few moves for a verdict; the old failure is gone
+
+
+def test_a_model_in_two_seats_of_one_match_counts_that_match_once(client, monkeypatch):
+    serve(monkeypatch)
+    body = {"game": "toy", "models": ["acme/plays", "acme/plays"], "confirm_spend": True}
+    error = ModelError("AuthenticationError", retryable=False)
+    with monkeypatch.context() as broken:
+        broken.setattr(
+            "arena.agents.budget.LiteLLMModel.__call__",
+            lambda self, messages, tools: (_ for _ in ()).throw(error),
+        )
+        finish(client, client.post("/matches", json=body).json()["id"])
+    client.app.state.reliability = None
+
+    models = client.get("/models/catalog").json()["models"]
+    plays = next(m for m in models if m["id"] == "acme/plays")["reliability"]
+
+    assert plays["agent_failed_recent"] == 1  # one match, not two
+    assert plays["matches"] == 1
+    assert "gave up in 1 of its last 2 matches" in plays["reason"]

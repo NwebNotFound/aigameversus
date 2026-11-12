@@ -69,9 +69,13 @@ class ReliabilityOut(BaseModel):
 
     status: Literal["ok", "unreliable", "unknown"]
     reason: str | None = Field(description="Why unreliable or unknown; null when ok")
-    n: int = Field(description="The moves the verdict rests on (at most 20)")
+    n: int = Field(description="The moves the verdict rests on")
+    matches: int = Field(description="The distinct matches those moves come from")
     fallback_share: float | None
     agent_failed_recent: int
+    telemetry_moves: int = Field(description="Moves that report cut-offs and rate limits")
+    cutoff_share: float | None
+    rate_limits_per_move: float | None
     warnings: list[str] = Field(description="What costs time without being a failure")
 
     @classmethod
@@ -86,7 +90,7 @@ async def _reliabilities(request: Request, model_ids: list[str]) -> dict[str, Re
     kept = getattr(request.app.state, "reliability", None)
     if kept and time.monotonic() - kept[0] < RELIABILITY_TTL and set(model_ids) <= set(kept[1]):
         return kept[1]
-    found = await reliabilities(request.app.state.pool, model_ids)
+    found = await reliabilities(request.app.state.pool, model_ids, load_config().reliability)
     request.app.state.reliability = (time.monotonic(), found)
     return found
 
