@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from arena.analytics import NoAnalytics, match_analytics
+from arena.analytics import NoAnalytics, UnknownVersion, match_analytics
 from arena.analytics.talk import talk_checks
 from arena.api.live import LiveMatches
 from arena.db.ledger import LedgerUnavailable
@@ -25,10 +25,14 @@ async def analytics(
     spoilers: Annotated[
         bool, Query(description="Include what players hid: their real cards, revolver risk")
     ] = False,
+    analytics_version: Annotated[
+        str | None,
+        Query(description="Throne of Tokens only: civ/1 (default) or civ/2, which adds to it"),
+    ] = None,
 ) -> dict[str, Any]:
     """Per move, per player and per round numbers of one match; docs/METRICS.md defines them.
 
-    404 for an unknown match or a game without analytics yet.
+    404 for an unknown match or a game without analytics yet; 422 for a version the game lacks.
     """
     live: LiveMatches = request.app.state.live
     record = await live.matches.get(match_id)
@@ -36,9 +40,13 @@ async def analytics(
         raise HTTPException(404, f"No match {match_id}")
     try:
         names = await live.matches.display_names(record)
-        result = match_analytics(record.game, await live.log(match_id), spoilers, names)
+        result = match_analytics(
+            record.game, await live.log(match_id), spoilers, names, analytics_version
+        )
     except NoAnalytics as missing:
         raise HTTPException(404, str(missing)) from missing
+    except UnknownVersion as unknown:
+        raise HTTPException(422, str(unknown)) from unknown
     # Who sat where (seat to model id; null for a bot), so a batch groups like with like.
     seats = record.seats or {}
     result["meta"]["seats"] = {

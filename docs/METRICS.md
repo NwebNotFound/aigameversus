@@ -411,3 +411,24 @@ Codes: `duplicate_model` (the model sat in several seats of one match), `table_r
 among random bots), `not_rated` (none of those; the log does not say why). Read from the match
 records against `rated_matches`; running and failed matches are not counted.
 
+## Throne of Tokens `civ/2` (opt-in)
+
+`GET /matches/{id}/analytics?analytics_version=civ/2` is `civ/1` unchanged plus (the default stays
+`civ/1`, byte for byte; an unknown version is 422, and other games take none):
+
+- `series.nations.<n>.decisions[]` (spoilers), one entry per round of `series.rounds`: `latency_ms`,
+  `tokens_out`, `reasoning_tokens` (null for a bot), `cutoffs`, `rejected` (refused answers),
+  `fallback` (the bot played). Round r is everything between the starts of round r and r + 1.
+- `series.nations.<n>.orders[]` (spoilers), per round: `sent`, `dropped`. Summed over the rounds they
+  equal `orders.<n>`.
+- `diplomacy.timeline[]`: a `treaty_signed` item has `until` (the last round it holds, null when
+  open-ended); a `treaty_broken` item has the same `until` and `rounds_early` (rounds it still had
+  to run, null when open-ended).
+- `report`, as the other games have: `at_a_glance` (winners, length in rounds, engine totals,
+  `turning_point`), `columns`, `ranking` and `key_moments[]` (`seq`, `kind` betrayal / war /
+  conquest / battle / victory / lead, `players`, `importance`, `text` en and de, `round`). Public
+  moments: a war or a break of a pact (a betrayal), a city that changes hands, the victory. With
+  spoilers also the two costliest battles. The turning point is, with spoilers, the moment in or just
+  before the round after which the winner led the score for good (else a synthetic "takes the lead
+  for good" moment); without spoilers, the first betrayal, else the first conquest. Barbarians are
+  named in words.
