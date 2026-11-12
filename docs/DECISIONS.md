@@ -132,3 +132,4 @@ with `python scripts/decisions.py adopt`.
 - [D-128](decisions/D-128-the-throne-of-tokens-scoreboard-is-public-by-rule-positions.md) · The Throne of Tokens scoreboard is public by rule; positions and contents stay fogged
 - [D-129](decisions/D-129-a-repaired-move-carries-a-muted-marker-per-tier-spoiler-free.md) · A repaired move carries a muted marker per tier; spoiler-free shows the tier and probability only
 - [D-131](decisions/D-131-under-the-werewolf-circle-who-claims-what-and-who-suspects.md) · Under the Werewolf circle: who claims what and who suspects whom, cut at the moment on screen
+- [D-132](decisions/D-132-a-model-is-qualified-per-configuration-by-its-first-answers.md) · A model is qualified per configuration by its first answers to real turns of seeded bot matches
