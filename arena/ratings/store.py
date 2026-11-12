@@ -23,6 +23,8 @@ class Usage:
     cost_micro_eur: int | None = 0  # None while the ledger cannot be read
     accepted: int = 0  # answers the server took
     rejected: int = 0  # answers the server refused (a wrong tool, bad arguments, an illegal move)
+    # moves taken as answers whose garbled call was read anyway (answer_repair); at most `accepted`
+    repaired: int = 0
 
 
 @dataclass(frozen=True)
@@ -271,7 +273,8 @@ class RatingStore:
         Counts the rated matches of `game_id`, or of every game. Cost is the sum of the booked
         model calls of the profile's seats, read from `ledger` (its own database or this one),
         and None for everyone while the ledger cannot be read; answers are the engine's
-        `action_accepted` and `action_rejected` events of those seats. Profiles without a seat
+        `action_accepted` and `action_rejected` events of those seats, and the moves whose
+        `decision` names a repair. Profiles without a seat
         are left out. With `profile_id` only that profile is counted, which makes the query
         much smaller.
         """
@@ -286,9 +289,13 @@ class RatingStore:
             f"WITH seats AS ({seats_sql}) "
             "SELECT s.profile_id, "
             "  count(*) FILTER (WHERE e.type = 'action_accepted') AS accepted, "
-            "  count(*) FILTER (WHERE e.type = 'action_rejected') AS rejected "
+            "  count(*) FILTER (WHERE e.type = 'action_rejected') AS rejected, "
+            "  count(*) FILTER (WHERE e.type = 'decision' "
+            "    AND e.data->>'fallback' IS NULL "  # a random move is no repaired answer
+            "    AND jsonb_typeof(e.data->'repairs') = 'array' "
+            "    AND jsonb_array_length(e.data->'repairs') > 0) AS repaired "
             "FROM seats s JOIN match_events e ON e.match_id = s.match_id "
-            "  AND e.type IN ('action_accepted', 'action_rejected') "
+            "  AND e.type IN ('action_accepted', 'action_rejected', 'decision') "
             "  AND e.data->>'player' = s.seat "
             "GROUP BY s.profile_id",
             game_id,
@@ -309,6 +316,7 @@ class RatingStore:
                 usage[row["profile_id"]],
                 accepted=int(row["accepted"]),
                 rejected=int(row["rejected"]),
+                repaired=int(row["repaired"]),
             )
         return usage
 

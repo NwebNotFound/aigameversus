@@ -1,0 +1,363 @@
+# The words of the Liar's Deck chronicle in English: four styles that differ in structure and in
+# wording. Fields: see `FIELDS` in arena/chronicle/tell_liars_deck.py (the tests format every variant).
+# `again` prefixes a sentence that every variant of its kind has already used in this chronicle.
+epic:
+  title: "The Saga of Liar's Deck"
+  layout: {joiner: " ", prefix: "", paragraph: 0}
+  again: ["Once more:", "Yet again:", "And still:", "Again:", "As before:", "One more time:"]
+  chapters:
+    prologue: "Prologue: The Table Is Set"
+    round: "The Round of the {Nth} Trial"
+    epilogue: "Epilogue: The Last at the Table"
+  glance_title: "At a glance"
+  glance_labels:
+    winner: "Last one standing"
+    length: "Duration"
+    turning_point: "The turning point"
+    bluffer: "Boldest bluffer"
+    caller: "Sharpest caller"
+    survivor: "Luckiest soul"
+    cost: "Cost of the saga"
+  glance_values:
+    length: "{rounds} rounds"
+    bluffer: "{who}, lying in {lies} of {plays} plays"
+    caller: "{who}, right on {right} of {of} calls"
+    survivor: "{who}, who lived through {shots} pulls of the trigger"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Round {n}: {player} faced a coin flip with the revolver and lived"
+    devil: "Round {n}: the devil card came to light and the whole table paid"
+    big_lie_caught: "Round {n}: {target} was caught lying with {count} false cards"
+    final_duel: "Round {n}: {winner} outlasted {loser} in the final duel"
+    final_shot: "Round {n}: the last shot fell on {loser}, and {winner} stood alone"
+    wrong_call_fatal: "Round {n}: {caller} called an honest hand of {target} and paid with their life"
+  kinds:
+    cast:
+      - "{count} players sat down at the table, each with a revolver and a lie in reserve: {cast}."
+    cast_devil:
+      - "{count} players sat down, and among the cards lay the devil card: {cast}."
+    round_starts:
+      - "The {nth} round began beneath the banner of the {card}, with {alive} still at the table, and {starter} opened."
+      - "Round {n}: the table card was the {card}, {alive} players remained, and {starter} led."
+      - "The cards were dealt anew, and the {card} ruled the {nth} round; {starter} spoke first."
+      - "The {nth} round: the {card} held sway, {alive} remained, and {starter} began the talking."
+      - "Once more the cards were shuffled, the {card} was named, and {starter} stepped forward."
+    duel:
+      - "Only {a} and {b} remained, and the room held its breath."
+      - "It was a duel now, {a} against {b}, and nobody else was left to hide behind."
+      - "Alone at the table, {a} and {b} measured each other once more."
+    lie_big:
+      - "{who} laid {count} cards face down and called them {card_pl}, though {false_cards} of them were nothing of the kind."
+      - "{who} pushed {count} cards forward and swore they were all {card_pl}; {false_cards} were lies."
+    truth_big:
+      - "{who} laid {count} cards down, and every one of them really was a {card}."
+      - "{who} played {count} {card_pl} and told the truth, which was the boldest bluff of all."
+    claim_quote:
+      - "{who} said: \"{quote}\""
+      - "\"{quote}\" said {who}."
+      - "{who} spoke, calm as a lake: \"{quote}\""
+      - "{who} offered the table this: \"{quote}\""
+    call:
+      - "{caller} rose and called {target} a liar!"
+      - "\"Liar!\" cried {caller}, pointing at {target}."
+      - "{caller} did not believe {target}, and said so."
+      - "{caller} narrowed their eyes at {target}: liar."
+    call_auto:
+      - "{caller} had no choice but to call {target} a liar."
+    reveal_caught:
+      - "The cards turned over: {cards}. No {card} in the lot, and {n_false} of them lies. {target} was caught."
+      - "{target}'s hand lay open: {cards}. The claim of {card_pl} collapsed, and {caller} had been right."
+    reveal_wrong:
+      - "The cards turned over: {cards}. All true to the {card}. {caller} had accused an honest hand."
+      - "{target} showed {cards}, and it was all honest. {caller} had called wrongly."
+      - "The truth lay on the table: {cards}. {caller} had doubted the wrong player."
+      - "{target}'s cards said {cards}: honest to the last. {caller} had misjudged."
+    devil_revealed:
+      - "The cards turned over: {cards}, and among them the devil card! The table would pay for {caller}'s call."
+    trigger_click:
+      - "{player} pulled the trigger, pull {pull}, odds {odds}. Click. The chamber was empty."
+      - "{player} put the barrel to the temple, pull {pull}, and heard only a click."
+      - "Pull {pull} for {player}, at {odds}, and only silence answered."
+    trigger_close:
+      - "{player} pulled, pull {pull}, odds {odds}, and the chamber was empty. A narrow escape."
+      - "A {odds} chance of death, and {player} lived: pull {pull}, and the cylinder turned on."
+    trigger_bang:
+      - "{player} pulled the trigger, and the thunderclap said it all. {player} was gone."
+      - "Pull {pull} was the live one for {player}, and the table fell silent."
+    eliminated:
+      - "{player} left the table in {place} place."
+      - "So {player} finished {place}, and the chair stayed empty."
+    result:
+      - "{winner} alone remained after {rounds} rounds, the last one breathing."
+    ranking:
+      - "The final order: {ranking}."
+news:
+  title: "LIAR'S DECK: THE FULL REPORT"
+  layout: {joiner: "\n", prefix: "- ", paragraph: 0}
+  again: ["Again:", "Once more:", "Same story:", "Repeat:", "Still:", "Another one:"]
+  chapters:
+    prologue: "Background"
+    round: "Round {n}"
+    epilogue: "Final result"
+  glance_title: "Key facts"
+  glance_labels:
+    winner: "Winner"
+    length: "Length"
+    turning_point: "Key moment"
+    bluffer: "Biggest bluffer"
+    caller: "Best caller"
+    survivor: "Luckiest"
+    cost: "Cost"
+  glance_values:
+    length: "{rounds} rounds"
+    bluffer: "{who} (lied in {lies} of {plays} plays)"
+    caller: "{who} ({right} of {of} calls right)"
+    survivor: "{who} ({shots} shots survived)"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Round {n}: {player} survives a coin-flip shot"
+    devil: "Round {n}: devil card revealed, everyone shoots"
+    big_lie_caught: "Round {n}: {target} caught with {count} false cards"
+    final_duel: "Round {n}: {winner} beats {loser} in the final duel"
+    final_shot: "Round {n}: {loser} eliminated, {winner} wins"
+    wrong_call_fatal: "Round {n}: {caller} makes a fatal wrong call on {target}"
+  kinds:
+    cast:
+      - "{count} players: {cast}."
+    cast_devil:
+      - "{count} players: {cast}. Variant: devil card."
+    round_starts:
+      - "ROUND {n}: table card {card}, {alive} players, {starter} starts."
+      - "Round {n} opens. Table card: {card}. {alive} players left."
+      - "New deal, round {n}. The {card} is the card; {starter} leads off."
+      - "Round {n}: {card} on the table, {alive} players, first move {starter}."
+      - "Deal {n}: the card is {card}. {starter} leads off."
+    duel:
+      - "Heads-up: {a} against {b}."
+      - "Final two: {a} and {b}."
+      - "Duel continues, {a} versus {b}."
+    lie_big:
+      - "{who} plays {count} cards as {card_pl}; {false_cards} are false."
+      - "{who} bluffs {count} cards ({false_cards} false)."
+    truth_big:
+      - "{who} plays {count} cards, all genuine {card_pl}."
+      - "{who} tells the truth with {count} {card_pl}."
+    claim_quote:
+      - "{who}: \"{quote}\""
+      - "{who} says: \"{quote}\""
+      - "Quote, {who}: \"{quote}\""
+      - "{who} to the table: \"{quote}\""
+    call:
+      - "{caller} calls {target} a liar."
+      - "{caller} challenges {target}."
+      - "{caller} doubts {target}."
+      - "{caller} says {target} is lying."
+    call_auto:
+      - "{caller} is forced to call {target} a liar."
+    reveal_caught:
+      - "Reveal: {cards}. {target} was lying ({n_false} false); {caller} was right."
+      - "{target} caught: {cards}, no {card} claim holds."
+    reveal_wrong:
+      - "Reveal: {cards}. All {card_pl}; {caller} was wrong."
+      - "{target} was honest ({cards}). {caller} called wrongly."
+      - "Wrong call: {target} showed {cards}, all true."
+      - "{target}'s play was honest: {cards}. {caller} loses the call."
+    devil_revealed:
+      - "Reveal: {cards}, including the devil card. Everyone but {target} shoots."
+    trigger_click:
+      - "{player} pulls (pull {pull}, odds {odds}): empty."
+      - "{player} shoots, pull {pull}: click."
+      - "{player} survives pull {pull} ({odds})."
+    trigger_close:
+      - "{player} pulls (pull {pull}, odds {odds}): empty, a close call."
+      - "Close call: {player} survives pull {pull} at {odds}."
+    trigger_bang:
+      - "{player} pulls (pull {pull}): LIVE. {player} is out."
+      - "BANG: {player} eliminated on pull {pull}."
+    eliminated:
+      - "{player} finishes {place}."
+      - "Out: {player}, {place} place."
+    result:
+      - "{winner} wins after {rounds} rounds."
+    ranking:
+      - "Final order: {ranking}."
+sports:
+  title: "Liar's Deck: Match Commentary"
+  layout: {joiner: "\n", prefix: "", paragraph: 0}
+  again: ["And once more,", "Here we go again,", "Same again,", "One more time,", "And again,", "Yet again,"]
+  chapters:
+    prologue: "Kick-off: the line-up"
+    round: "Round {n}: the whistle"
+    epilogue: "Full time"
+  glance_title: "The scoreboard"
+  glance_labels:
+    winner: "Winner"
+    length: "Match length"
+    turning_point: "Moment of the match"
+    bluffer: "Best actor"
+    caller: "Sharpest eye"
+    survivor: "Lucky charm"
+    cost: "Price of the ticket"
+  glance_values:
+    length: "{rounds} rounds"
+    bluffer: "{who}, bluffing in {lies} of {plays} plays"
+    caller: "{who}, {right} of {of} calls on target"
+    survivor: "{who}, {shots} shots survived"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Round {n}: {player} survives a coin flip with the revolver"
+    devil: "Round {n}: the devil card, and the whole table pays"
+    big_lie_caught: "Round {n}: {target} is caught with {count} false cards"
+    final_duel: "Round {n}: {winner} wins the final duel against {loser}"
+    final_shot: "Round {n}: {loser} goes down and {winner} wins it"
+    wrong_call_fatal: "Round {n}: {caller} calls it wrong and pays for it"
+  kinds:
+    cast:
+      - "Welcome! {count} players take the field: {cast}."
+    cast_devil:
+      - "Welcome! {count} players, and the devil card is in the deck: {cast}."
+    round_starts:
+      - "Round {n}, the {card} is the table card, {alive} on the pitch, {starter} kicks off!"
+      - "And we are off in round {n}! The {card} it is, and {starter} leads."
+      - "New round, {alive} players, the table card is the {card}!"
+      - "Round {n} under way, the {card} is the one, {alive} left and {starter} on the ball!"
+      - "Back to the table for round {n}: {card}, {alive} players, {starter} first!"
+    duel:
+      - "It is down to {a} and {b}, a straight duel now!"
+      - "Just two left: {a} against {b}!"
+      - "Nobody else on the pitch, {a} versus {b}!"
+    lie_big:
+      - "{who} pushes {count} cards forward as {card_pl}, and {false_cards} of them are a bluff! Bold!"
+      - "Look at that! {who} claims {count} {card_pl} with {false_cards} fakes!"
+    truth_big:
+      - "{who} puts down {count} cards, and every one is a genuine {card}! Ice cold!"
+      - "Honest play by {who}: {count} {card_pl}, no tricks!"
+    claim_quote:
+      - "{who} from the table: \"{quote}\""
+      - "\"{quote}\" says {who}, and the crowd leans in."
+      - "{who} with the chat: \"{quote}\""
+      - "{who} on the mic: \"{quote}\""
+    call:
+      - "{caller} calls it: LIAR, says {target}'s play!"
+      - "Challenge! {caller} goes after {target}!"
+      - "{caller} will not have it and calls {target}!"
+      - "{caller} says no way, {target}, and calls it!"
+    call_auto:
+      - "Forced hand for {caller}, who has to call {target}!"
+    reveal_caught:
+      - "And the cards say {cards}! No {card}! {target} is caught, {caller} scores!"
+      - "Reveal! {cards}, {n_false} fakes, and {target} is exposed!"
+    reveal_wrong:
+      - "And the cards say {cards}. All {card_pl}! Terrible call by {caller}!"
+      - "{target} turns over {cards}, honest as the day! {caller} has called it wrong!"
+      - "Wrong! {cards}, all true, and {target} is clean!"
+      - "{target} is clean with {cards}, and {caller} has thrown it away!"
+    devil_revealed:
+      - "The cards say {cards}, and there is the DEVIL CARD! Everybody but {target} has to pull!"
+    trigger_click:
+      - "{player} pulls, number {pull}... click! Safe, the crowd breathes again!"
+      - "{player} at {odds}... click! Pull {pull} is empty!"
+      - "{player} at {odds}, pull {pull}... nothing! Phew!"
+    trigger_close:
+      - "{player} pulls at {odds}, pull {pull}... click! That was far too close!"
+      - "A {odds} shot and {player} walks away! Unbelievable!"
+    trigger_bang:
+      - "{player} pulls... BANG! That is the end for {player}!"
+      - "Pull {pull} is live and {player} is out of the game!"
+    eliminated:
+      - "{player} finishes {place}, and leaves the pitch."
+      - "{place} place for {player}, who is out."
+    result:
+      - "FULL TIME: {winner} wins after {rounds} rounds!"
+    ranking:
+      - "Final table: {ranking}."
+novel:
+  title: "Liar's Deck: A Story"
+  layout: {joiner: " ", prefix: "", paragraph: 3}
+  again: ["Once again,", "As before,", "And still,", "Yet again,", "As always,", "One more time,"]
+  chapters:
+    prologue: "One. The Faces Around the Table"
+    round: "{Nth}: Sweaty Palms"
+    epilogue: "Last. Who Walked Away"
+  glance_title: "At a glance"
+  glance_labels:
+    winner: "Who walked away"
+    length: "How long it lasted"
+    turning_point: "Where it turned"
+    bluffer: "Who lied the most"
+    caller: "Who saw through it"
+    survivor: "Who kept their luck"
+    cost: "What it cost"
+  glance_values:
+    length: "{rounds} rounds"
+    bluffer: "{who}, who lied in {lies} of {plays} plays"
+    caller: "{who}, who was right on {right} of {of} calls"
+    survivor: "{who}, who lived through {shots} pulls of the trigger"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Round {n}: {player} put the gun to their head with a coin's odds and lived"
+    devil: "Round {n}: the devil card turned up, and nobody was safe"
+    big_lie_caught: "Round {n}: {target}'s lie of {count} cards finally came apart"
+    final_duel: "Round {n}: {winner} saw {loser} out in the last duel"
+    final_shot: "Round {n}: the last shot found {loser}, and {winner} was alone"
+    wrong_call_fatal: "Round {n}: {caller} did not believe {target}, and it cost everything"
+  kinds:
+    cast:
+      - "They were {count} around the table, each with a revolver and a quiet plan: {cast}."
+    cast_devil:
+      - "They were {count}, and the deck held one card nobody wanted to see: {cast}."
+    round_starts:
+      - "In the {nth} round the table card was the {card}, and {starter} spoke first, because someone had to."
+      - "Round {n}. The {card}, {alive} of them, and {starter} breaking the silence."
+      - "The cards went round again; the {card} was the card, and {starter} began."
+      - "The {nth} round came, the {card} again or still, and {starter} began as if nothing could go wrong."
+      - "Round {n}, {alive} of them, the {card}; {starter} cleared their throat."
+    duel:
+      - "By now only {a} and {b} were left, and nobody else's eyes to hide from."
+      - "{a} and {b}, alone, with the same table between them."
+      - "It was {a} against {b}, and both knew it."
+    lie_big:
+      - "{who} slid {count} cards across and said {card_pl}, and {false_cards} of them were not."
+      - "{who} put down {count} cards, face down, with a steady voice: {card_pl}. {false_cards} were lies."
+    truth_big:
+      - "{who} laid down {count} cards and every one was a {card}, which nobody believed."
+      - "{who} told the truth with {count} {card_pl}, and it looked just like a lie."
+    claim_quote:
+      - "\"{quote_bare},\" said {who}."
+      - "{who} said, almost gently: \"{quote}\""
+      - "\"{quote}\" That was {who}."
+      - "{who} added, quietly: \"{quote}\""
+    call:
+      - "Then {caller} looked at {target} for a long moment and said: liar."
+      - "{caller} leaned back and called it: {target} was lying."
+      - "\"I don't buy it,\" said {caller}, and pointed at {target}."
+      - "{caller} stared at {target} until it hurt, then said: no."
+    call_auto:
+      - "{caller} had no choice but to call {target} a liar."
+    reveal_caught:
+      - "The cards were turned: {cards}. No {card} among them. {target} had lied, and {caller} had known."
+      - "{target}'s cards lay open, {cards}, and the claim of {card_pl} fell apart."
+    reveal_wrong:
+      - "The cards were turned: {cards}. All true. {caller} had accused an honest hand."
+      - "{target} showed {cards}, and not one of them was a lie. {caller} swallowed hard."
+      - "It was the truth, in plain sight: {cards}. {caller} had been wrong."
+      - "There it was, {cards}, honest as bread. {caller} had misjudged {target}."
+    devil_revealed:
+      - "Among the cards, {cards}, lay the devil card, and for a moment nobody moved. Then everyone but {target} reached for the trigger."
+    trigger_click:
+      - "{player} pulled the trigger, pull {pull}, odds {odds}, and heard a click."
+      - "{player} closed their eyes, pull {pull}, and nothing happened."
+      - "{player} squeezed, pull {pull}, and the world went on."
+    trigger_close:
+      - "{player} pulled, with {odds} against, pull {pull}, and the chamber was empty. Someone laughed too loud."
+      - "Pull {pull}, {odds}, and {player} was still there, white as paper."
+    trigger_bang:
+      - "{player} pulled, and the sound filled the room. {player} was gone."
+      - "The live chamber had waited for {player}, pull {pull}, and it did not wait any longer."
+    eliminated:
+      - "{player} left the table, {place} of the lot."
+      - "{player} came {place}, and the chair stayed warm."
+    result:
+      - "{winner} was the last one at the table after {rounds} rounds."
+    ranking:
+      - "In the end the order was: {ranking}."

@@ -39,7 +39,8 @@ export function parseForm(
 	form: FormData,
 	games: GameInfo[],
 	models: string[] = [],
-	mixed = false
+	mixed = false,
+	personalities = false
 ): Parsed {
 	const errors: Partial<Record<Field, string>> = {};
 	const text = (name: string) => String(form.get(name) ?? '').trim();
@@ -69,10 +70,20 @@ export function parseForm(
 		} else if (Number.isInteger(players) && seats.length !== players) {
 			errors.seats = 'Choose a player for every seat.';
 		} else {
-			if (modelSeats.length === seats.length) seatModels = modelSeats;
+			// A personality per model seat (`personality_p1`, ...), where the arena takes one.
+			const played = seats.map((seat, i) =>
+				personalities && seat !== BOT ? text(`personality_p${i + 1}`) : ''
+			);
+			if (modelSeats.length === seats.length && !played.some(Boolean)) seatModels = modelSeats;
 			else
-				seatSpecs = seats.map((seat) =>
-					seat === BOT ? { kind: 'bot' as const } : { kind: 'model' as const, model: seat }
+				seatSpecs = seats.map((seat, i) =>
+					seat === BOT
+						? { kind: 'bot' as const }
+						: {
+								kind: 'model' as const,
+								model: seat,
+								...(played[i] ? { personality: played[i] } : {})
+							}
 				);
 			if (form.get('confirm_spend') === null) {
 				errors.confirm_spend = 'A match of models spends real money: tick the box to start it.';

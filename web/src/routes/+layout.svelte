@@ -20,7 +20,7 @@
 		</a>
 		<nav aria-label="Main">
 			<ul>
-				{#each NAV as item (item.href)}
+				{#each NAV.filter((item) => !(data.readOnly && item.href === '/matches/new')) as item (item.href)}
 					<li>
 						<a href={item.href} aria-current={page.url.pathname === item.href ? 'page' : undefined}>
 							{item.label}

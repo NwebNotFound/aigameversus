@@ -7,8 +7,8 @@ import yaml
 from fastapi.testclient import TestClient
 
 from arena.api.app import app
-from arena.api.setup import PERSONALITIES_DIR, load_personalities
 from arena.config import load_config
+from arena.personalities import PERSONALITIES_DIR, load_personalities
 
 client = TestClient(app)
 
@@ -40,6 +40,7 @@ def test_setup_lists_the_models_personalities_and_caps_of_the_config(monkeypatch
         "id": "honourable_knight",
         "name": knight["name"],
         "description": knight["description"].strip(),
+        "speech_style": knight["speech_style"].strip(),
     }
 
 

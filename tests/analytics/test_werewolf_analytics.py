@@ -184,3 +184,48 @@ def test_bot_matches_give_consistent_votes_and_recaps_in_both_views(seed):
         assert len(result["recap"]) == len(result["phases"])
         for recap in result["recap"]:
             assert recap["text"]["en"] and recap["text"]["de"]
+
+
+def test_a_claim_is_a_lie_with_spoilers_and_only_once_disproved_without():
+    events = [
+        start(),
+        Event(
+            source=EventSource.GAME,
+            type="role_assigned",
+            data={"player": "p1", "role": "werewolf"},
+            visible_to=("p1",),
+        ),
+        Event(
+            source=EventSource.GAME,
+            type="role_assigned",
+            data={"player": "p2", "role": "seer"},
+            visible_to=("p2",),
+        ),
+        game("day_started", {"day": 1, "order": SEATS}),
+        game(MESSAGE, {"player": "p1", "text": "I'm a simple villager."}),
+        game(MESSAGE, {"player": "p2", "text": "I am the seer."}),
+    ]
+
+    full = {c["player"]: c["lie"] for c in match_analytics("werewolf", events, True)["claims"]}
+    public = {c["player"]: c["lie"] for c in match_analytics("werewolf", events, False)["claims"]}
+
+    assert full == {"p1": True, "p2": False}
+    assert public == {"p1": None, "p2": None}  # nobody has died yet: unknown
+    dead = [*events, game("player_died", {"player": "p1", "cause": "executed", "role": "werewolf"})]
+    assert {c["player"]: c["lie"] for c in match_analytics("werewolf", dead, False)["claims"]} == {
+        "p1": True,
+        "p2": None,
+    }
+
+
+def test_the_report_awards_the_most_deceptive_and_the_most_accused():
+    awards = match_analytics("werewolf", example(), True)["report"]["at_a_glance"]["awards"]
+
+    by_id = {a["id"]: a for a in awards}
+    assert by_id["most_deceptive"]["seat"] == "p7"
+    assert by_id["most_deceptive"]["text"]["en"] == "Most deceptive: p7, 1 false role claim"
+    assert by_id["most_accused"]["heuristic"] is True
+    # Nobody on the village side voted for a wolf in the example: no "sharpest voter".
+    assert "most_accurate_voter" not in by_id
+    hidden = match_analytics("werewolf", example(), False)["report"]["at_a_glance"]["awards"]
+    assert "most_deceptive" not in {a["id"] for a in hidden}  # no death disproved a claim

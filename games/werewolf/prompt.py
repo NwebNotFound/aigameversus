@@ -8,6 +8,9 @@
 - `werewolf-p3`: `rules_v3.md` (what the first real matches taught: claim a Seer result early,
   silence is no evidence, do not copy the pack's words, vote for the player you named, what each
   role does with its power, brief thoughts) and the p2 summary plus a line of advice for this move.
+- `werewolf-p4`: `rules_v4.md` (p3 plus a neutral "think about the whole match" section: a team
+  aim, compare the legal options, keep facts apart from claims) and the p3 summary with the
+  choices open to you now. Nothing in it is computed from the full game state.
 
 All functions are pure.
 """
@@ -16,12 +19,15 @@ from collections.abc import Mapping
 from importlib import resources
 from typing import Any
 
-VERSIONS = ("werewolf-p1", "werewolf-p2", "werewolf-p3")
+from arena.agents.prompt import with_thought_in_the_call
+
+VERSIONS = ("werewolf-p1", "werewolf-p1.1", "werewolf-p2", "werewolf-p3", "werewolf-p4")
 DEFAULT_VERSION = "werewolf-p1"
 _FILES = {
     "werewolf-p1": "rules.md",
     "werewolf-p2": "rules_v2.md",
     "werewolf-p3": "rules_v3.md",
+    "werewolf-p4": "rules_v4.md",
 }
 
 GOALS = {
@@ -40,6 +46,8 @@ def version_of(settings: Mapping[str, Any] | None) -> str:
 
 
 def rules_text(version: str) -> str:
+    if version == "werewolf-p1.1":  # p1, with the thought where the system message asks for it
+        return with_thought_in_the_call(rules_text("werewolf-p1"))
     return resources.files("games.werewolf").joinpath(_FILES[version]).read_text(encoding="utf-8")
 
 
@@ -204,3 +212,26 @@ def situation_summary_v3(observation: Mapping[str, Any]) -> str:
         return summary
     lines = "\n".join(f"- {line}" for line in advice)
     return f"{summary}\nFor this move:\n{lines}"
+
+
+def legal_choices(observation: Mapping[str, Any]) -> list[str]:
+    """The living players this move can name, from the observation only (version p4)."""
+    if not observation["your_turn"]:
+        return []
+    you = observation["you"]
+    step = observation["step"]
+    pack = set(observation.get("pack") or [])
+    if step in ("vote", "captain_vote", "hunter", "pass_captaincy"):
+        return [p for p in observation["alive"] if p != you]
+    if step == "wolf":
+        return [p for p in observation["alive"] if p not in pack and p != you]
+    return []
+
+
+def situation_summary_v4(observation: Mapping[str, Any]) -> str:
+    """The version p3 summary, and under it the players you can name now (version p4)."""
+    summary = situation_summary_v3(observation)
+    choices = legal_choices(observation)
+    if not choices:
+        return summary
+    return f"{summary}\nYou can name: {_names(choices)}."

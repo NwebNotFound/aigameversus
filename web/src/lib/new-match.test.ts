@@ -211,6 +211,50 @@ describe('parseForm', () => {
 			expect(bots.ok && 'answer_repair' in bots.match.settings).toBe(false);
 		});
 
+		it('sends a personality per model seat where the arena takes one, never for a bot', () => {
+			const body = {
+				...LIARS,
+				seat: ['qwen-flash', BOT, 'deepseek-flash'],
+				personality_p1: 'opportunist',
+				personality_p2: 'honourable_knight',
+				confirm_spend: 'on'
+			};
+
+			expect(parseForm(form(body), GAMES, MODELS, true, true)).toMatchObject({
+				ok: true,
+				match: {
+					seats: [
+						{ kind: 'model', model: 'qwen-flash', personality: 'opportunist' },
+						{ kind: 'bot' },
+						{ kind: 'model', model: 'deepseek-flash' }
+					]
+				}
+			});
+			const without = parseForm(form(body), GAMES, MODELS, true, false);
+			expect(without.ok && without.match.seats?.[0]).toEqual({
+				kind: 'model',
+				model: 'qwen-flash'
+			});
+		});
+
+		it('sends an all-model table with a personality as seats, without one as models', () => {
+			const chosen = parseForm(
+				form({ ...THREE, personality_p2: 'opportunist', confirm_spend: 'on' }),
+				GAMES,
+				MODELS,
+				true,
+				true
+			);
+			const plain = parseForm(form({ ...THREE, confirm_spend: 'on' }), GAMES, MODELS, true, true);
+
+			expect(chosen.ok && chosen.match.seats?.[1]).toEqual({
+				kind: 'model',
+				model: 'qwen-flash',
+				personality: 'opportunist'
+			});
+			expect(plain.ok && plain.match.models).toEqual(THREE.seat);
+		});
+
 		it('sends no models and no spend for a bot match', () => {
 			const parsed = parseForm(form({ ...LIARS, confirm_spend: 'on' }), GAMES, MODELS);
 

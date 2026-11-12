@@ -122,7 +122,7 @@ def test_the_summary_of_a_hand_made_situation():
 
 def test_every_tool_of_every_turn_is_explained_in_the_rules_of_both_versions():
     # the old rules never named `stay_in_bed` and `let_them_die`: that is why p2 exists
-    for version in prompt.VERSIONS[1:]:
+    for version in [v for v in prompt.VERSIONS if not v.startswith("werewolf-p1")]:
         rules = prompt.rules_text(version)
         for seed in range(1, 9):
             for request in requests_of(seed):
@@ -205,3 +205,50 @@ def test_p3_advice_never_names_a_role_the_reader_may_not_know():
             for role_id in ROLES:
                 if re.search(rf"\b{role_id}\b", advice):
                     assert role_id in allowed, (request.player, role_id, advice)
+
+
+def test_golden_prompt_of_version_p4_has_the_whole_match_section_and_the_choices():
+    request = a_request()
+    plugin = Werewolf()
+    settings = {"prompt_version": "werewolf-p4"}
+    summary = plugin.situation_summary(request.observation, settings)
+    messages = build_messages("Werewolf", plugin.rules(settings), request, summary)
+
+    assert "You can name:" in summary
+    check_golden("werewolf-p4.txt", "\n=====\n".join(m["content"] for m in messages) + "\n")
+
+
+def test_p4_is_p3_plus_a_neutral_section_and_the_choices_and_p3_is_unchanged():
+    plugin = Werewolf()
+    p3 = {"prompt_version": "werewolf-p3"}
+    p4 = {"prompt_version": "werewolf-p4"}
+    rules3, rules4 = prompt.rules_text("werewolf-p3"), prompt.rules_text("werewolf-p4")
+
+    assert "Think about the whole match" in rules4 and "Think about the whole match" not in rules3
+    assert (
+        rules4.replace(rules4[rules4.index("## Think") : rules4.index("## How to play")], "")
+        == rules3
+    )
+    assert len(rules4.split()) < 1900
+    # no quota and no model-specific wording
+    assert not re.search(r"\b(always|never) (lie|bluff)|at least once|GPT|Claude|Gemma", rules4)
+    for request in requests_of(4):
+        observation = request.observation
+        assert plugin.situation_summary(observation, p4).startswith(
+            plugin.situation_summary(observation, p3)
+        )
+
+
+def test_p4_names_only_living_players_the_reader_can_pick_and_no_pack_member_for_a_wolf():
+    for seed in (1, 2, 3):
+        for request in requests_of(seed):
+            observation = request.observation
+            choices = prompt.legal_choices(observation)
+            assert set(choices) <= set(observation["alive"]) - {observation["you"]}
+            if observation["step"] == "wolf":
+                assert not set(choices) & set(observation.get("pack") or [])
+            summary = prompt.situation_summary_v4(observation)
+            assert ("You can name:" in summary) == bool(choices)
+            # no role the reader may not know is named by the new lines
+            extra = summary[len(prompt.situation_summary_v3(observation)) :]
+            assert not any(re.search(rf"\b{r}\b", extra) for r in ROLES)

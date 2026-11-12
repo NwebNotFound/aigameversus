@@ -35,9 +35,9 @@
 				<p>{game.tagline}</p>
 				<div class="foot">
 					<span class="players">{game.players}</span>
-					{#if playable}
+					{#if playable && !data.readOnly}
 						<a class="start" href="/matches/new?game={game.id}">Start a match</a>
-					{:else}
+					{:else if !playable}
 						<span class="badge">Coming soon</span>
 					{/if}
 				</div>
