@@ -165,6 +165,8 @@ class Werewolf(GamePlugin[WerewolfState]):
             return None
         if version == "werewolf-p3":
             return prompt.situation_summary_v3(observation)
+        if version == "werewolf-p4":
+            return prompt.situation_summary_v4(observation)
         return prompt.situation_summary(observation)
 
     # --- setup -------------------------------------------------------------
