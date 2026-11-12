@@ -5,7 +5,13 @@ from itertools import combinations
 
 import pytest
 
-from arena.research.design import blocks_of_four, guest_seatings, mirror_seatings, rotations
+from arena.research.design import (
+    all_tables,
+    blocks_of_four,
+    guest_seatings,
+    mirror_seatings,
+    rotations,
+)
 
 EIGHT = list("abcdefgh")
 
@@ -94,3 +100,17 @@ def test_mirror_seatings_are_the_six_ways_to_give_two_seats_each():
 def test_mirror_seatings_need_two_different_entries():
     with pytest.raises(ValueError, match="two different"):
         mirror_seatings("same", "same")
+
+
+def test_all_tables_of_six_seat_every_entry_10_times_and_every_pair_6_times():
+    tables = all_tables(list("abcdef"))
+
+    assert len(tables) == 15
+    assert Counter(entry for table in tables for entry in table) == dict.fromkeys("abcdef", 10)
+    pairs = Counter(pair for table in tables for pair in combinations(table, 2))
+    assert len(pairs) == 15 and set(pairs.values()) == {6}
+
+
+def test_all_tables_need_six_different_entries():
+    with pytest.raises(ValueError, match="exactly 6"):
+        all_tables(list("abcde"))

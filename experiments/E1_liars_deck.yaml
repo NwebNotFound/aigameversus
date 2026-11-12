@@ -9,17 +9,58 @@
 
 id: E1
 title: "Liar's Deck: a league of cheap models, reasoning effort, and stronger guests"
-version: 1
+version: 3
 status: approved          # approved by Nils 2026-11-11 (stage B, C after A); -> running -> closed
 registered: "2026-11-11"
 author: Arena Researcher
-amendments: []
+amendments:
+  - version: 2
+    date: "2026-11-11"
+    what: >
+      Stage A ends after its pilot (budget lowered to the 0.30 EUR of the
+      pilot). New stage A2 replaces its league: the six models that passed the
+      pilot rule, at all 15 tables of four, 4 seatings x 2 seeds = 120
+      matches, run budget 3.00 EUR. H1 to H4 now test stage A2, Holm over 6.
+      Stage B's substitutes lose qwen-flash and gemini-flash-lite. Matches are
+      played with "memory": false and prompt_version liars_deck-p1.
+    why: >
+      The pilot (6 of 8 matches, 0.2314 EUR, stopped by the budget rule)
+      found two models over the 10 % fallback limit: qwen-flash 52 % (its
+      reasoning ran into the 1 500-token output limit, then the turns timed
+      out) and gemini-flash-lite 19 % (the provider's rate limit ended its
+      agent in one match). The plan's rule is to fix or drop them; the owner
+      chose to drop them now and fix them in a later stage. The pilot also
+      showed a league match of 8 models would cost about 0.033 EUR, so the
+      approved 3.00 EUR could not pay for the 112 planned matches; 6 models
+      cost about 0.020 EUR a match. Decided before any league match was played.
+    pilot_data: "the 6 pilot matches stay pilot data and are not part of any test"
+  - version: 3
+    date: "2026-11-11"
+    what: >
+      A clarification, no change to how matches are played. All stages run
+      without answer repair: a malformed tool call is rejected and corrected
+      as before (the arena is getting an optional repair of such calls).
+      Reliability is reported in four parts per model: clean moves,
+      repaired moves (zero here), rejected answers and fallback moves.
+    why: >
+      Repair changes what counts as a rejected answer and a fallback move.
+      Mixing repaired and unrepaired matches inside a stage would confound
+      the reliability results and stage B. Written while league A2 was
+      running, before any outcome was read.
 # Every paid run needs the project owner's own yes. What he has said yes to:
 approvals:
   - stages: [A]
     date: "2026-11-11"
     by: "project owner, passed on by Arena Lead"
     scope: "8 pilot matches up to 0.30 EUR, then the league of 112 matches with a run budget of 3.00 EUR, stopped at 90 %"
+  - stages: [A2]
+    date: "2026-11-11"
+    by: "project owner, passed on by Arena Lead (his words: \"A jetzt, B später\")"
+    scope: >
+      The league of the six clean models, 120 matches, run budget 3.00 EUR,
+      stopped at 90 %, one match at a time through the arena API, after the
+      stack is rebuilt. Fixing qwen-flash and gemini-flash-lite for a league
+      of eight is a later stage and needs a new yes on its budget.
   - stages: [B, C]
     date: "2026-11-11"
     by: "project owner, passed on by Arena Lead"
@@ -44,7 +85,7 @@ settings: {variant: base}
 conditions:
   seats: 4
   seat_names: "p1 to p4; no prompt names a model, so players do not know who sits where"
-  memory: "off (at this commit no memory reaches a prompt)"
+  memory: "off: every match is started with \"memory\": false (nothing read, nothing written)"
   personalities: none
   language: "English rules text; the game has no language setting"
   prompt_version: >
@@ -56,6 +97,7 @@ conditions:
     across commits.
   history_shown: "last 40 visible events (HISTORY_LIMIT)"
   sampling: "provider defaults; the arena sets no temperature"
+  answer_repair: "off in every stage (version 3): malformed tool calls are rejected and corrected, never repaired"
   tool_choice: required
   provider_routing: "OpenRouter's default; the serving provider is stored per call if the export has it"
   usd_to_eur: "1.0 as in config/models.yaml (overstates cost)"
@@ -111,18 +153,37 @@ stages:
     pilot_budget_eur: 0.30 # the 8 pilot matches together; part of the stage budget
     turn_timeout_s: 60
     max_output_tokens: 1500
-    budget_eur: 3.00
-    estimate_eur: 2.20
+    budget_eur: 0.30       # version 2: ended after its pilot
+    estimate_eur: 0.30
     notes: >
       14 tables of four in which every pair of models meets 3 times; each table
       plays 2 seeds; each seed is played with 4 seatings that put every model in
       every seat once. 112 matches, 56 per model, 14 per model and seat.
 
+  - id: A2
+    kind: league
+    title: League of the six models that passed the pilot
+    models: [gpt-luna, claude-haiku, glm-flash, deepseek-flash, mistral-small, llama-scout]
+    effort: low
+    seeds: 2               # per table
+    seed_base: 1104000     # seed = seed_base + 10 * table + replicate
+    pilot_tables: 0
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 3.00
+    estimate_eur: 2.40
+    notes: >
+      All 15 tables of four of the six models: every model sits at 10 and
+      every pair meets at 6. Each table plays 2 seeds, each seed with the 4
+      seatings that put every model in every seat once. 120 matches, 80 per
+      model, 20 per model and seat. Estimate from the pilot: 0.020 EUR a
+      match on average over these six.
+
   - id: B
     kind: mirror
     title: The same model at high and at low reasoning effort
     models: [gpt-luna, claude-haiku, deepseek-flash, glm-flash]
-    substitutes: [mistral-small, qwen-flash, gemini-flash-lite]
+    substitutes: [mistral-small, llama-scout]   # version 2: the two that failed the pilot are out
     efforts: [high, low]
     seeds: 4               # per model; seed = seed_base + replicate, the same for every model
     seed_base: 1102000
@@ -162,33 +223,33 @@ stages:
 
 hypotheses:
   - id: H1
-    stage: A
+    stage: A2
     kind: confirmatory
-    claim: The eight models are not equally strong.
+    claim: The six league models are not equally strong.
     test: >
       Permutation test. Statistic: sum over models of (mean finishing rank -
       2.5) squared. Null distribution: finishing ranks shuffled among the four
       seats inside each match, 100 000 times.
   - id: H2
-    stage: A
+    stage: A2
     kind: secondary to H1
     claim: A model's share of wins differs from 0.25.
-    test: Exact two-sided binomial test per model, Holm over 8; Wilson 95 % intervals.
+    test: Exact two-sided binomial test per model, Holm over 6; Wilson 95 % intervals.
   - id: H3
-    stage: A
+    stage: A2
     kind: confirmatory
     claim: Models call "Liar!" on lies more often than on honest plays.
     test: >
       Per model a 2x2 table over the plays it could have called (the play
       directly before its turn): called or not, lie or honest. Pooled:
       Mantel-Haenszel odds ratio over models, two-sided. Per model: Fisher's
-      exact test, Holm over 8.
+      exact test, Holm over 6.
   - id: H4
-    stage: A
+    stage: A2
     kind: design check, a null result is expected
     claim: The seat does not change the chance to win.
     test: >
-      Exact multinomial test of the 112 winners' seats against 1/4 each.
+      Exact multinomial test of the 120 winners' seats against 1/4 each.
       Reference: random bots won 24.1, 24.2, 26.0 and 25.7 % from seats p1 to
       p4 in 4 000 matches (seeds 1 to 4 000).
   - id: H5
@@ -207,7 +268,7 @@ hypotheses:
     test: >
       Exact two-sided binomial test of the pooled guest wins against 0.25; per
       guest the same test, Holm over 4. Guests and league models on one scale:
-      Plackett-Luce strengths from stages A and C with bootstrap intervals.
+      Plackett-Luce strengths from stages A2 and C with bootstrap intervals.
   - id: D1
     stage: all
     kind: descriptive, no test
@@ -221,7 +282,7 @@ metrics:
   outcome: [win, finishing rank, rounds survived]
   rating: "Plackett-Luce strength and multiplayer Elo (K 32, start 1000), both with 2 000 bootstrap resamples of whole seeds"
   skill: [lie rate, share of lies caught, call rate, call accuracy, boldest bluff risk, cards per play]
-  reliability: [rejected answers per turn, fallback turns per turn, failed agents, timeouts]
+  reliability: [clean moves per turn, repaired moves per turn, rejected answers per turn, fallback turns per turn, failed agents, timeouts]
   cost: [EUR per match, EUR per win, tokens per move, seconds per move]
   exploratory:
     - "lie rate against revolver risk (does a model bluff less when a shot is more likely to kill)"
@@ -240,7 +301,9 @@ analysis:
     Matches on one seed share cards and revolvers. Bootstrap and permutation
     work on whole seeds or inside single matches, never on single moves.
   power: >
-    Exact binomial, 80 % power (arena/research/power.py). Stage A, 56 matches
+    Exact binomial, 80 % power (arena/research/power.py). Stage A2 (version 2),
+    80 matches per model: a win share of 0.45 with Holm over 6, 0.41
+    uncorrected. Stage A as first planned, 56 matches
     per model: a win share of 0.48 against 0.25 with Holm's strictest level,
     0.44 uncorrected; smaller gaps will be reported as not resolved. The rank
     test of H1 uses all four places and is expected to see less. Stage B, 96
@@ -297,4 +360,5 @@ limitations:
   - "Stage B compares a model with itself; it does not say whether effort helps against other models."
   - "Stage C has 24 matches per guest: only large advantages can be shown."
   - "Prices and the dollar rate in the ledger are upper bounds, not invoices."
+  - "Cost: before arena commit 6b40d46 (#106) a call the provider refused with 429 was booked at its upper bound and never corrected. In the ledger 45 calls stayed unsettled: 29 in the pilot (qwen-flash 22, gemini-flash-lite 7; 0.0603 EUR of the pilot's 0.2314), 1 in league A2 (glm-flash, 0.0006 EUR), the rest outside E1. The ledger keeps them as its audit trail; cost per match in the analysis leaves them out (research/E1/unsettled_calls.csv), so pilot cost figures read about 26 % high and league figures are unaffected."
   - "The plan and the analysis are written by an AI model whose vendor has models in the field; tests and scripts are fixed here before any result exists."

@@ -1,15 +1,17 @@
 """The page of one model: its rating, cost and tool errors per game."""
 
+import time
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from arena.api.ratings import RecentMatch, StandingOut, vendor_of
 from arena.catalog import load
 from arena.config import load_config
+from arena.db.reliability import Reliability, reliabilities
 from arena.ratings.elo import PROVISIONAL_GAMES
 from arena.ratings.store import RatingStore, Usage
 
@@ -71,7 +73,39 @@ class Personality(BaseModel):
     personality_id: str
 
 
+class ReliabilityOut(BaseModel):
+    """How the model has played on this arena, from its own logs (arena/db/reliability.py)."""
+
+    status: Literal["ok", "unreliable", "unknown"]
+    reason: str | None = Field(description="Why unreliable or unknown; null when ok")
+    n: int = Field(description="The moves the verdict rests on")
+    matches: int = Field(description="The distinct matches those moves come from")
+    fallback_share: float | None
+    agent_failed_recent: int
+    telemetry_moves: int = Field(description="Moves that report cut-offs and rate limits")
+    cutoff_share: float | None
+    rate_limits_per_move: float | None
+    warnings: list[str] = Field(description="What costs time without being a failure")
+
+    @classmethod
+    def of(cls, verdict: Reliability) -> "ReliabilityOut":
+        return cls(**verdict.__dict__)
+
+
+RELIABILITY_TTL = 60.0  # seconds a computed set of verdicts is reused
+
+
+async def _reliabilities(request: Request, model_ids: list[str]) -> dict[str, Reliability]:
+    kept = getattr(request.app.state, "reliability", None)
+    if kept and time.monotonic() - kept[0] < RELIABILITY_TTL and set(model_ids) <= set(kept[1]):
+        return kept[1]
+    found = await reliabilities(request.app.state.pool, model_ids, load_config().reliability)
+    request.app.state.reliability = (time.monotonic(), found)
+    return found
+
+
 class ModelPage(BaseModel):
+    reliability: ReliabilityOut = Field(description="How it has played here, and why")
     model: ModelInfo | None = Field(description="null for a model that is not in the config")
     profile_id: UUID | None = Field(
         description="The profile without a personality; null until played"
@@ -105,6 +139,10 @@ class CatalogModel(BaseModel):
         "booked at the listed price x 1.25)"
     )
     high_price: bool = Field(description="Output costs more than 10 USD per million tokens")
+    rate_limited_likely: bool = Field(
+        description="A free variant: its provider limits requests hard, a seat may give up"
+    )
+    reliability: ReliabilityOut
 
 
 class CatalogOut(BaseModel):
@@ -116,13 +154,23 @@ class CatalogOut(BaseModel):
 
 
 @router.get("/models/catalog")
-async def model_catalog() -> CatalogOut:
+async def model_catalog(
+    request: Request,
+    free: Annotated[
+        bool, Query(description="Include the :free variants (often rate-limited)")
+    ] = False,
+) -> CatalogOut:
     """Every model that can take a seat: config/models.yaml's, then OpenRouter's others.
 
     A model can play when it writes text and takes a forced tool call. The caps and
     confirm_spend hold for every model; unverified ones are priced at OpenRouter's prices.
+    The `:free` variants are left out unless `free=1`: their routes are limited so hard that
+    a seat often gives up. Every model says how it has played here (`reliability`); an
+    unreliable one stays selectable.
     """
     catalog = await load(load_config())
+    entries = [e for e in catalog.entries if free or not e.id.endswith(":free")]
+    verdicts = await _reliabilities(request, [e.id for e in entries])
     return CatalogOut(
         models=[
             CatalogModel(
@@ -139,8 +187,10 @@ async def model_catalog() -> CatalogOut:
                 verified=e.verified,
                 price_source=e.price_source,
                 high_price=e.high_price,
+                rate_limited_likely=e.id.endswith(":free"),
+                reliability=ReliabilityOut.of(verdicts[e.id]),
             )
-            for e in catalog.entries
+            for e in entries
         ],
         fetched_at=None
         if catalog.fetched_at is None
@@ -177,7 +227,9 @@ async def model_page(model_id: str, store: Store, request: Request) -> ModelPage
                     **StandingOut.of(standing).model_dump(),
                 )
             )
+    verdict = (await _reliabilities(request, [model_id]))[model_id]
     return ModelPage(
+        reliability=ReliabilityOut.of(verdict),
         model=ModelInfo(
             id=model_id,
             vendor=vendor_of(model_id),
