@@ -37,10 +37,33 @@ from games.civ.world import generate_map
 DATA = load_civ_data()
 
 
+def _version_1(data: CivData) -> CivData:
+    """The rules as they were before D-137 and D-138: the data files, two numbers back."""
+    victory_rules = data.victory.model_copy(
+        update={
+            "domination": data.victory.domination.model_copy(update={"min_cities_per_nation": 0})
+        }
+    )
+    regions = dict(data.balance.map.start_regions)
+    regions["food"] = ["forest", "forest", "hills", "hills", "river", "river"]
+    world = data.balance.map.model_copy(update={"start_regions": regions})
+    return data.model_copy(
+        update={
+            "victory": victory_rules,
+            "balance": data.balance.model_copy(update={"map": world}),
+        }
+    )
+
+
+# Every rules version a stored match may have been played with, newest last. A new rule or
+# data change adds a version here and keeps the old ones, so old logs replay as they were.
+RULES: dict[str, CivData] = {"1": _version_1(DATA), "2": DATA}
+
+
 class CivGame(GamePlugin[CivState]):
     id = "civ"
     name = "Throne of Tokens"
-    version = "1"
+    version = "2"  # rules: D-137 (domination needs 2 cities per nation), D-138 (food region)
     min_players = DATA.balance.map.nations.min
     max_players = DATA.balance.map.nations.max
     turn_mode = TurnMode.SIMULTANEOUS
@@ -48,15 +71,32 @@ class CivGame(GamePlugin[CivState]):
 
     data: CivData = DATA
 
+    def __init__(self, version: str | None = None):
+        """The game with the newest rules, or with those of an older `version`."""
+        if version is not None and version not in RULES:
+            raise ValueError(f"civ has no rules version {version} (known: {', '.join(RULES)})")
+        if version is not None:
+            self.version = version
+            self.data = RULES[version]
+
+    def at_version(self, version: str) -> CivGame:
+        if version == self.version:
+            return self
+        return CivGame(version)
+
     def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
         """The prompt version of a match, recorded with it (see `prompt.py`)."""
         return prompt.version_of(settings)
 
+    def history_limit(self, settings: Mapping[str, Any] | None = None) -> int:
+        """Civ shows 120 events: six talking nations send one nation up to 45 in a turn."""
+        return prompt.history_limit(settings)
+
     def situation_summary(
         self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
     ) -> str | None:
-        """A short text for the top of the turn's prompt; only version civ-p2 has one."""
-        if prompt.version_of(settings) == "civ-p1":
+        """A short text for the top of the turn's prompt; only civ-p2 has one."""
+        if not prompt.summary_version(settings):
             return None
         return prompt.situation_summary(observation)
 

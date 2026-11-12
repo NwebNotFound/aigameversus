@@ -10,7 +10,7 @@ null. `docs/METRICS.md` defines every number.
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from arena.analytics import behaviour, liars_deck, werewolf
+from arena.analytics import behaviour, civ, liars_deck, werewolf
 from arena.analytics.report import GAMES as REPORTS
 from arena.analytics.report import report
 from arena.analytics.situation import BUILDERS as SITUATIONS
@@ -23,6 +23,7 @@ from arena.transcript.common import public_settings
 # so the UI can jump a replay to a move even when some events are filtered out.
 ANALYZERS: dict[str, Callable[[list[tuple[int, Event]], bool], dict[str, Any]]] = {
     "liars_deck": liars_deck.analyze,
+    "civ": civ.analyze,
 }
 
 

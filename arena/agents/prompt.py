@@ -77,6 +77,7 @@ def build_messages(
     summary: str | None = None,
     memory: str | None = None,
     personality: str | None = None,
+    history_limit: int = HISTORY_LIMIT,
 ) -> list[Message]:
     """The prompt that asks `request.player` for their next action.
 
@@ -106,7 +107,7 @@ def build_messages(
     )
     if personality:
         system += _PERSONALITY.format(personality=personality.strip())
-    shown = request.events[-HISTORY_LIMIT:]
+    shown = request.events[-history_limit:]
     lines = [_line(event, request.player) for event in shown]
     earlier = len(request.events) - len(shown)
     if earlier:

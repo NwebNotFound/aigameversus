@@ -46,7 +46,13 @@ class _Measured:
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
-        messages = build_messages(self._plugin.name, self._rules, request, summary)
+        messages = build_messages(
+            self._plugin.name,
+            self._rules,
+            request,
+            summary,
+            history_limit=self._plugin.history_limit(self._settings),
+        )
         self.sizes.append(len(json.dumps([messages, tool_schemas(request.tools)])))
         return await self._bot.act(request)
 
