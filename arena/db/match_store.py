@@ -22,6 +22,7 @@ class Seat(BaseModel):
     name: str
     model_id: str | None = None  # an id from config/models.yaml; None for a bot
     kind: Literal["model", "bot"]
+    personality: str | None = None  # a personality id of config/personalities, if one was set
 
 
 def bot_seats(players: Sequence[PlayerId]) -> dict[PlayerId, Seat]:

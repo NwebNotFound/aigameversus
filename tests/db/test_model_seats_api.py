@@ -75,6 +75,7 @@ def test_models_play_a_match_that_is_metered_and_says_who_sat_where(
             "name": config.models[model].name or model,
             "model_id": model,
             "kind": "model",
+            "personality": None,  # none chosen
         }
         for n, model in enumerate(MODELS, start=1)
     }
@@ -196,7 +197,12 @@ def test_bot_match_names_its_seats_as_random_bots(client):
     response = client.post("/matches", json={"game": "toy", "players": 3})
 
     match = finish(client, response.json()["id"])
-    assert match["seats"]["p3"] == {"name": "Random Bot p3", "model_id": None, "kind": "bot"}
+    assert match["seats"]["p3"] == {
+        "name": "Random Bot p3",
+        "model_id": None,
+        "kind": "bot",
+        "personality": None,
+    }
     assert match["prompt_version"] == "v1"
     assert KEY not in response.text
 

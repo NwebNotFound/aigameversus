@@ -120,9 +120,10 @@ Three ways:
   `"seats": [{"kind": "model", "model": "glm-flash"}, {"kind": "bot"}, ...]`
   instead of `models` lets models and random bots share a table: the bots play
   free, a mixed match rates its models only, among themselves, and
-  `POST /matches/estimate` takes `null` for a bot seat. A personality per seat is
-  refused (422) until the agent runner puts one in the prompt; `GET /setup` says
-  `mixed_seats: true` on a server that takes `seats`. Model
+  `POST /matches/estimate` takes `null` for a bot seat. A model seat may add
+  `"personality": "<id>"` (see "A personality" below); a bot seat may not.
+  `GET /setup` says `mixed_seats: true` and `seat_personalities: true` on a
+  server that takes them. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
   ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
@@ -505,6 +506,11 @@ npm run test:unit             # vitest
 npx playwright test           # smoke tests on 3100 (WEB_URL overrides); needs demo_seed data
 ```
 
+Read-only web: with `READ_ONLY=1`, or for a request with the header `X-AGV-Read-Only: 1`
+(which the LAN proxy sets, `deploy/lan/nginx.conf`), the web server refuses every write
+(405) and the new-match form (404), and the pages hide the controls and the links to the
+form (`web/src/hooks.server.ts`, `web/src/lib/server/read-only.ts`).
+
 A spec that changes network answers (`page.route`) imports `test` and `expect` from
 `web/tests/routes.ts`, not from `@playwright/test`, and rewrites a real answer with
 `rewrite(page, url, edit)`: a handler that outlives its test is then dropped instead of
@@ -704,7 +710,15 @@ it in the prompt inside `<memory>`, marked as data. `"memory": false` in
 One YAML file in `config/personalities/<id>.yaml`, checked against
 `config/personalities/personality.schema.json`: `id`, `name`, `description`,
 `values` (`risk_taking`, `honesty`, `aggression`, integers 0-100) and
-`speech_style`.
+`speech_style`. `arena/personalities.py` loads them.
+
+A model seat that plays one (`"personality"` in `POST /matches` `seats`) gets a
+block at the end of its system message, `# Your personality`: name, description
+and speech style from the file, and "stay in character; the rules and the goal
+come first" (`prompt.personality_text`, `ModelAgent(..., personality=...)`). It
+is server text only, never game data. Without a personality the prompt is byte
+for byte what it was. The id is kept in the seat record and in `match_started`
+(`personalities`, only when a seat has one).
 
 ```bash
 uv run pytest tests/config
