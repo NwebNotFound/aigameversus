@@ -1,6 +1,6 @@
 """What one nation sees at the start of its round, small enough for one call per nation.
 
-    observation = observe(state, data, "ada", extras={...})
+    observation = observe(state, data, "ada", scoreboard=scoreboard, extras={...})
 
 The field names are those of docs/civ-interfaces.md ("Observation of a nation"). Only the
 nation's own things in full; of the others only what the fog lets through: the terrain of the
@@ -16,7 +16,6 @@ counter) is passed in ``extras`` until the state holds it:
 
 from __future__ import annotations
 
-import math
 from collections import Counter
 from typing import Any
 
@@ -57,9 +56,12 @@ def observe(
     data: CivData,
     player: str,
     *,
+    scoreboard: dict[str, Any],
     extras: dict[str, Any] | None = None,
     plan: str | None = None,
 ) -> dict[str, Any]:
+    """`scoreboard` is the public one (D-128, `plugin.scoreboard`): the city totals and counts the
+    victory lines use come from it, never from counting cities in the state."""
     extras = extras or {}
     seen = visible_to(state, data, player)
     mine_cities = [c for c in state.cities if c.owner == player]
@@ -72,7 +74,7 @@ def observe(
         "you": player,
         "round": state.round,
         "rounds_total": data.victory.round_limit.rounds,
-        "victory": _victory(state, data, player, extras),
+        "victory": _victory(state, data, player, extras, scoreboard),
         "stock": dict(nation.stock),
         "income_per_round": dict(income),
         "unpaid_rounds": nation.hungry_rounds,
@@ -146,12 +148,14 @@ def _trainable(state: CivState, data: CivData, player: str, city: City) -> dict[
     return found
 
 
-def _victory(state: CivState, data: CivData, player: str, extras: dict[str, Any]) -> dict[str, Any]:
+def _victory(
+    state: CivState, data: CivData, player: str, extras: dict[str, Any], scoreboard: dict[str, Any]
+) -> dict[str, Any]:
     """How far the nation is from each way to win, and the closest one."""
     rules = data.victory
-    mine = [c for c in state.cities if c.owner == player]
-    total = len(state.cities)  # assumed public: the share is checked against all cities
-    need = max(1, math.ceil(rules.domination.city_share * total - 1e-9))
+    mine = [c for c in state.cities if c.owner == player]  # its own cities, for its own score
+    total, need = scoreboard["cities_total"], scoreboard["domination_needed"]
+    held_cities = scoreboard["cities"][player]
     gold = state.nations[player].stock["gold"]
     held = extras.get("gold_held_rounds", 0)
     reputation = extras.get("reputation", 50)
@@ -164,12 +168,12 @@ def _victory(state: CivState, data: CivData, player: str, extras: dict[str, Any]
     )
     left = rules.round_limit.rounds - state.round
     gaps = {
-        "domination": max(0, need - len(mine)) * 3,
+        "domination": max(0, need - held_cities) * 3,
         "economy": max(0, rules.economy.hold_rounds - held)
         + (max(0, rules.economy.gold - gold) // 40),
     }
     return {
-        "domination": f"{len(mine)} of {need} cities needed ({total} exist)",
+        "domination": f"{held_cities} of {need} cities needed ({total} exist)",
         "economy": f"{gold} of {rules.economy.gold} gold, held {held} of "
         f"{rules.economy.hold_rounds} rounds",
         "score": f"{score} now; the highest score wins after round "

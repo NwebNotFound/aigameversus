@@ -81,9 +81,12 @@ class CivGame(GamePlugin[CivState]):
                 if r["nation"] == player and r["round"] == state.round - 1
             ],
         }
-        seen = observation.observe(state, data, player, extras=extras, plan=nation.plan)
+        board = scoreboard(state, data)
+        seen = observation.observe(
+            state, data, player, scoreboard=board, extras=extras, plan=nation.plan
+        )
         seen["legal"]["orders"] = _order_targets(state, data, player, seen)
-        seen["scoreboard"] = scoreboard(state, data)
+        seen["scoreboard"] = board
         return seen
 
     def get_tools(self, state: CivState, player: PlayerId) -> list[ToolSpec]:
