@@ -40,7 +40,7 @@ replacement. These are configuration-specific observations, not family rankings.
 
 Before each POST /matches, read the real ledger and effective match cap. Require
 both `spent + 3 * fresh estimate <= 0.9 * 3.50` and `spent + full enforced cap <=
-3.50`, one match at a time. The server's cap remains EUR 0.50, monthly EUR 25;
+3.50`, one match at a time. The global cap remains EUR 0.50; each guest match uses the lower EUR 0.40 limit, monthly EUR 25;
 notify/hold at EUR 20 spent. No retries of failed matches. A failed agent, failed
 or interrupted match, or guest fallback share above 10% holds the series for Lead.
 Do not call a two-cell model "qualified" even if there are no observed failures.
@@ -71,6 +71,8 @@ No start until #144 is merged on main AND deployed in a Reviewer-verified rebuil
 Then verify `settings.match_budget_eur` is enforced, record its value, re-estimate
 every table under the final settings, and send Lead a one-line pre-start report.
 The earlier cap-lowering alternative is superseded by this explicit #144 gate.
-Until a lower per-match value is chosen and verified, reserve the full EUR 0.50;
-do not assume an estimate is an enforceable spending limit. This remains a plan
+Amendment: set `settings.match_budget_eur: 0.40` for every guest match and
+verify the estimate reports cap_micro_eur 400000. Reserve that full bound;
+eight matches total at most EUR 3.20, below the EUR 3.50 allocation. The separate
+90%/three-times-estimate start rule still applies and can leave cells unplayed. This remains a plan
 only, with execution approval false and no live client or paid request launched.
