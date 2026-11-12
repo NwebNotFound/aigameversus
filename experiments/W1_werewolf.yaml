@@ -7,11 +7,32 @@
 
 id: W1
 title: "Werewolf pilot: eight seats of cheap models, every seat in every role"
-version: 4
-status: approved          # P1/P2 owner; P3 overnight delegation via Lead (2026-11-12)
+version: 5
+status: closed            # P1 complete; P2 closed n=1; P3 budget-stopped at6/8
 registered: "2026-11-12"
 author: Arena Researcher
 amendments:
+  - version: 5
+    date: "2026-11-12"
+    what: >
+      Close P2 as a descriptive single-match stage (EUR0.067841); no further
+      P2 spend. qwen-flash is operationally excluded from Werewolf guest and
+      later Werewolf rosters until configuration remediation and a separately
+      approved mini qualification. Its one match had 4 timeout fallbacks in
+      15 decisions; Gemini had 0 fallbacks and 1 rejected answer in 7 decisions.
+      This is not a completed QUALIFY suite or a general capability verdict.
+      Close P3 after 6 completed original-roster pairs (EUR0.309660), with
+      two unplayed cells: the remaining EUR0.190340 could not reserve the
+      ledger-enforced EUR0.20 match bound. Retain the full original schedule;
+      unplayed cells are missing, never losses or implied replications.
+    why: >
+      Lead decision 7e2c9806-bed8-45c2-b04b-728f60fdaf32 after P2 match1:
+      no in-study Qwen tuning or further spend. P3 remediation retained Llama
+      under the earlier exception; it still breached the 10 percent gate.
+      Reviewer restored cap0.20 to0.50 after P3 in an idle gap on main87fcf21
+      (message f8952acd-dc69-4b79-a8e2-379c291fd880), independently read back.
+      Historical approvals are retained as an audit trail, not renewed
+      permission to resume these closed cells. No post-hoc outcome selection.
   - version: 4
     date: "2026-11-12"
     what: >
@@ -253,6 +274,9 @@ budget:
 
 limitations:
   - "One template (classic, 8 players), one prompt version (werewolf-p2), low reasoning effort."
+  - "P2 is only one match; neither Qwen nor Gemini results support broad inference. Qwen is excluded by the observed-timeout policy, not a completed qualification suite."
+  - "P3 contains six of eight pairs, stopped by the full EUR0.20 reservation; two missing cells and unequal per-seat exposure prevent full role balance."
+  - "P1/P3 differ in prompt, arena build and cost ceiling; the comparison is exploratory remediation, not isolated causal prompt evidence."
   - "Two models hold two seats each in P1, so they also play against themselves."
   - "8 or 16 matches: team and role results are sizes for the league, not findings."
   - "Werewolf outcomes depend on the role dealt; the cyclic design gives every model every seat, but with one seed per stage every seat's role is the same in all its rotations."

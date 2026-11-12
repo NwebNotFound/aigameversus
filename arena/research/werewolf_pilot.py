@@ -8,6 +8,16 @@ from pathlib import Path
 
 def rates(counts):
     counts = dict(counts)
+    for field in (
+        "turns",
+        "fallbacks",
+        "rejected_answers",
+        "word_limit_rejections",
+        "cutoffs",
+        "other_rejections",
+        "failed_agents",
+    ):
+        counts.setdefault(field, 0)
     turns = counts.get("turns", 0)
     counts["fallback_share"] = counts.get("fallbacks", 0) / turns if turns else None
     counts["word_limit_rejections_per_decision"] = (
@@ -178,6 +188,13 @@ def analyse(root):
             ),
         }
     result["paired_reliability"] = paired_reliability(stages["P1"], stages["P3"])
+    baseline = {twin_key(row): row for row in stages["P1"]}
+    paired_outcomes = Counter()
+    for row in stages["P3"]:
+        before = outcomes(baseline[twin_key(row)])[0]
+        after = outcomes(row)[0]
+        paired_outcomes[f"{before}_to_{after}"] += 1
+    result["paired_team_results"] = dict(paired_outcomes)
     return result
 
 

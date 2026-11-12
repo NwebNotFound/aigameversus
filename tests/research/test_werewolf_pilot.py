@@ -57,3 +57,12 @@ def test_bot_votes_do_not_become_model_vote_accuracy():
     assert team == "village" and sum(r["won"] for r in roles) == 1
     assert votes["model_village_votes"] == votes["bot_village_votes"] == 1
     assert votes["model_votes_on_wolf"] == votes["bot_votes_on_wolf"] == 1
+
+
+def test_zero_exposure_is_not_a_zero_failure_rate():
+    paired = paired_reliability([cell()], [cell(events=[event("action_accepted")])])
+    before = paired["pairs"][0]["P1_llama"]
+    after = paired["pairs"][0]["P3_llama"]
+    assert before["turns"] == before["fallbacks"] == 0
+    assert before["fallback_share"] is None
+    assert after["fallback_share"] == 0
