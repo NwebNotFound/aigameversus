@@ -147,7 +147,12 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
             enter("day", data["day"], seq)
         elif event.type == "player_died":
             phase["deaths"].append(
-                {"player": data["player"], "cause": data.get("cause"), "role": data.get("role")}
+                {
+                    "seq": seq,
+                    "player": data["player"],
+                    "cause": data.get("cause"),
+                    "role": data.get("role"),
+                }
             )
             if data.get("role"):
                 revealed[data["player"]] = data["role"]
@@ -225,7 +230,7 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
     return {
         "players": players,
         "votes": _votes(days, known),
-        "claims": _contradictions(claims, revealed),
+        "claims": _contradictions(claims, revealed, known),
         "accusations": accusations,
         "stance": stance,
         "phases": [_phase_out(p) for p in phases],
@@ -249,7 +254,9 @@ def _votes(days: dict[int, dict], roles: dict[str, str]) -> dict[str, Any]:
     return out
 
 
-def _contradictions(claims: list[dict], revealed: dict[str, str]) -> list[dict]:
+def _contradictions(
+    claims: list[dict], revealed: dict[str, str], roles: dict[str, str]
+) -> list[dict]:
     """Each claim with who else claimed the same unique role, and whether death disproved it."""
     unique = {role_id for role_id, role in load_roles().items() if role.unique}
     first: dict[tuple[str, str], dict] = {}
@@ -277,6 +284,13 @@ def _contradictions(claims: list[dict], revealed: dict[str, str]) -> list[dict]:
                 "counterclaimed_by": rivals if claim["role"] in unique else [],
                 "disproved": dead_as is not None and dead_as != claim["role"],
                 "true_role": dead_as,
+                # A lie: with spoilers, any claim of a role the player does not have; without,
+                # only a claim that a death disproved (null: not known yet).
+                "lie": (
+                    roles[claim["player"]] != claim["role"]
+                    if claim["player"] in roles
+                    else (True if dead_as is not None and dead_as != claim["role"] else None)
+                ),
             }
         )
     return out

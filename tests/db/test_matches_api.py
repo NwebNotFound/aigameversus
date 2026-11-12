@@ -369,3 +369,13 @@ def test_applying_the_same_match_again_changes_nothing(client):
 
     assert asyncio.run(again()) is None
     assert client.get("/leaderboard", params={"game": "toy", "kind": "all"}).json() == before
+
+
+def test_answer_repair_is_a_match_setting_that_is_checked_and_recorded(client):
+    refused = client.post("/matches", json={"game": "toy", "settings": {"answer_repair": "v9"}})
+    started = client.post("/matches", json={"game": "toy", "settings": {"answer_repair": "v1"}})
+
+    assert refused.status_code == 422
+    assert "answer_repair" in refused.json()["detail"]
+    assert started.status_code == 201
+    assert started.json()["settings"] == {"answer_repair": "v1"}

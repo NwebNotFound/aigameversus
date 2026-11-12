@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.rng import derive_rng
 from arena.engine.types import (
+    ANSWER_REPAIR,
+    ANSWER_REPAIR_VERSIONS,
     MESSAGE,
     Action,
     Agent,
@@ -28,6 +30,8 @@ from arena.engine.types import (
     ToolSpec,
     TurnMode,
     TurnRequest,
+    game_settings,
+    repair_of,
 )
 
 MAX_CORRECTIONS = 2  # retries after a rejected action, before the random fallback plays
@@ -83,7 +87,12 @@ class Match[StateT: BaseModel]:
         self.plugin = plugin
         self.seed = seed
         self.settings = dict(settings or {})
-        self.state = plugin.initial_state(players, self.settings)
+        repair = repair_of(self.settings)
+        if repair not in ANSWER_REPAIR_VERSIONS:
+            raise ValueError(
+                f"Unknown {ANSWER_REPAIR} {repair!r}; choose one of {list(ANSWER_REPAIR_VERSIONS)}"
+            )
+        self.state = plugin.initial_state(players, game_settings(self.settings))
         self.events: list[Event] = []
         self._agents = dict(agents)
         self._sink = sink
@@ -120,6 +129,7 @@ class Match[StateT: BaseModel]:
                     "players": list(self._agents),
                     "settings": dict(self.settings),
                     "prompt_version": plugin.prompt_version(self.settings),
+                    ANSWER_REPAIR: repair_of(self.settings),
                     "seed": self.seed,
                 },
                 # Spectators only: a player who knows the seed knows every hidden draw.
@@ -281,6 +291,10 @@ class Match[StateT: BaseModel]:
                 "reasoning_tokens": total("reasoning_tokens"),
                 "retries": sum(stats.retries for stats in reported),
                 "fallback": fallback,
+                # A repaired move is a valid move but not a clean one: research counts both.
+                "repairs": sorted({repair for stats in reported for repair in stats.repairs}),
+                "raw_arguments": [s.raw_arguments for s in reported if s.raw_arguments],
+                "simple_schema": any(stats.simple_schema for stats in reported),
             },
             visible_to=(),
         )
@@ -336,7 +350,9 @@ class Match[StateT: BaseModel]:
         try:
             jsonschema.validate(action.arguments, spec.parameters)
         except jsonschema.ValidationError as invalid:
-            return f"Invalid arguments for '{action.tool}': {invalid.message}."
+            error = f"Invalid arguments for '{action.tool}': {invalid.message}."
+            # With answer_repair on, the correction also names the tool's fields.
+            return error if repair_of(self.settings) == "off" else f"{error} {_fields(spec)}"
         return self.plugin.validate(self.state, player, action)
 
     def _stream(self, *key: str | int) -> random.Random:
@@ -386,6 +402,19 @@ def _storable(value: Any) -> Any:
     if isinstance(value, list | tuple):
         return [_storable(item) for item in value]
     return value
+
+
+def _fields(spec: ToolSpec) -> str:
+    """What a call of this tool may hold, for a correction."""
+    properties = spec.parameters.get("properties") or {}
+    if not properties:
+        return f"'{spec.name}' takes no arguments: send {{}} (and your thought)."
+    required = spec.parameters.get("required") or []
+    fields = ", ".join(
+        f"{name} ({schema.get('type', 'value')}{', required' if name in required else ''})"
+        for name, schema in properties.items()
+    )
+    return f"'{spec.name}' takes only: {fields}."
 
 
 def _engine_event(

@@ -5,6 +5,9 @@
 - `werewolf-p2`: `rules_v2.md` and a short summary above the situation, worked out from the
   observation only: your role and what you win with, the phase, who lives, the pack, the votes,
   and your own secrets (seer results, potions, lovers). It states nothing the player does not see.
+- `werewolf-p3`: `rules_v3.md` (what the first real matches taught: claim a Seer result early,
+  silence is no evidence, do not copy the pack's words, vote for the player you named, what each
+  role does with its power, brief thoughts) and the p2 summary plus a line of advice for this move.
 
 All functions are pure.
 """
@@ -13,9 +16,13 @@ from collections.abc import Mapping
 from importlib import resources
 from typing import Any
 
-VERSIONS = ("werewolf-p1", "werewolf-p2")
+VERSIONS = ("werewolf-p1", "werewolf-p2", "werewolf-p3")
 DEFAULT_VERSION = "werewolf-p1"
-_FILES = {"werewolf-p1": "rules.md", "werewolf-p2": "rules_v2.md"}
+_FILES = {
+    "werewolf-p1": "rules.md",
+    "werewolf-p2": "rules_v2.md",
+    "werewolf-p3": "rules_v3.md",
+}
 
 GOALS = {
     "village": "You win when every werewolf is dead. Find the wolves; do not waste your vote on villagers.",
@@ -117,3 +124,83 @@ def situation_summary(observation: Mapping[str, Any]) -> str:
             f"Your move now: {observation['step']}. {len(others)} other player(s) alive to choose from."
         )
     return "\n".join(lines)
+
+
+def move_advice(observation: Mapping[str, Any]) -> list[str]:
+    """One or two lines of advice for the move the player is about to make (version p3).
+
+    Built from the player's own observation only, and never names a role the player does not
+    hold: a villager's advice to speak or vote is the same as a wolf's.
+    """
+    if not observation["your_turn"]:
+        return []
+    step = observation["step"]
+    role = (observation["role"] or {}).get("id")
+    visions = observation.get("seer_results") or {}
+    alive = observation["alive"]
+    if step == "speak":
+        advice = [
+            "Speak in 60-100 words: one concrete fact or suspect with its reason, in your own words.",
+            "Silence or a short speech is not evidence; do not repeat another player's wording.",
+        ]
+        wolves = [
+            p
+            for p, r in visions.items()
+            if r in ("werewolf", "prime_wolf", "white_wolf") and p in alive
+        ]
+        if wolves:
+            advice.insert(
+                0,
+                f"You saw that {', '.join(wolves)} is a werewolf: say so now and name whom to vote for.",
+            )
+        return advice[:2]
+    if step == "vote":
+        advice = [
+            "Vote for the player you named in your speech; if you change your mind, say so in the reason."
+        ]
+        wolves = [
+            p
+            for p, r in visions.items()
+            if r in ("werewolf", "prime_wolf", "white_wolf") and p in alive
+        ]
+        if wolves:
+            advice.append(f"Your own vision says {', '.join(wolves)} is a werewolf: vote for them.")
+        return advice
+    if step == "captain_vote":
+        return [
+            "Choose the player whose reasoning rests on facts; the captain's vote counts double."
+        ]
+    if step == "hunter":
+        return ["Shoot your best wolf suspect, never a player confirmed as village."]
+    if step == "wolf":
+        return [
+            "Pick someone dangerous (a likely power role or a sharp reasoner); the pack's majority decides."
+        ]
+    if step == "night":
+        return {
+            "seer": [
+                "Check a player you know nothing about; do not check someone you already hold a result for."
+            ],
+            "witch": [
+                "Heal the victim if they could be a power role; poison only a player the Seer named or a clear liar."
+            ],
+            "protector": [
+                "Guard the player most likely to hold a power role; not the same player twice in a row."
+            ],
+            "raven": ["Mark the player you most suspect, never one you believe is village."],
+            "little_girl": [
+                "Spying risks being caught (15 %); spy at most two nights, then stay in bed."
+            ],
+            "cupid": ["Link two players who will protect each other."],
+        }.get(role or "", [])
+    return []
+
+
+def situation_summary_v3(observation: Mapping[str, Any]) -> str:
+    """The version p2 summary, and under it the advice for this move (version p3)."""
+    summary = situation_summary(observation)
+    advice = move_advice(observation)
+    if not advice:
+        return summary
+    lines = "\n".join(f"- {line}" for line in advice)
+    return f"{summary}\nFor this move:\n{lines}"

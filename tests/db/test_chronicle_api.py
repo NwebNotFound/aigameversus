@@ -75,3 +75,25 @@ def test_unknown_match_and_unchronicled_game_are_404_and_bad_options_422(client)
     assert client.get(f"/matches/{toy}/chronicle").status_code == 404
     assert client.get(f"/matches/{toy}/chronicle", params={"style": "tabloid"}).status_code == 422
     assert client.get(f"/matches/{toy}/chronicle", params={"lang": "fr"}).status_code == 422
+
+
+def test_a_werewolf_chronicle_names_players_by_display_name_and_has_a_glance_box(client):
+    import re
+
+    match_id = start(client, "werewolf", players=8, seed=4)
+    finish(client, match_id)
+
+    body = client.get(f"/matches/{match_id}/chronicle", params={"style": "news"}).json()
+    markdown = client.get(
+        f"/matches/{match_id}/chronicle", params={"format": "markdown", "lang": "de"}
+    ).text
+
+    text = " ".join([c["text"] for c in body["chapters"]] + [g["value"] for g in body["glance"]])
+    assert not re.search(r"\bp\d+\b", text + markdown), "a seat id reached the story"
+    assert "Bot 1" in text
+    assert [c["kind"] for c in body["chapters"]][0] == "prologue"
+    assert body["chapters"][-1]["kind"] == "epilogue"
+    assert body["glance_title"] == "Key facts"
+    assert {g["label"] for g in body["glance"]} >= {"Winner", "Length"}
+    assert body["key_moments"] and all("seq" in m for m in body["key_moments"])
+    assert "## Auf einen Blick" in markdown

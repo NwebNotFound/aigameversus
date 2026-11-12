@@ -4,6 +4,7 @@ Built from the stored log on every request (`arena.analytics`), so a running mat
 answers with its turns so far. Without `spoilers` only public events are read.
 """
 
+from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from arena.analytics import NoAnalytics, match_analytics
 from arena.api.live import LiveMatches
+from arena.db.ledger import LedgerUnavailable
 
 router = APIRouter(tags=["analytics"])
 
@@ -41,4 +43,25 @@ async def analytics(
     result["meta"]["seats"] = {
         seat: seats[seat].model_id if seat in seats else None for seat in record.players
     }
+    if "report" in result:
+        glance = result["report"]["at_a_glance"]
+        end = record.finished_at or datetime.now(UTC)
+        glance["duration_s"] = round((end - record.started_at).total_seconds())
+        try:
+            costs = await live.ledger.match_costs(match_id)
+            by_seat = {seat: costs.get(seat, 0) for seat in record.players}
+        except LedgerUnavailable:  # the report stays readable; the cost is unknown, not 0
+            by_seat = None
+        glance["cost_micro_eur"] = None if by_seat is None else sum(by_seat.values())
+        glance["cost_by_seat"] = by_seat
+        column = {
+            "key": "cost_micro_eur",
+            "label": {"en": "Cost", "de": "Kosten"},
+            "kind": "micro_eur",
+            "better": "lower",
+        }
+        result["report"]["columns"].append(column)
+        for row in result["report"]["ranking"]:
+            value = None if by_seat is None else by_seat[row["seat"]]
+            row["values"].append({**column, "value": value})
     return result

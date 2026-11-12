@@ -430,3 +430,48 @@ export function mentionParts(text: string, players: Record<string, Seat> | undef
 	if (last < text.length) parts.push({ text: text.slice(last) });
 	return parts.length ? parts : [{ text }];
 }
+
+/** A move's story of attempts: how many answers were refused, and whether the engine took over. */
+export interface Attempts {
+	retries: number;
+	fallback: boolean;
+}
+
+/**
+ * A model's refused answers are bookkeeping, not drama: each brings its own thought, so one
+ * move could show three thought clouds. Folded here: the thoughts of refused attempts are
+ * hidden (`hidden`) and the first line the move that finally counted tells carries the count
+ * (`marks`). A random move the engine played is marked too, the only case worth red.
+ */
+export function attempts(lines: TranscriptLine[]): {
+	hidden: Set<TranscriptLine>;
+	marks: Map<TranscriptLine, Attempts>;
+} {
+	const hidden = new Set<TranscriptLine>();
+	const marks = new Map<TranscriptLine, Attempts>();
+	type Open = { retries: number; fallback: boolean; thoughts: TranscriptLine[]; armed: boolean };
+	const open = new Map<string, Open>();
+	/** Seats the engine plays for from now on (`agent_failed`). */
+	const failed = new Set<string>();
+	for (const line of lines) {
+		const actor = line.actor;
+		if (!actor) continue;
+		const type = String(line.raw?.type ?? '');
+		let s = open.get(actor);
+		if (!s) open.set(actor, (s = { retries: 0, fallback: false, thoughts: [], armed: false }));
+		if (line.kind === 'thought') s.thoughts.push(line);
+		else if (type === 'action_rejected') {
+			s.retries += 1;
+			for (const t of s.thoughts) hidden.add(t); // that attempt's thinking went with it
+			s.thoughts = [];
+		} else if (type === 'action_fallback') s.fallback = s.armed = true;
+		else if (type === 'agent_failed') failed.add(actor);
+		else if (type === 'action_accepted') s.armed = true;
+		else if (line.kind !== 'info' && (s.armed || failed.has(actor))) {
+			const fallback = s.fallback || failed.has(actor);
+			if (s.retries || fallback) marks.set(line, { retries: s.retries, fallback });
+			open.delete(actor);
+		}
+	}
+	return { hidden, marks };
+}
