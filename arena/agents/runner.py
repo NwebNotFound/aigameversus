@@ -58,25 +58,27 @@ class ModelAgent:
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
         messages = build_messages(self._plugin.name, self._rules, request, summary, self._memory)
-        answer, tries = await self._call_model(messages, tool_schemas(request.tools))
+        answer, tries, rate_limits = await self._call_model(messages, tool_schemas(request.tools))
         usage = answer.usage
         stats = AnswerStats(
             tokens_in=usage.input_tokens if usage else None,
             tokens_out=usage.output_tokens if usage else None,
             reasoning_tokens=usage.reasoning_tokens if usage else None,
             retries=tries - 1,
+            rate_limits=rate_limits,
+            cut_off=answer.cut_off,
         )
         return _read(answer).model_copy(update={"stats": stats})
 
     async def _call_model(
         self, messages: list[Message], tools: list[dict[str, Any]]
-    ) -> tuple[ModelReply, int]:
-        """The model's answer and how many calls it took."""
-        tries = 0
+    ) -> tuple[ModelReply, int, int]:
+        """The model's answer, how many calls it took, and how many were rate-limited."""
+        tries = rate_limits = 0
         while True:
             tries += 1
             try:
-                return await self._call(messages, tools), tries
+                return await self._call(messages, tools), tries, rate_limits
             except ModelError as error:
                 rate_limited = error.reason == RATE_LIMITED
                 used_up = rate_limited and self._rate_limit_retries == 0
@@ -87,6 +89,7 @@ class ModelAgent:
                     ) from error
                 if rate_limited:
                     self._rate_limit_retries -= 1
+                    rate_limits += 1
                 base = RATE_LIMIT_BACKOFF_SECONDS if rate_limited else BACKOFF_SECONDS
                 delay = base * 2 ** (tries - 1) * (1 + JITTER * self._jitter())
                 # Only the kind of failure is logged: never the prompt or a provider message.

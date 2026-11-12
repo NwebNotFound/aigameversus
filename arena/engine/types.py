@@ -89,6 +89,8 @@ class AnswerStats(_Frozen):
     tokens_out: int | None = None
     reasoning_tokens: int | None = None
     retries: int = 0  # failed calls tried again before this answer
+    rate_limits: int = 0  # of those, the ones the provider refused as too many requests
+    cut_off: bool = False  # the answer ran into the output limit
 
 
 class Reply(_Frozen):

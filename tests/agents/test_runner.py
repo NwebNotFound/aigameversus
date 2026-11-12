@@ -247,7 +247,9 @@ def test_an_answer_reports_its_tokens_and_the_calls_tried_again():
         tool_call("play_card", {"card": 7}, usage=Usage(1200, 80, reasoning_tokens=30)),
     )
 
-    assert stats == AnswerStats(tokens_in=1200, tokens_out=80, reasoning_tokens=30, retries=1)
+    assert stats == AnswerStats(
+        tokens_in=1200, tokens_out=80, reasoning_tokens=30, retries=1, rate_limits=1
+    )
 
 
 def test_an_answer_without_usage_has_unknown_tokens():

@@ -5,7 +5,7 @@ import itertools
 from dataclasses import replace
 
 from arena.agents.mock_llm import MockLLM, tool_call
-from arena.agents.model import ModelError, Usage
+from arena.agents.model import ModelError, ModelReply, Usage
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
 from arena.engine.match import Match
@@ -54,6 +54,8 @@ def test_every_model_move_says_its_time_tokens_and_retries_for_spectators_only()
         "tokens_out": 90,
         "reasoning_tokens": 30,
         "retries": 1,
+        "rate_limits": 1,  # the retry was a rate limit
+        "cutoffs": 0,
         "fallback": None,
     }
     position = match.events.index(first)
@@ -102,3 +104,11 @@ def test_bots_leave_no_decision_events():
     asyncio.run(match.run())
 
     assert of_type(match, "decision") == []
+
+
+def test_an_answer_cut_off_at_the_output_limit_is_counted_on_its_move():
+    cut = ModelReply(text="I think that the best card is", cut_off=True)  # no tool call
+    match, _ = play({"p1": [cut, LOWEST] + [LOWEST] * HAND_SIZE}, clock=ticking())
+
+    first = of_type(match, "decision", "p1")[0].data
+    assert (first["answers"], first["cutoffs"], first["rate_limits"]) == (2, 1, 0)
