@@ -45,3 +45,7 @@ with `Remove-NetFirewallRule -DisplayName "AIGameVersus spectator (LAN, read-onl
 
 Check it from the computer itself: `GET /` answers `200`, `POST /matches/<id>/state` answers
 `405`, `GET /matches/new` answers `404`, and `http://<LAN_BIND_IP>:8100/health` does not answer.
+
+The proxy adds `X-AGV-Read-Only: 1` to every request it forwards (and overwrites one sent by a client), so the web server shows viewers no buttons, no form link and refuses writes itself too (`web/src/lib/server/read-only.ts`). Check: `GET /` through the proxy has no "New match" link; the same page on port 3100 has one.
+
+Not yet verified from a phone: the Windows rule needs an elevated PowerShell (step 3), and the address in `LAN_BIND_IP` must be re-set if the router hands out another one.
