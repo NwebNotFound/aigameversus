@@ -360,7 +360,10 @@ A match is a list of `Event`s. Engine events (`match_started`, `thought`,
 
 `decision` (spectators only) closes every move of a model and every move that
 ended in a random one: `{player, answers, latency_ms, tokens_in, tokens_out,
-reasoning_tokens, retries, fallback}`. `answers` counts the replies of the
+reasoning_tokens, retries, rate_limits, cutoffs, fallback}`. `rate_limits`
+are the retries the provider refused as too many requests, `cutoffs` the
+answers that ran into the output limit: neither means a model cannot call
+tools ([docs/model-qualification.md](docs/model-qualification.md)). `answers` counts the replies of the
 move (corrections included), the token counts add up what they reported
 (`null` when none did), `retries` counts failed calls tried again, `fallback`
 is the reason of a random move or `null`. `latency_ms` is the wall time of the

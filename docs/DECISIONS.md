@@ -120,10 +120,11 @@ with `python scripts/decisions.py adopt`.
 - [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
 - [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
 - [D-117](decisions/D-117-a-headline-for-viewers-is-a-match-flag-thought-headline-not.md) · A headline for viewers is a match flag, thought_headline, not a prompt version
-- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
+- [D-118](decisions/D-118-cut-off-answers-and-rate-limits-are-counted-apart-and-a.md) · Cut-off answers and rate limits are counted apart, and a model is qualified per route, game and configuration
 - [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
-- [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
 - [D-120](decisions/D-120-free-variants-are-left-out-of-the-catalog-and-every-model.md) · Free variants are left out of the catalog, and every model says how reliably it has played here
+- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
 - [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule
+- [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
 - [D-129](decisions/D-129-a-repaired-move-carries-a-muted-marker-per-tier-spoiler-free.md) · A repaired move carries a muted marker per tier; spoiler-free shows the tier and probability only
 - [D-123](decisions/D-123-jev.md) · Jev calibration preserves intent and separates human agreement from ground truth
