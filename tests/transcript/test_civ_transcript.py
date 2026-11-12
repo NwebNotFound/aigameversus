@@ -1,7 +1,6 @@
 """The Throne of Tokens play-by-play: public lines without spoilers, readable cities and armies."""
 
 import asyncio
-import json
 import re
 
 import pytest
@@ -33,15 +32,14 @@ def texts(lines):
     return [line.text for line in lines]
 
 
-def test_without_spoilers_the_rounds_say_where_cities_stand_and_who_won_battles(events):
+def test_without_spoilers_a_founding_shows_who_but_never_where(events):
     lines = render_match(events, NAMES, spoilers=False)
-    kinds = {line.raw["type"] for line in lines}
+    founded = [line for line in lines if line.raw["type"] == "city_founded"]
 
-    assert {"round_started", "city_founded", "battle"} <= kinds
-    founded = [line.text for line in lines if line.raw["type"] == "city_founded"]
-    assert all("Bot" in text and "(" in text for text in founded)
-    battle = next(line for line in lines if line.raw["type"] == "battle")
-    assert "wins" in battle.text and battle.detail is None  # no losses without spoilers
+    assert founded and all(re.fullmatch(r"Bot \d founds a city", line.text) for line in founded)
+    assert all(set(line.raw["data"]) == {"owner"} for line in founded)
+    german = render_match(events, NAMES, lang="de", spoilers=False)
+    assert any("gründet eine Stadt" in line.text for line in german)
 
 
 def test_the_round_heading_carries_the_public_city_count_of_every_nation(events):
@@ -56,19 +54,28 @@ def test_the_round_heading_carries_the_public_city_count_of_every_nation(events)
     )
 
 
-def test_a_battle_in_the_public_view_leaks_no_power_and_no_losses(events):
-    for line in render_match(events, NAMES, spoilers=False):
-        if line.raw["type"] == "battle":
-            assert set(line.raw["data"]) <= {"tile", "winner", "attacker", "defender"}
-            assert set(line.raw["data"].get("attacker", {})) <= {"nation"}
-            assert "power" not in json.dumps(line.raw) and "lost" not in json.dumps(line.raw)
+@pytest.mark.parametrize("seed", [1, 2, 3, 5])
+def test_the_public_view_names_no_place_of_a_city_nobody_conquered(seed):
+    events = played(seed=seed)
+    conquered = {e.data["city"] for e in events if e.type == "city_conquered"}
+    founded = {
+        e.data["city"]: (e.data["col"], e.data["row"]) for e in events if e.type == "city_founded"
+    }
+    allowed = {founded[c] for c in conquered if c in founded}
+    lines = render_match(events, NAMES, spoilers=False)
+    text = chr(10).join(line.text + " " + (line.detail or "") for line in lines)
+
+    shown = {(int(a), int(b)) for a, b in re.findall(r"\((\d+), (\d+)\)", text)}
+    assert shown <= allowed, shown - allowed
+    assert "Battle at" not in text and "Schlacht" not in text
+    assert not any(line.raw["type"] == "battle" for line in lines)
 
 
 def test_nothing_else_private_appears_without_spoilers(events):
     shown = {line.raw["type"] for line in render_match(events, NAMES, spoilers=False)}
     private = {e.type for e in events if e.visible_to is not None}
 
-    assert (shown & private) <= {"city_founded", "battle", "match_started"}
+    assert (shown & private) <= {"city_founded", "match_started"}
 
 
 def test_cities_and_armies_read_as_who_where_and_how_big(events):

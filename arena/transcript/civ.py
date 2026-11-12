@@ -8,7 +8,7 @@ rounds, public talk, treaties and wars, conquests, the economic countdown and th
 from collections.abc import Mapping
 
 from arena.engine.types import Event
-from arena.transcript.common import Base
+from arena.transcript.common import Base, TranscriptLine
 
 NEUTRAL = "neutral"
 
@@ -34,30 +34,34 @@ class Civ(Base):
         self.sizes: dict[str, int] = {}  # army id -> units
         self.nations: set[str] = set()
 
-    # Public by the board (hex_map): where a city is founded and who won a battle. The rest of the
-    # nation's own events stay out of the view without spoilers.
-    BOARD_PUBLIC = {"city_founded", "battle"}
+    # Private events whose count is public by rule (D-128); they are shown without any place.
+    PLACELESS = {"city_founded"}
 
     def line(self, event: Event, seq: int | None = None):
         self.track(event)
-        if not self.spoilers and event.visible_to is not None and event.type in self.BOARD_PUBLIC:
-            built = super().line(event.model_copy(update={"visible_to": None}), seq)
-            if built is not None:  # no powers and no losses in the raw event
-                keep = {"tile", "winner", "city", "owner", "col", "row"}
-                data = {k: v for k, v in built.raw["data"].items() if k in keep}
-                for side in ("attacker", "defender"):
-                    if side in built.raw["data"]:
-                        data[side] = {"nation": built.raw["data"][side].get("nation")}
-                built = built.model_copy(
-                    update={"raw": {**built.raw, "visible_to": event.visible_to, "data": data}}
-                )
-            return built
+        if not self.spoilers and event.type in self.PLACELESS and event.visible_to is not None:
+            # Only the count is public (D-128), never the place: "Bot 3 founds a city".
+            owner = event.data["owner"]
+            raw = event.model_dump(mode="json")
+            raw["data"] = {"owner": owner}
+            raw["visible_to"] = None
+            return TranscriptLine(
+                seq=seq,
+                kind="action",
+                actor=owner,
+                text=self.w.pick(
+                    f"{self.who(owner)} founds a city", f"{self.who(owner)} gründet eine Stadt"
+                ),
+                importance=2,
+                raw=raw,
+            )
         return super().line(event, seq)
 
     def track(self, event: Event) -> None:
         """What later labels and the scoreboard need: where cities stand, how big armies are."""
         data = event.data
         if event.type == "city_founded":
+            self.cities[data["city"]] = data["owner"]
             self.tiles[data["city"]] = (data["col"], data["row"])
             self.nations.add(data["owner"])
         elif event.type == "army_raised":
@@ -75,6 +79,7 @@ class Civ(Base):
         elif event.type == "army_disbanded":
             self.sizes.pop(data["army"], None)
         elif event.type == "city_conquered":
+            self.cities[data["city"]] = data["to"]
             self.nations.add(data["to"])
 
     def learn(self, event: Event) -> None:
