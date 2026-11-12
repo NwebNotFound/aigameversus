@@ -506,6 +506,11 @@ npm run test:unit             # vitest
 npx playwright test           # smoke tests on 3100 (WEB_URL overrides); needs demo_seed data
 ```
 
+Read-only web: with `READ_ONLY=1`, or for a request with the header `X-AGV-Read-Only: 1`
+(which the LAN proxy sets, `deploy/lan/nginx.conf`), the web server refuses every write
+(405) and the new-match form (404), and the pages hide the controls and the links to the
+form (`web/src/hooks.server.ts`, `web/src/lib/server/read-only.ts`).
+
 A spec that changes network answers (`page.route`) imports `test` and `expect` from
 `web/tests/routes.ts`, not from `@playwright/test`, and rewrites a real answer with
 `rewrite(page, url, edit)`: a handler that outlives its test is then dropped instead of
