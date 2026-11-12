@@ -627,7 +627,12 @@ Such a model goes by its OpenRouter id (`vendor/model`) and is booked at
 OpenRouter's listed price times 1.25 (`UNVERIFIED_PRICE_MARGIN`: not checked
 by hand), behind the same caps; a price that is not a finite number up to
 10,000 USD per million tokens, and every `:` variant but `:free`, leave a
-model out; `catalog.resolve` adds it to the config where
+model out (and `:free` variants are listed only with `?free=1`, marked
+`rate_limited_likely`); every entry and model page has `reliability` from
+the arena's own logs (`arena/db/reliability.py`: unreliable after a seat that
+gave up in its last 2 matches or more than half of its last 20 moves by the
+bot, unknown below 20 moves, warnings for cut-off answers and rate limits);
+`catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
 `tests/conftest.py` refuses, and `tests/test_catalog.py` hands over a sample.

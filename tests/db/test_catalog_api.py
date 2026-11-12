@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import arena.catalog as catalog
+from arena.agents.model import ModelError
 from arena.api.app import app
 from tests.db.test_model_seats_api import KEY, PLAY_3, calls, finish
 from tests.test_catalog import serve
@@ -141,3 +142,80 @@ def test_an_estimate_refuses_an_id_in_no_catalog(client, monkeypatch):
 
     assert out.status_code == 422
     assert "GET /models/catalog" in out.json()["detail"]
+
+
+def test_free_variants_are_left_out_unless_asked_for(client, monkeypatch):
+    serve(monkeypatch)
+
+    plain = {m["id"] for m in client.get("/models/catalog").json()["models"]}
+    with_free = client.get("/models/catalog", params={"free": 1}).json()["models"]
+
+    assert "acme/gratis:free" not in plain
+    gratis = next(m for m in with_free if m["id"] == "acme/gratis:free")
+    assert gratis["rate_limited_likely"] is True and gratis["free"] is True
+    assert all(not m["rate_limited_likely"] for m in with_free if m["id"] != "acme/gratis:free")
+
+
+def test_a_model_whose_seat_gave_up_is_marked_unreliable_and_says_why(client, monkeypatch):
+    serve(monkeypatch)
+    answer_with_error = ModelError("AuthenticationError", retryable=False)
+    monkeypatch.setattr(
+        "arena.agents.budget.LiteLLMModel.__call__",
+        lambda self, messages, tools: (_ for _ in ()).throw(answer_with_error),
+    )
+
+    started = client.post(
+        "/matches",
+        json={"game": "toy", "models": ["acme/plays", "glm-flash"], "confirm_spend": True},
+    )
+    finish(client, started.json()["id"])
+    client.app.state.reliability = None  # the verdicts are kept for a minute
+    models = {m["id"]: m for m in client.get("/models/catalog").json()["models"]}
+
+    plays = models["acme/plays"]["reliability"]
+    assert plays["status"] == "unreliable"
+    assert "gave up in 1 of its last 2 matches" in plays["reason"]
+    assert plays["agent_failed_recent"] == 1
+    assert models["acme/thinks"]["reliability"]["status"] == "unknown"  # never played here
+
+
+def test_a_seat_that_gave_up_three_matches_ago_no_longer_counts(client, monkeypatch, answer_with):
+    serve(monkeypatch)
+    body = {"game": "toy", "models": ["acme/plays", "glm-flash"], "confirm_spend": True}
+    with monkeypatch.context() as broken:
+        error = ModelError("AuthenticationError", retryable=False)
+        broken.setattr(
+            "arena.agents.budget.LiteLLMModel.__call__",
+            lambda self, messages, tools: (_ for _ in ()).throw(error),
+        )
+        finish(client, client.post("/matches", json=body).json()["id"])
+    answer_with(**PLAY_3)
+    for _ in range(2):
+        finish(client, client.post("/matches", json=body).json()["id"])
+    client.app.state.reliability = None
+
+    models = client.get("/models/catalog").json()["models"]
+    plays = next(m for m in models if m["id"] == "acme/plays")["reliability"]
+
+    assert plays["agent_failed_recent"] == 0
+    assert plays["status"] == "unknown"  # too few moves for a verdict; the old failure is gone
+
+
+def test_a_model_in_two_seats_of_one_match_counts_that_match_once(client, monkeypatch):
+    serve(monkeypatch)
+    body = {"game": "toy", "models": ["acme/plays", "acme/plays"], "confirm_spend": True}
+    error = ModelError("AuthenticationError", retryable=False)
+    with monkeypatch.context() as broken:
+        broken.setattr(
+            "arena.agents.budget.LiteLLMModel.__call__",
+            lambda self, messages, tools: (_ for _ in ()).throw(error),
+        )
+        finish(client, client.post("/matches", json=body).json()["id"])
+    client.app.state.reliability = None
+
+    models = client.get("/models/catalog").json()["models"]
+    plays = next(m for m in models if m["id"] == "acme/plays")["reliability"]
+
+    assert plays["agent_failed_recent"] == 1  # one match, not two
+    assert plays["matches"] == 1
+    assert "gave up in 1 of its last 2 matches" in plays["reason"]

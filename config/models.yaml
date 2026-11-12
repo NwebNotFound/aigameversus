@@ -17,6 +17,17 @@ limits:
   # gets to its move. minimal, low, medium or high.
   reasoning_effort: low
 
+# When a model is marked unreliable in the catalog and on its page, from this arena's own
+# logs: its seat gave up in one of its newest `matches` matches, or the random bot played
+# more than `fallback_above` of its newest `moves` moves; fewer moves give "unknown".
+# Cut-off answers and rate limits only warn. A selection is never blocked.
+reliability:
+  moves: 20
+  matches: 2
+  fallback_above: 0.5
+  cut_off_above: 0.1
+  throttled_above: 0.2
+
 # Prices in USD per million tokens, as listed by openrouter.ai on 2026-11-11.
 # The caps count with these numbers: check them when you add or keep a model.
 models:
