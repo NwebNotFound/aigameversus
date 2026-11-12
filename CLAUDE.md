@@ -510,6 +510,12 @@ Read-only web: with `READ_ONLY=1`, or for a request with the header `X-AGV-Read-
 (405) and the new-match form (404), and the pages hide the controls and the links to the
 form (`web/src/hooks.server.ts`, `web/src/lib/server/read-only.ts`).
 
+A spec that changes network answers (`page.route`) imports `test` and `expect` from
+`web/tests/routes.ts`, not from `@playwright/test`, and rewrites a real answer with
+`rewrite(page, url, edit)`: a handler that outlives its test is then dropped instead of
+failing a green run ("route.fetch: Test ended"). `npm run lint` refuses a spec that
+routes without it.
+
 Secret scan (same as CI):
 
 ```bash

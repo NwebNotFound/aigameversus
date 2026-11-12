@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, rewrite } from './routes.js';
 
 // The player chips of the watch screen: a model seat always shows its model, never "bot".
 // A real model match costs money, so the live page's own state refresh is answered with
@@ -16,18 +16,12 @@ test('model seats show the model and are never called bots', async ({ page, requ
 		p1: { name: 'gemini-flash-lite', model_id: 'gemini-flash-lite', kind: 'model' },
 		p2: { name: 'Random Bot p2', model_id: null, kind: 'bot' }
 	};
-	await page.route(`**/matches/${match.id}/state*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${match.id}/state*`, (body) => {
 		body.match.seats = seats;
 		body.cost = { total_micro_eur: 1200, players: { p1: 1200 } };
-		await route.fulfill({ response, json: body });
 	});
-	await page.route(`**/matches/${match.id}/transcript*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${match.id}/transcript*`, (body) => {
 		body.players = { p1: { name: null, model: null }, p2: { name: 'Random Bot p2', model: null } };
-		await route.fulfill({ response, json: body });
 	});
 
 	await page.goto(`/matches/${match.id}`);
@@ -61,19 +55,13 @@ test('in a 4-model match no visible text names a seat id, except the seat badges
 	const seats = Object.fromEntries(
 		models.map((m, i) => [`p${i + 1}`, { name: m, model_id: m, kind: 'model' }])
 	);
-	await page.route(`**/matches/${match.id}/state*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${match.id}/state*`, (body) => {
 		body.match.seats = seats;
-		await route.fulfill({ response, json: body });
 	});
-	await page.route(`**/matches/${match.id}/transcript*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${match.id}/transcript*`, (body) => {
 		body.players = Object.fromEntries(
 			Object.keys(seats).map((s) => [s, { name: null, model: null }])
 		);
-		await route.fulfill({ response, json: body });
 	});
 
 	await page.goto(`/matches/${match.id}`);

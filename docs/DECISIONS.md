@@ -117,5 +117,6 @@ with `python scripts/decisions.py adopt`.
 - [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
 - [D-114](decisions/D-114-a-garbled-tool-call-that-clearly-means-one-move-is-repaired.md) · A garbled tool call that clearly means one move is repaired, and the move says so
 - [D-111](decisions/D-111-a-model-may-set-its-own-call-options-rate-limits-are-waited.md) · A model may set its own call options; rate limits are waited out longer, within a budget
-- [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
 - [D-113](decisions/D-113-refused-answers-are-answer-quality-a-retry-marker-on-the.md) · Refused answers are answer quality: a retry marker on the move, red only for a random move
+- [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
+- [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
