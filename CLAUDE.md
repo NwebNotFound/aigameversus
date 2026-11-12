@@ -908,6 +908,10 @@ next to it says what each does and what the generator guarantees.
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
   and `your_plan_from_last_round` exist only when it is on).
+  `GET /matches/{id}/analytics` answers for Civ too (`arena/analytics/civ.py`,
+  `analytics_version: "civ/1"`). It gives per-round series per nation, battles,
+  conquests, diplomacy, orders, decision metrics and behaviour tags.
+  docs/METRICS.md defines them, and which need `spoilers=true`.
 
 How these follow the engine's rules, and what the next systems should copy:
 

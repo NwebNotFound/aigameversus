@@ -297,6 +297,101 @@ speech by simple rules, each marked `heuristic: true`.
   no roles but those revealed at death (`meta.revealed`); `meta.roles` is
   null.
 
+## Throne of Tokens
+
+`arena/analytics/civ.py`. The answer carries `analytics_version: "civ/1"`, which
+changes whenever the shape does. With spoilers, the game events are applied to a
+fresh state in order, as a replay does, and each nation is read at the end of every
+round. Almost every event of the game is private to one nation. So without spoilers
+`series`, `battles`, `orders`, `decisions` and `behaviour` are `null`, because a
+state rebuilt from the public events would be wrong. Only what every nation saw
+remains: conquests, wars and treaties, the gold countdown, public talk and the final
+standings.
+
+### Per round (`series`, spoilers only)
+
+`series.rounds` is the list of resolved rounds. Each list below has one value per
+round, read at the end of that round.
+
+| Field (`series.nations.<nation>`) | Meaning |
+|---|---|
+| `stock` | The nation's food, wood, iron and gold. |
+| `income` | What its cities produced that round (`production` events), per resource. |
+| `cities`, `population` | Cities held, and the sum of their population. |
+| `armies`, `units`, `strength` | Armies, units in them, and their summed strength (`combat.strength`). |
+| `score` | The round-limit score (`victory.score`). Its last value equals the final standings. |
+| `reputation`, `at_war` | Reputation, and the nations it is at war with. |
+
+`series.progress` holds `cities_total`, `domination_needed` (the city count a
+domination needs), `leader` and `leader_cities` (most cities; ties go to seat
+order), and `gold_countdown` (`{nation, rounds_held}` of the holder closest to the
+economic victory, or `null`).
+
+### End and progress (`victory`)
+
+- `kind` is `round_limit`, `domination` or `economy`, or `null` while the match
+  runs. `winners`, `round` and `standings` (score and rank per nation) come from the
+  public `victory` event.
+- `countdown` lists every public `economy_countdown`: `{round, rounds, needed}`.
+
+### Battles and conquests
+
+- `battles` (spoilers only) holds every `battle` with `seq`, `round`, `tile`,
+  attacker and defender (nation, armies or city, power, units lost) and `winner`.
+  Barbarian battles count.
+- `conquests` (public) holds `{seq, round, city, from, to}`. `to: "neutral"` means
+  barbarians took the city.
+
+### Diplomacy (`diplomacy`)
+
+- `timeline` (public): every `war_declared`, `treaty_signed`, `treaty_broken` and
+  `treaty_expired` with `seq`, `round`, `event`, who (`by`, `on`, `joined`,
+  `parties`), `treaty` and `treaty_kind`. A war declared on a treaty partner lists
+  the treaties it broke in `broken`.
+- `by_nation`: these counts are public: `wars_declared`, `treaties_signed`,
+  `treaties_broken` and `messages_public`. These need spoilers and are `null`
+  without: `messages_private`, `offers_sent`, `offers_received`, and of the offers a
+  nation received, `offers_accepted`, `offers_declined` and `offers_lapsed`.
+
+### Orders (`orders`, spoilers only)
+
+Per nation:
+
+- `submitted` counts the orders in its own calls. `by_fallback` counts those the
+  engine's random fallback sent for it.
+- `dropped` counts its `order_refused` events, with `dropped_share` = dropped /
+  (submitted + by_fallback).
+- `by_type` gives sent and dropped per order type.
+- `reasons` lists the most frequent kinds of refusal, at most 5, `{reason,
+  count}`. A kind is the order type plus the refusal's first sentence with ids and
+  numbers replaced by `#`.
+
+### Decisions (`decisions`, spoilers only)
+
+As in the other games, from the engine's `decision` events:
+
+- `moves` counts the nation's calls and fallbacks. `model_moves` counts the moves
+  with a `decision` event, so it is 0 for a bot.
+- `fallbacks`, `fallback_share` and `rejected` come from the action events.
+- `response_ms_total`, `response_ms_mean`, `tokens_in`, `tokens_out` and
+  `reasoning_tokens` are summed over the decisions, `null` when none reported them.
+- `retries`, `rate_limits` and `cutoffs` are summed too, 0 for a bot.
+
+### Behaviour tags (`behaviour`, spoilers only)
+
+Rules on the counts they rest on, which each nation's `counts` lists. A nation can
+carry several tags. A tag says what happened, not why.
+
+| Tag | Rule |
+|---|---|
+| `aggressor` | Declared at least one war, or ordered at least 3 attacks on tiles another nation held. |
+| `betrayer` | Broke at least one treaty, by `break_treaty` or by declaring war on a treaty partner. |
+| `trader` | Was a party to at least 2 agreed trades. |
+| `turtle` | No war declared, no attack, and at least 5 fortify orders or at least 2 walls built. |
+
+Random bots never declare war, attack or make offers, so a match of bots alone can
+only show `turtle`.
+
 ## Table-talk checks
 
 `GET /matches/{id}/talk-checks` (`arena/analytics/talk.py`, D-122): statements about the speaker's
