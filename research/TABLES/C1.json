@@ -9,5 +9,6 @@
   "reservation_micro_eur": 200000,
   "smoke": true,
   "requires_c1_smoke": false,
-  "guest_price_ceilings": {}
+  "guest_price_ceilings": {},
+  "expected_history_limit_events": 120
 }

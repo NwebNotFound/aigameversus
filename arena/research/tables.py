@@ -71,11 +71,12 @@ def load_job(path):
         "smoke",
         "requires_c1_smoke",
         "guest_price_ceilings",
+        "expected_history_limit_events",
     }
     if set(job) != allowed or job["stage"] not in {"C1", "W2"}:
         raise RunStopped("Unknown or missing job fields")
     expected = (
-        (1_000_000, 200_000, 200_000) if job["stage"] == "C1" else (3_500_000, 400_000, 500_000)
+        (1_000_000, 200_000, 200_000) if job["stage"] == "C1" else (3_500_000, 400_000, 400_000)
     )
     if (
         tuple(job[k] for k in ("budget_micro_eur", "match_micro_eur", "reservation_micro_eur"))
@@ -86,6 +87,8 @@ def load_job(path):
         raise RunStopped("Missing approval or noncanonical batch id")
     if job["smoke"] != (job["stage"] == "C1") or job["requires_c1_smoke"] != (job["stage"] == "W2"):
         raise RunStopped("Smoke gate changed")
+    if job["expected_history_limit_events"] != (120 if job["stage"] == "C1" else 40):
+        raise RunStopped("Unexpected research history-window metadata")
     csv_path = path.parent / job["csv"]
     if hashlib.sha256(csv_path.read_bytes()).hexdigest() != job["csv_sha256"]:
         raise RunStopped("CSV hash changed")
@@ -159,12 +162,25 @@ def start_allowed(spent, estimate, job, month):
 
 
 class Tables:
-    def __init__(self, job_path, root, request, *, sleep=time.sleep, say=print):
+    def __init__(
+        self,
+        job_path,
+        root,
+        request,
+        *,
+        sleep=time.sleep,
+        say=print,
+        now=time.time,
+        max_wait_seconds=3600,
+    ):
         self.job, self.rows = load_job(job_path)
         self.root = root
         self.out = root / self.job["stage"]
         self.out.mkdir(parents=True, exist_ok=True)
         self.request, self.sleep, self.say = request, sleep, say
+        if not 0 < max_wait_seconds <= 3600:
+            raise RunStopped("Active wait must be bounded at one hour or less")
+        self.now, self.max_wait_seconds = now, max_wait_seconds
         self.path = self.out / "run.json"
         self.frozen = digest({"job": self.job, "rows": self.rows})
         self.state = (
@@ -246,6 +262,15 @@ class Tables:
         if record["status"] not in {"running", "finished"}:
             reasons.append(f"match {record['status']}")
         intent = self.state["intents"].get(str(row["order"]), {})
+        if record["status"] == "running":
+            deadline = intent.get("wait_deadline_epoch")
+            if deadline is None and record.get("started_at"):
+                deadline = (
+                    datetime.fromisoformat(record["started_at"].replace("Z", "+00:00")).timestamp()
+                    + self.max_wait_seconds
+                )
+            if deadline is None or self.now() > deadline:
+                reasons.append("active wait deadline exceeded or unavailable")
         quote = intent.get("estimate_micro_eur", row["estimate_micro_eur"])
         jump_limit = (
             160_000
@@ -391,6 +416,7 @@ class Tables:
                     "month_before_micro_eur": month,
                     "arena_build": arena_build,
                     "requested_at": datetime.now(UTC).isoformat(),
+                    "wait_deadline_epoch": self.now() + self.max_wait_seconds,
                     "setup_caps": setup["caps"],
                     "match_id": None,
                 }

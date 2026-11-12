@@ -6,7 +6,7 @@
   "csv_sha256": "cb9360d3662956770839ac36ed6591d02cc026b5836fdd363730814d0fd1c2c1",
   "budget_micro_eur": 3500000,
   "match_micro_eur": 400000,
-  "reservation_micro_eur": 500000,
+  "reservation_micro_eur": 400000,
   "smoke": false,
   "requires_c1_smoke": true,
   "guest_price_ceilings": {
@@ -26,5 +26,6 @@
       "input_usd_per_mtok": 2,
       "output_usd_per_mtok": 10
     }
-  }
+  },
+  "expected_history_limit_events": 40
 }

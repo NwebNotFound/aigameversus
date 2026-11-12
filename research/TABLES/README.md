@@ -8,7 +8,7 @@ attempts. There are no arbitrary model/setting/order overrides or rerun commands
 
 Lead approvals: C1 `454cd9d8` (four rotations with Haiku, EUR 1.00, supersedes the
 earlier mistaken 16-match/Mistral description); W2 `5c29a3f0` (eight role cells,
-EUR 3.50). Ownership/order `98efac40`: Researcher authors, Reviewer reviews,
+EUR 3.50). Final ownership/order `44f4ab77`: #168 is the sole client, Researcher authors, Reviewer reviews,
 C1 first smoke then W2, serial. These approvals do not replace the client's
 money-path review/merge or the written PR pre-start report. No paid call was
 made while writing this client. The older proposal documents' execution=false
@@ -19,7 +19,7 @@ C1 sets `match_budget_eur=0.20`. It must stop after table 1 for a Researcher
 review: no failed agent, no model above 10% fallback, finished normally and
 actual cost at most EUR 0.16. Later C1 tables and W2 require a persisted smoke
 release linked to the finished report's SHA-256 and match id. W2 enforces 0.40
-per match, but conservatively reserves 0.50 per Lead's explicit acceptance.
+per match and reserves that same 0.40 per final Lead42080496 (supersedes 0.50).
 The independent `spent + 3 * fresh estimate <= 90% of stage budget` and full
 reservation rules must both pass before each start. No budget-blocked cell is
 rerun. A pause, interruption, agent failure or above-gate fallback is a hold.
@@ -75,7 +75,12 @@ live running list immediately before each POST. Existing server per-match/month
 caps remain the authoritative financial boundary. No claim of distributed
 exactly-once dispatch is made; ambiguous cases stop instead of risking duplicates.
 
-Tests use a fake arena only. `mutations.json` records four deliberate bypasses
-(full reservation, 3x/90%, monthly hold, effective cap) that made targeted tests
+Tests use a fake arena only. `mutations.json` records six deliberate bypasses
+(full reservation, 3x/90%, monthly hold, effective cap, dry-run dispatch and confirm_spend) that made targeted tests
 fail. Raw live exports remain local/ignored; no player observation is created
 from the research CSV, which contains no hidden role map.
+
+An active match has a persisted one-hour deadline; it cannot wait forever or
+reset its timer on restart. Expiry holds and attempts to pause that own match.
+C1 records the expected 120-event history window (W2 remains 40); verify the
+actual deployed hook/build in the pre-start report before enabling execution.

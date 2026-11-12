@@ -15,6 +15,16 @@
     "killed": true
   },
   {
+    "mutation": "dry-run-dispatch",
+    "test_exit": 1,
+    "killed": true
+  },
+  {
+    "mutation": "confirm-spend",
+    "test_exit": 1,
+    "killed": true
+  },
+  {
     "mutation": "effective-cap",
     "test_exit": 1,
     "killed": true

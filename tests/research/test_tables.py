@@ -1,10 +1,12 @@
 """No sockets/models: exercise the money/client boundary with a fake arena."""
 
 import copy
+import csv
 import hashlib
 from pathlib import Path
 
 import pytest
+import yaml
 
 from arena.research.runner import RunStopped
 from arena.research.tables import Tables, load_job, lock, read_json, save, start_allowed
@@ -125,6 +127,22 @@ def test_reviewed_inputs_and_no_csv_tampering(tmp_path):
     save(tmp_path / "job.json", job)
     with pytest.raises(RunStopped, match="hash"):
         load_job(tmp_path / "job.json")
+
+
+def test_explicit_jobs_preserve_the_registered_seeds_rosters_and_order():
+    root = JOBS.parents[1]
+    c1 = yaml.safe_load((root / "research/C1/PLAN.yaml").read_text())
+    _, c1_rows = load_job(JOBS / "C1.json")
+    for index, row in enumerate(c1_rows):
+        assert row["seed"] == c1["seed"]
+        assert row["models"] == c1["models"][index:] + c1["models"][:index]
+    with (root / "research/W2/schedule.csv").open(newline="") as stream:
+        registered = list(csv.DictReader(stream))
+    _, w2_rows = load_job(JOBS / "W2.json")
+    for row, original in zip(w2_rows, registered, strict=True):
+        assert row["order"] == int(original["order"])
+        assert row["seed"] == int(original["seed"])
+        assert row["models"] == [original[f"p{i}"] for i in range(1, 9)]
 
 
 def test_dry_run_never_posts_a_match(tmp_path):
@@ -288,6 +306,39 @@ def test_both_stages_share_smoke_gate_then_complete_without_duplicate_posts(tmp_
     assert len(api.bodies) == 9  # one C1 smoke plus eight W2 tables
     assert client(tmp_path, api, "W2").run(**EVIDENCE) == "finished"
     assert len(api.bodies) == 9
+    assert client(tmp_path / "fresh-output", api, "W2").run(**EVIDENCE) == "finished"
+    assert len(api.bodies) == 9  # Same server batch, no replay even without local journal.
+
+
+def test_w2_reserves_only_its_enforced_table_limit():
+    job, _ = load_job(JOBS / "W2.json")
+    assert job["reservation_micro_eur"] == job["match_micro_eur"] == 400_000
+    start_allowed(3_100_000, 1, job, 3_756_279)
+    with pytest.raises(RunStopped, match="Full reservation"):
+        start_allowed(3_100_001, 1, job, 3_756_279)
+
+
+def test_never_ending_match_has_a_persisted_bounded_wait(tmp_path):
+    api = FakeArena()
+    api.status = "running"
+    clock = [0]
+
+    def advance(_):
+        clock[0] += 2
+
+    runner = Tables(
+        JOBS / "C1.json",
+        tmp_path,
+        api,
+        sleep=advance,
+        say=lambda _: None,
+        now=lambda: clock[0],
+        max_wait_seconds=1,
+    )
+    with pytest.raises(RunStopped, match="deadline"):
+        runner.run(**EVIDENCE)
+    assert len(api.bodies) == 1 and api.pauses
+    assert read_json(tmp_path / "C1/run.json")["intents"]["1"]["wait_deadline_epoch"] == 1
 
 
 @pytest.mark.parametrize("change", ["duplicate", "gap", "roster", "settings"])
