@@ -57,6 +57,14 @@ the caps of [config/models.yaml](../config/models.yaml) (0.50 EUR per match,
 environment (default: `DATABASE_URL`), with `127.0.0.1:5435` instead of
 `host.docker.internal`.
 
+## A known overstatement in the ledger
+
+Until 2026-11-12 (#106) a call that the provider refused with a rate limit
+(429) stayed booked at its upper bound, although it cost nothing: 48 calls,
+0.088 EUR, nearly all of them qwen-flash and gemini-flash-lite. They are left
+in the ledger as the record of what was booked; since #106 such a call is
+booked at 0.
+
 ## Safety net
 
 Before a model match starts, the arena (API and command) checks the ledger:
