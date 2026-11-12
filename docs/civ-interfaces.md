@@ -93,7 +93,8 @@ runs (a missing field is an `order_refused`). This is its shape:
   together; a `message` text has at most 60 words. The schema caps the
   list; the plugin drops every message and offer beyond those numbers, and
   a longer text, with `order_refused`.
-- `plan` (optional) is the nation's own short plan, cut to its first 60
+- `plan` (optional, and only in a match with the setting `private_plan: "on"`, D-135;
+  the field is absent from the tool otherwise) is the nation's own short plan, cut to its first 60
   words. Only that nation reads it again: as `your_plan_from_last_round` in
   its next observation (`plan_set`, private). It is kept in the state, never
   shown to another nation, and spectators see it.
