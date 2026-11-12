@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import hexFixture from '../boards/fixture-hex-map.json';
-import type { LiveState, MatchEvent } from '../api.js';
+import type { LiveState, MatchEvent, Transcript, TranscriptLine } from '../api.js';
 import {
 	publicBoard,
 	publicEvents,
 	publicSettings,
 	publicState,
-	publicTranscript
+	publicTranscript,
+	withRepairMarks
 } from './redact.js';
 
 // Board specs as the plugins' render_spec writes them (spectator data included).
@@ -204,6 +205,32 @@ describe('the Throne of Tokens map, spoiler-free: one nation sees it', () => {
 		}
 	});
 
+	it('keeps a battle the nation fought even off its seen tiles, and its own fortification', () => {
+		const spec = {
+			...(hexFixture as Record<string, unknown>),
+			battles: [{ tile: [9, 5], winner: 'p2', nations: ['p1', 'p2'], round: 3 }],
+			armies: [
+				{
+					id: 'own',
+					owner: 'p1',
+					tile: [0, 0],
+					strength: 3,
+					units: { spearman: 1 },
+					fortified: true
+				}
+			]
+		};
+		const board = publicBoard(spec, 'p1')!;
+		expect(board.battles).toEqual([{ tile: [9, 5], winner: 'p2' }]);
+		expect((board.armies as Record<string, unknown>[])[0]).toMatchObject({
+			fortified: true,
+			units: { spearman: 1 }
+		});
+		expect(publicBoard(spec, 'p3')!.battles).toEqual(
+			map.fog.p3[5][9] === '1' ? [{ tile: [9, 5], winner: 'p2' }] : []
+		);
+	});
+
 	it('gives its own units and stock only, and its own fog row only', () => {
 		const board = view('p1');
 		for (const army of board.armies as { owner: string; units?: unknown }[])
@@ -219,5 +246,42 @@ describe('the Throne of Tokens map, spoiler-free: one nation sees it', () => {
 		expect(ids(view('p2').cities)).not.toEqual(ids(view('p1').cities));
 		expect(view(null)).toEqual(view(map.nations[0].id));
 		expect(view('p99')).toEqual(view(map.nations[0].id));
+	});
+});
+
+describe('withRepairMarks', () => {
+	const line = (seq: number, kind: TranscriptLine['kind'], type: string, data = {}) =>
+		({
+			seq,
+			kind,
+			actor: 'p2',
+			text: `${type} ${seq}`,
+			detail: null,
+			importance: 2,
+			raw: { type, data: { player: 'p2', ...data } }
+		}) as TranscriptLine;
+
+	it('marks the public move line with the tier and probability only', () => {
+		const spectator = [
+			line(4, 'info', 'action_rejected', { error: 'You do not hold the Q♥', arguments: { c: 1 } }),
+			line(5, 'info', 'action_accepted', { repaired_by: 'jev', top_probability: 0.93 }),
+			line(6, 'info', 'decision', { raw_arguments: ['{"cards":[1]}'] }),
+			line(7, 'action', 'cards_played')
+		];
+		const open = {
+			players: {},
+			lines: [line(7, 'action', 'cards_played')]
+		} as unknown as Transcript;
+		const marked = withRepairMarks(open, spectator);
+		expect(marked.lines[0].repair).toEqual({ tier: 2, p: 0.93 });
+		expect(JSON.stringify(marked)).not.toMatch(/Q♥|raw_arguments|cards"|error/);
+	});
+
+	it('leaves a transcript without repairs as it is', () => {
+		const open = {
+			players: {},
+			lines: [line(7, 'action', 'cards_played')]
+		} as unknown as Transcript;
+		expect(withRepairMarks(open, [line(7, 'action', 'cards_played')])).toBe(open);
 	});
 });

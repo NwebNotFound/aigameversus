@@ -6,7 +6,8 @@
  * and a layout that is not listed gives no board at all. A new secret field in a plugin
  * therefore stays hidden until someone lists it here as public.
  */
-import type { LiveState, MatchEvent, Transcript } from '../api.js';
+import type { LiveState, MatchEvent, Transcript, TranscriptLine } from '../api.js';
+import { attempts } from '../viewer.js';
 
 /** keep: public as it is. cards: hidden, sent as as many placeholders. drop-value: sent as null. */
 type Rule = 'keep' | 'cards' | 'null' | Shape | [Shape];
@@ -136,19 +137,24 @@ export function hexNationView(spec: Record<string, unknown>, nation: string | nu
 		cities: list(spec.cities).filter(sees),
 		armies: list(spec.armies).filter(sees)
 	}) as Item;
-	// Its own units and stock: what that nation knows of itself.
+	// Its own units, fortification and stock: what that nation knows of itself.
 	view.armies = list(view.armies).map((army) => {
 		const source = list(spec.armies).find((a) => a.id === army.id);
-		return army.owner === who && source?.units ? { ...army, units: source.units } : army;
+		if (army.owner !== who || !source) return army;
+		const own = { ...army };
+		if (source.units) own.units = source.units;
+		if (typeof source.fortified === 'boolean') own.fortified = source.fortified;
+		return own;
 	});
 	view.nations = list(view.nations).map((n) => {
 		const source = list(spec.nations).find((s) => s.id === n.id);
 		return n.id === who && source?.stock ? { ...n, stock: source.stock } : n;
 	});
+	// The battles it fought (render_spec's `nations`) or saw.
 	view.battles = list(spec.battles)
 		.filter((b) => {
-			const tile = b.tile;
-			return Array.isArray(tile) && sees({ tile });
+			const fought = Array.isArray(b.nations) && who !== null && b.nations.includes(who);
+			return fought || (Array.isArray(b.tile) && sees({ tile: b.tile }));
 		})
 		.map((b) => ({ tile: b.tile, winner: b.winner ?? null }));
 	if (rows && who) view.fog = { [who]: rows.filter((r) => typeof r === 'string') };
@@ -198,6 +204,26 @@ export function publicTranscript(transcript: Transcript): Transcript {
 			const safe = publicSettings(settings as Record<string, unknown>);
 			return { ...line, raw: { ...line.raw, data: { ...data, settings: safe } } };
 		})
+	};
+}
+
+/**
+ * A repaired move is marked in the spoiler-free view too, but only that it was repaired, by
+ * which tier and with what probability: read from the spectator lines (`decision`,
+ * `action_accepted`, never sent on) and put on the public line of the same move. The
+ * refused call, its arguments and the error text stay here, as they can name hidden cards.
+ */
+export function withRepairMarks(open: Transcript, spectator: TranscriptLine[]): Transcript {
+	const bySeq = new Map<number, { tier: 1 | 2; p: number | null }>();
+	for (const [line, mark] of attempts(spectator).marks)
+		if (mark.repair && line.seq !== null)
+			bySeq.set(line.seq, { tier: mark.repair.tier, p: mark.repair.p });
+	if (bySeq.size === 0) return open;
+	return {
+		...open,
+		lines: open.lines.map((line) =>
+			line.seq !== null && bySeq.has(line.seq) ? { ...line, repair: bySeq.get(line.seq) } : line
+		)
 	};
 }
 
