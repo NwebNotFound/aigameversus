@@ -52,3 +52,37 @@ def test_unknown_match_and_game_without_analytics_are_404(client):
     missing = client.get(f"/matches/{toy['id']}/analytics")
     assert missing.status_code == 404
     assert "No analytics for toy yet" in missing.json()["detail"]
+
+
+def test_every_game_with_a_situation_says_how_it_is_going_by_display_name(client):
+    for game, players in (("liars_deck", 3), ("poker", 3), ("werewolf", 8)):
+        match = start(client, game=game, players=players, seed=5)
+        follow(client, match["id"])
+
+        answer = client.get(f"/matches/{match['id']}/analytics")
+
+        assert answer.status_code == 200, game
+        lines = answer.json()["situation"]["lines"]
+        assert lines["en"] and lines["de"]
+        text = " ".join(lines["en"] + lines["de"])
+        assert "p1" not in text and "p2" not in text, text
+        assert answer.json()["meta"]["seats"]["p1"] is None
+        if game == "werewolf":
+            recap = answer.json()["recap"]
+            assert recap and all("p1" not in r["text"]["en"] for r in recap)
+
+
+def test_the_report_adds_duration_and_cost_from_the_record_and_the_ledger(client):
+    match = start(client, game="liars_deck", seed=6)
+    follow(client, match["id"])
+
+    report = client.get(f"/matches/{match['id']}/analytics").json()["report"]
+
+    glance = report["at_a_glance"]
+    assert glance["duration_s"] >= 0 and glance["cost_micro_eur"] == 0  # bots cost nothing
+    assert glance["cost_by_seat"] == {"p1": 0, "p2": 0}
+    assert all(
+        row["values"][-1] == {**report["columns"][-1], "value": 0} for row in report["ranking"]
+    )
+    assert report["columns"][-1]["key"] == "cost_micro_eur"
+    assert glance["winners"] == [report["ranking"][0]["seat"]]

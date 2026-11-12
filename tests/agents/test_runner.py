@@ -2,17 +2,18 @@ import asyncio
 
 import pytest
 
+from arena.agents import runner
 from arena.agents.mock_llm import MockLLM, tool_call
-from arena.agents.model import ModelError, ModelReply, ToolCall
+from arena.agents.model import ModelError, ModelReply, ToolCall, Usage
 from arena.agents.prompt import build_messages, tool_schemas
 from arena.agents.runner import ModelAgent
-from arena.engine.types import Action, AgentError, Reply, TurnRequest
+from arena.engine.types import Action, AgentError, AnswerStats, Reply, TurnRequest
 from games.toy.plugin import PLAY_CARD, ToyGame
 from tests.engine.counter_game import SequentialCounter
 
 REQUEST = TurnRequest(player="p1", observation={"hand": [2, 7]}, tools=(PLAY_CARD,), events=())
 PLAY_7 = tool_call("play_card", {"card": 7})
-RATE_LIMIT = ModelError("RateLimitError")
+RATE_LIMIT = ModelError("ServiceUnavailableError")  # a failure a retry can fix
 
 
 def ask(*script):
@@ -22,11 +23,17 @@ def ask(*script):
     async def sleep(seconds):
         pauses.append(seconds)
 
-    agent = ModelAgent(mock, ToyGame(), sleep=sleep)
+    agent = ModelAgent(mock, ToyGame(), sleep=sleep, jitter=lambda: 0.0)
     try:
-        return asyncio.run(agent.act(REQUEST)), mock, pauses
+        reply = asyncio.run(agent.act(REQUEST))
     except AgentError as error:
         return error, mock, pauses
+    return reply.model_copy(update={"stats": None}), mock, pauses  # stats: tested on their own
+
+
+def stats_of(*script):
+    agent = ModelAgent(MockLLM(*script), ToyGame(), sleep=lambda seconds: asyncio.sleep(0))
+    return asyncio.run(agent.act(REQUEST)).stats
 
 
 def test_tool_call_is_the_action_and_text_is_the_thought():
@@ -165,7 +172,7 @@ def test_failure_that_a_retry_cannot_fix_is_not_retried():
 def test_retry_is_logged_without_the_prompt(caplog):
     ask(RATE_LIMIT, PLAY_7)
 
-    assert caplog.messages == ["Model call failed (RateLimitError), next try in 1 s"]
+    assert caplog.messages == ["Model call failed (ServiceUnavailableError), next try in 1 s"]
     assert "hand" not in caplog.text
 
 
@@ -189,3 +196,61 @@ def test_mock_llm_repeats_its_last_step_and_needs_a_script():
     assert asyncio.run(three_calls()) == [RATE_LIMIT, PLAY_7, PLAY_7]
     with pytest.raises(ValueError, match="at least one step"):
         MockLLM()
+
+
+THROTTLED = ModelError("RateLimitError")
+ANSWER = tool_call("play_card", {"card": 7})
+
+
+def throttled_agent(*script, jitter=0.0):
+    """An agent over `script`, and the list its pauses go to."""
+    pauses = []
+
+    async def sleep(seconds):
+        pauses.append(seconds)
+
+    return ModelAgent(MockLLM(*script), ToyGame(), sleep=sleep, jitter=lambda: jitter), pauses
+
+
+def test_a_rate_limit_is_waited_out_longer():
+    agent, pauses = throttled_agent(THROTTLED, THROTTLED, THROTTLED, ANSWER)
+
+    assert asyncio.run(agent.act(REQUEST)).action is not None
+    assert pauses == [3.0, 6.0, 12.0]
+
+
+def test_every_pause_is_up_to_half_longer_at_random():
+    agent, pauses = throttled_agent(RATE_LIMIT, THROTTLED, ANSWER, jitter=1.0)
+
+    asyncio.run(agent.act(REQUEST))
+
+    assert pauses == [1.5, 9.0]  # 1 s and 6 s, each times 1.5
+
+
+def test_a_seat_waits_out_only_so_many_rate_limits_in_a_match():
+    moves = runner.RATE_LIMIT_RETRIES_PER_MATCH // 2  # two rate limits per move
+    agent, pauses = throttled_agent(*[THROTTLED, THROTTLED, ANSWER] * moves, THROTTLED)
+
+    for _ in range(moves):
+        assert asyncio.run(agent.act(REQUEST)).action is not None
+    waited = len(pauses)
+    with pytest.raises(AgentError, match="rate-limit retries of this match are used up"):
+        asyncio.run(agent.act(REQUEST))
+
+    assert waited == runner.RATE_LIMIT_RETRIES_PER_MATCH
+    assert len(pauses) == waited  # the last rate limit is not waited out
+
+
+def test_an_answer_reports_its_tokens_and_the_calls_tried_again():
+    stats = stats_of(
+        ModelError("RateLimitError"),
+        tool_call("play_card", {"card": 7}, usage=Usage(1200, 80, reasoning_tokens=30)),
+    )
+
+    assert stats == AnswerStats(tokens_in=1200, tokens_out=80, reasoning_tokens=30, retries=1)
+
+
+def test_an_answer_without_usage_has_unknown_tokens():
+    stats = stats_of(tool_call("play_card", {"card": 7}))
+
+    assert stats == AnswerStats(tokens_in=None, tokens_out=None, reasoning_tokens=None, retries=0)
