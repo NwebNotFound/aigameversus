@@ -201,3 +201,86 @@ def test_golden_prompts_of_the_versions(name, settings):
     messages = build_messages("Throne of Tokens", PLUGIN.rules(settings), request, summary)
 
     check_golden(name, "\n=====\n".join(m["content"] for m in messages) + "\n")
+
+
+class Talker:
+    """A nation that, every round, says three things to everyone and offers three treaties."""
+
+    def __init__(self, name, nations, seed):
+        import random
+
+        self.name, self.nations, self.rng = name, nations, random.Random(seed)
+        self.new_events: list[int] = []
+        self.seen = 0
+
+    async def act(self, request):
+        from games.civ.bot import random_orders
+
+        self.new_events.append(len(request.events) - self.seen)
+        self.seen = len(request.events)
+        others = [p for p in self.nations if p != self.name]
+        talk = [
+            {"type": "message", "to": None, "text": f"Hello from {self.name} " + "word " * 25}
+            for _ in range(3)
+        ]
+        offers = [
+            {"type": "propose_treaty", "to": o, "kind": "non_aggression", "rounds": 5}
+            for o in others[:3]
+        ]
+        orders = (talk + offers + random_orders(request.observation, self.rng)["orders"])[:40]
+        from arena.engine.types import Action, Reply
+
+        return Reply(action=Action(tool="submit_orders", arguments={"orders": orders}))
+
+
+def talking_match():
+    nations = SIX
+    agents = {p: Talker(p, nations, i) for i, p in enumerate(nations)}
+    asyncio.run(Match(PLUGIN, agents, seed=4, settings={"rounds": 20}).run())
+    return agents
+
+
+def test_six_talking_nations_send_one_nation_more_than_forty_events_in_a_turn():
+    agents = talking_match()
+
+    most = max(max(a.new_events) for a in agents.values())
+    assert most > 40  # the cut was real with the default window of 40
+    assert most <= PLUGIN.history_limit({})  # and nothing of a turn is dropped with Civ's 120
+
+
+def test_every_civ_prompt_version_shows_120_events():
+    for version in prompt.VERSIONS:
+        assert PLUGIN.history_limit({"prompt_version": version}) == 120
+    assert PLUGIN.history_limit(None) == prompt.HISTORY_LIMIT == 120
+
+
+def test_other_games_keep_the_default_window_of_forty():
+    from arena.agents.prompt import HISTORY_LIMIT
+    from games.liars_deck.plugin import LiarsDeck
+    from games.poker.plugin import Poker
+    from games.werewolf.plugin import Werewolf
+
+    assert HISTORY_LIMIT == 40
+    for plugin in (LiarsDeck(), Poker(), Werewolf()):
+        assert plugin.history_limit({}) == HISTORY_LIMIT
+
+
+def test_a_prompt_built_with_civs_limit_holds_all_events_of_a_talking_turn():
+    nations = SIX
+    seen: list = []
+
+    class Spy(Talker):
+        async def act(self, request):
+            seen.append(request)
+            return await super().act(request)
+
+    agents = {p: Spy(p, nations, i) for i, p in enumerate(nations)}
+    asyncio.run(Match(PLUGIN, agents, seed=4, settings={"rounds": 8}).run())
+    request = max(seen, key=lambda r: len(r.events))
+    narrow = build_messages("Throne of Tokens", PLUGIN.rules({}), request)[1]["content"]
+    wide = build_messages("Throne of Tokens", PLUGIN.rules({}), request, history_limit=120)[1][
+        "content"
+    ]
+
+    assert "earlier events are not shown" in narrow
+    assert wide.count("\n") > narrow.count("\n")

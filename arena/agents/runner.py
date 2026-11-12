@@ -67,6 +67,7 @@ class ModelAgent:
         self._plugin = plugin
         self._settings = settings
         self._rules = plugin.rules(settings)
+        self._history = plugin.history_limit(settings)
         self._sleep = sleep
         self._jitter = jitter  # 0 to 1; the pauses only, never the game's randomness
         self._rate_limit_retries = RATE_LIMIT_RETRIES_PER_MATCH
@@ -77,7 +78,13 @@ class ModelAgent:
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
         messages = build_messages(
-            self._plugin.name, self._rules, request, summary, self._memory, self._personality
+            self._plugin.name,
+            self._rules,
+            request,
+            summary,
+            self._memory,
+            self._personality,
+            self._history,
         )
         simple = self._repair and self._malformed >= MALFORMED_LIMIT
         schemas = tool_schemas(request.tools, with_thought=not simple, headline=self._headline)

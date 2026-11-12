@@ -347,7 +347,7 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
 The system message is what the server says: who the player is, the game's
 rules (`rules.md`), how to answer. The user message is game data: the game's
 summary of the turn in `<summary>` if it has one, the observation in
-`<situation>`, the last 40 visible events in `<events>`, then the ask (with
+`<situation>`, the last 40 visible events (`GamePlugin.history_limit`: 120 for Civ, D-136) in `<events>`, then the ask (with
 the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
@@ -907,7 +907,10 @@ next to it says what each does and what the generator guarantees.
   The prompt settings (`games/civ/prompt.py`, D-135): `prompt_version`
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
-  and `your_plan_from_last_round` exist only when it is on).
+  and `your_plan_from_last_round` exist only when it is on). A Civ prompt shows 120 events, not 40 (D-136).
+  A balance sweep with random bots (no cost) is `uv run python -m
+  arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
+  its findings and the proposals D-137 and D-138.
   `GET /matches/{id}/analytics` answers for Civ too (`arena/analytics/civ.py`,
   `analytics_version: "civ/1"`). It gives per-round series per nation, battles,
   conquests, diplomacy, orders, decision metrics and behaviour tags.
@@ -954,6 +957,38 @@ has the rules; a plan spends nothing until it is approved.
 uv run python -m arena.research.experiment experiments/<name>.yaml > experiments/<name>_schedule.csv
 uv run pytest tests/research
 ```
+
+An explicit research stage (`PLAN.yaml` + `schedule.csv`: W2, C1) is played by
+`arena/research/stage_runner.py`, not by the generic runner. `--dry-run` gives the checks
+and estimates only.
+- **Before anything starts:** it refuses without the plan's recorded execution approval.
+  It also refuses a CSV with unknown columns, gaps in `order` or the wrong length, and a
+  guest plan whose CSV is not the schedule it generates.
+- **What it sends:** only whitelisted fields, never `expected_roles`.
+- **Before each start:**
+  - the month hold, and no other match running (one research match at a time);
+  - a fresh free estimate below the match limit, and the limit read back;
+  - the stage's spend over every attempt plus 3× that estimate within 90 %;
+  - the same spend plus the table's own limit (`match_budget_eur`) within the stage;
+  - no guest whose listed price has risen;
+  - not at the review checkpoint (`checkpoint_after`). Going on after it needs
+    `--release-checkpoint EVIDENCE`.
+- **After each match:** it holds on a failed match, a failed agent, a fallback share above
+  10 % (the guest's, else every model's), a wrong role, or a cost above
+  `max_cost_per_match_eur`. It never retries.
+- **Logs:** `<out>/attempts.jsonl` is written and fsynced before every POST. A restart
+  adopts a lost start by its batch label. If the arena shows none, it holds until
+  `--mark-unstarted ATTEMPT_ID EVIDENCE`; it never posts again on its own.
+- **Spend:** the stage's spend is read from the arena's batch history, so a new out folder
+  resets nothing.
+- **Paid runs:** they need `--pre-start-report` and `--arena-build`. One client runs at a
+  time across stages (the lock `<out>/../.stage-runner.lock`). A resume with a changed plan
+  or schedule is refused. While a match runs, a pause or a failed agent holds at once; the
+  match is not aborted. A row played outside the client (a directly approved smoke) is
+  named in `adopted_matches: {order: {match_id, evidence}}` and adopted, never replayed.
+- **`<out>/run.json`:** the hashes (client included), the evidence, the effective limit,
+  the reserve, every attempt with its body, quote, month and seat counts, and the stop
+  reasons.
 
 ### A system
 
