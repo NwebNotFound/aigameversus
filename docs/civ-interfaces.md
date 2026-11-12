@@ -191,7 +191,8 @@ returns only what that nation may know, built from its fog view
 - `victory`: the nation's standing in every win condition, so a model need
   not compute it: `domination` (its share of all cities, the share needed),
   `economy` (gold held, rounds held, the public countdown of any nation
-  close to it), `score` (its score and rank by the round-limit formula), and
+  close to it), `score` (its own score by the round-limit formula; no rank,
+  because another nation's score holds its gold), and
   `closest_win` (the condition it is nearest to),
 - `stock`, `reputation`, `production_modifier` (weariness, lost capital),
 - `cities` (own, full) and `armies` (own, with `reachable` tiles and
@@ -207,6 +208,30 @@ returns only what that nation may know, built from its fog view
   unit costs, and `orders`, the order types that can do something this round
   with their parameters (e.g. `move` only when an army can move),
 - `your_plan`: the `plan` the nation sent last round, or `null`.
+
+**Public by rule (D-128).** Public: the total number of cities in the world,
+the city count per nation, and who holds the gold countdown (and how far it
+is); also reputations, treaties and wars. Private: other nations' scores
+(they hold gold and population), stocks,
+positions, buildings, and armies outside the nation's own sight. The
+observation carries the public part in one field, built by the plugin from
+the state and nothing else, so no number is derived from fogged state by
+accident:
+
+```json
+"scoreboard": {
+  "round": 12,
+  "cities_total": 12,
+  "cities": {"p1": 3, "p2": 5, "p3": 4},
+  "domination_needed": 6,
+  "gold_countdown": {"nation": "p2", "rounds_held": 2, "rounds_needed": 5},
+  "reputation": {"p1": 50, "p2": 30, "p3": 55}
+}
+```
+
+`round` is the round being played. `gold_countdown` is `null` while nobody
+holds enough gold; with several holders it names the one closest to winning. Everything else in
+an observation about another nation comes from its fog view.
 
 **Size budget.** An observation and its prompt are what every call pays
 for: 360 calls in a 60-round match of six nations. An observation stays under
