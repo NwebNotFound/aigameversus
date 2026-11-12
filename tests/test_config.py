@@ -154,9 +154,9 @@ def with_model(**options):
 
 
 def test_a_model_takes_the_limits_unless_it_sets_its_own_options():
-    assert call_options(with_model(), "some-model") == CallOptions(1500, "low", "required")
+    assert call_options(with_model(), "some-model") == CallOptions(1500, "low", "required", 8000)
     own = with_model(max_output_tokens=4000, reasoning_effort="off", tool_choice="auto")
-    assert call_options(own, "some-model") == CallOptions(4000, None, "auto")
+    assert call_options(own, "some-model") == CallOptions(4000, None, "auto", 8000)
     assert (
         call_options(with_model(reasoning_effort="high"), "some-model").reasoning_effort == "high"
     )

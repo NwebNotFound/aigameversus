@@ -14,10 +14,11 @@ from typing import Any, Literal
 from arena.agents.budget import cost_micro_eur
 from arena.agents.prompt import build_messages, tool_schemas
 from arena.agents.random_bot import random_bots
+from arena.agents.runner import escalation, output_limits
 from arena.config import Config, call_options
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import PlayerId, Reply, TurnRequest
+from arena.engine.types import PlayerId, Reply, TurnRequest, adaptive_output_of
 
 SEEDS = (1, 2, 3)  # the estimate is the most expensive of these matches, per seat
 BYTES_PER_TOKEN = 3.5  # JSON-heavy English; a low guess makes the estimate high
@@ -34,6 +35,9 @@ class SeatEstimate:
     calls: int  # prompts in the most expensive of the matches played
     estimate_micro_eur: int
     basis: Basis  # how its answers were counted: its mean in the ledger, or the output limit
+    # Every answer at the most it may cost: its output limit, and with adaptive_output every
+    # raised limit up to the ceiling, each call with its whole prompt (D-143).
+    worst_case_micro_eur: int
 
 
 class _Measured:
@@ -78,7 +82,9 @@ async def estimate(
         for seat, model_id in seats.items():
             if model_id is None:  # a bot seat plays, so the others' prompts are real, but is free
                 continue
-            priced = _priced(config, model_id, agents[seat].sizes, output_history)
+            priced = _priced(
+                config, model_id, agents[seat].sizes, output_history, adaptive_output_of(settings)
+            )
             if seat not in worst or priced.estimate_micro_eur > worst[seat].estimate_micro_eur:
                 worst[seat] = priced
     return worst
@@ -89,6 +95,7 @@ def _priced(
     model_id: str,
     sizes: Sequence[int],
     output_history: Mapping[str, tuple[int, float]],
+    adaptive: bool = False,
 ) -> SeatEstimate:
     answers, mean = output_history.get(model_id, (0, 0.0))
     known = answers >= HISTORY_MIN
@@ -97,10 +104,20 @@ def _priced(
     output = mean if known else call_options(config, model_id).max_output_tokens
     input_tokens = sum(sizes) / BYTES_PER_TOKEN * RETRY_SHARE
     output_tokens = len(sizes) * output * RETRY_SHARE
-    cost = cost_micro_eur(config, config.models[model_id], input_tokens, output_tokens)
+    model = config.models[model_id]
+    cost = cost_micro_eur(config, model, input_tokens, output_tokens)
+    limits = output_limits(config, model_id)
+    chain = escalation(limits) if adaptive else [limits.start]
+    worst = cost_micro_eur(
+        config,
+        model,
+        input_tokens * len(chain),
+        len(sizes) * sum(chain) * RETRY_SHARE,
+    )
     return SeatEstimate(
         model_id=model_id,
         calls=len(sizes),
         estimate_micro_eur=cost,
         basis="ledger history" if known else "output limit",
+        worst_case_micro_eur=max(cost, worst),
     )

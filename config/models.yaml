@@ -12,6 +12,9 @@ limits:
   # off by the provider at the output limit.
   max_input_tokens: 50000
   max_output_tokens: 1500
+  # With the match setting adaptive_output "on", a cut-off answer is asked again with
+  # twice the limit, up to this ceiling (a model may set its own output_ceiling; D-143).
+  output_ceiling: 8000
   # Reasoning models think before they answer. That thinking is billed as
   # output and uses up the output limit, so a model that thinks too long never
   # gets to its move. minimal, low, medium or high.

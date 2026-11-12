@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.rng import derive_rng
 from arena.engine.types import (
+    ADAPTIVE_OUTPUT,
+    ADAPTIVE_OUTPUT_VALUES,
     ANSWER_REPAIR,
     ANSWER_REPAIR_VERSIONS,
     MATCH_BUDGET,
@@ -102,6 +104,9 @@ class Match[StateT: BaseModel]:
             raise ValueError(
                 f"Unknown {ANSWER_REPAIR} {repair!r}; choose one of {list(ANSWER_REPAIR_VERSIONS)}"
             )
+        adaptive = self.settings.get(ADAPTIVE_OUTPUT, "off")
+        if adaptive not in ADAPTIVE_OUTPUT_VALUES:
+            raise ValueError(f"{ADAPTIVE_OUTPUT} is one of {list(ADAPTIVE_OUTPUT_VALUES)}")
         if not isinstance(self.settings.get(THOUGHT_HEADLINE, False), bool):
             raise ValueError(f"{THOUGHT_HEADLINE} is true or false")
         budget = self.settings.get(MATCH_BUDGET)
@@ -393,6 +398,12 @@ class Match[StateT: BaseModel]:
                 "repairs": sorted({repair for stats in reported for repair in stats.repairs}),
                 "raw_arguments": [s.raw_arguments for s in reported if s.raw_arguments],
                 "simple_schema": any(stats.simple_schema for stats in reported),
+                # Only when an answer was asked again with a larger output limit (D-143).
+                **(
+                    {"output_limits": [list(s.output_limits) for s in reported]}
+                    if any(s.output_limits for s in reported)
+                    else {}
+                ),
                 # Only when tier 2 was asked: its verdict, and whether it played the move.
                 **({"jev": jev} if jev is not None else {}),
             },

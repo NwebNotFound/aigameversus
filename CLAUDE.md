@@ -205,6 +205,13 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   - Jev sees only what that player saw, its own thought and its own move.
   - The tags are unvalidated research data (`referee_runs`). GET answers only with
     `spoilers=true`, and nothing goes back into the match.
+- `adaptive_output: "on"` (engine setting, default `"off"`, D-143): an answer cut off at the
+  output limit with no usable call is asked again, the same prompt, with twice the limit,
+  up to the model's ceiling (`limits.output_ceiling` 8000, or its own `output_ceiling`).
+  The runner gets the limits as `ModelAgent(..., output=output_limits(config, model_id))`,
+  and the call as `call(messages, tools, max_output_tokens=...)`. The budget books each
+  call at its raised limit, so a raise that would pass a cap pauses the match. The
+  `decision` event then has `output_limits`, and the estimate a `worst_case_micro_eur`.
 - The AI-written chronicle (`arena/chronicle/ai.py`, D-140).
   - `POST /matches/{id}/chronicle/ai {style, lang, model, confirm_spend}` has a model retell
     the template chronicle of a finished match, in one call. It has the guards of a paid
@@ -345,7 +352,9 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   expensive trial: prompt bytes / 3.5 as input tokens, one answer per prompt
   at the model's mean output in the ledger (with fewer than 10 answers there,
   the model's own output limit, as the budget books it: `call_options`), times
-  1.3 for corrections and retries. The answer has
+  1.3 for corrections and retries. Each seat also gets `worst_case_micro_eur`: every answer
+  at its output limit, and with `adaptive_output` at every raised limit up to the ceiling,
+  each call with its whole prompt. The answer has
   the month so far and whether the estimate fits the match cap and the month
   left, per seat its `basis` (`ledger history` or `output limit`), and in
   `high_price` the models above 10 USD per million output tokens. It takes

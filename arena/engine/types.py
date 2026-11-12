@@ -96,7 +96,11 @@ THOUGHT_HEADLINE = "thought_headline"
 # What one match may spend at most, in euros: lowers the config's per-match cap for this
 # match, never raises it (arena/agents/budget.py). Games never see it either.
 MATCH_BUDGET = "match_budget_eur"
-ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE, MATCH_BUDGET)
+# "on": an answer cut off at the output limit with no usable call is asked again, the
+# same prompt, with twice the limit, up to the model's ceiling (D-143). Default "off".
+ADAPTIVE_OUTPUT = "adaptive_output"
+ADAPTIVE_OUTPUT_VALUES = ("off", "on")
+ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE, MATCH_BUDGET, ADAPTIVE_OUTPUT)
 
 
 def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
@@ -115,6 +119,11 @@ def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
 def repair_of(settings: Mapping[str, Any]) -> str:
     """The answer_repair of a match: its setting, else "off" (the call as sent)."""
     return settings.get(ANSWER_REPAIR, "off")
+
+
+def adaptive_output_of(settings: Mapping[str, Any]) -> bool:
+    """Whether a cut-off answer is asked again with a larger output limit (default no)."""
+    return settings.get(ADAPTIVE_OUTPUT, "off") == "on"
 
 
 def headline_of(settings: Mapping[str, Any]) -> bool:
@@ -139,6 +148,9 @@ class AnswerStats(_Frozen):
     repairs: tuple[str, ...] = ()  # how a garbled call was read (arena/agents/arguments.py)
     raw_arguments: str | None = None  # the call as sent, when it was repaired or unreadable
     simple_schema: bool = False  # the model was offered its tools without `thought`
+    # With adaptive_output: the output limit of every call of this answer, in order, when it
+    # was asked again after a cut-off (1500, 3000, ...); empty when it was not.
+    output_limits: tuple[int, ...] = ()
 
 
 class Reply(_Frozen):

@@ -4,11 +4,13 @@ import asyncio
 import logging
 import random
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from arena.agents.arguments import as_sent, read_arguments
 from arena.agents.model import RATE_LIMITED, Message, ModelCall, ModelError, ModelReply
 from arena.agents.prompt import HEADLINE, HEADLINE_CHARS, THOUGHT, build_messages, tool_schemas
+from arena.config import Config, call_options
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import (
     Action,
@@ -17,6 +19,7 @@ from arena.engine.types import (
     Reply,
     ToolSpec,
     TurnRequest,
+    adaptive_output_of,
     headline_of,
     repair_of,
 )
@@ -30,6 +33,28 @@ BACKOFF_SECONDS = 1.0  # pause before the first retry; doubles with every retry
 RATE_LIMIT_BACKOFF_SECONDS = 3.0  # it needs longer: 3, 6, 12 s (and the jitter)
 RATE_LIMIT_RETRIES_PER_MATCH = 12  # after these, a rate limit is no longer waited out
 JITTER = 0.5  # each pause is up to this share longer, so seats do not retry in step
+
+
+@dataclass(frozen=True)
+class OutputLimits:
+    """A model's output limit and the most adaptive_output may raise it to (D-143)."""
+
+    start: int
+    ceiling: int
+
+
+def escalation(limits: OutputLimits) -> list[int]:
+    """Every output limit one answer may be asked with: the start, doubled up to the ceiling."""
+    chain = [limits.start]
+    while chain[-1] < limits.ceiling:
+        chain.append(min(chain[-1] * 2, limits.ceiling))
+    return chain
+
+
+def output_limits(config: Config, model_id: str) -> OutputLimits:
+    """The limits of a model from the config: its output limit and its ceiling."""
+    options = call_options(config, model_id)
+    return OutputLimits(options.max_output_tokens, options.output_ceiling)
 
 
 class ModelAgent:
@@ -54,12 +79,17 @@ class ModelAgent:
         settings: Mapping[str, Any] | None = None,
         memory: str | None = None,
         personality: str | None = None,
+        output: OutputLimits | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         jitter: Callable[[], float] = random.random,
     ):
         """`memory`: what this player remembers of the opponents (`arena/memory/block.py`).
 
         `personality`: the character this player plays (`prompt.personality_text`).
+
+        `output`: the model's output limits. With the match setting adaptive_output "on",
+        an answer cut off at the limit with no usable call is asked again with twice the
+        limit, up to the ceiling (D-143); otherwise they change nothing.
         """
         self._call = call
         self._memory = memory
@@ -74,6 +104,7 @@ class ModelAgent:
         self._malformed = 0  # answers of this match whose call was garbled
         self._repair = repair_of(settings or {}) != "off"
         self._headline = headline_of(settings or {})
+        self._output = output if adaptive_output_of(settings or {}) else None
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
@@ -92,31 +123,54 @@ class ModelAgent:
         reply, repairs, raw = _read(
             answer, request.tools, repair=self._repair, headline=self._headline
         )
+        usages, retries, limits = [answer.usage], tries - 1, []
+        if self._output and answer.cut_off and reply.action is None:
+            # The same prompt again with more room, until it finishes or the ceiling is hit.
+            chain = escalation(self._output)
+            limits.append(chain[0])
+            for limit in chain[1:]:
+                if not answer.cut_off or reply.action is not None:
+                    break
+                limits.append(limit)
+                answer, tries, limited = await self._call_model(messages, schemas, limit)
+                usages.append(answer.usage)
+                retries += tries - 1
+                rate_limits += limited
+                reply, repairs, raw = _read(
+                    answer, request.tools, repair=self._repair, headline=self._headline
+                )
         if repairs or raw is not None:
             self._malformed += 1
-        usage = answer.usage
         stats = AnswerStats(
-            tokens_in=usage.input_tokens if usage else None,
-            tokens_out=usage.output_tokens if usage else None,
-            reasoning_tokens=usage.reasoning_tokens if usage else None,
-            retries=tries - 1,
+            tokens_in=_total(usages, "input_tokens"),
+            tokens_out=_total(usages, "output_tokens"),
+            reasoning_tokens=_total(usages, "reasoning_tokens"),
+            retries=retries,
             rate_limits=rate_limits,
             cut_off=answer.cut_off,
             repairs=tuple(repairs),
             raw_arguments=raw,
             simple_schema=simple,
+            output_limits=tuple(limits),
         )
         return reply.model_copy(update={"stats": stats})
 
     async def _call_model(
-        self, messages: list[Message], tools: list[dict[str, Any]]
+        self, messages: list[Message], tools: list[dict[str, Any]], limit: int | None = None
     ) -> tuple[ModelReply, int, int]:
-        """The model's answer, how many calls it took, and how many were rate-limited."""
+        """The model's answer, how many calls it took, and how many were rate-limited.
+
+        `limit` raises the output limit of the call (adaptive_output); None keeps the model's.
+        """
         tries = rate_limits = 0
         while True:
             tries += 1
             try:
-                return await self._call(messages, tools), tries, rate_limits
+                if limit is None:
+                    answer = await self._call(messages, tools)
+                else:
+                    answer = await self._call(messages, tools, max_output_tokens=limit)
+                return answer, tries, rate_limits
             except ModelError as error:
                 rate_limited = error.reason == RATE_LIMITED
                 used_up = rate_limited and self._rate_limit_retries == 0
@@ -174,3 +228,9 @@ def _read(
     short = line.strip()[:HEADLINE_CHARS] if isinstance(line, str) and line.strip() else None
     action = Action(tool=call.name, arguments=arguments)
     return Reply(action=action, thought=thought, headline=short), repairs, raw
+
+
+def _total(usages: list[Any], field: str) -> int | None:
+    """A token count summed over the calls of an answer; None when no call reported it."""
+    values = [getattr(u, field) for u in usages if u is not None and getattr(u, field) is not None]
+    return sum(values) if values else None

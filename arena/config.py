@@ -31,6 +31,8 @@ class Limits(_Strict):
     usd_to_eur: Decimal = Field(gt=0)
     max_input_tokens: int = Field(gt=0)
     max_output_tokens: int = Field(gt=0)
+    # With adaptive_output: the most a cut-off answer is raised to (D-143).
+    output_ceiling: int = Field(8000, gt=0)
     # How much a reasoning model may think before it answers; None leaves it to the model.
     reasoning_effort: Literal["minimal", "low", "medium", "high"] | None = None
 
@@ -46,6 +48,7 @@ class Model(_Strict):
     output_usd_per_mtok: Decimal = Field(ge=0)
     # What this model needs to play, over `limits`; unset: the value in `limits`.
     max_output_tokens: int | None = Field(None, gt=0)
+    output_ceiling: int | None = Field(None, gt=0)  # this model's own, else limits'
     reasoning_effort: Effort | Literal["off"] | None = None  # "off": the option is not sent
     tool_choice: Literal["required", "auto"] = "required"  # auto: the model may also not call
 
@@ -57,6 +60,7 @@ class CallOptions:
     max_output_tokens: int
     reasoning_effort: Effort | None  # None: not sent
     tool_choice: Literal["required", "auto"]
+    output_ceiling: int  # with adaptive_output, the most a cut-off answer is raised to
 
 
 class ReliabilityRules(_Strict):
@@ -127,11 +131,14 @@ def _read_key_file(variable: str) -> None:
 def call_options(config: Config, model_id: str) -> CallOptions:
     """The options of `model_id`: its own where it sets them, else those of `limits`."""
     model, limits = config.models[model_id], config.limits
+    start = model.max_output_tokens or limits.max_output_tokens
     effort = limits.reasoning_effort if model.reasoning_effort is None else model.reasoning_effort
     return CallOptions(
-        max_output_tokens=model.max_output_tokens or limits.max_output_tokens,
+        max_output_tokens=start,
         reasoning_effort=None if effort == "off" else effort,
         tool_choice=model.tool_choice,
+        # Never below the start: a model whose own limit is higher just starts there.
+        output_ceiling=max(start, model.output_ceiling or limits.output_ceiling),
     )
 
 
