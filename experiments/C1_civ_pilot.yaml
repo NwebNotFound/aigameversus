@@ -1,0 +1,71 @@
+id: C1
+schema: civ_design_only_v1
+version: 1
+status: design_waiting_for_deployment_and_quote
+owner: Arena Researcher
+date: '2026-11-12'
+execution_approved: false
+approved_budget_eur: 0
+game: civ
+requested_preset:
+  nations: 4
+  rounds: 20
+  map: smallest_supported_for_four_nations
+  round_limit_api_setting: null
+  note: 'Requirements, not accepted API settings; do not forward this object.'
+models: [glm-flash, deepseek-flash, gpt-luna, claude-haiku]
+seed: 2104001
+baseline:
+  matches: 4
+  rotation: cyclic_all_four_starting_positions
+  prompt_version: civ-p1
+  strategy_text: 'off'
+  private_plan: 'off'
+  memory: false
+  answer_repair: 'off'
+  reasoning_effort: low
+  configured_output_limit: record_and_freeze_before_approval
+  calls_per_round: one_submit_orders_per_living_nation_plus_existing_retries
+  expected_base_calls_upper: 80
+later_factorial:
+  status: proposal_only_separate_approval
+  prompt_version: civ-p1
+  strategy_text: ['off', v1]
+  private_plan: ['off', 'on']
+  cells: 4
+  paired_blocks: same_seed_roster_rotation_build_and_context_prompt
+  matches_per_cell: 4
+  total_cells_including_baseline: 16
+  additional_matches_if_baseline_reusable: 12
+  reuse_baseline_only_if: identical_frozen_build_prompt_config_and_eligible_plan
+  note: 'Enhanced civ-p2 context is a separate future experiment, never changed inside this 2x2.'
+budget:
+  proposed_stage_eur: null
+  free_estimate_eur: null
+  required_estimate_per_match_below_eur: 0.40
+  maximum_match_eur: 0.50
+  monthly_cap_eur: 25
+  month_notify_hold_eur: 20
+  start_stop_share: 0.90
+  reserve: full_verified_enforceable_match_budget_plus_prior_spend
+  concurrency: 1
+  no_retries_or_reruns_without_amendment: true
+gates:
+  - 'Civ plugin, combat, victory and scoreboard merged; Reviewer free 20/60-round bot and leak checks passed.'
+  - 'Verified deployed 20-round preset, terminal score/victory semantics and API setting; do not simulate truncation by aborting.'
+  - 'Supported civ-p1, strategy_text off and private_plan off; optional submitted plan cannot bypass off.'
+  - 'Estimate all four rotated tables for free; record exact ids, prices, tool flags, build and settings.'
+  - 'Lead approves exact quotes, total stage ceiling and frozen plan before any real match.'
+  - 'Verified enforceable per-match spending setting; paid endpoint uses existing guards and ledger.'
+  - 'Freeze plan, prompt/config hashes and seed before first start; record dated amendments.'
+metrics:
+  primary: [fallback_decisions_per_model_decision, rejected_answers_per_decision, refused_orders_per_submitted_order, actual_cost_per_completed_round]
+  descriptive: [completion, latency, token_usage, score, victory_type, cities, treaties_kept_broken, trades]
+  factorial_estimands: [strategy_effect, private_plan_effect, interaction]
+analysis:
+  unit: match_seed_and_rotation_block
+  comparisons: paired_within_frozen_blocks
+  uncertainty: descriptive_pilot_no_strength_ranking_or_power_claim
+  denominator_rules: 'Retries are rejected answers, not new turns; bot moves and zero-exposure seats remain explicit.'
+  missingness: 'Keep all starts, failures, pauses and budget-stopped cells; no outcome-selected reruns.'
+  leak_scope: nation_observation_only_never_spectator_state
