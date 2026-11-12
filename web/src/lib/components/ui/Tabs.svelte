@@ -1,29 +1,56 @@
 <script lang="ts" generics="T extends string">
-	/** Underline tabs: Watch, Report, Thoughts, Raw log. */
+	/**
+	 * Underline tabs: Watch, Report, Thoughts, Raw log. A WAI-ARIA tab list: only the
+	 * selected tab is in the tab order, the arrow keys (and Home, End) move to and select
+	 * the next tab, and `panel` names the element each tab controls.
+	 */
 	let {
 		tabs,
 		value = $bindable(),
 		label,
 		onchange
 	}: {
-		tabs: { value: T; label: string; testid?: string }[];
+		tabs: { value: T; label: string; testid?: string; panel?: string }[];
 		value: T;
 		label: string;
 		onchange?: (value: T) => void;
 	} = $props();
+
+	let buttons = $state<HTMLButtonElement[]>([]);
+
+	function pick(index: number) {
+		const tab = tabs[(index + tabs.length) % tabs.length];
+		value = tab.value;
+		onchange?.(tab.value);
+		buttons[tabs.indexOf(tab)]?.focus();
+	}
+
+	function onkeydown(event: KeyboardEvent, index: number) {
+		const moves: Record<string, number> = {
+			ArrowRight: index + 1,
+			ArrowLeft: index - 1,
+			Home: 0,
+			End: tabs.length - 1
+		};
+		if (!(event.key in moves)) return;
+		event.preventDefault();
+		pick(moves[event.key]);
+	}
 </script>
 
 <div class="tabs" role="tablist" aria-label={label}>
-	{#each tabs as tab (tab.value)}
+	{#each tabs as tab, index (tab.value)}
 		<button
+			bind:this={buttons[index]}
 			type="button"
 			role="tab"
+			id="tab-{tab.value}"
 			aria-selected={value === tab.value}
+			aria-controls={tab.panel}
+			tabindex={value === tab.value ? 0 : -1}
 			data-testid={tab.testid}
-			onclick={() => {
-				value = tab.value;
-				onchange?.(tab.value);
-			}}>{tab.label}</button
+			onclick={() => pick(index)}
+			onkeydown={(event) => onkeydown(event, index)}>{tab.label}</button
 		>
 	{/each}
 </div>
