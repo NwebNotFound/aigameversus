@@ -325,6 +325,69 @@ export interface MonthSpend {
 	remaining_micro_eur: number;
 }
 
+/** A core qualification job (research/QUALIFY.md), as `/qualifications` returns it. */
+export interface Qualification {
+	id: string;
+	model_id: string;
+	game: string;
+	scope: string;
+	config_hash: string;
+	status: 'running' | 'qualified' | 'unqualified' | 'unknown';
+	/** "repaired (v1)" on a qualified job whose answers needed the v1 repair. */
+	badge: string | null;
+	reasons: string[];
+	cases: {
+		case: string;
+		check: string;
+		outcome: 'clean' | 'repaired' | 'failed' | 'unknown';
+		reason: string | null;
+		thought_profile?: string;
+		latency_ms: number | null;
+	}[];
+	counts: Record<string, number>;
+	reserved_micro_eur: number;
+	cap_micro_eur: number;
+	started_at: string;
+	finished_at: string | null;
+	expires_at: string | null;
+}
+
+/** `GET /qualifications/current`: the status of one exact configuration now. */
+export interface QualificationCurrent {
+	status: 'qualified' | 'unqualified' | 'unknown';
+	badge: string | null;
+	/** Why unknown: never tested, expired, configuration changed, or the latest outage. */
+	reason: string | null;
+	config_hash: string;
+	last: Qualification | null;
+	latest?: Qualification | null;
+}
+
+/** `GET /qualifications/quote`: what a "Test this model" click would send and reserve. */
+export interface QualificationQuote {
+	model: string;
+	game: string;
+	answer_repair: string;
+	scope: string;
+	cases: { case: string; check: string; thought: string }[];
+	calls: number;
+	tries_per_call: number;
+	reserved_micro_eur: number;
+	default_cap_micro_eur: number;
+	max_cap_micro_eur: number;
+	fits_default: boolean;
+	config_hash: string;
+}
+
+/** What starts a qualification job; it spends money like a match with model seats. */
+export interface NewQualification {
+	model: string;
+	game: string;
+	answer_repair: 'off' | 'v1';
+	confirm_spend: true;
+	max_eur: number;
+}
+
 /** A start the arena refused, with its reason (422: the game refused, 429: arena full). */
 export type Refused = { state: 'refused'; status: number; detail: string };
 
@@ -497,6 +560,23 @@ export interface ArenaClient {
 	monthSpend(): Promise<ApiResult<MonthSpend>>;
 	catalog(): Promise<ApiResult<Catalog>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
+	/** Free: what a qualification click would reserve; `not_found` for a game without cases. */
+	qualificationQuote(
+		model: string,
+		game: string,
+		repair: 'off' | 'v1'
+	): Promise<ApiResult<QualificationQuote>>;
+	/** Free: the status of this model, game and repair setting now. */
+	qualificationCurrent(
+		model: string,
+		game: string,
+		repair: 'off' | 'v1'
+	): Promise<ApiResult<QualificationCurrent>>;
+	qualification(id: string): Promise<ApiResult<Qualification>>;
+	/** Spends money: the arena's guards decide (403 off, 409 busy, 422 refused, 503 ledger). */
+	startQualification(
+		job: NewQualification
+	): Promise<{ state: 'ok'; data: Qualification } | Refused | Unreachable>;
 }
 
 export function createArenaClient(
@@ -778,6 +858,52 @@ export function createArenaClient(
 
 		eventsUrl(id) {
 			return `${root.replace(/^http/, 'ws')}/matches/${encodeURIComponent(id)}/events`;
+		},
+
+		qualificationQuote(model, game, repair) {
+			const query = new URLSearchParams({ model, game, answer_repair: repair });
+			return getJson<QualificationQuote>(
+				`/qualifications/quote?${query}`,
+				(body) => isObject(body) && typeof body.reserved_micro_eur === 'number',
+				[404, 422]
+			);
+		},
+
+		qualificationCurrent(model, game, repair) {
+			const query = new URLSearchParams({ model, game, answer_repair: repair });
+			return getJson<QualificationCurrent>(
+				`/qualifications/current?${query}`,
+				(body) => isObject(body) && typeof body.status === 'string',
+				[404, 422]
+			);
+		},
+
+		qualification(id) {
+			return getJson<Qualification>(
+				`/qualifications/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && typeof body.status === 'string'
+			);
+		},
+
+		async startQualification(job) {
+			let response: Response;
+			try {
+				response = await get('/qualifications', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify(job)
+				});
+			} catch (error) {
+				return { state: 'unreachable', reason: describe(error) };
+			}
+			const body: unknown = await response.json().catch(() => undefined);
+			if (response.status === 202 && isObject(body) && typeof body.id === 'string') {
+				return { state: 'ok', data: body as unknown as Qualification };
+			}
+			if ([403, 404, 409, 422, 503].includes(response.status)) {
+				return { state: 'refused', status: response.status, detail: detailOf(body) };
+			}
+			return { state: 'unreachable', reason: `the arena answered ${response.status}` };
 		}
 	};
 }

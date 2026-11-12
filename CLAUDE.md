@@ -714,6 +714,11 @@ for one exact configuration (D-132, `arena/qualify/`).
   one real turn of p1 from a seeded random-bot match (`fixtures.py`). Only the
   first answer counts, judged by the engine's own check (`runner.py`).
 - The job is booked in the ledger under its own id. It leaves no match record.
+- `GET /qualifications/quote?model=&game=&answer_repair=` (free) says what a click would
+  send and reserve: the cases, the calls, the worst case and the caps. The model page
+  (`/models/[id]`) shows each game's status and quote, and a "Test this model" form. The
+  form needs a ticked spend box and a limit that holds the worst case; it is hidden for
+  spectators and on a server without model seats.
 - `GET /qualifications/current?model=&game=&answer_repair=` gives the status of
   that configuration now. A result counts only for its configuration hash, and
   for 7 days.
