@@ -1,0 +1,28 @@
+# The spectator UI on the home network, read-only: a small nginx in front of `web` that
+# lets only GET and HEAD through (deploy/lan/nginx.conf). The API keeps its 127.0.0.1
+# binding, the ledger and the caps are untouched, nothing here is reachable from the
+# internet (no tunnel, no router forward).
+#
+#   LAN_BIND_IP=192.168.178.45          # this computer's address on the home network, in .env
+#   docker compose -f docker-compose.yml -f docker-compose.models.yml -f docker-compose.lan.yml \
+#       up -d --no-deps lan
+#
+# First `scripts/make_lan_cert.sh <that address>` (a local certificate authority and a server
+# certificate; they stay in the gitignored deploy/lan/certs/). Then open
+# https://<that address>:3443 on a phone on the same network (http://<address>:3101 sends you
+# there and hands out the CA certificate to trust). Windows also needs an inbound firewall rule
+# for TCP 3101 and 3443 from the local subnet (see docs/LAN.md).
+services:
+  lan:
+    image: nginx:1.27-alpine
+    ports:
+      - "${LAN_BIND_IP:?set LAN_BIND_IP in .env, see docs/LAN.md}:3101:80"
+      - "${LAN_BIND_IP}:3443:443"
+    volumes:
+      - ./deploy/lan/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Only the server's key and certificate and the public CA certificate are mounted,
+      # never the CA's private key (deploy/lan/certs/ca/).
+      - ./deploy/lan/certs/server:/etc/nginx/tls:ro
+      - ./deploy/lan/certs/lan-ca.crt:/etc/nginx/ca/lan-ca.crt:ro
+    depends_on:
+      - web
