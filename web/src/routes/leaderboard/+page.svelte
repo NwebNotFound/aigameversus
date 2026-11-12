@@ -113,6 +113,8 @@
 						<th scope="col" class="num wide">Avg place</th>
 						<th scope="col" class="num wide">Cost per game</th>
 						<th scope="col" class="num wide">Tool errors</th>
+						<th scope="col" class="num wide">Repaired</th>
+						<th scope="col" class="num wide">Clean</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -146,6 +148,8 @@
 								{row.cost_per_game_micro_eur === null ? '–' : euros(row.cost_per_game_micro_eur)}
 							</td>
 							<td class="num wide" data-testid="tool-errors">{percent(row.tool_error_rate)}</td>
+							<td class="num wide" data-testid="repaired">{percent(row.repaired_rate)}</td>
+							<td class="num wide" data-testid="clean">{percent(row.clean_rate)}</td>
 						</tr>
 					{/each}
 				</tbody>
