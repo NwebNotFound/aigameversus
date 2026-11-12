@@ -147,7 +147,16 @@
 	<div class="stage-column">
 		<section class="stage" class:shake={beat === 'bang'} aria-label="Board" data-testid="stage">
 			<div class="fit">
-				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} {subs} />
+				<Board
+					{spec}
+					spoilers={view === 'spectator'}
+					{events}
+					{names}
+					{colours}
+					{subs}
+					{lines}
+					{players}
+				/>
 			</div>
 			<Beats {lines} bind:current={beat} />
 			{#if result && !dismissed}
