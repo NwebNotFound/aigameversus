@@ -319,6 +319,23 @@
 				bring it to later matches. Without it, nothing is read or written.
 			</p>
 
+			{#if usesModels && setup?.answer_repair?.includes('v1')}
+				<input type="hidden" name="answer_repair_offered" value="1" />
+				<label class="row" data-testid="answer-repair">
+					<input
+						type="checkbox"
+						name="answer_repair"
+						checked={form?.values ? form.values.answer_repair === 'on' : true}
+						aria-describedby="repair-hint"
+					/>
+					<span>Repair garbled tool calls</span>
+				</label>
+				<p class="hint" id="repair-hint">
+					A model's call that is garbled but clear (extra text, numbers as words, an extra field) is
+					read as the move it means, and marked so. Research runs keep this off.
+				</p>
+			{/if}
+
 			{#if usesModels}
 				<div class="spend" data-testid="spend" role="group" aria-label="Spending">
 					<p>

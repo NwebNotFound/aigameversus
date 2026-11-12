@@ -110,6 +110,12 @@ export function parseForm(
 		}
 	}
 
+	// The repair switch is in the form only where the arena takes the setting (GET /setup)
+	// and the table has a model: then a ticked box asks for v1, a cleared one for off.
+	if (form.get('answer_repair_offered') !== null && modelSeats.length) {
+		settings.answer_repair = form.get('answer_repair') === null ? 'off' : 'v1';
+	}
+
 	if (Object.keys(errors).length || !game) return { ok: false, errors };
 	return {
 		ok: true,

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from arena.agents.budget import MICRO
 from arena.api.matches import ALLOW_MODEL_SEATS
 from arena.config import CONFIG_PATH, display_name, load_config, load_keys
+from arena.engine.types import ANSWER_REPAIR_VERSIONS
 
 PERSONALITIES_DIR = CONFIG_PATH.parent / "personalities"
 
@@ -43,6 +44,10 @@ class SetupOptions(BaseModel):
         description="Whether POST /matches seats models on this server: it was started with "
         "ARENA_ALLOW_MODEL_SEATS=1 and has the providers' API keys. Otherwise every seat is "
         "a random bot."
+    )
+    answer_repair: list[str] = Field(
+        default_factory=lambda: list(ANSWER_REPAIR_VERSIONS),
+        description="The values the match setting `answer_repair` takes; the first is the default",
     )
     mixed_seats: bool = Field(
         True,
