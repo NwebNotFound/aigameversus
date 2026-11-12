@@ -1,4 +1,4 @@
-# D-136 · A Civ prompt can show 120 events: civ-p1.1 and civ-p2.1
+# D-136 · A Civ prompt shows 120 events, not 40
 
 - **Date:** 2026-11-12
 - **Decision:** A prompt shows the latest 40 events of a player; the older ones are only counted ("N earlier events are not shown"). In Throne of Tokens that is too few: talk and a nation's results reach a model only through these events (D-130), and with six nations that all talk (3 messages and 3 offers each) plus their own results, one nation gets up to 45 new events in a turn (measured in a 20-round match of scripted talkers; random bots give at most 16). So the oldest events of the turn are cut. `GamePlugin.history_limit(settings)` (default 40, so every other game's prompt is byte for byte what it was) is read by the agent runner and the cost estimate; Civ answers 120 for every prompt version. No real Civ model match has run, so `civ-p1` and `civ-p2` are not frozen by results and change in place; from the first real Civ run on they are frozen.
