@@ -72,11 +72,13 @@ class Match[StateT: BaseModel]:
         turn_timeout: float = DEFAULT_TURN_TIMEOUT,
         max_turns: int | None = None,
         clock: Callable[[], float] | None = None,
+        personalities: Mapping[PlayerId, str] | None = None,
     ):
         """`clock` (seconds, e.g. time.monotonic) times every move into its `decision` event.
 
         Without it the time stays out of the log, so a match is the same each time it is
-        played with the same seed and answers.
+        played with the same seed and answers. `personalities` (seat -> personality id) is
+        recorded in `match_started` when a seat has one.
         """
         players = list(agents)
         if not plugin.min_players <= len(players) <= plugin.max_players:
@@ -98,6 +100,7 @@ class Match[StateT: BaseModel]:
         self._sink = sink
         self._turn_timeout = turn_timeout
         self._clock = clock
+        self._personalities = dict(personalities or {})
         self._max_turns = plugin.max_turns if max_turns is None else max_turns
         self._turns = 0  # completed turns
         self._failed: set[PlayerId] = set()  # seats whose agent gave up for good
@@ -131,6 +134,8 @@ class Match[StateT: BaseModel]:
                     "prompt_version": plugin.prompt_version(self.settings),
                     ANSWER_REPAIR: repair_of(self.settings),
                     "seed": self.seed,
+                    # Only with a personality: a match without one logs what it always did.
+                    **({"personalities": self._personalities} if self._personalities else {}),
                 },
                 # Spectators only: a player who knows the seed knows every hidden draw.
                 visible_to=(),
