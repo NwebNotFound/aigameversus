@@ -23,7 +23,7 @@ from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
-from arena.engine.types import MATCH_BUDGET, Event
+from arena.engine.types import MATCH_BUDGET, Event, match_budget_of
 from arena.personalities import load_personalities
 
 router = APIRouter(tags=["matches"])
@@ -254,7 +254,9 @@ class SeatEstimateOut(BaseModel):
 
 class EstimateOut(BaseModel):
     estimate_micro_eur: int = Field(description="All seats together, in millionths of a euro")
-    cap_micro_eur: int = Field(description="The cap of one match")
+    cap_micro_eur: int = Field(
+        description="The cap of this match: the config's, or its own lower match_budget_eur"
+    )
     month_spent_micro_eur: int = Field(description="What this calendar month has cost so far")
     month_cap_micro_eur: int
     seats: dict[str, SeatEstimateOut]
@@ -311,6 +313,8 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     ids = [model_id for model_id in new.models if model_id is not None]
     if not ids:
         raise HTTPException(422, "Every seat is a bot: a match of bots costs nothing.")
+    if MATCH_BUDGET in new.settings:
+        _check_match_budget(new.settings[MATCH_BUDGET])
     config = await _seat_config(ids)
     seats = {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
     history = await live.ledger.output_tokens(sorted(set(ids)))
@@ -322,7 +326,11 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
     total = sum(seat.estimate_micro_eur for seat in per_seat.values())
-    cap = int(config.limits.match_eur * MICRO)
+    # The match's own limit, if it sets one, is its cap (the lower of the two), as Budget has it.
+    limit = match_budget_of(new.settings)
+    cap = int(
+        min(limit, config.limits.match_eur) * MICRO if limit else config.limits.match_eur * MICRO
+    )
     month_cap = int(config.limits.month_eur * MICRO)
     return EstimateOut(
         estimate_micro_eur=total,

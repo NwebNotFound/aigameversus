@@ -1,11 +1,13 @@
 """settings.match_budget_eur: a match's own spend limit, only ever lower than the config's cap."""
 
+import asyncio
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
 
 from arena.agents.budget import Budget
+from arena.agents.random_bot import random_bots
 from arena.config import Config, Limits
 from arena.engine.match import Match
 from arena.engine.types import match_budget_of
@@ -55,3 +57,22 @@ def test_the_game_never_sees_the_limit_and_the_start_records_it():
     assert match.settings == {"match_budget_eur": 0.2}
     assert match_budget_of(match.settings) == Decimal("0.2")
     assert match_budget_of({}) is None
+
+
+@pytest.mark.parametrize("value", ["lots", "0.2", True, float("nan"), float("inf"), -1, 0])
+def test_reading_a_limit_that_is_not_euros_names_the_setting(value):
+    # The CLI reads the setting with match_budget_of: never a bare decimal error.
+    with pytest.raises(ValueError, match="match_budget_eur"):
+        match_budget_of({"match_budget_eur": value})
+
+
+def test_the_game_sees_neither_engine_setting_and_the_start_records_both():
+    plugin = Poker()  # refuses every setting it does not know
+    settings = {"match_budget_eur": 0.2, "thought_headline": True}
+    match = Match(plugin, random_bots(plugin, ["p1", "p2"], 1), seed=1, settings=settings)
+
+    asyncio.run(match.run())
+
+    (started,) = [e for e in match.events if e.type == "match_started"]
+    assert started.data["settings"] == settings
+    assert any(e.type == "match_finished" for e in match.events)

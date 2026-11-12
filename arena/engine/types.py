@@ -98,9 +98,16 @@ ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE, MATCH_BUDGET)
 
 
 def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
-    """The match's own spend limit in euros, if it set one."""
+    """The match's own spend limit in euros, if it set one. ValueError if it is not euros."""
     value = settings.get(MATCH_BUDGET)
-    return None if value is None else Decimal(str(value))
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{MATCH_BUDGET} must be a number of euros, not {value!r}")
+    euros = Decimal(str(value))
+    if not euros.is_finite() or euros <= 0:
+        raise ValueError(f"{MATCH_BUDGET} must be a number of euros above 0, not {value!r}")
+    return euros
 
 
 def repair_of(settings: Mapping[str, Any]) -> str:
