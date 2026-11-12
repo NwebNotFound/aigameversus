@@ -7,11 +7,26 @@
 
 id: W1
 title: "Werewolf pilot: eight seats of cheap models, every seat in every role"
-version: 2
-status: approved          # P1 and P2 by the owner (1.50 EUR); P3 proposed, not approved
+version: 3
+status: approved          # P1/P2 owner; P3 overnight delegation via Lead (2026-11-12)
 registered: "2026-11-12"
 author: Arena Researcher
 amendments:
+  - version: 3
+    date: "2026-11-12"
+    what: >
+      Record Lead's overnight approval of P3 up to 0.50 EUR, after P1/P2
+      reliability gates. No seeds, seats, prompts or outcome metrics change.
+      Record the corrected pre-W1 ledger baseline and reserve other overnight
+      allocations; reduce unallocated reserve from 5 to 2 EUR. P1 is still
+      running; only reliability and cost, not outcomes, have been inspected.
+    why: >
+      Lead message 1fd8b027-07da-49ba-80f3-b32ff019cdf5 passes on the owner's
+      instruction to act autonomously overnight and allocates at most 6 EUR
+      NEW spending across P2/P3, strong guests, narrator and qualification.
+      Monthly hard cap remains 25 EUR; pause new starts and notify Lead at
+      20 EUR. Per-match cap remains 0.50 EUR. No qualification or narrator
+      implementation/calls are authorized by this research amendment alone.
   - version: 2
     date: "2026-11-12"
     what: >
@@ -22,6 +37,14 @@ amendments:
       Arena Lead asked for a p2-against-p3 comparison for Werewolf (#118). It
       is written before any W1 match was played.
 approvals:
+  - stages: [P3]
+    date: "2026-11-12"
+    by: "Arena Lead under owner's explicit overnight delegation"
+    scope: >
+      P3 at most 0.50 EUR, one match at a time, stop starting at 90 percent;
+      only after P1 and P2 are clean and werewolf-p3 is deployed. Part of
+      the shared new overnight ceiling of 6 EUR; all call reservations count.
+      Approval evidence: 1fd8b027-07da-49ba-80f3-b32ff019cdf5.
   - stages: [P1, P2]
     date: "2026-11-11"
     by: "project owner, passed on by Arena Lead"
@@ -52,7 +75,7 @@ conditions:
   how_matches_run: "through POST /matches on the shared stack, one match at a time (two at most), with the batch field W1-P1 or W1-P2"
   needs_before_start:
     P1: "the arena rebuild after league E1-A2"
-    P3: "#118 (werewolf-p3) on the running stack, P1 played, and the owner's yes"
+    P3: "#118 (werewolf-p3) on the running stack, clean P1/P2, overnight approval recorded"
     P2: "#106 on the running stack (qwen-flash: 4 000 output tokens, no reasoning effort, tool_choice auto; longer waits after a rate limit)"
 
 # Ids and prices as listed by openrouter.ai/api/v1/models on 2026-11-11 (USD per million tokens).
@@ -92,7 +115,7 @@ stages:
 
   - id: P3
     kind: cyclic
-    title: "The same matches as P1 with the Werewolf prompt p3 (proposed, not approved)"
+    title: "The same matches as P1 with the Werewolf prompt p3"
     seats: [gpt-luna, claude-haiku, glm-flash, deepseek-flash, gpt-luna, mistral-small, llama-scout, claude-haiku]
     effort: low
     seeds: 1
@@ -190,11 +213,12 @@ rules:
 
 budget:
   month_cap_eur: 25.00
-  spent_before_eur: 3.00          # the month ledger before W1 (E1 pilot and league, other runs)
-  reserve_eur: 5.00
+  spent_before_eur: 3.044212      # verified ledger immediately before W1
+  reserve_eur: 2.00
   other_plans_eur:
     E1_stage_B: 4.50              # approved, not started
     E1_stage_C: 7.50              # approved, not started
+    other_overnight: 5.00         # guests 3.50, narrator 1.00, qualification 0.50; P2/P3 above
 
 limitations:
   - "One template (classic, 8 players), one prompt version (werewolf-p2), low reasoning effort."

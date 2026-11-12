@@ -422,8 +422,7 @@ def test_a_stage_with_its_own_settings_sends_them_over_the_plans(tmp_path):
         load_experiment(W1), "P1", tmp_path, arena, sleep=lambda _: None, say=lambda _: None
     ).run()
     assert {b["settings"]["prompt_version"] for b in arena.started} == {"werewolf-p2"}
-    with pytest.raises(PlanError, match="approvals"):
-        Runner(load_experiment(W1), "P3", tmp_path, FakeArena())  # proposed: may not spend
+    Runner(load_experiment(W1), "P3", tmp_path, FakeArena())  # overnight approval recorded
     bots = FakeArena(cost=0)
     Runner(
         load_experiment(W1),

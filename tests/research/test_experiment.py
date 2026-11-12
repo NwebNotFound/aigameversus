@@ -245,7 +245,9 @@ def test_cyclic_stage_puts_every_entry_in_every_seat_once_per_seed():
 def test_w1_budget_stays_inside_what_the_owner_approved():
     experiment = load_experiment(W1)
     approved = {s for entry in experiment.approvals for s in entry["stages"]}
-    assert sum(st.budget_eur for st in experiment.stages if st.id in approved) <= 1.50
+    assert approved == {"P1", "P2", "P3"}
+    assert sum(st.budget_eur for st in experiment.stages if st.id in {"P1", "P2"}) <= 1.50
+    assert next(st for st in experiment.stages if st.id == "P3").budget_eur <= 0.50
     assert experiment.settings["prompt_version"] == "werewolf-p2"
 
 
@@ -259,4 +261,5 @@ def test_w1_p3_replays_p1_with_only_the_prompt_changed():
     first = [(m.seed, m.seats) for m in rows if m.stage == "P1"]
     third = [(m.seed, m.seats) for m in rows if m.stage == "P3"]
     assert sorted(first) == sorted(third)
-    assert not any("P3" in entry["stages"] for entry in experiment.approvals)
+    approval = next(entry for entry in experiment.approvals if "P3" in entry["stages"])
+    assert "1fd8b027-07da-49ba-80f3-b32ff019cdf5" in approval["scope"]
