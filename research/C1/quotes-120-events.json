@@ -1,0 +1,222 @@
+{
+  "checked_at": "2026-11-12T10:21:07.238344+00:00",
+  "quotes": [
+    {
+      "rotation": 0,
+      "request": {
+        "game": "civ",
+        "models": [
+          "glm-flash",
+          "deepseek-flash",
+          "gpt-luna",
+          "claude-haiku"
+        ],
+        "settings": {
+          "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
+          "answer_repair": "off",
+          "match_budget_eur": 0.2
+        }
+      },
+      "response": {
+        "estimate_micro_eur": 73302,
+        "cap_micro_eur": 200000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 20,
+            "estimate_micro_eur": 8260,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 20,
+            "estimate_micro_eur": 23054,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "gpt-luna",
+            "calls": 20,
+            "estimate_micro_eur": 21626,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "claude-haiku",
+            "calls": 20,
+            "estimate_micro_eur": 20362,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": []
+      }
+    },
+    {
+      "rotation": 1,
+      "request": {
+        "game": "civ",
+        "models": [
+          "deepseek-flash",
+          "gpt-luna",
+          "claude-haiku",
+          "glm-flash"
+        ],
+        "settings": {
+          "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
+          "answer_repair": "off",
+          "match_budget_eur": 0.2
+        }
+      },
+      "response": {
+        "estimate_micro_eur": 73620,
+        "cap_micro_eur": 200000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "deepseek-flash",
+            "calls": 20,
+            "estimate_micro_eur": 23477,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "gpt-luna",
+            "calls": 20,
+            "estimate_micro_eur": 20320,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "claude-haiku",
+            "calls": 20,
+            "estimate_micro_eur": 22044,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "glm-flash",
+            "calls": 20,
+            "estimate_micro_eur": 7779,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": []
+      }
+    },
+    {
+      "rotation": 2,
+      "request": {
+        "game": "civ",
+        "models": [
+          "gpt-luna",
+          "claude-haiku",
+          "glm-flash",
+          "deepseek-flash"
+        ],
+        "settings": {
+          "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
+          "answer_repair": "off",
+          "match_budget_eur": 0.2
+        }
+      },
+      "response": {
+        "estimate_micro_eur": 73200,
+        "cap_micro_eur": 200000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "gpt-luna",
+            "calls": 20,
+            "estimate_micro_eur": 21150,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "claude-haiku",
+            "calls": 20,
+            "estimate_micro_eur": 20738,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "glm-flash",
+            "calls": 20,
+            "estimate_micro_eur": 8450,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "deepseek-flash",
+            "calls": 20,
+            "estimate_micro_eur": 22862,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": []
+      }
+    },
+    {
+      "rotation": 3,
+      "request": {
+        "game": "civ",
+        "models": [
+          "claude-haiku",
+          "glm-flash",
+          "deepseek-flash",
+          "gpt-luna"
+        ],
+        "settings": {
+          "rounds": 20,
+          "prompt_version": "civ-p1",
+          "strategy_text": "off",
+          "private_plan": "off",
+          "answer_repair": "off",
+          "match_budget_eur": 0.2
+        }
+      },
+      "response": {
+        "estimate_micro_eur": 73161,
+        "cap_micro_eur": 200000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "claude-haiku",
+            "calls": 20,
+            "estimate_micro_eur": 21568,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "glm-flash",
+            "calls": 20,
+            "estimate_micro_eur": 7929,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "deepseek-flash",
+            "calls": 20,
+            "estimate_micro_eur": 23720,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "gpt-luna",
+            "calls": 20,
+            "estimate_micro_eur": 19944,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": []
+      }
+    }
+  ],
+  "paid_calls": 0
+}

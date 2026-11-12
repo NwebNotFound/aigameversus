@@ -111,3 +111,19 @@ hook GO and the new quote. When the reviewed client later takes over, it must
 adopt that C1 batch/index1 from server history and account its ledger cost,
 never play the first cell twice. Remaining three rotations need smoke review
 and explicit Lead release; the strategy/private-plan factorial remains unapproved.
+
+
+## Post-hook freeze before the first real response
+
+Reviewer rebuilt from main01e8b50195aca9931afd0271dbc6063755c0d440 after #166.
+The live arena image is sha256:7c6b214992239cbc15b843be2f47d831bef77ee72c8b8522aba87ba9a9e3736c;
+CivGame.history_limit(civ-p1) reads back120 inside that container. The commit
+mapping comes from Reviewer's lock note, not a cryptographic source-image proof.
+Four free baseline rotation quotes now are EUR0.073302 /0.073620 /0.073200
+/0.073161, total EUR0.293283. Each cap reads back0.20 and fits. Payloads and
+timestamps are in quotes-120-events.json. Older-window quotes stay historical.
+
+Only the first direct smoke is approved (Lead5664932f/28c1ca94). The remaining
+three still need cost/reliability/prompt-cut review and explicit Lead release.
+Shared-client execution flags remain false while its money review is pending.
+The stage has no outcomes at this freeze.

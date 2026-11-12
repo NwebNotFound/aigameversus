@@ -1,7 +1,7 @@
 id: C1
 schema: explicit_stage_v1
 version: 3
-status: approved_scope_waiting_history_hook_and_requote
+status: approved_direct_smoke_only
 owner: Arena Researcher
 date: '2026-11-12'
 execution_approved: false
@@ -16,7 +16,11 @@ checkpoint_after: 1
 settings: {rounds: 20, prompt_version: civ-p1, strategy_text: 'off', private_plan: 'off', answer_repair: 'off', match_budget_eur: 0.20}
 memory: false
 remaining_release: 'Researcher smoke review AND explicit Lead go, reviewed merged client; no automatic release'
-start_build: null
+start_build: 01e8b50195aca9931afd0271dbc6063755c0d440
+start_image_digest: sha256:7c6b214992239cbc15b843be2f47d831bef77ee72c8b8522aba87ba9a9e3736c
+build_evidence: 'Reviewer rebuild lock note; image digest and120-event in-container readback verified'
+direct_smoke_approval_evidence: 'Lead5664932f and28c1ca94; one direct API match only'
+direct_smoke_approved: true
 expected_history_limit_events: 120
 history_limit_approval: 'Lead28c1ca94: Civ120, other games40; direct smoke exception after verified deployment/requote'
 game: civ
@@ -55,7 +59,7 @@ later_factorial:
   note: 'Enhanced civ-p2 context is a separate future experiment, never changed inside this 2x2.'
 budget:
   proposed_stage_eur: 1.00
-  free_estimate_eur: null
+  free_estimate_eur: 0.293283
   superseded_p1_estimate_eur: 0.246445
   stage_eur: 1.00
   match_cap_eur: 0.20
