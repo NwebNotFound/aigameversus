@@ -296,3 +296,13 @@ speech by simple rules, each marked `heuristic: true`.
 - Without spoilers only public events are read: no wolf chat, no lover chat,
   no roles but those revealed at death (`meta.revealed`); `meta.roles` is
   null.
+
+## Table-talk checks
+
+`GET /matches/{id}/talk-checks` (`arena/analytics/talk.py`, D-122): statements about the speaker's
+own cards or role, read by pattern and compared with the engine's truth. A tag is
+`{seq, player, kind, quote, claim, verdict (true|false), evidence, heuristic}`; `summary` counts
+checked and false statements per player. Read it as a rate with its n, never as a lie detector:
+a missed sentence is not counted, and a false statement may be a slip. Needs spoilers except for
+Werewolf claims a death has disproved.
+

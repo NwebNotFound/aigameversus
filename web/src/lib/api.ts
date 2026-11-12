@@ -186,6 +186,8 @@ export interface SetupOptions {
 	model_seats: boolean;
 	/** Whether a table may mix models and random bots (`seats` in POST /matches). */
 	mixed_seats?: boolean;
+	/** Whether a model seat in `seats` may name a personality. */
+	seat_personalities?: boolean;
 	models: {
 		id: string;
 		model: string;
@@ -249,7 +251,7 @@ export interface NewMatch {
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
 	/** One entry per seat, a model or a bot: a table that mixes them. Instead of `models`. */
-	seats?: ({ kind: 'model'; model: string } | { kind: 'bot' })[];
+	seats?: ({ kind: 'model'; model: string; personality?: string } | { kind: 'bot' })[];
 	/** Must be true with `models` or a model in `seats`: the match spends money. */
 	confirm_spend?: boolean;
 }
@@ -273,6 +275,23 @@ export interface CatalogModel {
 	high_price: boolean;
 	/** "config/models.yaml" (checked by hand) or "openrouter list" (booked at the listed price x 1.25). */
 	price_source: string;
+	/** How the model did in this arena lately; missing until the arena reports it. */
+	reliability?: Reliability | null;
+	/** A free variant: its provider limits it hard, a match may stall on it. */
+	rate_limited_likely?: boolean;
+}
+
+/** The arena's own record of a model: unreliable when it failed or was replaced by the bot a lot. */
+export interface Reliability {
+	status: 'ok' | 'unreliable' | 'unknown';
+	/** Why, in words, for the tooltip. */
+	reason?: string | null;
+	fallback_share?: number | null;
+	agent_failed_recent?: number | null;
+	/** How many recent moves the verdict rests on. */
+	n?: number | null;
+	/** Other signs, such as answers cut off at the length limit. */
+	warnings?: string[] | null;
 }
 
 export interface Catalog {
@@ -706,8 +725,10 @@ export function createArenaClient(
 		},
 
 		catalog() {
+			// With the free variants: the picker hides them behind a switch. An arena that
+			// does not know `free` lists them anyway.
 			return getJson<Catalog>(
-				'/models/catalog',
+				'/models/catalog?free=1',
 				(body) => isObject(body) && Array.isArray(body.models)
 			);
 		},

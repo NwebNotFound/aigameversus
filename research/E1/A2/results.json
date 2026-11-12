@@ -1,0 +1,298 @@
+{
+ "run": "runs\\E1-A2",
+ "design": {
+  "matches": 120,
+  "per_model": {
+   "claude-haiku": 80,
+   "deepseek-flash": 80,
+   "glm-flash": 80,
+   "gpt-luna": 80,
+   "llama-scout": 80,
+   "mistral-small": 80
+  },
+  "per_seat_min_max": [
+   20,
+   20
+  ],
+  "pair_meetings_min_max": [
+   48,
+   48
+  ]
+ },
+ "cost_eur": 2.474928,
+ "H1": {
+  "statistic": 2.63125,
+  "p": 9.99990000099999e-06,
+  "permutations": 100000,
+  "p_holm_family": 1.999980000199998e-05
+ },
+ "H2": {
+  "claude-haiku": {
+   "wins": 3,
+   "matches": 80,
+   "share": 0.0375,
+   "wilson95": [
+    0.012834336300788755,
+    0.10454891974394322
+   ],
+   "p": 7.635016224668522e-07,
+   "p_holm": 3.0540064898674088e-06
+  },
+  "deepseek-flash": {
+   "wins": 43,
+   "matches": 80,
+   "share": 0.5375,
+   "wilson95": [
+    0.4290416436680269,
+    0.64252187611213
+   ],
+   "p": 3.938981830435321e-08,
+   "p_holm": 1.9694909152176606e-07
+  },
+  "glm-flash": {
+   "wins": 48,
+   "matches": 80,
+   "share": 0.6,
+   "wilson95": [
+    0.49045264548149986,
+    0.7003834072655851
+   ],
+   "p": 3.537700670300723e-11,
+   "p_holm": 2.1226204021804335e-10
+  },
+  "gpt-luna": {
+   "wins": 16,
+   "matches": 80,
+   "share": 0.2,
+   "wilson95": [
+    0.1270273637929335,
+    0.3004644779658116
+   ],
+   "p": 0.3660420997376704,
+   "p_holm": 0.3660420997376704
+  },
+  "llama-scout": {
+   "wins": 3,
+   "matches": 80,
+   "share": 0.0375,
+   "wilson95": [
+    0.012834336300788755,
+    0.10454891974394322
+   ],
+   "p": 7.635016224668522e-07,
+   "p_holm": 3.0540064898674088e-06
+  },
+  "mistral-small": {
+   "wins": 7,
+   "matches": 80,
+   "share": 0.0875,
+   "wilson95": [
+    0.043031454647439876,
+    0.16976982777083457
+   ],
+   "p": 0.0003972788134680694,
+   "p_holm": 0.0007945576269361388
+  }
+ },
+ "H3": {
+  "per_model": {
+   "claude-haiku": {
+    "table": [
+     38,
+     11,
+     233,
+     76
+    ],
+    "hit_rate": 0.7755102040816326,
+    "false_alarm_rate": 0.7540453074433657,
+    "odds_ratio": 1.1268045259461568,
+    "p": 0.8584542461283576,
+    "p_holm": 1.0
+   },
+   "deepseek-flash": {
+    "table": [
+     52,
+     92,
+     87,
+     364
+    ],
+    "hit_rate": 0.3611111111111111,
+    "false_alarm_rate": 0.19290465631929046,
+    "odds_ratio": 2.364817591204398,
+    "p": 6.556653699200631e-05,
+    "p_holm": 0.0003278326849600315
+   },
+   "glm-flash": {
+    "table": [
+     66,
+     103,
+     101,
+     384
+    ],
+    "hit_rate": 0.3905325443786982,
+    "false_alarm_rate": 0.20824742268041238,
+    "odds_ratio": 2.4362203210612323,
+    "p": 5.677918525319863e-06,
+    "p_holm": 3.4067511151919176e-05
+   },
+   "gpt-luna": {
+    "table": [
+     25,
+     66,
+     142,
+     278
+    ],
+    "hit_rate": 0.27472527472527475,
+    "false_alarm_rate": 0.3380952380952381,
+    "odds_ratio": 0.7415706359368331,
+    "p": 0.2686220795455941,
+    "p_holm": 1.0
+   },
+   "llama-scout": {
+    "table": [
+     19,
+     16,
+     156,
+     112
+    ],
+    "hit_rate": 0.5428571428571428,
+    "false_alarm_rate": 0.582089552238806,
+    "odds_ratio": 0.8525641025641025,
+    "p": 0.7173061741934941,
+    "p_holm": 1.0
+   },
+   "mistral-small": {
+    "table": [
+     68,
+     32,
+     264,
+     105
+    ],
+    "hit_rate": 0.68,
+    "false_alarm_rate": 0.7154471544715447,
+    "odds_ratio": 0.8451704545454546,
+    "p": 0.5355764654491333,
+    "p_holm": 1.0
+   }
+  },
+  "pooled": {
+   "odds_ratio": 1.4114204611579169,
+   "chi2": 11.79330755987427,
+   "p": 0.0005944402781297492
+  },
+  "pooled_p_holm_family": 0.0005944402781297492
+ },
+ "H4": {
+  "wins_by_seat": [
+   25,
+   31,
+   36,
+   28
+  ],
+  "chi2": 2.2,
+  "p": 0.5507744922550775
+ },
+ "plackett_luce": {
+  "glm-flash": {
+   "strength": 1.273002565641216,
+   "ci95": [
+    1.0097845791656495,
+    1.607126822832333
+   ]
+  },
+  "deepseek-flash": {
+   "strength": 0.9935852256329505,
+   "ci95": [
+    0.5957710057217895,
+    1.4721457006455825
+   ]
+  },
+  "gpt-luna": {
+   "strength": 0.209693521971526,
+   "ci95": [
+    -0.012194592008429886,
+    0.437239187216812
+   ]
+  },
+  "mistral-small": {
+   "strength": -0.5291211532079659,
+   "ci95": [
+    -0.7768216806439401,
+    -0.3254145040070595
+   ]
+  },
+  "claude-haiku": {
+   "strength": -0.8547306243127885,
+   "ci95": [
+    -1.1931392868087278,
+    -0.5864509230653516
+   ]
+  },
+  "llama-scout": {
+   "strength": -1.0924295357249376,
+   "ci95": [
+    -1.44623297443173,
+    -0.7440985900135356
+   ]
+  }
+ },
+ "reliability": {
+  "claude-haiku": {
+   "matches": 80,
+   "moves": 563,
+   "clean_share": 1.0,
+   "repaired_share": 0.0,
+   "rejected_per_move": 0.015985790408525755,
+   "fallback_share": 0.0,
+   "failed_agents": 0
+  },
+  "deepseek-flash": {
+   "matches": 80,
+   "moves": 849,
+   "clean_share": 0.9528857479387515,
+   "repaired_share": 0.0,
+   "rejected_per_move": 0.5441696113074205,
+   "fallback_share": 0.04711425206124853,
+   "failed_agents": 0
+  },
+  "glm-flash": {
+   "matches": 80,
+   "moves": 831,
+   "clean_share": 0.9987966305655837,
+   "repaired_share": 0.0,
+   "rejected_per_move": 0.02286401925391095,
+   "fallback_share": 0.0012033694344163659,
+   "failed_agents": 0
+  },
+  "gpt-luna": {
+   "matches": 80,
+   "moves": 720,
+   "clean_share": 1.0,
+   "repaired_share": 0.0,
+   "rejected_per_move": 0.0,
+   "fallback_share": 0.0,
+   "failed_agents": 0
+  },
+  "llama-scout": {
+   "matches": 80,
+   "moves": 527,
+   "clean_share": 0.9962049335863378,
+   "repaired_share": 0.0,
+   "rejected_per_move": 0.222011385199241,
+   "fallback_share": 0.003795066413662239,
+   "failed_agents": 0
+  },
+  "mistral-small": {
+   "matches": 80,
+   "moves": 740,
+   "clean_share": 0.9945945945945946,
+   "repaired_share": 0.0,
+   "rejected_per_move": 0.23783783783783785,
+   "fallback_share": 0.005405405405405406,
+   "failed_agents": 0
+  }
+ },
+ "notes": [
+  "H5 (stage B) and H6 (stage C) join the family of confirmatory tests when those stages are played; the Holm adjustment here covers H1 and H3 only so far."
+ ]
+}

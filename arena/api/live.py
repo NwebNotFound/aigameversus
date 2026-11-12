@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 import asyncpg
 
 from arena.agents.budget import Budget
+from arena.agents.prompt import personality_text
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
 from arena.catalog import resolve
@@ -27,6 +28,7 @@ from arena.jev.client import HttpJev
 from arena.jev.config import load_jev_config
 from arena.jev.repair import JevRepairer
 from arena.memory.store import MemoryStore
+from arena.personalities import load_personalities
 from arena.ratings.store import RatingStore
 
 log = logging.getLogger(__name__)
@@ -117,6 +119,7 @@ class LiveMatches:
         models: Mapping[str, str] | None = None,
         memory: bool = True,
         batch: Batch | None = None,
+        personalities: Mapping[str, str] | None = None,
     ) -> MatchRecord:
         """Start a match and return its record. It plays on in the background.
 
@@ -155,15 +158,32 @@ class LiveMatches:
             # A table may mix models and random bots: a seat without a model is a bot.
             bots = random_bots(plugin, [seat for seat in players if seat not in models], seed)
             bot_seat = bot_seats(list(bots))
+            played = dict(personalities or {})
+            texts = (
+                {
+                    p.id: personality_text(p.name, p.description, p.speech_style)
+                    for p in load_personalities()
+                }
+                if played
+                else {}
+            )
             agents = {
-                seat: ModelAgent(budget.model(seat, models[seat]), plugin, settings=settings)
+                seat: ModelAgent(
+                    budget.model(seat, models[seat]),
+                    plugin,
+                    settings=settings,
+                    personality=texts.get(played.get(seat, "")),
+                )
                 if seat in models
                 else bots[seat]
                 for seat in players
             }
             seats = {
                 seat: Seat(
-                    name=display_name(config, models[seat]), model_id=models[seat], kind="model"
+                    name=display_name(config, models[seat]),
+                    model_id=models[seat],
+                    kind="model",
+                    personality=played.get(seat),
                 )
                 if seat in models
                 else bot_seat[seat]
@@ -184,6 +204,9 @@ class LiveMatches:
             sink=sink,
             clock=time.monotonic,
             repairer=repairer,
+            personalities={
+                s: p for s, p in (personalities or {}).items() if models and s in models
+            },
         )
         if len(self._running) >= MAX_RUNNING:
             raise ArenaBusy(

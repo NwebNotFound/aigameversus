@@ -2,7 +2,13 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { cheapSeats, loadFavourites, saveFavourites } from '#lib/catalog.js';
+	import {
+		cheapSeats,
+		loadFavourites,
+		reliabilityNote,
+		saveFavourites,
+		unreliable
+	} from '#lib/catalog.js';
 	import ModelPicker from '#lib/components/ModelPicker.svelte';
 	import WerewolfRoles from '#lib/components/WerewolfRoles.svelte';
 	import { gameName } from '#lib/games.js';
@@ -68,6 +74,7 @@
 	const unverified = $derived(
 		catalog.filter((m) => !m.verified && seatIds.includes(m.id)).map((m) => m.name)
 	);
+	const shaky = $derived(catalog.filter((m) => unreliable(m) && seatIds.includes(m.id)));
 
 	let favourites = $state(new Set<string>());
 	onMount(() => (favourites = loadFavourites(localStorage)));
@@ -200,9 +207,14 @@
 						<label>
 							<span class="sr-only">Personality of {seat}</span>
 							<select
+								name="personality_{seat}"
 								aria-label="Personality of {seat}"
-								disabled
-								title="Not possible yet: the live arena does not take a personality per seat"
+								disabled={!setup?.seat_personalities ||
+									!setup.model_seats ||
+									seatIds[index] === BOT}
+								title={setup?.seat_personalities
+									? 'A personality for this model; a random bot plays none'
+									: 'Not possible yet: the live arena does not take a personality per seat'}
 							>
 								<option value="">No personality</option>
 								{#each setup?.personalities ?? [] as personality (personality.id)}
@@ -225,6 +237,20 @@
 					</button>
 				</div>
 			{/if}
+			{#if shaky.length}
+				<div class="field-error" role="alert" data-testid="unreliable-models">
+					<p>
+						Unreliable in this arena: {#each shaky as model, i (model.id)}{i ? ', ' : ''}<span
+								title={reliabilityNote(model)}>{model.name}</span
+							>{/each}. Such a model often fails or is replaced by the random bot.
+					</p>
+					<label>
+						<input type="checkbox" name="confirm_unreliable" />
+						Seat {shaky.length === 1 ? 'it' : 'them'} anyway
+					</label>
+					{#if errors.confirm_unreliable}<p>{errors.confirm_unreliable}</p>{/if}
+				</div>
+			{/if}
 			{#if expensive.length}
 				<p class="field-error" role="alert" data-testid="high-price">
 					Expensive: {expensive.join(', ')} cost{expensive.length === 1 ? 's' : ''} more than $10 per
@@ -239,8 +265,8 @@
 			{/if}
 			<p class="hint">
 				{#if setup?.model_seats && setup.mixed_seats}
-					Each seat is a model (paid) or a random bot (free); a table may mix them. Not possible
-					yet: a personality per seat.
+					Each seat is a model (paid) or a random bot (free); a table may mix them, and a model may
+					play a personality.
 				{:else if setup?.model_seats}
 					A table is all models (paid) or all random bots (free). Not possible yet: bots and models
 					at one table, and a personality per seat; both need an arena update that is not live.

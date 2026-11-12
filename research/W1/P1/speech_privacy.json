@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "accepted_texts": 364,
+    "accepted_text_fields": 250,
+    "accepted_reason_fields": 114,
+    "accepted_day_votes": 114
+  },
+  "accepted_tools": {
+    "seer_check": 17,
+    "wolf_chat": 12,
+    "wolf_kill": 44,
+    "witch_act": 18,
+    "elect_captain": 60,
+    "speak": 238,
+    "vote": 114,
+    "hunter_shoot": 6,
+    "pass_captaincy": 7
+  },
+  "flags": [],
+  "limitations": "Stored event audiences and syntactic identity scan only; exact sent request snapshots are not logged; no exhaustive semantic confusion/privacy proof."
+}

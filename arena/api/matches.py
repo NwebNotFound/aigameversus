@@ -25,6 +25,7 @@ from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 from arena.jev.client import ALLOW_JEV
+from arena.personalities import load_personalities
 
 router = APIRouter(tags=["matches"])
 
@@ -53,15 +54,15 @@ class SeatSpec(BaseModel):
     kind: Literal["model", "bot"]
     model: str | None = Field(None, description="For a model seat: an id of GET /models/catalog")
     personality: str | None = Field(
-        None, description="Not supported yet: the agent runner has no personality in its prompt"
+        None, description="For a model seat: a personality id of GET /setup, or none"
     )
 
     @model_validator(mode="after")
     def _check(self) -> "SeatSpec":
         if (self.kind == "model") != (self.model is not None):
             raise ValueError("a model seat names its model, a bot seat names none")
-        if self.personality is not None:
-            raise ValueError("a personality per seat is not supported yet")
+        if self.personality is not None and self.kind == "bot":
+            raise ValueError("a random bot plays no personality")
         return self
 
 
@@ -136,11 +137,22 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     if new.models is not None and new.seats is not None:
         raise HTTPException(422, "Name the seats with `seats` or with `models`, not both.")
     models = None
+    personalities: dict[str, str] = {}
     if new.seats is not None:
         count = len(new.seats)
         if new.players is not None and new.players != count:
             raise HTTPException(422, f"players is {new.players}, but {count} seats are named")
         chosen = {f"p{i}": s.model for i, s in enumerate(new.seats, start=1) if s.kind == "model"}
+        personalities = {
+            f"p{i}": s.personality for i, s in enumerate(new.seats, start=1) if s.personality
+        }
+        known = {p.id for p in load_personalities()}
+        if unknown := sorted(set(personalities.values()) - known):
+            raise HTTPException(
+                422,
+                f"Unknown personality {', '.join(unknown)}. "
+                f"Personalities: {', '.join(sorted(known))}",
+            )
         if chosen:
             models = await _model_seats(new, chosen)
     elif new.models is None:
@@ -166,6 +178,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
             models=models,
             memory=new.memory,
             batch=new.batch,
+            personalities=personalities,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused

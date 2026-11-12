@@ -13,6 +13,10 @@ export interface CatalogFilter {
 	minContext: number | null;
 	/** Only these ids (the favourites); null: every model. */
 	only: Set<string> | null;
+	/** Also the free variants (hidden by default: they are often rate-limited). */
+	showFree: boolean;
+	/** Also models the arena marks unreliable (hidden by default). */
+	showUnreliable: boolean;
 }
 
 export const NO_FILTER: CatalogFilter = {
@@ -21,8 +25,25 @@ export const NO_FILTER: CatalogFilter = {
 	reasoning: false,
 	verifiedOnly: false,
 	minContext: null,
-	only: null
+	only: null,
+	showFree: false,
+	showUnreliable: false
 };
+
+/** Whether the arena marks the model unreliable from its recent matches. */
+export function unreliable(model: CatalogModel): boolean {
+	return model.reliability?.status === 'unreliable';
+}
+
+/** The badge text of an unreliable model: the arena's reason, and what it rests on. */
+export function reliabilityNote(model: CatalogModel): string | null {
+	const r = model.reliability;
+	if (!r || r.status !== 'unreliable') return null;
+	const parts = [r.reason || 'Often failed or replaced by the bot in this arena'];
+	if (r.n) parts.push(`last ${r.n} moves`);
+	for (const warning of r.warnings ?? []) parts.push(warning);
+	return parts.join('; ');
+}
 
 /** The price filters the picker offers, in dollars per million output tokens. */
 export const PRICE_STEPS = [
@@ -44,6 +65,8 @@ export function filterCatalog(models: CatalogModel[], filter: CatalogFilter): Ca
 		if (filter.verifiedOnly && !model.verified) return false;
 		if (filter.minContext !== null && (model.context_length ?? 0) < filter.minContext) return false;
 		if (filter.only && !filter.only.has(model.id)) return false;
+		if (!filter.showFree && model.free) return false;
+		if (!filter.showUnreliable && unreliable(model)) return false;
 		return true;
 	});
 }
@@ -55,7 +78,7 @@ export function filterCatalog(models: CatalogModel[], filter: CatalogFilter): Ca
  */
 export function cheapSeats(models: CatalogModel[], seats: number): string[] {
 	const cheap = models
-		.filter((model) => model.verified && !model.free)
+		.filter((model) => model.verified && !model.free && !unreliable(model))
 		.toSorted(
 			(a, b) =>
 				a.input_usd_per_mtok +
