@@ -50,6 +50,8 @@ combat:
   random_factor: {min: 0.8, max: 1.2}
   ranged_rounds: 1 # archers fire before melee
   winner_loss_factor: 0.4 # winner loses (loser power / winner power) * this share of units
+  loser_loss_factor: 0.5 # loser loses (winner power / loser power) * this share, at least 1 unit, at most all
+  ranged_loss_factor: 0.5 # ranged round: each side loses (archers' power / its own power) * this share
 
 conquest:
   population_loss: 1
