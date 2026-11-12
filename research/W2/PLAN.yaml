@@ -8,7 +8,7 @@ game: werewolf
 allocation_approval: 'Lead overnight delegation 1fd8b027: guest stage up to EUR3.50'
 execution_plan_approved: false
 execution_approval_evidence: null
-schedule: W2_werewolf_guests_schedule.csv
+schedule: schedule.csv
 settings: {template: classic, language: en, prompt_version: werewolf-p2, answer_repair: 'off'}
 memory: false
 reasoning_effort_per_model: low

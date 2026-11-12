@@ -14,7 +14,7 @@ from games.werewolf.plugin import Werewolf
 @pytest.fixture
 def plan():
     root = Path(__file__).resolve().parents[2]
-    return yaml.safe_load((root / "experiments/W2_werewolf_guests.yaml").read_text())
+    return yaml.safe_load((root / "research/W2/PLAN.yaml").read_text())
 
 
 def test_fixed_hosts_two_role_cells_and_no_omitted_models(plan):

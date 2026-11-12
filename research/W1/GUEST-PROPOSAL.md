@@ -45,7 +45,7 @@ notify/hold at EUR 20 spent. No retries of failed matches. A failed agent, faile
 or interrupted match, or guest fallback share above 10% holds the series for Lead.
 Do not call a two-cell model "qualified" even if there are no observed failures.
 
-[YAML](../../experiments/W2_werewolf_guests.yaml) and the explicit CSV are a
+[YAML](../W2/PLAN.yaml) and the [explicit CSV](../W2/schedule.csv) are a
 proposed study schema, not input accepted by the existing E1 experiment runner.
 An explicit-CSV API client must be implemented/reviewed before spending. It must
 match the frozen roster/seed/settings, account every attempt against the shared
