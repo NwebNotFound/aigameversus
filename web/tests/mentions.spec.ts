@@ -4,6 +4,12 @@ import { expect, test } from '@playwright/test';
 // bubbles show such a seat as its name chip; the raw switch shows the words as written.
 
 const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
+
+// A route handler can still be fetching when a test ends; unrouting with ignoreErrors keeps
+// its late "Test ended" rejection from failing the run.
+test.afterEach(async ({ page }) => {
+	await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
 const SENTENCE = 'p2, two kings with your history? I doubt it!';
 // The shape of the Werewolf thought Nils saw: reasoning steps as **headings**, paragraphs.
 const THOUGHT = [

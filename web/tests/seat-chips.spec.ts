@@ -6,6 +6,12 @@ import { expect, test } from '@playwright/test';
 
 const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
 
+// A route handler can still be fetching when a test ends; unrouting with ignoreErrors keeps
+// its late "Test ended" rejection from failing the run.
+test.afterEach(async ({ page }) => {
+	await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
 test('model seats show the model and are never called bots', async ({ page, request }) => {
 	const match = await (
 		await request.post(`${ARENA}/matches`, {

@@ -5,6 +5,12 @@ import { readFileSync } from 'node:fs';
 
 const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
 
+// A route handler can still be fetching when a test ends; unrouting with ignoreErrors keeps
+// its late "Test ended" rejection from failing the run.
+test.afterEach(async ({ page }) => {
+	await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
 async function finished(request: APIRequestContext, body: Record<string, unknown>) {
 	const match = await (await request.post(`${ARENA}/matches`, { data: body })).json();
 	await expect
