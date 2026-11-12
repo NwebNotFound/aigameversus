@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, rewrite, test } from './routes.js';
 
 // The Throne of Tokens board (`hex_map`, docs/civ-interfaces.md). The plugin is not built yet,
 // so a running match's board is swapped for a map from the real generator (fixture).
@@ -10,12 +11,9 @@ const NATIONS = MAP.nations.map((n: { id: string }) => n.id);
 
 /** Serve `spec` as the board of the match, as the arena would once the plugin exists. */
 async function withMap(page: Page, id: string, spec: Record<string, unknown>) {
-	await page.route(`**/matches/${id}/state*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${id}/state*`, (body) => {
 		body.board = { ...body.board, spec };
 		body.match.players = NATIONS;
-		await route.fulfill({ response, json: body });
 	});
 }
 
