@@ -8,7 +8,7 @@ it exactly.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import get_args
+from typing import Any, get_args
 
 from pydantic import BaseModel
 
@@ -17,11 +17,17 @@ from games.civ.world import Hex, WorldMap
 
 Stock = dict[Resource, int]
 
+# The owner of barbarians and of rebel cities: at war with everyone, without a declaration.
+NEUTRAL = "neutral"
+
 
 class Nation(BaseModel):
     stock: Stock  # what the nation owns of every resource; never below 0
     hungry_rounds: int = 0  # rounds in a row in which upkeep was not paid in full
     reputation: int = 50  # public, between the limits in treaties.yaml; new_game sets the start
+    weary_rounds: int = 0  # rounds in a row at war (combat.weariness)
+    capital_lost_until: int | None = None  # its capital fell: production suffers until then
+    plan: str | None = None  # the nation's own note from its last call, shown back only to it
 
 
 class Site(BaseModel):
@@ -41,6 +47,7 @@ class City(BaseModel):
     focus: Focus = "growth"
     buildings: list[str] = []
     sites: list[Site] = []
+    conquered_round: int | None = None  # the round it last changed hands by conquest
 
     @property
     def tile(self) -> Hex:
@@ -61,6 +68,7 @@ class Army(BaseModel):
     row: int
     units: list[Troop]  # never empty: an army that loses its last unit is gone
     moved_in_round: int | None = None  # the round of its last move; an army moves once a round
+    fortified_from: int | None = None  # fortified from this round on, until it moves
 
     @property
     def tile(self) -> Hex:
@@ -104,6 +112,17 @@ class Deal(BaseModel):
     rounds_left: int
 
 
+class Condition(BaseModel):
+    """A lasting effect of a random event on the cities around a tile, such as a drought."""
+
+    event: str
+    col: int
+    row: int
+    radius: int
+    until_round: int  # the last round it holds
+    modifiers: dict[Resource, float]  # relative change of a city's yield, -0.5 = half
+
+
 class CivState(BaseModel):
     round: int = 0  # the round being played; 0 before the first
     world: WorldMap = WorldMap(rows=[], starts=[])
@@ -117,6 +136,13 @@ class CivState(BaseModel):
     offers_made: int = 0  # for the next offer id
     deals: list[Deal] = []
     wars: list[list[str]] = []  # pairs of nations at war, each sorted
+    attacks: list[dict[str, Any]] = []  # this round's attacks {army, target}, until fought
+    conditions: list[Condition] = []  # from random events, oldest first
+    rich_rounds: dict[str, int] = {}  # rounds in a row a nation held the economic-victory gold
+    victory: dict[str, Any] | None = None  # {kind, winners, placements} once the match is won
+    # Kept for one round after their own, for the next observation and the board:
+    refused: list[dict[str, Any]] = []  # dropped orders {nation, round, order, reason}
+    battles: list[dict[str, Any]] = []  # {round, tile, winner, nations}
 
     def city(self, city_id: str) -> City:
         return next(city for city in self.cities if city.id == city_id)

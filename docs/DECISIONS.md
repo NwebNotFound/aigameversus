@@ -118,8 +118,19 @@ with `python scripts/decisions.py adopt`.
 - [D-113](decisions/D-113-refused-answers-are-answer-quality-a-retry-marker-on-the.md) · Refused answers are answer quality: a retry marker on the move, red only for a random move
 - [D-114](decisions/D-114-a-garbled-tool-call-that-clearly-means-one-move-is-repaired.md) · A garbled tool call that clearly means one move is repaired, and the move says so
 - [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
-- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
 - [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
+- [D-117](decisions/D-117-a-headline-for-viewers-is-a-match-flag-thought-headline-not.md) · A headline for viewers is a match flag, thought_headline, not a prompt version
+- [D-118](decisions/D-118-cut-off-answers-and-rate-limits-are-counted-apart-and-a.md) · Cut-off answers and rate limits are counted apart, and a model is qualified per route, game and configuration
 - [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
 - [D-120](decisions/D-120-free-variants-are-left-out-of-the-catalog-and-every-model.md) · Free variants are left out of the catalog, and every model says how reliably it has played here
+- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
 - [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule
+- [D-123](decisions/D-123-jev.md) · Jev calibration preserves intent and separates human agreement from ground truth
+- [D-124](decisions/D-124-the-throne-of-tokens-board-draws-the-hex-map-in-svg-with-a.md) · The Throne of Tokens board draws the hex map in SVG, with a nation's fog on request
+- [D-126](decisions/D-126-throne-of-tokens-combat-what-a-battle-costs-the-ranged-round.md) · Throne of Tokens combat: what a battle costs, the ranged round, and which city is a capital
+- [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
+- [D-128](decisions/D-128-the-throne-of-tokens-scoreboard-is-public-by-rule-positions.md) · The Throne of Tokens scoreboard is public by rule; positions and contents stay fogged
+- [D-129](decisions/D-129-a-repaired-move-carries-a-muted-marker-per-tier-spoiler-free.md) · A repaired move carries a muted marker per tier; spoiler-free shows the tier and probability only
+- [D-130](decisions/D-130-throne-of-tokens-is-played-round-by-round-in-one-call-per.md) · Throne of Tokens is played round by round in one call per nation
+- [D-131](decisions/D-131-under-the-werewolf-circle-who-claims-what-and-who-suspects.md) · Under the Werewolf circle: who claims what and who suspects whom, cut at the moment on screen
+- [D-132](decisions/D-132-a-model-is-qualified-per-configuration-by-its-first-answers.md) · A model is qualified per configuration by its first answers to real turns of seeded bot matches

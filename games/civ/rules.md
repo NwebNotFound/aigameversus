@@ -102,8 +102,13 @@ sees it. Trades carry a 10 % fee, +10 % if your reputation is below 30.
 ## Orders
 
 You submit all orders of a round in one `submit_orders` call, a list of orders
-(at most 40). Diplomacy orders run first, then cities, then armies. An illegal
-order is dropped with a reason you read next round, and the rest still run.
+(at most 40; at most 3 messages and 3 treaty or trade offers). Diplomacy
+orders run first, then cities, then armies; within each type the nations go
+in seat order. An illegal order is dropped with a reason you read next round
+(`refused`), and the rest still run. `legal` in your situation lists what you
+can build and train, and `legal.orders` which order types can do something
+now. `plan` (optional, at most 60 words) is a note to yourself: you get it
+back next round as `your_plan_from_last_round`; nobody else reads it.
 
 Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
 
@@ -114,7 +119,7 @@ Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
   {"type": "train", "city": "c1", "unit": "spearman", "count": 2},
   {"type": "settle", "army": "a2"},
   {"type": "move", "army": "a1", "to": [4, 3]}
-]}
+], "plan": "Grow c1, settle east, keep a1 near the river."}
 ```
 
 | Order | Arguments |
@@ -122,26 +127,26 @@ Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
 | build, demolish | city, building |
 | focus | city, focus (growth, production, military) |
 | train | city, unit, count (1 to 10) |
-| move | army, to ([col, row], a tile it can reach) |
+| move | army, to ([col, row], a tile in its `reachable`; a tile held by a nation you are at war with, or by barbarians, is attacked) |
 | settle | army (its settler founds a city here) |
 | split | army, units (unit ids to take out as a new army) |
 | merge | armies (ids on one tile; they join the first) |
 | disband | army |
 | fortify | army (stays put; +25 % defense from next round) |
 | pillage | army (destroys the newest building of an enemy city next to it) |
-| message | to (nation or null for everyone), text |
-| propose_treaty | to, kind, rounds |
+| message | to (nation or null for everyone), text (at most 60 words) |
+| propose_treaty | to, kind, rounds (a tribute also: payer, payment) |
 | respond | offer (id), accept (true/false) |
 | declare_war, break_treaty | on (nation) / treaty (id) |
 | propose_trade | to, gives, wants, rounds |
 
 ## A round
 
-1. Info: up to 8 info tool calls.
-2. Diplomacy: messages, treaties, trades; 2 passes.
-3. Orders: everyone submits secretly with `submit_orders` at the same time.
-4. Resolution: trade → build and train → movement → combat → production →
-   growth → events.
+1. Everyone gets their situation and answers with one `submit_orders` at the
+   same time. An offer made this round can be answered next round.
+2. Resolution: your orders (diplomacy, cities, armies), barbarians, combat,
+   tributes and trades, production and upkeep, growth, random events, war
+   weariness, victory.
 
 Random events: plague, drought, rebellion of recently conquered cities,
 barbarians, gold finds, good harvests.

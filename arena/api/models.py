@@ -85,6 +85,15 @@ class ReliabilityOut(BaseModel):
     telemetry_moves: int = Field(description="Moves that report cut-offs and rate limits")
     cutoff_share: float | None
     rate_limits_per_move: float | None
+    answers: int = Field(description="The answers of the moves that report an answer count")
+    rejected: int = Field(description="Of those answers, the ones the server refused")
+    rejected_rate: float | None = Field(description="rejected / answers; null without a count")
+    rejected_told: int = Field(description="Refused answers in moves that also report cut-offs")
+    rejected_cut_off: int | None = Field(
+        description="Of the refused answers in moves that report cut-offs, those that ran into "
+        "the output limit; null when no move reports them (older logs)"
+    )
+    last_seen: datetime | None = Field(description="When its newest move was logged")
     warnings: list[str] = Field(description="What costs time without being a failure")
 
     @classmethod

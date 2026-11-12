@@ -44,12 +44,20 @@ test('nothing overflows the viewport horizontally', async ({ page }) => {
 	expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test('a game without its plugin yet is coming soon and starts nothing', async ({ page }) => {
+test('Throne of Tokens has its plugin: its card starts a match like any other', async ({
+	page,
+	request
+}) => {
+	const games = await (
+		await request.get(`${process.env.ARENA_URL ?? 'http://127.0.0.1:8100'}/games`)
+	).json();
+	expect(games.map((game: { id: string }) => game.id)).toContain('civ');
+
 	await page.goto('/');
 
 	const civ = page.locator('[data-testid="game-card"][data-game="civ"]');
-	await expect(civ).toContainText('Coming soon');
-	await expect(civ.getByRole('link')).toHaveCount(0);
+	await expect(civ).not.toContainText('Coming soon');
+	await expect(civ.getByRole('link', { name: 'Start a match' })).toBeVisible();
 });
 
 test('a playable game starts the new-match form with it chosen', async ({ page }) => {

@@ -146,7 +146,10 @@ class Event(_Named):
     probability_per_round: Ratio
     target: Literal["city", "region", "nation", "map"]
     region_radius: Annotated[int, Field(ge=1)] | None = None
-    duration_rounds: Annotated[int, Field(ge=1)] = Field(1, description="1 = this round only")
+    duration_rounds: Annotated[int, Field(ge=1)] = Field(
+        1,
+        description="Productions it holds, from the next round on (events strike after production)",
+    )
     only_conquered_within_rounds: Annotated[int, Field(ge=1)] | None = None
     effects: EventEffects
 
@@ -319,6 +322,8 @@ class CombatBalance(_Model):
     random_factor: Range
     ranged_rounds: Annotated[int, Field(ge=0)]
     winner_loss_factor: Ratio
+    loser_loss_factor: Ratio
+    ranged_loss_factor: Ratio
 
 
 class ConquestBalance(_Model):

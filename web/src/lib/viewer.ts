@@ -431,10 +431,37 @@ export function mentionParts(text: string, players: Record<string, Seat> | undef
 	return parts.length ? parts : [{ text }];
 }
 
-/** A move's story of attempts: how many answers were refused, and whether the engine took over. */
+/**
+ * How a garbled answer still became a move (answer_repair, #114 and #141): tier 1, the call
+ * read as meant (`decision.repairs`); tier 2, Jev mapped the refused call to the legal move
+ * the model meant (`action_accepted.repaired_by: "jev"`, with its top probability).
+ */
+export interface Repair {
+	tier: 1 | 2;
+	/** Jev's top probability (tier 2), else null. */
+	p: number | null;
+	/** What was wrong with the answer, for the tooltip; null in the spoiler-free view. */
+	problem: string | null;
+}
+
+/** A move's story of attempts: refused answers, a repair, or a move the engine took over. */
 export interface Attempts {
 	retries: number;
 	fallback: boolean;
+	repair: Repair | null;
+}
+
+/** What a tier-1 repair fixed, in words (arena/agents/arguments.py). */
+const REPAIRS: Record<string, string> = {
+	extracted_json: 'the call was written inside text',
+	ignored_extra_keys: 'it had fields the tool does not take',
+	ignored_non_object: 'its arguments were not an object',
+	coerced_numbers: 'numbers were written as text',
+	ignored_thought: 'the thought was in the wrong place'
+};
+
+export function repairProblem(kinds: string[]): string {
+	return kinds.map((kind) => REPAIRS[kind] ?? kind.replaceAll('_', ' ')).join('; ');
 }
 
 /**
@@ -449,7 +476,17 @@ export function attempts(lines: TranscriptLine[]): {
 } {
 	const hidden = new Set<TranscriptLine>();
 	const marks = new Map<TranscriptLine, Attempts>();
-	type Open = { retries: number; fallback: boolean; thoughts: TranscriptLine[]; armed: boolean };
+	type Open = {
+		retries: number;
+		fallback: boolean;
+		thoughts: TranscriptLine[];
+		armed: boolean;
+		/** Tier-1 repairs of the move (decision), Jev's probability (tier 2), the last refusal. */
+		kinds: string[];
+		/** Jev played the move (tier 2); its top probability, when it gave one. */
+		jev: { p: number | null } | null;
+		refused: string | null;
+	};
 	const open = new Map<string, Open>();
 	/** Seats the engine plays for from now on (`agent_failed`). */
 	const failed = new Set<string>();
@@ -458,18 +495,45 @@ export function attempts(lines: TranscriptLine[]): {
 		if (!actor) continue;
 		const type = String(line.raw?.type ?? '');
 		let s = open.get(actor);
-		if (!s) open.set(actor, (s = { retries: 0, fallback: false, thoughts: [], armed: false }));
+		if (!s)
+			open.set(
+				actor,
+				(s = {
+					retries: 0,
+					fallback: false,
+					thoughts: [],
+					armed: false,
+					kinds: [],
+					jev: null,
+					refused: null
+				})
+			);
+		const data = (line.raw?.data ?? {}) as Record<string, unknown>;
 		if (line.kind === 'thought') s.thoughts.push(line);
-		else if (type === 'action_rejected') {
+		else if (type === 'decision') {
+			if (Array.isArray(data.repairs)) s.kinds = data.repairs.map(String);
+		} else if (type === 'action_rejected') {
 			s.retries += 1;
+			if (typeof data.error === 'string') s.refused = data.error;
 			for (const t of s.thoughts) hidden.add(t); // that attempt's thinking went with it
 			s.thoughts = [];
 		} else if (type === 'action_fallback') s.fallback = s.armed = true;
 		else if (type === 'agent_failed') failed.add(actor);
-		else if (type === 'action_accepted') s.armed = true;
-		else if (line.kind !== 'info' && (s.armed || failed.has(actor))) {
+		else if (type === 'action_accepted') {
+			s.armed = true;
+			if (data.repaired_by === 'jev')
+				s.jev = { p: typeof data.top_probability === 'number' ? data.top_probability : null };
+		} else if (line.kind !== 'info' && (s.armed || failed.has(actor) || line.repair)) {
 			const fallback = s.fallback || failed.has(actor);
-			if (s.retries || fallback) marks.set(line, { retries: s.retries, fallback });
+			const repair: Repair | null = s.jev
+				? { tier: 2, p: s.jev.p, problem: s.refused }
+				: s.kinds.length
+					? { tier: 1, p: null, problem: repairProblem(s.kinds) }
+					: line.repair
+						? { tier: line.repair.tier, p: line.repair.p, problem: null }
+						: null;
+			if (s.retries || fallback || repair)
+				marks.set(line, { retries: s.retries, fallback, repair });
 			open.delete(actor);
 		}
 	}

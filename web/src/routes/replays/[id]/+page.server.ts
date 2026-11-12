@@ -1,7 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { ARENA_API_URL } from '$app/env/private';
 import { createArenaClient } from '#lib/api.js';
-import { publicEvents, publicState, publicTranscript } from '#lib/server/redact.js';
+import { publicEvents, publicState } from '#lib/server/redact.js';
+import { transcriptFor } from '#lib/server/transcript.js';
 import { langOf, viewFrom } from '#lib/viewer.js';
 import type { PageServerLoad } from './$types';
 
@@ -16,18 +17,18 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	}
 	const lang = match.state === 'ok' ? langOf(match.data.match.settings) : 'en';
 	const [transcript, setup] = await Promise.all([
-		arena.transcript(params.id, spectator, lang),
+		transcriptFor(arena, params.id, spectator, lang),
 		arena.setup()
 	]);
 	return {
 		view,
 		roster: setup.state === 'ok' ? setup.data.models : [],
-		match: match.state === 'ok' && !spectator ? { ...match, data: publicState(match.data) } : match,
+		match:
+			match.state === 'ok' && !spectator
+				? { ...match, data: publicState(match.data, url.searchParams.get('nation')) }
+				: match,
 		events:
 			events.state === 'ok' && !spectator ? { ...events, data: publicEvents(events.data) } : events,
-		transcript:
-			transcript.state === 'ok' && !spectator
-				? { ...transcript, data: publicTranscript(transcript.data) }
-				: transcript
+		transcript
 	};
 };

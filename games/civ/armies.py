@@ -351,9 +351,10 @@ def starve(state: CivState, data: CivData, ctx: TurnContext) -> None:
 
 
 def _army_raised(state: CivState, data: dict[str, Any]) -> None:
-    stock = state.nations[data["owner"]].stock
-    for resource, amount in data["cost"].items():
-        stock[resource] -= amount
+    if data["owner"] in state.nations:  # a neutral army pays nothing
+        stock = state.nations[data["owner"]].stock
+        for resource, amount in data["cost"].items():
+            stock[resource] -= amount
     state.armies_raised += 1
     state.armies.append(
         Army(
@@ -370,6 +371,7 @@ def _army_moved(state: CivState, data: dict[str, Any]) -> None:
     army = state.army(data["army"])
     army.col, army.row = data["path"][-1]
     army.moved_in_round = state.round
+    army.fortified_from = None  # an army that moves is no longer dug in
 
 
 def _army_split(state: CivState, data: dict[str, Any]) -> None:

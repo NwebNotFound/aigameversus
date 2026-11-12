@@ -9,7 +9,7 @@ import pytest
 from arena.agents.random_bot import random_bots
 from arena.analytics import NoAnalytics, match_analytics
 from arena.engine.match import Match
-from arena.engine.types import Event
+from arena.engine.types import Event, EventSource
 from arena.games import load_games
 from arena.stats import STATS
 
@@ -118,11 +118,21 @@ def test_a_real_match_has_its_fallbacks_and_a_partial_log_works():
     assert full["totals"]["p1"]["response_ms_total"] is None
 
 
-def test_thinking_time_is_read_from_the_decision_event_when_present():
-    events = played(10)
+def with_decisions(events, **data):
+    """The log as a model match has it: a `decision` event after every move."""
+    out = []
     for event in events:
-        if event.type == "action_accepted":
-            event.data.update(latency_ms=1200, tokens_in=900, tokens_out=40)
+        out.append(event)
+        if event.type in ("action_accepted", "action_fallback"):
+            fields = {"player": event.data["player"], **data}
+            out.append(
+                Event(source=EventSource.ENGINE, type="decision", data=fields, visible_to=())
+            )
+    return out
+
+
+def test_thinking_time_is_read_from_the_decision_event_when_present():
+    events = with_decisions(played(10), latency_ms=1200, tokens_in=900, tokens_out=40)
 
     analytics = match_analytics("liars_deck", events, spoilers=True)
 
@@ -256,3 +266,12 @@ def test_the_round_cells_add_up_to_the_totals_and_leave_fallbacks_out(events):
         assert sum(c["lies"] + c["calls"] for c in p3) == (
             analytics["totals"]["p3"]["lies"] + analytics["totals"]["p3"]["calls"]
         )
+
+
+def test_cut_off_answers_and_rate_limits_are_counted_apart_from_refusals():
+    events = with_decisions(played(10), cutoffs=1, rate_limits=2)
+
+    total = match_analytics("liars_deck", events, spoilers=True)["totals"]["p1"]
+
+    assert total["cutoffs"] == total["moves"] and total["moves"] > 0
+    assert total["rate_limits"] == 2 * total["moves"]

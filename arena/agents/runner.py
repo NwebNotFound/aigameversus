@@ -8,7 +8,7 @@ from typing import Any
 
 from arena.agents.arguments import as_sent, read_arguments
 from arena.agents.model import RATE_LIMITED, Message, ModelCall, ModelError, ModelReply
-from arena.agents.prompt import THOUGHT, build_messages, tool_schemas
+from arena.agents.prompt import HEADLINE, HEADLINE_CHARS, THOUGHT, build_messages, tool_schemas
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import (
     Action,
@@ -17,6 +17,7 @@ from arena.engine.types import (
     Reply,
     ToolSpec,
     TurnRequest,
+    headline_of,
     repair_of,
 )
 
@@ -71,6 +72,7 @@ class ModelAgent:
         self._rate_limit_retries = RATE_LIMIT_RETRIES_PER_MATCH
         self._malformed = 0  # answers of this match whose call was garbled
         self._repair = repair_of(settings or {}) != "off"
+        self._headline = headline_of(settings or {})
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
@@ -78,9 +80,11 @@ class ModelAgent:
             self._plugin.name, self._rules, request, summary, self._memory, self._personality
         )
         simple = self._repair and self._malformed >= MALFORMED_LIMIT
-        schemas = tool_schemas(request.tools, with_thought=not simple)
-        answer, tries = await self._call_model(messages, schemas)
-        reply, repairs, raw = _read(answer, request.tools, repair=self._repair)
+        schemas = tool_schemas(request.tools, with_thought=not simple, headline=self._headline)
+        answer, tries, rate_limits = await self._call_model(messages, schemas)
+        reply, repairs, raw = _read(
+            answer, request.tools, repair=self._repair, headline=self._headline
+        )
         if repairs or raw is not None:
             self._malformed += 1
         usage = answer.usage
@@ -89,6 +93,8 @@ class ModelAgent:
             tokens_out=usage.output_tokens if usage else None,
             reasoning_tokens=usage.reasoning_tokens if usage else None,
             retries=tries - 1,
+            rate_limits=rate_limits,
+            cut_off=answer.cut_off,
             repairs=tuple(repairs),
             raw_arguments=raw,
             simple_schema=simple,
@@ -97,13 +103,13 @@ class ModelAgent:
 
     async def _call_model(
         self, messages: list[Message], tools: list[dict[str, Any]]
-    ) -> tuple[ModelReply, int]:
-        """The model's answer and how many calls it took."""
-        tries = 0
+    ) -> tuple[ModelReply, int, int]:
+        """The model's answer, how many calls it took, and how many were rate-limited."""
+        tries = rate_limits = 0
         while True:
             tries += 1
             try:
-                return await self._call(messages, tools), tries
+                return await self._call(messages, tools), tries, rate_limits
             except ModelError as error:
                 rate_limited = error.reason == RATE_LIMITED
                 used_up = rate_limited and self._rate_limit_retries == 0
@@ -114,6 +120,7 @@ class ModelAgent:
                     ) from error
                 if rate_limited:
                     self._rate_limit_retries -= 1
+                    rate_limits += 1
                 base = RATE_LIMIT_BACKOFF_SECONDS if rate_limited else BACKOFF_SECONDS
                 delay = base * 2 ** (tries - 1) * (1 + JITTER * self._jitter())
                 # Only the kind of failure is logged: never the prompt or a provider message.
@@ -122,7 +129,7 @@ class ModelAgent:
 
 
 def _read(
-    reply: ModelReply, tools: Sequence[ToolSpec], *, repair: bool
+    reply: ModelReply, tools: Sequence[ToolSpec], *, repair: bool, headline: bool = False
 ) -> tuple[Reply, list[str], str | None]:
     """The reply, the repairs made to its call, and the raw call if it was garbled.
 
@@ -156,5 +163,7 @@ def _read(
     said = arguments.pop(THOUGHT, None)
     if isinstance(said, str) and said.strip():
         thought = said.strip()
+    line = arguments.pop(HEADLINE, None) if headline else None  # only with thought_headline
+    short = line.strip()[:HEADLINE_CHARS] if isinstance(line, str) and line.strip() else None
     action = Action(tool=call.name, arguments=arguments)
-    return Reply(action=action, thought=thought), repairs, raw
+    return Reply(action=action, thought=thought, headline=short), repairs, raw

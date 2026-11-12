@@ -1,0 +1,80 @@
+id: JEV-C1
+version: 2
+drafted: '2026-11-12'
+status: proposed
+owner: Arena Researcher
+kind: offline_intent_preservation_and_postmatch_agreement
+implementation_mode: fake_only
+real_call_approvals: []
+blocking_preconditions:
+  humans_available: false
+  human_raters: {rater_a: null, rater_b: null, adjudicator: null}
+  eligible_independent_blocks: null
+  eligible_inventory_verified: false
+  minimum_independent_blocks_before_any_run: 100
+  below_minimum_action: do_not_run_spend_zero
+registration:
+  state: design_frozen_manifest_pending
+  merge_commit: 4dc0baf5abebf7ec61ac0993ef9b8680f7ea6797
+  recorded_date: '2026-11-12'
+  corpus_manifest_hash: null
+  split_hash: null
+  configuration_hash: null
+  freeze_record: docs/decisions/D-123-jev.md
+  later_changes: dated_amendment_before_labels_or_predictions
+model: typesafe/jev-1.14
+api_contract: provisional_alpha_verify_before_any_real_call
+budget:
+  approved_real_eur: 0
+  proposed_real_eur: 0.25
+  max_real_requests_if_separately_approved: 224
+  automatic_retries: 0
+  per_job_ceiling_eur: 0.50
+  month_ceiling_eur: 25
+  stop_and_notify_lead_at_month_eur: 20
+  reserve_policy: current_verified_price_times_input_bound_plus_margin_before_call
+  settlement: existing_ledger_usage_cost_usd_converted_at_frozen_fx
+  cannot_borrow: [W1, guests, narrator, qualification_button]
+repair:
+  source: naturally_recorded_invalid_answers_after_retry_and_deterministic_tier
+  target_cases: 200
+  minimum_pilot_cases: 100
+  development_target: 60
+  validation_target: 140
+  minimum_error_free_accepted_for_precision_gate: 59
+  necessary_holdout_acceptance_coverage: 0.421429
+  split_unit: canonical_scenario_block
+  manifest_seed: 2026111204
+  option_count_buckets: ['2', '3-5', '6-10', '11+']
+  games: [liars_deck, poker, werewolf, civ_when_implemented]
+  humans_per_case: 2
+  adjudicator: third_human_if_disagreement
+  threshold_statistic: maximum_returned_option_probability
+  initial_fake_threshold: 0.90
+  development_threshold_grid: [0.90, 0.95, 0.975, 0.99]
+  minimum_development_accepts: 10
+  primary_target_precision: 0.95
+  primary_lower_bound: one_sided_exact_binomial_95_percent_on_frozen_holdout
+  unsafe_accepted_ambiguous_cases_count_as: incorrect
+  free_text_repair: forbidden
+  strategic_recommendation_or_missing_amount_guess: forbidden
+  production_enablement: separate_explicit_approval_after_validation
+referee:
+  target_matches: 24
+  moments_per_match: 5
+  questions: [reasoning_action_consistency, residual_lie_claim, perceived_persuasiveness]
+  humans_per_moment: 2
+  request_limit: one_per_match
+  binary_probability_cutoff: 0.50
+  primary_nominal_agreement: cohens_kappa
+  ordinal_agreement: linearly_weighted_cohens_kappa
+  bootstrap_unit: scenario_block
+  bootstrap_replicates: 10000
+  exploratory_publish_rule: kappa_point_at_least_0_60_and_lower95_at_least_0_40
+  ordinal_rule: both_human_human_and_jev_human_must_pass
+reporting:
+  repaired_actions_are_not_original_clean_actions: true
+  elo_off_view: exclude_entire_matches_with_any_jev_repair_and_show_selection_bias
+  causal_on_off_comparison: requires_separate_approved_actual_paired_matches
+  firing_rates: attempted_and_terminal_tier_per_model_per_eligible_decision
+  real_data_missing: report_inconclusive_do_not_synthesize_labels

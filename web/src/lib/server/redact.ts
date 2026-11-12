@@ -6,7 +6,8 @@
  * and a layout that is not listed gives no board at all. A new secret field in a plugin
  * therefore stays hidden until someone lists it here as public.
  */
-import type { LiveState, MatchEvent, Transcript } from '../api.js';
+import type { LiveState, MatchEvent, Transcript, TranscriptLine } from '../api.js';
+import { attempts } from '../viewer.js';
 
 /** keep: public as it is. cards: hidden, sent as as many placeholders. drop-value: sent as null. */
 type Rule = 'keep' | 'cards' | 'null' | Shape | [Shape];
@@ -42,6 +43,31 @@ const PUBLIC: Record<string, Shape> = {
 		day: 'keep',
 		turn: 'keep',
 		seats: [{ player: 'keep', alive: 'keep', role: 'null' }]
+	},
+	// Throne of Tokens (docs/civ-interfaces.md): the map without stocks, unit lists and fog.
+	hex_map: {
+		layout: 'keep',
+		round: 'keep',
+		rounds_total: 'keep',
+		cols: 'keep',
+		rows: 'keep',
+		terrain: 'keep',
+		legend: 'keep',
+		cities: [
+			{
+				id: 'keep',
+				owner: 'keep',
+				tile: 'keep',
+				population: 'keep',
+				capital: 'keep',
+				walls: 'keep'
+			}
+		],
+		armies: [{ id: 'keep', owner: 'keep', tile: 'keep', strength: 'keep' }],
+		nations: [{ id: 'keep', reputation: 'keep', cities: 'keep', at_war: 'keep' }],
+		treaties: 'keep',
+		wars: 'keep',
+		battles: 'keep'
 	}
 };
 
@@ -66,11 +92,73 @@ function apply(rule: Rule, value: unknown): unknown {
 	);
 }
 
-/** The board as a spoiler-free page may see it, or null for a layout without an allowlist. */
-export function publicBoard(spec: Record<string, unknown> | null): Record<string, unknown> | null {
+/**
+ * The board as a spoiler-free page may see it, or null for a layout without an allowlist.
+ * `nation` picks whose eyes a Throne of Tokens map is seen through (hexNationView).
+ */
+export function publicBoard(
+	spec: Record<string, unknown> | null,
+	nation: string | null = null
+): Record<string, unknown> | null {
 	if (!spec) return null;
+	if (spec.layout === 'hex_map') return hexNationView(spec, nation);
 	const shape = PUBLIC[String(spec.layout)];
 	return shape ? (apply(shape, spec) as Record<string, unknown>) : null;
+}
+
+type Item = Record<string, unknown>;
+const list = (value: unknown): Item[] =>
+	Array.isArray(value) ? value.filter((v): v is Item => !!v && typeof v === 'object') : [];
+
+/**
+ * A Throne of Tokens map as one nation sees it this round (docs/civ-interfaces.md, "Board
+ * for spectators"): the land, and only the cities, armies and battles on tiles in its own
+ * fog row (its own always), with the public fields; unit lists and stock only for its own;
+ * its fog row and no other. `nation` is the viewer's pick, else the first nation.
+ */
+export function hexNationView(spec: Record<string, unknown>, nation: string | null): Item {
+	const ids = list(spec.nations)
+		.map((n) => n.id)
+		.filter((id): id is string => typeof id === 'string');
+	const who = nation && ids.includes(nation) ? nation : (ids[0] ?? null);
+	const fog = spec.fog as Record<string, unknown> | null | undefined;
+	const rows = who && Array.isArray(fog?.[who]) ? (fog[who] as unknown[]) : null;
+	const sees = (item: Item) => {
+		if (who !== null && item.owner === who) return true;
+		const tile = item.tile;
+		if (!rows || !Array.isArray(tile)) return false;
+		const [col, row] = tile;
+		const line = typeof row === 'number' ? rows[row] : undefined;
+		return typeof line === 'string' && typeof col === 'number' && line[col] === '1';
+	};
+	const shape = PUBLIC.hex_map;
+	const view = apply(shape, {
+		...spec,
+		cities: list(spec.cities).filter(sees),
+		armies: list(spec.armies).filter(sees)
+	}) as Item;
+	// Its own units, fortification and stock: what that nation knows of itself.
+	view.armies = list(view.armies).map((army) => {
+		const source = list(spec.armies).find((a) => a.id === army.id);
+		if (army.owner !== who || !source) return army;
+		const own = { ...army };
+		if (source.units) own.units = source.units;
+		if (typeof source.fortified === 'boolean') own.fortified = source.fortified;
+		return own;
+	});
+	view.nations = list(view.nations).map((n) => {
+		const source = list(spec.nations).find((s) => s.id === n.id);
+		return n.id === who && source?.stock ? { ...n, stock: source.stock } : n;
+	});
+	// The battles it fought (render_spec's `nations`) or saw.
+	view.battles = list(spec.battles)
+		.filter((b) => {
+			const fought = Array.isArray(b.nations) && who !== null && b.nations.includes(who);
+			return fought || (Array.isArray(b.tile) && sees({ tile: b.tile }));
+		})
+		.map((b) => ({ tile: b.tile, winner: b.winner ?? null }));
+	if (rows && who) view.fog = { [who]: rows.filter((r) => typeof r === 'string') };
+	return view;
 }
 
 /** The events every player could see. Spectator-only and private events are left out. */
@@ -119,11 +207,31 @@ export function publicTranscript(transcript: Transcript): Transcript {
 	};
 }
 
+/**
+ * A repaired move is marked in the spoiler-free view too, but only that it was repaired, by
+ * which tier and with what probability: read from the spectator lines (`decision`,
+ * `action_accepted`, never sent on) and put on the public line of the same move. The
+ * refused call, its arguments and the error text stay here, as they can name hidden cards.
+ */
+export function withRepairMarks(open: Transcript, spectator: TranscriptLine[]): Transcript {
+	const bySeq = new Map<number, { tier: 1 | 2; p: number | null }>();
+	for (const [line, mark] of attempts(spectator).marks)
+		if (mark.repair && line.seq !== null)
+			bySeq.set(line.seq, { tier: mark.repair.tier, p: mark.repair.p });
+	if (bySeq.size === 0) return open;
+	return {
+		...open,
+		lines: open.lines.map((line) =>
+			line.seq !== null && bySeq.has(line.seq) ? { ...line, repair: bySeq.get(line.seq) } : line
+		)
+	};
+}
+
 /** A live-state snapshot for a spoiler-free page: the public board and settings, and no seed. */
-export function publicState(state: LiveState): LiveState {
+export function publicState(state: LiveState, nation: string | null = null): LiveState {
 	return {
 		...state,
 		match: { ...state.match, seed: null, settings: publicSettings(state.match.settings) },
-		board: { ...state.board, spec: publicBoard(state.board.spec) }
+		board: { ...state.board, spec: publicBoard(state.board.spec, nation) }
 	};
 }

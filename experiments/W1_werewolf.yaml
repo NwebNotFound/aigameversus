@@ -1,0 +1,282 @@
+# Experiment W1: Werewolf with real models, first series (pilot).
+#
+# The pre-registration of the pilot. Written before its first paid match;
+# after approval it changes only through an entry under `amendments`.
+# Checked by arena/research/experiment.py; the matches it fixes are in
+# W1_werewolf_schedule.csv.
+
+id: W1
+title: "Werewolf pilot: eight seats of cheap models, every seat in every role"
+version: 5
+status: closed            # P1 complete; P2 closed n=1; P3 budget-stopped at6/8
+registered: "2026-11-12"
+author: Arena Researcher
+amendments:
+  - version: 5
+    date: "2026-11-12"
+    what: >
+      Close P2 as a descriptive single-match stage (EUR0.067841); no further
+      P2 spend. qwen-flash is operationally excluded from Werewolf guest and
+      later Werewolf rosters until configuration remediation and a separately
+      approved mini qualification. Its one match had 4 timeout fallbacks in
+      15 decisions; Gemini had 0 fallbacks and 1 rejected answer in 7 decisions.
+      This is not a completed QUALIFY suite or a general capability verdict.
+      Close P3 after 6 completed original-roster pairs (EUR0.309660), with
+      two unplayed cells: the remaining EUR0.190340 could not reserve the
+      ledger-enforced EUR0.20 match bound. Retain the full original schedule;
+      unplayed cells are missing, never losses or implied replications.
+    why: >
+      Lead decision 7e2c9806-bed8-45c2-b04b-728f60fdaf32 after P2 match1:
+      no in-study Qwen tuning or further spend. P3 remediation retained Llama
+      under the earlier exception; it still breached the 10 percent gate.
+      Reviewer restored cap0.20 to0.50 after P3 in an idle gap on main87fcf21
+      (message f8952acd-dc69-4b79-a8e2-379c291fd880), independently read back.
+      Historical approvals are retained as an audit trail, not renewed
+      permission to resume these closed cells. No post-hoc outcome selection.
+  - version: 4
+    date: "2026-11-12"
+    what: >
+      P1 remains unchanged. Omit llama-scout from P2 and future guest tables
+      until re-qualified; replace its P2 entry with gpt-luna, keeping eight
+      seats. P3 keeps every original P1 seat, including Llama, as an explicit
+      reliability-remediation exception to the clean-P1/P2 prerequisite.
+      Primary P3 reliability metrics are Llama fallback share and word-limit
+      rejections per decision, paired by original seed and seating. Add a
+      descriptive sensitivity report with and without Llama seat records;
+      full-match team outcomes remain unchanged, not counterfactual games.
+    why: >
+      Lead decision 01bebc80-3524-4cff-b5dd-138fd6f57944 after P1 ended:
+      Llama had 6 bot replacements in 35 decisions and 27 word-limit
+      rejections. These changes are informed by P1 reliability, before any
+      P2/P3 call or outcome inspection; remediation is exploratory, not a
+      confirmatory prompt-effect test. P3's word budgets target the observed
+      failure. Three times the free estimate is a start-planning reserve,
+      not an enforced cap; retain an additional worst-case allowance check
+      until a smaller ledger-enforced limit is available. Never exceed stage
+      0.50 EUR or match 0.50 EUR; stop starts at 90 percent. A match exceeding
+      0.20 EUR stops the stage and is reported to Lead. Read monthly ledger
+      before every start and hold at 20 EUR spent.
+  - version: 3
+    date: "2026-11-12"
+    what: >
+      Record Lead's overnight approval of P3 up to 0.50 EUR, after P1/P2
+      reliability gates. No seeds, seats, prompts or outcome metrics change.
+      Record the corrected pre-W1 ledger baseline and reserve other overnight
+      allocations; reduce unallocated reserve from 5 to 2 EUR. P1 is still
+      running; only reliability and cost, not outcomes, have been inspected.
+    why: >
+      Lead message 1fd8b027-07da-49ba-80f3-b32ff019cdf5 passes on the owner's
+      instruction to act autonomously overnight and allocates at most 6 EUR
+      NEW spending across P2/P3, strong guests, narrator and qualification.
+      Monthly hard cap remains 25 EUR; pause new starts and notify Lead at
+      20 EUR. Per-match cap remains 0.50 EUR. No qualification or narrator
+      implementation/calls are authorized by this research amendment alone.
+  - version: 2
+    date: "2026-11-12"
+    what: >
+      New stage P3: P1's seed and seatings again, with prompt_version
+      werewolf-p3 instead of werewolf-p2. Stages may set settings of their own.
+      P3 is a proposal and spends nothing until the owner says yes.
+    why: >
+      Arena Lead asked for a p2-against-p3 comparison for Werewolf (#118). It
+      is written before any W1 match was played.
+approvals:
+  - stages: [P3]
+    date: "2026-11-12"
+    by: "Arena Lead under owner's explicit overnight delegation"
+    scope: >
+      P3 at most 0.50 EUR, one match at a time, stop starting at 90 percent;
+      after P1 reliability review and werewolf-p3 deployment; v4 grants
+      a remediation exception to the clean-P1/P2 gate. Part of
+      the shared new overnight ceiling of 6 EUR; all call reservations count.
+      Approval evidence: 1fd8b027-07da-49ba-80f3-b32ff019cdf5.
+  - stages: [P1, P2]
+    date: "2026-11-11"
+    by: "project owner, passed on by Arena Lead"
+    scope: >
+      Werewolf matches with real models up to 1.50 EUR in total for the first
+      series (a pilot of about ten matches), one match at a time through the
+      arena API, the usual cap of 0.50 EUR per match. P1 starts after the
+      arena rebuild that follows league E1-A2; P2 only after that rebuild
+      contains #106 (the options for qwen-flash and gemini-flash-lite).
+
+question: >
+  Can the cheap models play Werewolf reliably enough for a league, what does a
+  match cost and take, and how do the roles and the two teams fare? A pilot:
+  descriptive, no confirmatory test; it sizes the league that follows.
+
+game: werewolf
+settings: {template: classic, language: en, prompt_version: werewolf-p2}
+
+conditions:
+  seats: 8
+  roles: "template classic for 8 players: 2 werewolves, seer, witch, hunter, 3 villagers; the seed deals the roles to the seats"
+  seat_names: "p1 to p8; no prompt names a model"
+  memory: "off: every match is started with \"memory\": false"
+  prompt_version: "werewolf-p2 (rules for every role and tool, situation summary), passed explicitly; the arena commit of each match is recorded"
+  answer_repair: "off (no repair of malformed tool calls), passed explicitly once the arena has the setting"
+  reasoning_effort: low
+  sampling: "provider defaults"
+  how_matches_run: "through POST /matches on the shared stack, one match at a time (two at most), with the batch field W1-P1 or W1-P2"
+  needs_before_start:
+    P1: "the arena rebuild after league E1-A2"
+    P3: "#118 deployed, P1 review complete, original seats kept under v4 remediation exception"
+    P2: "#106 on the running stack (qwen-flash: 4 000 output tokens, no reasoning effort, tool_choice auto; longer waits after a rate limit)"
+
+# Ids and prices as listed by openrouter.ai/api/v1/models on 2026-11-11 (USD per million tokens).
+models:
+  gpt-luna:          {openrouter: openai/gpt-6-luna,            input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.50,   tier: cheap}
+  claude-haiku:      {openrouter: anthropic/claude-haiku-5.5,   input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.50,   tier: cheap}
+  glm-flash:         {openrouter: z-ai/glm-5.3-flash,           input_usd_per_mtok: 0.0399, output_usd_per_mtok: 0.0784, tier: cheap}
+  deepseek-flash:    {openrouter: deepseek/deepseek-v4.1-flash, input_usd_per_mtok: 0.051,  output_usd_per_mtok: 0.567,  tier: cheap}
+  mistral-small:     {openrouter: mistralai/mistral-small-2603, input_usd_per_mtok: 0.15,   output_usd_per_mtok: 0.60,   tier: cheap}
+  llama-scout:       {openrouter: meta-llama/llama-4-scout,     input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.30,   tier: cheap}
+  qwen-flash:        {openrouter: qwen/qwen3.8-flash,           input_usd_per_mtok: 0.15,   output_usd_per_mtok: 0.47,   tier: cheap}
+  gemini-flash-lite: {openrouter: google/gemini-2.5-flash-lite, input_usd_per_mtok: 0.10,   output_usd_per_mtok: 0.40,   tier: cheap}
+
+not_chosen:
+  strong_models: "later: first the cheap ones must play the game reliably"
+  dusterwald_template: "after the classic template; more roles need more matches per role"
+
+stages:
+  - id: P1
+    kind: cyclic
+    title: Six clean models, gpt-luna and claude-haiku in two seats each
+    seats: [gpt-luna, claude-haiku, glm-flash, deepseek-flash, gpt-luna, mistral-small, llama-scout, claude-haiku]
+    effort: low
+    seeds: 1
+    seed_base: 2101000
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 1.00
+    estimate_eur: 0.48
+    notes: >
+      One seed played in all 8 cyclic rotations: every entry sits in every
+      seat once, so every model plays every role the seed deals (both wolf
+      seats, seer, witch, hunter, villagers) once per seat it holds. The two
+      repeated models are the most reliable and among the cheapest of league
+      E1-A2. Estimate: about 0.06 EUR a match (the example match of 8 models
+      cost 0.041 EUR with qwen-flash in it; p2 prompts are longer).
+
+  - id: P3
+    kind: cyclic
+    title: "The same matches as P1 with the Werewolf prompt p3"
+    seats: [gpt-luna, claude-haiku, glm-flash, deepseek-flash, gpt-luna, mistral-small, llama-scout, claude-haiku]
+    effort: low
+    seeds: 1
+    seed_base: 2101000     # the seed of P1: the same roles in the same seats
+    settings: {prompt_version: werewolf-p3}
+    turn_timeout_s: 60
+    max_output_tokens: 1500
+    budget_eur: 0.50
+    estimate_eur: 0.36
+    notes: >
+      Each P3 match has a P1 twin: the same seed deals the same roles to the
+      same seats with the same models; only the prompt differs (p3: claim the
+      seer's result early, vote the player you named, silence is no evidence,
+      role guidance, brief thoughts, advice per move in the summary). Played
+      after P1, on the same arena commit. Estimate: the arena's free estimate
+      for P1 (0.036 EUR a match) plus a margin for the longer summary.
+
+  - id: P2
+    kind: cyclic
+    title: "The two pilot failures of E1 get a second chance in Werewolf"
+    seats: [gpt-luna, qwen-flash, glm-flash, deepseek-flash, gemini-flash-lite, mistral-small, gpt-luna, claude-haiku]
+    effort: low
+    seeds: 1
+    seed_base: 2102000
+    turn_timeout_s: 60
+    max_output_tokens: 1500   # qwen-flash takes its own 4 000 from config/models.yaml (#106)
+    budget_eur: 0.50
+    estimate_eur: 0.55
+    notes: >
+      qwen-flash and gemini-flash-lite in the two seats that P1 gave to the
+      repeated models. The run budget will likely stop it after 6 or 7 of its
+      8 matches (qwen-flash cost about 3x a cheap seat in E1); that is enough
+      for the question it answers: does each of them stay under 10 % fallback
+      moves with #106.
+
+hypotheses:
+  - id: D1
+    stage: all
+    kind: descriptive, no test
+    claim: What a Werewolf match costs and takes, and how reliably each model plays each role.
+    test: >
+      Per model and per role: moves, rejected answers per move, fallback share,
+      night actions refused or skipped; per match: cost, duration, days played.
+  - id: D3
+    stage: P3
+    kind: descriptive, paired, no confirmatory test
+    claim: Does p3 change how the village plays and how reliably the models answer?
+    test: >
+      Primary reliability remediation: Llama fallback share (fallback
+      decisions / all its decisions), word-limit rejected answers per
+      decision, and paired differences on the P1/P3 seating subset that
+      budget permits. Every retry is retained; no repeated qualification
+      until pass. Report exposure and missing pairs. Other comparisons
+      below remain exploratory, with no claim of a controlled causal
+      effect if arena configuration changed between stages.
+      Paired by twin (P1 match, P3 match with the same seed and seating), 8
+      pairs: village win (McNemar's exact test, reported, too few pairs to
+      decide), village vote accuracy, the day the seer first states a result,
+      share of votes that match the voter's own last accusation, words per
+      speech, rejected answers per move and fallback share, cost per match.
+      Each as a paired difference with a bootstrap interval over pairs. 8 pairs
+      show large effects only; a W1 league would carry the p2/p3 factor with
+      more seeds if the pilot points one way.
+  - id: D2
+    stage: all
+    kind: descriptive, no test
+    claim: How the teams and roles fare.
+    test: >
+      Village and wolf win shares with Wilson intervals; per model, wins as
+      wolf and as villager; vote accuracy of the village side; days the seer
+      survives; share of nights in which the wolves killed the seer or the
+      witch. With 8 to 16 matches these are sizes for the league, not claims.
+
+metrics:
+  outcome: [team that won, per seat won or lost, days played, survivors]
+  roles: [vote accuracy of the village side, wolf votes on fellow wolves, seer checks on wolves, witch heal and poison use, hunter shot on a wolf, seer survival in days]
+  deception: "a wolf's public claims of a village role and how many village votes went elsewhere that day (from the analytics claims, votes and accusations, when on main)"
+  speech: "words per speech, accusations made and received, and whether a player's accusation was followed by votes (speech influence, descriptive)"
+  reliability: [clean moves, repaired moves, rejected answers per move, fallback moves, failed agents, by role and by tool]
+  cost: [EUR per match, EUR per model and match, seconds per move from the decision events]
+
+analysis:
+  unit: "matches; intervals over matches; a model's two seats in P1 are pooled for that model"
+  power: >
+    None: a pilot. The league W1 that follows is sized from it. With the
+    team win share near one half, 64 matches find a difference of about 0.17
+    from one half (80 % power, alpha 0.05).
+  scripts: "arena/research/ (a Werewolf analysis next to the E1 one, built on Heavy's analytics), written before the pilot's outcomes are read"
+
+rules:
+  valid_match: "status finished and the stored log rebuilds the final state"
+  failed_match: "played once more with the same seed and seating; both attempts are kept"
+  pilot_rule: >
+    For the league: a model with more than 10 % of its moves played by the
+    fallback, or with a failed agent in 2 of its matches, is fixed or left out
+    first; the decision is the owner's.
+  budget_stop: >
+    Each stage stops starting matches at 90 % of its budget, counting every
+    running match at its cost so far or 0.10 EUR, whichever is higher; the
+    series stops at 1.50 EUR in total. No match may pass the 0.50 EUR cap.
+  no_peeking: "while a stage runs, only cost, failures and fallback rates are watched"
+
+budget:
+  month_cap_eur: 25.00
+  spent_before_eur: 3.044212      # verified ledger immediately before W1
+  reserve_eur: 2.00
+  other_plans_eur:
+    E1_stage_B: 4.50              # approved, not started
+    E1_stage_C: 7.50              # approved, not started
+    other_overnight: 5.00         # guests 3.50, narrator 1.00, qualification 0.50; P2/P3 above
+
+limitations:
+  - "One template (classic, 8 players), one prompt version (werewolf-p2), low reasoning effort."
+  - "P2 is only one match; neither Qwen nor Gemini results support broad inference. Qwen is excluded by the observed-timeout policy, not a completed qualification suite."
+  - "P3 contains six of eight pairs, stopped by the full EUR0.20 reservation; two missing cells and unequal per-seat exposure prevent full role balance."
+  - "P1/P3 differ in prompt, arena build and cost ceiling; the comparison is exploratory remediation, not isolated causal prompt evidence."
+  - "Two models hold two seats each in P1, so they also play against themselves."
+  - "8 or 16 matches: team and role results are sizes for the league, not findings."
+  - "Werewolf outcomes depend on the role dealt; the cyclic design gives every model every seat, but with one seed per stage every seat's role is the same in all its rotations."

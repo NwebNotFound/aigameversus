@@ -15,7 +15,15 @@ export const DEFAULT_TURN_DELAY = 1;
 export const BOT = 'random_bot';
 
 export type Field =
-	'game' | 'players' | 'seats' | 'seed' | 'language' | 'turn_delay' | 'roles' | 'confirm_spend';
+	| 'game'
+	| 'players'
+	| 'seats'
+	| 'seed'
+	| 'language'
+	| 'turn_delay'
+	| 'roles'
+	| 'confirm_spend'
+	| 'confirm_unreliable';
 
 /** The Werewolf role selection: a template id, or CUSTOM for the counts of the checklist. */
 export const CUSTOM = 'custom';
@@ -35,12 +43,17 @@ export type Parsed =
  * server plays bots only. A match is all bots or all models: the arena does not
  * mix them yet. A model match needs the "spends money" box ticked.
  */
+/**
+ * The form as a match to start, or what to fix. `unreliable` are the ids the arena marks
+ * unreliable: choosing one needs its own tick, on purpose possible.
+ */
 export function parseForm(
 	form: FormData,
 	games: GameInfo[],
 	models: string[] = [],
 	mixed = false,
-	personalities = false
+	personalities = false,
+	unreliable: string[] = []
 ): Parsed {
 	const errors: Partial<Record<Field, string>> = {};
 	const text = (name: string) => String(form.get(name) ?? '').trim();
@@ -88,6 +101,13 @@ export function parseForm(
 			if (form.get('confirm_spend') === null) {
 				errors.confirm_spend = 'A match of models spends real money: tick the box to start it.';
 			}
+			if (
+				modelSeats.some((seat) => unreliable.includes(seat)) &&
+				form.get('confirm_unreliable') === null
+			) {
+				errors.confirm_unreliable =
+					'An unreliable model often fails or is replaced by the bot: tick the box to seat it anyway.';
+			}
 		}
 	}
 
@@ -119,6 +139,12 @@ export function parseForm(
 			if (roles === null) errors.roles = 'A role count is a whole number of 0 or more.';
 			else settings.roles = roles;
 		}
+	}
+
+	// The repair switch is in the form only where the arena takes the setting (GET /setup)
+	// and the table has a model: then a ticked box asks for v1, a cleared one for off.
+	if (form.get('answer_repair_offered') !== null && modelSeats.length) {
+		settings.answer_repair = form.get('answer_repair') === null ? 'off' : 'v1';
 	}
 
 	if (Object.keys(errors).length || !game) return { ok: false, errors };

@@ -8,6 +8,7 @@ import asyncio
 import os
 import time
 from datetime import UTC, datetime
+from functools import partial
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -485,19 +486,33 @@ async def get_board(
     events: Annotated[
         int | None, Query(ge=0, description="Only the first this many events (for replays)")
     ] = None,
+    nation: Annotated[
+        str | None,
+        Query(
+            description="The board as this player sees it, for the spoiler-free view "
+            "(games with `render_spec_for` only)"
+        ),
+    ] = None,
 ) -> Board:
     """What the game draws for spectators, after the completed turns so far.
 
     With `events`, after that many events of the log instead: a replay can show
-    the board at any point of a match.
+    the board at any point of a match. With `nation`, only what that player sees.
     """
     record = await _record(live, match_id)
     plugin = live.games.get(record.game)
     if plugin is None:
         raise HTTPException(404, f"The game {record.game!r} is not installed")
+    render = getattr(plugin, "render_spec", None)
+    if nation is not None:
+        render = getattr(plugin, "render_spec_for", None)
+        if render is None:
+            raise HTTPException(422, f"{record.game} has no board for one player")
+        if nation not in record.players:
+            raise HTTPException(422, f"{nation!r} is not a player of this match")
+        render = partial(render, nation=nation)
     log = await live.log(match_id)
     events = log if events is None else log[:events]
-    render = getattr(plugin, "render_spec", None)
     spec = render(replay(plugin, events)) if render and events else None
     return Board(game=record.game, events=len(events), spec=spec)
 

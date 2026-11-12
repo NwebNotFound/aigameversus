@@ -4,6 +4,7 @@ import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -15,6 +16,7 @@ from arena.api import (
     matches,
     memory,
     models,
+    qualify,
     ratings,
     setup,
     transcript,
@@ -23,8 +25,10 @@ from arena.api import (
 )
 from arena.api.live import LiveMatches
 from arena.api.matches import Estimates
+from arena.api.qualify import Jobs
 from arena.db.database import connect, ledger_url, migrate
 from arena.db.ledger import Ledger, LedgerUnavailable
+from arena.db.qualification_store import QualificationStore
 from arena.games import load_games
 
 log = logging.getLogger(__name__)
@@ -55,10 +59,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.pool = pool
         app.state.live = live = LiveMatches(pool, load_games(), ledger)
         app.state.estimates = Estimates()
+        app.state.qualifications = jobs = Jobs(QualificationStore(pool))
         await live.matches.interrupt_running()
+        await jobs.store.interrupt_running(datetime.now(UTC))
         try:
             yield
         finally:
+            await jobs.stop()
             await live.stop()
     finally:
         if ledger_pool is not pool:
@@ -78,6 +85,7 @@ app.include_router(transcript.router)
 app.include_router(analytics.router)
 app.include_router(viewer_help.router)
 app.include_router(batches.router)
+app.include_router(qualify.router)
 
 
 @app.exception_handler(LedgerUnavailable)

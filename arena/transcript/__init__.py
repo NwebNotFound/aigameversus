@@ -16,6 +16,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from arena.engine.types import Event
+from arena.transcript.civ import Civ
 from arena.transcript.common import (
     KINDS,
     LANGS,
@@ -52,6 +53,7 @@ RENDERERS: dict[str, type[Base]] = {
     "liars_deck": LiarsDeck,
     "poker": Poker,
     "werewolf": Werewolf,
+    "civ": Civ,
 }
 
 
