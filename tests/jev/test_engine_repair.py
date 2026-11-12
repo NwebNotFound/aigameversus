@@ -9,6 +9,7 @@ from arena.agents.mock_llm import MockLLM, tool_call
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
 from arena.engine.match import Match
+from arena.engine.types import MatchPaused
 from arena.games import load_games
 from arena.jev.client import FakeJev, JevError
 from arena.jev.config import load_jev_config
@@ -63,12 +64,16 @@ def test_v2_plays_jevs_legal_pick_and_marks_it_in_the_move_and_its_decision():
 
     repaired = [e for e in of(events, "action_accepted") if e.data.get("repaired_by") == "jev"]
     assert repaired and all(e.data["top_probability"] == 0.95 for e in repaired)
-    assert of(events, "action_fallback") == []  # every broken move was repaired
     decisions = [e.data for e in of(events, "decision") if e.data["player"] == "p1"]
-    assert all(d["jev"]["reason"] == "accepted" and d["fallback"] is None for d in decisions)
+    # Every broken move with a choice was repaired; one with a single option falls back.
+    for d in decisions:
+        accepted = d["jev"]["options"] > 1
+        assert d["jev"]["reason"] == ("accepted" if accepted else "single_option")
+        assert (d["fallback"] is None) is accepted
+    assert len(of(events, "action_fallback")) == len(decisions) - len(repaired)
     assert len(jev.calls) == len(repaired)
     # The refused attempts are still in the log: the tool-error count does not change.
-    assert len(of(events, "action_rejected")) == 3 * len(repaired)
+    assert len(of(events, "action_rejected")) == 3 * len(decisions)
 
 
 def test_v1_and_off_never_ask_jev():
@@ -96,8 +101,33 @@ def test_an_unsure_or_failing_jev_leaves_the_random_fallback_with_its_reason(scr
     assert of(events, "action_fallback")
     assert not any(e.data.get("repaired_by") for e in of(events, "action_accepted"))
     decisions = [e.data for e in of(events, "decision") if e.data["player"] == "p1"]
-    assert {d["jev"]["reason"] for d in decisions} == {reason}
+    asked = [d for d in decisions if d["jev"]["reason"] != "single_option"]
+    assert asked and {d["jev"]["reason"] for d in asked} == {reason}
     assert all(d["fallback"] == "rejected" for d in decisions)
+
+
+def test_a_cap_reached_by_jevs_booking_pauses_the_match_and_is_never_swallowed():
+    async def at_the_cap(state, questions):
+        raise MatchPaused("match_cap", spent_micro_eur=500_000, cap_micro_eur=500_000)
+
+    plugin = ToyGame()
+    agents = {"p1": ModelAgent(MockLLM(*[BROKEN] * 60), plugin, settings={"answer_repair": "v2"})}
+    agents |= random_bots(plugin, ["p2"], 3)
+    match = Match(
+        plugin,
+        agents,
+        seed=3,
+        settings={"answer_repair": "v2"},
+        repairer=JevRepairer(lambda player: at_the_cap, CONFIG),
+    )
+
+    with pytest.raises(MatchPaused):
+        asyncio.run(match.run())
+
+    (paused,) = of(match.events, "match_paused")
+    assert paused.data["reason"] == "match_cap"
+    assert of(match.events, "match_finished") == []
+    assert not any("jev" in e.data for e in of(match.events, "decision"))
 
 
 def test_v2_without_a_repairer_plays_like_v1():

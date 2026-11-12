@@ -81,31 +81,71 @@ def test_speech_is_never_an_option_and_optional_free_text_is_dropped():
 
     assert options == [
         Action(tool="vote", arguments={"target": "p2"}),
-        Action(tool="fold", arguments={}),
         Action(tool="vote", arguments={"target": "p3"}),
+        Action(tool="fold", arguments={}),
     ]
 
 
-def test_a_bet_is_offered_as_bounds_middle_and_the_amount_the_model_tried():
+@pytest.mark.parametrize(
+    ("tried", "amounts"),
+    [
+        ([{"tool": "raise", "arguments": {"amount": 250}}], [250]),  # the model's own amount
+        ([{"tool": "raise!", "arguments": {"amount": 250}}], [250]),  # also in a garbled call
+        ([], []),  # no amount of its own: no bet is offered, no guessed bucket
+        (  # two different amounts: not unique, so none
+            [
+                {"tool": "raise", "arguments": {"amount": 250}},
+                {"tool": "raise", "arguments": {"amount": 300}},
+            ],
+            [],
+        ),
+        ([{"tool": "raise", "arguments": {"amount": 5000}}], []),  # outside the bounds
+    ],
+)
+def test_a_bet_is_offered_only_at_the_one_amount_the_model_wrote(tried, amounts):
     candidates = [
         Action(tool="raise", arguments={"amount": 377}),
+        Action(tool="raise", arguments={"amount": 912}),
         Action(tool="fold", arguments={}),
     ]
-    tried = [{"tool": "raise", "arguments": {"amount": 250}, "error": "not your turn"}]
 
     options = options_of(candidates, [RAISE, FOLD], limit=16, attempts=tried)
 
-    amounts = sorted(o.arguments["amount"] for o in options if o.tool == "raise")
-    assert amounts == [40, 250, 520, 1000]  # min, tried, middle, max: no random 377
+    assert [o.arguments["amount"] for o in options if o.tool == "raise"] == amounts
+    assert Action(tool="fold", arguments={}) in options  # the engine's random 377/912 never
 
 
-def test_options_keep_every_tool_before_a_tool_gets_a_second_one():
+def test_more_moves_than_the_limit_are_never_cut_jev_abstains():
     candidates = [Action(tool="vote", arguments={"target": t}) for t in ("p2", "p3", None)]
     candidates.append(Action(tool="fold", arguments={}))
+    fake = FakeJev()
 
-    options = options_of(candidates, [VOTE, FOLD], limit=2)
+    assert options_of(candidates, [VOTE, FOLD], limit=4) == [
+        Action(tool="vote", arguments={"target": t}) for t in ("p2", "p3", None)
+    ] + [Action(tool="fold", arguments={})]
+    assert options_of(candidates, [VOTE, FOLD], limit=3) is None
+    small = CONFIG.model_copy(update={"max_options": 3})
+    outcome = asyncio.run(
+        JevRepairer(lambda p: fake, small).repair(request([VOTE, FOLD]), candidates)
+    )
+    assert (outcome.action, outcome.reason, fake.calls) == (None, "too_many_options", [])
 
-    assert [o.tool for o in options] == ["vote", "fold"]
+
+def test_a_single_option_is_never_asked_the_fallback_plays():
+    fake = FakeJev()
+
+    outcome = asyncio.run(
+        JevRepairer(lambda p: fake, CONFIG).repair(
+            request([FOLD]), [Action(tool="fold", arguments={})] * 3
+        )
+    )
+
+    assert (outcome.action, outcome.reason, outcome.options, fake.calls) == (
+        None,
+        "single_option",
+        1,
+        [],
+    )
 
 
 @pytest.mark.parametrize(("top", "played"), [(0.95, True), (0.90, True), (0.89, False)])
@@ -126,7 +166,7 @@ def test_the_pick_plays_only_at_or_above_the_threshold_on_the_top_probability(to
     assert outcome.reason == ("accepted" if played else "below_threshold")
 
 
-def test_the_most_probable_option_plays_even_if_jevs_choice_field_says_another():
+def test_an_answer_whose_choice_is_not_its_most_probable_option_repairs_nothing():
     fake = FakeJev(choice({"m1": 0.04, "m2": 0.96}, chosen="m1"))
     candidates = [
         Action(tool="vote", arguments={"target": "p2"}),
@@ -137,16 +177,19 @@ def test_the_most_probable_option_plays_even_if_jevs_choice_field_says_another()
         JevRepairer(lambda p: fake, CONFIG).repair(request([VOTE, FOLD]), candidates)
     )
 
-    assert outcome.action == Action(tool="fold", arguments={})
+    assert (outcome.action, outcome.reason) == (None, "bad_answer")
 
 
-@pytest.mark.parametrize("reason", ["timeout", "rate_limited", "bad_answer", "disabled"])
+@pytest.mark.parametrize(
+    "reason", ["timeout", "rate_limited", "bad_answer", "disabled", "cost_over_bound"]
+)
 def test_a_failed_jev_call_repairs_nothing_and_says_why(reason):
     fake = FakeJev(JevError(reason))
 
     outcome = asyncio.run(
         JevRepairer(lambda p: fake, CONFIG).repair(
-            request([FOLD]), [Action(tool="fold", arguments={})]
+            request([VOTE]),
+            [Action(tool="vote", arguments={"target": t}) for t in ("p2", "p3")],
         )
     )
 

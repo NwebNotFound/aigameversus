@@ -42,6 +42,7 @@ class Budget:
         clock: Callable[[], float] = time.monotonic,
     ):
         self.match_cap = int(config.limits.match_eur * MICRO)
+        self.jev_over_bound = False  # a Jev call billed more than its booking (Budget.jev)
         self.month_cap = int(config.limits.month_eur * MICRO)
         self._ledger = ledger
         self._match_id = match_id
@@ -121,12 +122,18 @@ class Budget:
         `jev.input_usd_per_mtok`; Jev bills input tokens only), then settled with the
         `usage.cost` Jev reports in US dollars. A cap that a call would pass pauses the match
         (MatchPaused), as for a model call. A failed call keeps its booking, except a 429.
+
+        If Jev bills more than the booked bound, the booking did not hold: the real cost is
+        recorded, and every later Jev call of this match is refused unsent
+        (JevError "cost_over_bound").
         """
         from arena.jev.client import JevError
 
         rate = self._config.limits.usd_to_eur
 
         async def metered(state, questions):
+            if self.jev_over_bound:
+                raise JevError("cost_over_bound")
             input_bound = len(json.dumps({"state": state, "questions": questions}))
             bound = int(
                 (Decimal(input_bound) * jev.input_usd_per_mtok * rate).to_integral_value(
@@ -163,6 +170,8 @@ class Budget:
                 cost,
                 latency_ms=round((self._clock() - sent) * 1000),
             )
+            if cost > bound:
+                self.jev_over_bound = True
             return result
 
         return metered

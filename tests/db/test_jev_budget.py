@@ -61,6 +61,25 @@ def test_a_failed_call_keeps_its_booking_unless_it_was_refused(database_url, err
     assert (row[-1] > 0) is kept  # the upper bound stays, or a refused call costs nothing
 
 
+def test_a_jev_bill_above_its_booking_is_recorded_and_stops_jev_for_the_match(database_url):
+    pricey = {**ANSWER, "usage": {"input_tokens": 40, "cost": 0.5}}  # far above the bound
+
+    async def scenario(pool):
+        budget = budget_of(pool)
+        fake = FakeJev(pricey, ANSWER)
+        first = await budget.jev(fake, JEV, "p1")(STATE, QUESTIONS)
+        with pytest.raises(JevError) as stopped:
+            await budget.jev(fake, JEV, "p2")(STATE, QUESTIONS)
+        return first, stopped.value.reason, len(fake.calls), await booked(pool)
+
+    first, reason, sent, rows = with_pool(database_url, scenario)
+
+    assert first.usage.cost == 0.5  # the answer that was paid for is still read
+    assert (reason, sent) == ("cost_over_bound", 1)  # the next call is never sent
+    (row,) = rows  # and never booked
+    assert row[-1] == 500_000  # the real bill, 0.5 USD at 1 EUR per USD, is what counts
+
+
 def test_the_api_refuses_jev_repair_unless_the_server_allows_it(database_url, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.delenv(ALLOW_JEV, raising=False)

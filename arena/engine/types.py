@@ -199,7 +199,9 @@ class RepairOutcome(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     action: Action | None
-    reason: str  # "accepted", "below_threshold", "no_options", or the error's kind
+    # "accepted", "below_threshold", "no_options", "single_option", "too_many_options",
+    # or the Jev error's kind
+    reason: str
     top_probability: float | None = None
     options: int = 0
 

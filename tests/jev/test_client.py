@@ -39,6 +39,18 @@ def test_a_good_answer_is_read_with_its_cost():
         {"answers": {"move": {**GOOD["answers"]["move"], "probabilities": {"m7": 1.0}}}},
         {"nothing": True},
         "not even an object",
+        # research/JEV: in [0, 1], exactly the options, summing to 1, choice = argmax
+        {"answers": {"move": {**GOOD["answers"]["move"], "probabilities": {"m1": 0, "m2": 7.0}}}},
+        {"answers": {"move": {**GOOD["answers"]["move"], "probabilities": {"m2": 1.0}}}},
+        {"answers": {"move": {**GOOD["answers"]["move"], "probabilities": {"m1": 0.2, "m2": 0.7}}}},
+        {
+            "answers": {
+                "move": {**GOOD["answers"]["move"], "probabilities": {"m1": -0.5, "m2": 1.5}}
+            }
+        },
+        {"answers": {"move": {**GOOD["answers"]["move"], "choice": "m1"}}},  # not the argmax
+        {**GOOD, "usage": {"cost": float("inf")}},
+        {**GOOD, "usage": {"cost": float("nan")}},
     ],
 )
 def test_a_wrong_or_partial_answer_is_a_bad_answer(body):
@@ -46,6 +58,14 @@ def test_a_wrong_or_partial_answer_is_a_bad_answer(body):
         parse(body, QUESTIONS)
 
     assert raised.value.reason == "bad_answer"
+
+
+def test_a_tie_for_the_top_and_float_rounding_are_still_an_answer():
+    tie = {"type": "choice", "choice": "m1", "probabilities": {"m1": 0.5, "m2": 0.5}}
+    rounded = {"type": "choice", "choice": "m2", "probabilities": {"m1": 0.1, "m2": 0.9000001}}
+
+    for answer in (tie, rounded):
+        assert parse({"answers": {"move": answer}}, QUESTIONS).answers["move"].choice
 
 
 def test_the_real_client_sends_nothing_unless_the_server_allows_jev(monkeypatch):

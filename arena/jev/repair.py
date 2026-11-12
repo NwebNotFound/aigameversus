@@ -35,17 +35,28 @@ def _free_text(name: str, schema: Mapping[str, Any]) -> bool:
     return name in TEXT_FIELDS or schema.get("maxLength", 0) >= 100
 
 
-def _amounts(name: str, schema: Mapping[str, Any], attempts: list[dict[str, Any]], tool: str):
-    """The amounts offered for an integer argument: the bounds, the middle and what was tried."""
+def _wide(schema: Mapping[str, Any], limit: int) -> bool:
+    """An integer argument with more values than Jev may be shown (a bet between bounds)."""
     low, high = schema.get("minimum"), schema.get("maximum")
-    if low is None or high is None:
-        return None
-    values = {low, (low + high) // 2, high}
-    for attempt in attempts:
-        tried = (attempt.get("arguments") or {}).get(name)
-        if attempt.get("tool") == tool and isinstance(tried, int) and low <= tried <= high:
-            values.add(tried)
-    return sorted(values)
+    return (
+        schema.get("type") == "integer"
+        and isinstance(low, int)
+        and isinstance(high, int)
+        and high - low + 1 > limit
+    )
+
+
+def _tried(name: str, schema: Mapping[str, Any], attempts: list[dict[str, Any]]) -> int | None:
+    """The one amount the model itself wrote for this argument in its broken calls, if one."""
+    low, high = schema["minimum"], schema["maximum"]
+    values = {
+        value
+        for attempt in attempts
+        if isinstance(attempt.get("arguments"), dict)
+        for value in [attempt["arguments"].get(name)]
+        if isinstance(value, int) and not isinstance(value, bool) and low <= value <= high
+    }
+    return values.pop() if len(values) == 1 else None
 
 
 def options_of(
@@ -53,14 +64,16 @@ def options_of(
     tools: list[ToolSpec],
     limit: int,
     attempts: list[dict[str, Any]] | None = None,
-) -> list[Action]:
+) -> list[Action] | None:
     """The moves Jev may choose from: speech tools out, optional free text dropped, distinct.
 
-    An integer argument with bounds (a bet) is offered as a few amounts: the minimum, the
-    middle, the maximum and the amount the model itself tried, instead of random amounts.
+    Nothing is guessed (research/JEV): an amount with more values than `limit` (a
+    bet) is offered only as the one amount the model itself wrote in its broken calls; a
+    move needing an amount the model did not write uniquely is not offered. The engine's
+    random amounts never are.
 
-    Kept in the order the engine sampled them, at most `limit`, with every tool that has a
-    candidate represented before a tool gets a second one.
+    None when there are more distinct moves than `limit`: Jev then abstains instead of
+    seeing a cut list.
     """
     specs = {tool.name: tool for tool in tools}
     cleaned: list[Action] = []
@@ -78,30 +91,22 @@ def options_of(
             for name, value in action.arguments.items()
             if not _free_text(name, properties.get(name, {}))
         }
-        variants = [arguments]
-        for name, value in arguments.items():
+        for name in list(arguments):
             schema = properties.get(name, {})
-            if schema.get("type") == "integer" and isinstance(value, int):
-                amounts = _amounts(name, schema, attempts or [], action.tool)
-                if amounts:
-                    variants = [{**v, name: amount} for v in variants for amount in amounts]
-        for variant in variants:
-            move = Action(tool=action.tool, arguments=variant)
-            key = json.dumps([move.tool, move.arguments], sort_keys=True)
-            if key not in seen:
-                seen.add(key)
-                cleaned.append(move)
-    by_tool: dict[str, list[Action]] = {}
-    for move in cleaned:
-        by_tool.setdefault(move.tool, []).append(move)
-    picked: list[Action] = []
-    depth = 0
-    while len(picked) < limit and any(depth < len(moves) for moves in by_tool.values()):
-        for moves in by_tool.values():
-            if depth < len(moves) and len(picked) < limit:
-                picked.append(moves[depth])
-        depth += 1
-    return picked
+            if _wide(schema, limit):
+                amount = _tried(name, schema, attempts or [])
+                if amount is None:
+                    arguments = None  # no amount of the model's own: not an option
+                    break
+                arguments[name] = amount
+        if arguments is None:
+            continue
+        move = Action(tool=action.tool, arguments=arguments)
+        key = json.dumps([move.tool, move.arguments], sort_keys=True)
+        if key not in seen:
+            seen.add(key)
+            cleaned.append(move)
+    return cleaned if len(cleaned) <= limit else None
 
 
 def describe(move: Action) -> str:
@@ -142,8 +147,14 @@ class JevRepairer:
 
     async def repair(self, request: RepairRequest, candidates: list[Action]) -> RepairOutcome:
         options = options_of(candidates, request.tools, self._config.max_options, request.attempts)
+        if options is None:
+            return RepairOutcome(action=None, reason="too_many_options")
         if not options:
             return RepairOutcome(action=None, reason="no_options")
+        if len(options) == 1:
+            # One option always gets probability 1: the threshold could not protect it, and
+            # Jev would only ever confirm the one sampled move. The fallback plays.
+            return RepairOutcome(action=None, reason="single_option", options=1)
         names = {f"m{i}": move for i, move in enumerate(options, start=1)}
         question = {
             QUESTION: {"type": "choice", "criteria": {k: describe(m) for k, m in names.items()}}
@@ -154,12 +165,8 @@ class JevRepairer:
         except JevError as error:
             return RepairOutcome(action=None, reason=error.reason, options=len(options))
         answer = result.answers[QUESTION]
-        assert isinstance(answer, ChoiceAnswer)  # checked by client.parse
-        # The option with the highest probability, judged on that probability itself.
-        pick = max(
-            names, key=lambda name: (answer.probabilities.get(name, 0.0), name == answer.choice)
-        )
-        top = answer.probabilities.get(pick, 0.0)
+        assert isinstance(answer, ChoiceAnswer)  # checked by client.parse: choice = argmax
+        pick, top = answer.choice, answer.probabilities[answer.choice]
         if top < self._config.threshold(len(options)):
             return RepairOutcome(
                 action=None, reason="below_threshold", top_probability=top, options=len(options)

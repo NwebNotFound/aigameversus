@@ -1,20 +1,25 @@
 # Jev, TypeSafe's decision model on OpenRouter (docs/jev.md). It only ever repairs a broken
 # tool call into the legal move the model itself meant (answer_repair "v2"); it never picks
 # a move of its own, never seats a player and never chooses a model.
-# No real call is made unless the server runs with ARENA_ALLOW_JEV=1.
+# No real call is made unless the server runs with ARENA_ALLOW_JEV=1, and it stays off
+# until Nils approves real Jev calls and the thresholds below are frozen (D-125).
 model: typesafe/jev-1.14
 endpoint: https://openrouter.ai/api/alpha/decisions
 timeout_seconds: 10
 
 # Booking before a call: the request's size in bytes as input tokens at this price, an upper
-# bound of what Jev bills (it bills input tokens only; ~0.04 USD per million at the time of
-# writing). The booking is settled with the `usage.cost` Jev reports, in USD.
+# bound of what Jev bills (it bills input tokens only). The booking is settled with the
+# `usage.cost` Jev reports, in USD; a settle above its booking stops Jev for the match.
+# UNVERIFIED PLACEHOLDER: 0.20 is not a measured or published price; check it before
+# the first real call.
 input_usd_per_mtok: 0.20
 
 # What goes into the state: the tail of the model's own reasoning and of the game summary.
 reasoning_chars: 600
 situation_chars: 1500
-# The legal moves Jev chooses from: sampled from the game's random legal moves.
+# The legal moves Jev chooses from: the distinct moves among `samples` random legal moves,
+# never cut down: more than `max_options` and Jev abstains. A bet is offered only at the
+# amount the model itself wrote, never at a guessed one (arena/jev/repair.py).
 max_options: 16
 samples: 64
 

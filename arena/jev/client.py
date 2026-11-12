@@ -9,6 +9,7 @@ Jev call until that is decided. The key comes from OPENROUTER_API_KEY at call ti
 never logged. Every match wraps the client in `Budget.jev`, so each call is booked.
 """
 
+import math
 import os
 from collections.abc import Mapping
 from typing import Any, Literal, Protocol
@@ -18,10 +19,11 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 ALLOW_JEV = "ARENA_ALLOW_JEV"
 KEY_VARIABLE = "OPENROUTER_API_KEY"
+SUM_TOLERANCE = 1e-6  # how far a choice's probabilities may sum from 1
 
 
 class _Frozen(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="ignore")
+    model_config = ConfigDict(frozen=True, extra="ignore", allow_inf_nan=False)
 
 
 class ChoiceAnswer(_Frozen):
@@ -67,7 +69,8 @@ class JevError(Exception):
 
     def __init__(self, reason: str):
         super().__init__(reason)
-        self.reason = reason  # disabled, timeout, rate_limited, http, bad_answer
+        # disabled, timeout, rate_limited, http, bad_answer; cost_over_bound (Budget.jev)
+        self.reason = reason
 
 
 class JevClient(Protocol):
@@ -86,11 +89,23 @@ def parse(body: Any, questions: Mapping[str, Mapping[str, Any]]) -> JevResult:
         answer = result.answers.get(key)
         if answer is None or answer.type != question.get("type"):
             raise JevError("bad_answer")
-        if isinstance(answer, ChoiceAnswer):
-            options = set(question.get("criteria", {}))
-            if answer.choice not in options or set(answer.probabilities) - options:
-                raise JevError("bad_answer")
+        if isinstance(answer, ChoiceAnswer) and not _a_distribution(answer, question):
+            raise JevError("bad_answer")
     return result
+
+
+def _a_distribution(answer: ChoiceAnswer, question: Mapping[str, Any]) -> bool:
+    """A probability for exactly the options asked, each in [0, 1], summing to 1, and the
+    choice one of the most probable (research/JEV)."""
+    options = set(question.get("criteria", {}))
+    values = answer.probabilities
+    if set(values) != options or answer.choice not in options:
+        return False
+    if not all(math.isfinite(p) and 0 <= p <= 1 for p in values.values()):
+        return False
+    if abs(math.fsum(values.values()) - 1) > SUM_TOLERANCE:
+        return False
+    return values[answer.choice] == max(values.values())
 
 
 class HttpJev:

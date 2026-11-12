@@ -317,7 +317,9 @@ class Match[StateT: BaseModel]:
         )
         try:
             outcome = await self._repairer.repair(request, candidates)
-        except Exception:  # an alpha API: whatever goes wrong, the random fallback plays
+        except MatchPaused:
+            raise  # a cap reached by Jev's booking pauses the match, as a model call's does
+        except Exception:  # an alpha API: whatever else goes wrong, the random fallback plays
             outcome = RepairOutcome(action=None, reason="error")
         verdict = {
             "reason": outcome.reason,
