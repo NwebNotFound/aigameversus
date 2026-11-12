@@ -11,6 +11,7 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from arena.analytics import behaviour, civ, liars_deck, poker, werewolf
+from arena.analytics.civ import UnknownVersion
 from arena.analytics.report import GAMES as REPORTS
 from arena.analytics.report import report
 from arena.analytics.situation import BUILDERS as SITUATIONS
@@ -33,9 +34,16 @@ class NoAnalytics(ValueError):
 
 
 def match_analytics(
-    game: str, events: Iterable[Event], spoilers: bool, names: Mapping[str, str] | None = None
+    game: str,
+    events: Iterable[Event],
+    spoilers: bool,
+    names: Mapping[str, str] | None = None,
+    version: str | None = None,
 ) -> dict[str, Any]:
     """The analytics of a match. `names` maps seats to the names its sentences use.
+
+    `version` picks the shape of a game that has several (Civ: "civ/1", the default, or "civ/2",
+    which adds to it); any other game has one, and a version is refused.
 
     A game with a situation but no analyzer yet answers with the situation only.
     """
@@ -43,6 +51,8 @@ def match_analytics(
     if analyze is None and game not in SITUATIONS:
         known = sorted({*ANALYZERS, *SITUATIONS})
         raise NoAnalytics(f"No analytics for {game} yet (known: {', '.join(known)})")
+    if version is not None and game != "civ":
+        raise UnknownVersion(f"{game} has one analytics version; no version {version!r}")
     log = list(enumerate(events))
     if not spoilers:
         # The start of the match stays, as in the transcript: without the seed (it would
@@ -53,13 +63,16 @@ def match_analytics(
         numbers = werewolf.analyze(log, spoilers, names or {})
         numbers["recap"] = werewolf.recaps(numbers, names or {})
         numbers["narration"] = drama.narration(log, names or {})
+    elif game == "civ":
+        numbers = civ.analyze(log, spoilers, version or civ.VERSION)
     else:
         numbers = analyze(log, spoilers) if analyze else {"meta": {}}
     if game == "liars_deck":
         # Only a spectator reads thoughts; without spoilers the log has none anyway.
         thoughts = {e.data["player"]: e.data["text"] for _, e in log if e.type == "thought"}
         numbers["behaviour"] = behaviour.liars_deck(numbers, spoilers, thoughts)
-    if game in REPORTS:
+    # Civ's report is part of civ/2 only: civ/1 stays as it was.
+    if game in REPORTS and (game != "civ" or numbers.get("analytics_version") == "civ/2"):
         numbers["report"] = report(game, log, spoilers, numbers, names or {})
     result = {
         "game": game,

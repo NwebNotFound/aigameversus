@@ -161,6 +161,27 @@ def test_talk_checks_never_quote_private_werewolf_talk_without_spoilers(client, 
     assert any("Pack, listen" in tag["quote"] for tag in full["tags"])
 
 
+def test_civ_analytics_version_is_opt_in_and_checked(client):
+    match = start(client, game="civ", players=4, seed=3, settings={"rounds": 6})
+    follow(client, match["id"])
+    base = f"/matches/{match['id']}/analytics"
+
+    one = client.get(base, params={"spoilers": True}).json()
+    two = client.get(base, params={"spoilers": True, "analytics_version": "civ/2"}).json()
+
+    assert one["analytics_version"] == "civ/1" and "report" not in one
+    assert two["analytics_version"] == "civ/2" and two["report"]["key_moments"] is not None
+    p1 = two["series"]["nations"]["p1"]
+    assert "decisions" in p1 and "orders" in p1
+    public = client.get(base, params={"analytics_version": "civ/2"}).json()
+    assert public["series"] is None and "report" in public
+    assert client.get(base, params={"analytics_version": "civ/9"}).status_code == 422
+    poker = start(client, game="poker", players=3, seed=3)
+    follow(client, poker["id"])
+    other = client.get(f"/matches/{poker['id']}/analytics", params={"analytics_version": "civ/2"})
+    assert other.status_code == 422
+
+
 def test_poker_analytics_has_hands_chips_moves_and_totals_and_no_hidden_cards_in_public(client):
     match = start(client, game="poker", players=3, seed=3)
     follow(client, match["id"])

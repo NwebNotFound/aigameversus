@@ -26,6 +26,7 @@ from games.civ.plugin import CivGame
 from games.civ.state import NEUTRAL, CivState
 
 VERSION = "civ/1"
+VERSIONS = ("civ/1", "civ/2")  # civ/2 is opt-in: civ/1 stays as it was
 RESOURCES = ("food", "wood", "iron", "gold")
 TOP_REASONS = 5  # most frequent kinds of dropped orders listed per nation
 # Behaviour tags (spoilers only): rule-based, the thresholds documented in docs/METRICS.md.
@@ -37,7 +38,16 @@ TRADER_TRADES = 2  # trades agreed
 Log = list[tuple[int, Event]]
 
 
-def analyze(log: Log, spoilers: bool) -> dict[str, Any]:
+class UnknownVersion(ValueError):
+    """The analytics version asked for does not exist for this game."""
+
+
+def analyze(log: Log, spoilers: bool, version: str = VERSION) -> dict[str, Any]:
+    """The numbers of a match. `version` "civ/2" adds to civ/1 (see `_civ2`), never changes it."""
+    if version not in VERSIONS:
+        raise UnknownVersion(
+            f"No analytics version {version!r} for civ (known: {', '.join(VERSIONS)})"
+        )
     events = [e for _, e in log]
     start = next((e for e in events if e.type == "match_started"), None)
     players = list(start.data["players"]) if start else []
@@ -52,7 +62,7 @@ def analyze(log: Log, spoilers: bool) -> dict[str, Any]:
         "rounds_total": settings.get("rounds", plugin.data.victory.round_limit.rounds),
     }
     built = _replay(log, players, settings, plugin) if spoilers and start else None
-    return {
+    result = {
         "meta": meta,
         "analytics_version": VERSION,
         "nations": players,
@@ -65,6 +75,74 @@ def analyze(log: Log, spoilers: bool) -> dict[str, Any]:
         "decisions": _decisions(events, players) if spoilers else None,
         "behaviour": _behaviour(log, players, built) if built else None,
     }
+    return _civ2(result, log, players) if version == "civ/2" else result
+
+
+def _civ2(result: dict[str, Any], log: Log, players: list[str]) -> dict[str, Any]:
+    """civ/1 plus: per-round `decisions` and `orders` of each nation in `series` (spoilers), the
+    end round `until` of treaties in the timeline, and (added by the caller) a `report`."""
+    result["analytics_version"] = "civ/2"
+    series = result["series"]
+    if series is not None:
+        rounds = series["rounds"]
+        per_round = _per_round(log, players, rounds)
+        for p in players:
+            series["nations"][p]["decisions"] = [per_round[r][p]["decisions"] for r in rounds]
+            series["nations"][p]["orders"] = [per_round[r][p]["orders"] for r in rounds]
+    ends: dict[str, int | None] = {}
+    for _, e in log:
+        if e.type == "treaty_signed":
+            ends[e.data["treaty"]] = e.data.get("ends_round")
+    for item in result["diplomacy"]["timeline"]:
+        if "treaty" in item:
+            until = ends.get(item["treaty"])  # None: open-ended, or its signing is not in view
+            item["until"] = until
+            if item["event"] == "treaty_broken":
+                item["rounds_early"] = None if until is None else max(until - item["round"] + 1, 0)
+    return result
+
+
+def _per_round(log: Log, players: list[str], rounds: list[int]) -> dict[int, dict[str, Any]]:
+    """What each nation's calls took and sent in each round (events between two round starts)."""
+    empty = lambda: {  # noqa: E731
+        "decisions": {
+            "latency_ms": None,
+            "tokens_out": None,
+            "reasoning_tokens": None,
+            "cutoffs": 0,
+            "rejected": 0,
+            "fallback": False,
+        },
+        "orders": {"sent": 0, "dropped": 0},
+    }
+    per = {r: {p: empty() for p in players} for r in rounds}
+    current = 0
+    for _, e in log:
+        if e.type == "round_started":
+            current = e.data["round"]
+            continue
+        row = per.get(current)
+        if row is None:
+            continue
+        d = e.data
+        player = d.get("player") or d.get("nation")
+        if player not in row:
+            continue
+        mine = row[player]
+        if e.type == "decision":
+            for field in ("latency_ms", "tokens_out", "reasoning_tokens"):
+                if d.get(field) is not None:
+                    mine["decisions"][field] = (mine["decisions"][field] or 0) + d[field]
+            mine["decisions"]["cutoffs"] += d.get("cutoffs") or 0
+        elif e.type == "action_rejected":
+            mine["decisions"]["rejected"] += 1
+        elif e.type in ("action_accepted", "action_fallback"):
+            if e.type == "action_fallback":
+                mine["decisions"]["fallback"] = True
+            mine["orders"]["sent"] += len((d.get("arguments") or {}).get("orders") or [])
+        elif e.type == "order_refused":
+            mine["orders"]["dropped"] += 1
+    return per
 
 
 # --- the state, round by round (spoilers only) ------------------------------------------------

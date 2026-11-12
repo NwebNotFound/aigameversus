@@ -385,6 +385,219 @@ def _poker(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Ca
     return rows, columns, moments, {"hands": facts["hand"] or 0}
 
 
+# --- Throne of Tokens (civ/2) ---------------------------------------------------
+
+
+KINDS_OF_VICTORY = {
+    "domination": ("domination", "Herrschaft"),
+    "economy": ("wealth", "Reichtum"),
+    "round_limit": ("score at the round limit", "Punkte am Rundenende"),
+}
+NEUTRAL_WORDS = ("the barbarians", "die Barbaren")
+
+
+def _civ(log: Log, spoilers: bool, numbers: dict, players: list[str], name: Callable[[str], str]):
+    """Key moments of a Civ match from the public events, battles with spoilers, one turning point.
+
+    The turning point is, with spoilers, the moment in or just before the round after which the
+    winner led the score for good; without them, the first betrayal, else the first conquest.
+    """
+    series, battles = numbers["series"], numbers["battles"]
+
+    def say(kind, seq, seats, importance, at, en, de, **who):
+        """A moment whose sentence names seats (the barbarians in words) in each language."""
+        words = {k: NEUTRAL_WORDS if v == "neutral" else (name(v), name(v)) for k, v in who.items()}
+        text = _moment(
+            seq,
+            kind,
+            seats,
+            importance,
+            en.format(**{k: w[0] for k, w in words.items()}),
+            de.format(**{k: w[1] for k, w in words.items()}),
+        )
+        return text | ({"round": at} if at is not None else {})
+
+    round_seq = {e.data["round"]: seq for seq, e in log if e.type == "round_started"}
+    moments: list[dict] = []
+    for item in numbers["diplomacy"]["timeline"]:
+        by, on, at, seq = item.get("by"), item.get("on"), item["round"], item["seq"]
+        if item["event"] == "war_declared" and item.get("broken"):
+            moments.append(
+                say(
+                    "betrayal",
+                    seq,
+                    [by, on],
+                    3,
+                    at,
+                    f"{{by}} breaks a pact with {{on}} and declares war (round {at}).",
+                    f"{{by}} bricht einen Pakt mit {{on}} und erklärt den Krieg (Runde {at}).",
+                    by=by,
+                    on=on,
+                )
+            )
+        elif item["event"] == "war_declared":
+            moments.append(
+                say(
+                    "war",
+                    seq,
+                    [by, on],
+                    2,
+                    at,
+                    f"{{by}} declares war on {{on}} (round {at}).",
+                    f"{{by}} erklärt {{on}} den Krieg (Runde {at}).",
+                    by=by,
+                    on=on,
+                )
+            )
+        elif item["event"] == "treaty_broken":
+            moments.append(
+                say(
+                    "betrayal",
+                    seq,
+                    [by],
+                    3,
+                    at,
+                    f"{{by}} breaks a treaty (round {at}).",
+                    f"{{by}} bricht einen Vertrag (Runde {at}).",
+                    by=by,
+                )
+            )
+    for c in numbers["conquests"]:
+        at = c["round"]
+        moments.append(
+            say(
+                "conquest",
+                c["seq"],
+                [c["to"], c["from"]],
+                3,
+                at,
+                f"A city of {{loser}} falls to {{to}} (round {at}).",
+                f"Eine Stadt von {{loser}} fällt an {{to}} (Runde {at}).",
+                to=c["to"],
+                loser=c["from"],
+            )
+        )
+    costly = sorted(
+        battles or [], key=lambda b: -(len(b["attacker"]["lost"]) + len(b["defender"]["lost"]))
+    )
+    for b in costly[:2]:
+        a, d, (col, row) = b["attacker"]["nation"], b["defender"]["nation"], b["tile"]
+        moments.append(
+            say(
+                "battle",
+                b["seq"],
+                [a, d],
+                2,
+                None,
+                f"Battle at ({col}, {row}): {{a}} against {{d}}, winner: {{w}}.",
+                f"Schlacht bei ({col}, {row}): {{a}} gegen {{d}}, Sieger: {{w}}.",
+                w=b["winner"],
+                a=a,
+                d=d,
+            )
+        )
+    won = next(((seq, e.data) for seq, e in log if e.type == "victory"), None)
+    if won:
+        seq, v = won
+        how = KINDS_OF_VICTORY.get(v["kind"], (v["kind"], v["kind"]))
+        who = ", ".join(name(p) for p in v["winners"])
+        moments.append(
+            _moment(
+                seq,
+                "victory",
+                v["winners"],
+                3,
+                f"{who} wins by {how[0]} in round {v['round']}.",
+                f"{who} gewinnt durch {how[1]} in Runde {v['round']}.",
+            )
+            | {"round": v["round"]}
+        )
+    _mark_turning_point(moments, numbers, series, round_seq, name)
+    final = {r["player"]: r["score"] for r in (numbers["victory"]["standings"] or [])}
+    kept = bool(series and series["rounds"])
+    by_nation = numbers["diplomacy"]["by_nation"]
+    rows = [
+        {
+            "player": p,
+            "cities": series["nations"][p]["cities"][-1] if kept else None,
+            "score": series["nations"][p]["score"][-1] if kept else final.get(p),
+            "cities_taken": sum(1 for c in numbers["conquests"] if c["to"] == p),
+            "cities_lost": sum(1 for c in numbers["conquests"] if c["from"] == p),
+            "wars_declared": by_nation[p]["wars_declared"],
+            "treaties_broken": by_nation[p]["treaties_broken"],
+            "battles_won": None if battles is None else sum(1 for b in battles if b["winner"] == p),
+        }
+        for p in players
+    ]
+    columns = [
+        {"key": "cities", "label": _label("Cities", "Städte"), "kind": "number", "spoilers": True},
+        {"key": "score", "label": _label("Score", "Punkte"), "kind": "number"},
+        {
+            "key": "cities_taken",
+            "label": _label("Cities taken", "Städte erobert"),
+            "kind": "number",
+        },
+        {"key": "cities_lost", "label": _label("Cities lost", "Städte verloren"), "kind": "number"},
+        {
+            "key": "wars_declared",
+            "label": _label("Wars declared", "Kriege erklärt"),
+            "kind": "number",
+        },
+        {
+            "key": "treaties_broken",
+            "label": _label("Treaties broken", "Verträge gebrochen"),
+            "kind": "number",
+        },
+        {
+            "key": "battles_won",
+            "label": _label("Battles won", "Schlachten gewonnen"),
+            "kind": "number",
+            "spoilers": True,
+        },
+    ]
+    rounds = (series["rounds"][-1] if kept else None) or (won[1]["round"] if won else 0)
+    return rows, columns, moments, {"rounds": rounds}
+
+
+def _mark_turning_point(moments, numbers, series, round_seq, name) -> None:
+    """Flag one moment `turning`: where the winner took the lead for good, else the first break."""
+    winners = numbers["victory"]["winners"] or []
+    if series and winners and series["rounds"]:
+        winner, rounds, nations = winners[0], series["rounds"], series["nations"]
+        seats = list(nations)
+
+        def leader(i: int) -> str:
+            return max(seats, key=lambda p: (nations[p]["score"][i], -seats.index(p)))
+
+        behind = [i for i in range(len(rounds)) if leader(i) != winner]
+        if behind and behind[-1] + 1 < len(rounds):
+            turn = rounds[behind[-1] + 1]
+            near = [
+                m for m in moments if m.get("round") in (turn - 1, turn) and m["kind"] != "victory"
+            ]
+            if near:
+                max(near, key=lambda m: (m["importance"], -m["seq"]))["turning"] = True
+            elif (seq := round_seq.get(turn)) is not None:
+                moments.append(
+                    _moment(
+                        seq,
+                        "lead",
+                        [winner],
+                        2,
+                        f"{name(winner)} takes the lead for good in round {turn}.",
+                        f"{name(winner)} übernimmt in Runde {turn} dauerhaft die Führung.",
+                        turning=True,
+                    )
+                    | {"round": turn}
+                )
+            return
+    for kind in ("betrayal", "conquest"):
+        first = min((m for m in moments if m["kind"] == kind), key=lambda m: m["seq"], default=None)
+        if first:
+            first["turning"] = True
+            return
+
+
 # --- Werewolf -----------------------------------------------------------------
 
 
@@ -513,7 +726,7 @@ def _werewolf(
     )
 
 
-GAMES = {"liars_deck": _liars, "poker": _poker, "werewolf": _werewolf}
+GAMES = {"liars_deck": _liars, "poker": _poker, "werewolf": _werewolf, "civ": _civ}
 
 
 def _award(award: str, seat: str, en: str, de: str, **evidence: Any) -> dict[str, Any]:
