@@ -1,15 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, rewrite } from './routes.js';
 
 // Models write the seat ids they see in their prompt ("p2, two kings?"). Speech and thought
 // bubbles show such a seat as its name chip; the raw switch shows the words as written.
 
 const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
 
-// A route handler can still be fetching when a test ends; unrouting with ignoreErrors keeps
-// its late "Test ended" rejection from failing the run.
-test.afterEach(async ({ page }) => {
-	await page.unrouteAll({ behavior: 'ignoreErrors' });
-});
 const SENTENCE = 'p2, two kings with your history? I doubt it!';
 // The shape of the Werewolf thought Nils saw: reasoning steps as **headings**, paragraphs.
 const THOUGHT = [
@@ -33,9 +28,7 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 			data: { game: 'liars_deck', players: 4, seed: 61, turn_delay: 0.5 }
 		})
 	).json();
-	await page.route(`**/matches/${match.id}/transcript*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${match.id}/transcript*`, (body) => {
 		// Lines of their own (no log position): the commentary shows them at any moment, so the
 		// live playout never holds them back.
 		const line = (_id: number, text: string, kind: string) => ({
@@ -54,7 +47,6 @@ test('a seat a model named in its words reads as that seat’s name chip', async
 			line(100003, THOUGHT, 'thought'),
 			line(100004, '<img src=x onerror=alert(1)> **<b>bold?</b>**', 'speech')
 		);
-		await route.fulfill({ response, json: body });
 	});
 
 	await page.goto(`/matches/${match.id}`);

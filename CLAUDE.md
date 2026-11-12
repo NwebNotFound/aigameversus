@@ -490,6 +490,12 @@ npm run test:unit             # vitest
 npx playwright test           # smoke tests on 3100 (WEB_URL overrides); needs demo_seed data
 ```
 
+A spec that changes network answers (`page.route`) imports `test` and `expect` from
+`web/tests/routes.ts`, not from `@playwright/test`, and rewrites a real answer with
+`rewrite(page, url, edit)`: a handler that outlives its test is then dropped instead of
+failing a green run ("route.fetch: Test ended"). `npm run lint` refuses a spec that
+routes without it.
+
 Secret scan (same as CI):
 
 ```bash

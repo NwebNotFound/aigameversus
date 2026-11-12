@@ -1,15 +1,10 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test } from './routes.js';
 
 // The live view of bot matches. The tests start their matches on the arena API
 // directly (ARENA_URL, default the Compose port 8100), as the new-match form will.
 
 const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
-
-// A route handler can still be fetching when a test ends; unrouting with ignoreErrors keeps
-// its late "Test ended" rejection from failing the run.
-test.afterEach(async ({ page }) => {
-	await page.unrouteAll({ behavior: 'ignoreErrors' });
-});
 
 interface Started {
 	id: string;

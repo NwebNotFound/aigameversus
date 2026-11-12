@@ -1,16 +1,11 @@
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { type APIRequestContext } from '@playwright/test';
+import { expect, test, rewrite } from './routes.js';
 
 // Pacing: a burst of instant moves is played out moment by moment, and a model that takes
 // long shows as a running timer. The live stream is replayed from a real bot match: a short
 // backlog first, then everything else in one burst (as instant tool calls arrive).
 
 const ARENA = process.env.ARENA_URL ?? 'http://127.0.0.1:8100';
-
-// A route handler can still be fetching when a test ends; unrouting with ignoreErrors keeps
-// its late "Test ended" rejection from failing the run.
-test.afterEach(async ({ page }) => {
-	await page.unrouteAll({ behavior: 'ignoreErrors' });
-});
 
 async function finishedLog(request: APIRequestContext) {
 	const match = await (
@@ -46,9 +41,7 @@ test('a burst of instant moves plays out moment by moment; a long wait is a time
 		return route.fulfill({ headers: { 'content-type': 'text/event-stream' }, body });
 	});
 	// The match still "runs", and p2 has been asked for 30 seconds.
-	await page.route(`**/matches/${id}/state*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${id}/state*`, (body) => {
 		body.match.status = 'running';
 		body.match.placements = null;
 		body.control = {
@@ -56,7 +49,6 @@ test('a burst of instant moves plays out moment by moment; a long wait is a time
 			turn_delay: 0,
 			asking: [{ player: 'p2', since: new Date(Date.now() - 30_000).toISOString() }]
 		};
-		await route.fulfill({ response, json: body });
 	});
 	// Record when the number of events on screen changes.
 	await page.addInitScript(() => {
