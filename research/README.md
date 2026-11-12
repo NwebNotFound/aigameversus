@@ -183,7 +183,7 @@ tokens, or change how they play.
 
 ## Proposal: Throne of Tokens pilot (C1, not approved)
 
-See [C1 design](C1/PLAN.md) and [frozen proposal YAML](../experiments/C1_civ_pilot.yaml).
+See [C1 design](C1/PLAN.md) and [frozen proposal YAML](C1/PLAN.yaml).
 The free estimate currently refuses Civ (not deployed); no numeric quote exists.
 One call per nation per round gives at most 80 base decisions for 4 nations and
 20 rounds, plus retries. The old multi-call estimate is superseded.
