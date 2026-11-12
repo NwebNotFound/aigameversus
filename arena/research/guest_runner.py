@@ -14,7 +14,8 @@ Before every start, all of these must hold, or it holds and reports (exit 3):
 - a fresh free estimate (POST /matches/estimate) is strictly below the match cap, and the
   arena reads the cap back as `match_budget_eur`;
 - the stage's spend over every attempt so far, plus 3x that estimate, stays within
-  `stop_start_share` of `stage_eur`; plus the full match cap stays within `stage_eur`;
+  `stop_start_share` of `stage_eur`; plus the arena's full per-match ledger cap (GET
+  /setup, EUR 0.50, stricter than the 0.40 limit: Lead 5c29a3f0) stays within the stage;
 - no listed price of a guest has risen above the plan's;
 - no other match is running on the arena.
 
@@ -91,6 +92,9 @@ class GuestRunner:
         budget = self.plan["budget"]
         self.stage = _micro(budget["stage_eur"])
         self.cap = _micro(budget["match_cap_eur"])
+        # The hard reserve of a new match (Lead 5c29a3f0): the arena's full per-match ledger
+        # cap, not the lower match_budget_eur; read from GET /setup before every start.
+        self.reserve = self.cap
         self.stop_share = Decimal(str(budget["stop_start_share"]))
         self.month_hold = _micro(budget["notify_and_hold_at_month_eur"])
         self.batch_id = str(self.plan["id"])
@@ -174,7 +178,7 @@ class GuestRunner:
             if attempt.get("state") == "not_started":
                 continue
             cost = attempt.get("cost_micro_eur")
-            total += self.cap if cost is None else cost
+            total += self.reserve if cost is None else cost
         return total
 
     # --- gates -----------------------------------------------------------------------------
@@ -187,6 +191,8 @@ class GuestRunner:
 
     def gates(self, row: Mapping[str, str]) -> dict[str, Any]:
         """Every check before a start; RunStopped names the first that fails."""
+        setup = self._get("/setup")
+        self.reserve = max(self.cap, _micro(setup["caps"]["match_eur"]))
         month = self._get("/ledger/month")
         if month["spent_micro_eur"] >= self.month_hold:
             raise RunStopped(
@@ -222,16 +228,17 @@ class GuestRunner:
                 f"spent {spent / MICRO:.6f} + 3 x {quote / MICRO:.6f} EUR would pass "
                 f"{self.stop_share:.0%} of the stage's {self.stage / MICRO:.2f} EUR"
             )
-        if spent + self.cap > self.stage:
+        if spent + self.reserve > self.stage:
             raise RunStopped(
-                f"spent {spent / MICRO:.6f} + the full cap {self.cap / MICRO:.2f} EUR would "
-                f"pass the stage's {self.stage / MICRO:.2f} EUR"
+                f"spent {spent / MICRO:.6f} + the full ledger cap {self.reserve / MICRO:.2f} "
+                f"EUR would pass the stage's {self.stage / MICRO:.2f} EUR"
             )
         self._prices(row["guest"])
         return {
             "month_spent_micro_eur": month["spent_micro_eur"],
             "estimate_micro_eur": quote,
             "cap_micro_eur": estimate["cap_micro_eur"],
+            "reserve_micro_eur": self.reserve,
             "stage_spent_micro_eur": spent,
         }
 

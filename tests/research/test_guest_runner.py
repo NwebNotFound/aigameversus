@@ -24,6 +24,7 @@ class FakeArena:
         self.month = override.get("month", 3_756_279)
         self.estimate = override.get("estimate", 241_947)
         self.cap = override.get("cap", 400_000)
+        self.ledger_cap = override.get("ledger_cap", 0.5)  # limits.match_eur of the arena
         self.cost = override.get("cost", 200_000)
         self.running = override.get("running", [])
         self.prices = {g["id"]: dict(g) for g in plan["guests"]}
@@ -35,6 +36,8 @@ class FakeArena:
 
     def __call__(self, method, path, body):
         self.calls.append((method, path, body))
+        if method == "GET" and path == "/setup":
+            return 200, {"caps": {"match_eur": self.ledger_cap, "month_eur": 25}}
         if method == "GET" and path == "/ledger/month":
             return 200, {
                 "spent_micro_eur": self.month,
@@ -205,22 +208,27 @@ def test_the_shared_stage_budget_counts_every_attempt_and_both_reserves(approved
     assert again.posts() == []
 
 
-def test_the_full_cap_is_held_for_the_next_match_and_a_lost_start_counts_at_the_cap(
+def test_the_full_ledger_cap_is_held_for_the_next_match_and_a_lost_start_counts_at_it(
     approved, tmp_path
 ):
     runner = client(approved, tmp_path / "out", arena_for(approved))
-    for order in range(1, 8):
+    for order in range(1, 7):
         runner._write(
-            {"attempt_id": f"a{order}", "order": order, "state": "ended", "cost_micro_eur": 390_000}
+            {"attempt_id": f"a{order}", "order": order, "state": "ended", "cost_micro_eur": 350_000}
         )
     runner._write({"attempt_id": "x", "order": 99, "state": "started", "match_id": "lost"})
-    # 7 x 0.39 + the lost start at the cap 0.40 = 3.13 EUR: 3 x a tiny quote still fits 90 %
-    # (3.133 <= 3.15), but the next match's full cap would pass 3.50 (3.53).
+    # 6 x 0.35 + the lost start at the ledger cap 0.50 = 2.60 EUR, then 3.10 with a held
+    # 0.50 for the next match: within 3.50. Add one ended match at 0.45: 3.05 + 0.50 = 3.55
+    # does not fit, though 3.05 + the 0.40 limit would, and 3 x a tiny quote fits 90 %.
+    runner._write({"attempt_id": "a7", "order": 7, "state": "ended", "cost_micro_eur": 450_000})
     arena = arena_for(approved, estimate=1_000)
 
-    with pytest.raises(RunStopped, match="full cap"):
+    with pytest.raises(RunStopped, match="full ledger cap 0.50"):
         client(approved, tmp_path / "out", arena).gates(runner.matches[7])
     assert arena.posts() == []
+    # The 0.50 is what holds: with a ledger cap of 0.40 the same row would pass the gates.
+    looser = client(approved, tmp_path / "out", arena_for(approved, estimate=1_000, ledger_cap=0.4))
+    assert looser.gates(runner.matches[7])["reserve_micro_eur"] == 400_000
 
 
 @pytest.mark.parametrize(

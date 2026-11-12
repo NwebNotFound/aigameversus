@@ -958,7 +958,8 @@ An explicit guest stage (`research/W2`: `PLAN.yaml` + `schedule.csv`) is played 
 - **What it sends:** only whitelisted fields, never `expected_roles`.
 - **Before each start:** the month hold, no other match running, a fresh free estimate
   below the cap, and the cap read back. The stage's spend over every attempt plus 3×
-  that estimate must stay within 90 %, and plus the full cap within the stage. It also
+  that estimate must stay within 90 %, and plus the arena's full ledger cap (EUR 0.50, not
+  the 0.40 limit) within the stage. It also
   holds if a guest's listed price has risen.
 - **After each match:** it holds on a failed match, a failed agent, a guest fallback
   share above 10 % or a wrong role. It never retries.
