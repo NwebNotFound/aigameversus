@@ -205,6 +205,16 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   - Jev sees only what that player saw, its own thought and its own move.
   - The tags are unvalidated research data (`referee_runs`). GET answers only with
     `spoilers=true`, and nothing goes back into the match.
+- The AI-written chronicle (`arena/chronicle/ai.py`, D-140).
+  - `POST /matches/{id}/chronicle/ai {style, lang, model, confirm_spend}` has a model retell
+    the template chronicle of a finished match, in one call. It has the guards of a paid
+    match.
+  - The call is booked under its own uuid5 id, with a cap of EUR 0.03 for every retry
+    together. A worst case above that is refused before booking.
+  - Each chapter may add no name, number, card or role word. A chapter that does keeps its
+    template text, and `checks` says why.
+  - The answer is labelled AI-written and cached in `ai_chronicles` per match, style,
+    language and model. `GET` serves the cached chronicle, free.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
