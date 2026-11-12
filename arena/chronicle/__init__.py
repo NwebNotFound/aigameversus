@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from arena.chronicle import compose, werewolf
+from arena.chronicle import compose, liars_deck, werewolf
 from arena.chronicle.beats import BEATS, Beat, Chapter
 from arena.chronicle.text import LANGS, STYLES, Narrator, TemplateNarrator
 from arena.engine.types import Event, EventSource
@@ -123,7 +123,7 @@ def tell(
     )
 
 
-NEW_GAMES = {"werewolf": werewolf.build}
+NEW_GAMES = {"werewolf": werewolf.build, "liars_deck": liars_deck.build}
 
 
 def _compose(events, game, style, lang, names, cost_micro_eur) -> Chronicle:

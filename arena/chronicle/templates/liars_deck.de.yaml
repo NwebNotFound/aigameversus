@@ -1,0 +1,363 @@
+# Die Worte der Liar's-Deck-Chronik auf Deutsch: vier Stile mit eigenem Aufbau und eigenen Worten.
+# Felder: siehe `FIELDS` in arena/chronicle/tell_liars_deck.py (die Tests formatieren jede Variante).
+# `again` steht vor einem Satz, den alle Varianten seiner Art in dieser Chronik schon gebraucht haben.
+epic:
+  title: "Die Saga von Liar's Deck"
+  layout: {joiner: " ", prefix: "", paragraph: 0}
+  again: ["Noch einmal:", "Wieder:", "Und erneut:", "Abermals:", "Wie zuvor:", "Ein weiteres Mal:"]
+  chapters:
+    prologue: "Prolog: Der Tisch ist gedeckt"
+    round: "Die Runde der {nth}n Prüfung"
+    epilogue: "Epilog: Der Letzte am Tisch"
+  glance_title: "Auf einen Blick"
+  glance_labels:
+    winner: "Letzter Überlebender"
+    length: "Dauer"
+    turning_point: "Der Wendepunkt"
+    bluffer: "Kühnster Bluffer"
+    caller: "Schärfster Rufer"
+    survivor: "Glücklichste Seele"
+    cost: "Preis der Saga"
+  glance_values:
+    length: "{rounds} Runden"
+    bluffer: "{who}, log in {lies} von {plays} Zügen"
+    caller: "{who}, richtig bei {right} von {of} Rufen"
+    survivor: "{who}, der {shots} Abzüge überlebte"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Runde {n}: {player} stand vor einem Münzwurf mit dem Revolver und überlebte"
+    devil: "Runde {n}: Die Teufelskarte kam ans Licht, und der ganze Tisch zahlte"
+    big_lie_caught: "Runde {n}: {target} wurde mit {count} falschen Karten der Lüge überführt"
+    final_duel: "Runde {n}: {winner} überdauerte {loser} im letzten Duell"
+    final_shot: "Runde {n}: Der letzte Schuss traf {loser}, und {winner} stand allein"
+    wrong_call_fatal: "Runde {n}: {caller} rief gegen die ehrliche Hand von {target} und zahlte mit dem Leben"
+  kinds:
+    cast:
+      - "{count} Spieler setzten sich an den Tisch, jeder mit Revolver und einer Lüge in Reserve: {cast}."
+    cast_devil:
+      - "{count} Spieler setzten sich, und unter den Karten lag die Teufelskarte: {cast}."
+    round_starts:
+      - "Die {nth} Runde begann, Tischkarte {card}, noch {alive} saßen am Tisch, und {starter} eröffnete."
+      - "Runde {n}: Die Tischkarte war {card}, {alive} Spieler blieben, und {starter} führte an."
+      - "Die Karten wurden neu gegeben, {card} war die Tischkarte der {nth}n Runde; {starter} sprach zuerst."
+      - "Die {nth} Runde: Tischkarte {card}, {alive} blieben, und {starter} begann zu reden."
+      - "Wieder wurden die Karten gemischt, {card} ausgerufen, und {starter} trat vor."
+    duel:
+      - "Nur {a} und {b} blieben übrig, und der Raum hielt den Atem an."
+      - "Es war nun ein Duell, {a} gegen {b}, und niemand sonst, hinter dem man sich verstecken konnte."
+      - "Allein am Tisch maßen {a} und {b} einander noch einmal."
+    lie_big:
+      - "{who} legte {count} Karten verdeckt ab und nannte sie {card_pl}, obwohl {false_cards} davon nichts dergleichen waren."
+      - "{who} schob {count} Karten vor und schwor, es seien alles {card_pl}; {false_cards} waren gelogen."
+    truth_big:
+      - "{who} legte {count} Karten ab, und jede davon war wirklich {card}."
+      - "{who} spielte {count} {card_pl} und sagte die Wahrheit, der kühnste Bluff von allen."
+    claim_quote:
+      - "{who} sagte: \"{quote}\""
+      - "\"{quote_bare}\", sagte {who}."
+      - "{who} sprach, ruhig wie ein See: \"{quote}\""
+      - "{who} bot dem Tisch an: \"{quote}\""
+    call:
+      - "{caller} erhob sich und nannte {target} einen Lügner!"
+      - "\"Lügner!\", rief {caller} und zeigte auf {target}."
+      - "{caller} glaubte {target} nicht und sagte es."
+      - "{caller} kniff die Augen zusammen und sah {target} an: Lügner."
+    call_auto:
+      - "{caller} blieb nichts anderes übrig, als {target} einen Lügner zu nennen."
+    reveal_caught:
+      - "Die Karten wurden umgedreht: {cards}. Keine {card_pl} darunter, {n_false} davon gelogen. {target} war erwischt."
+      - "Die Hand von {target} lag offen: {cards}. Die Behauptung von {card_pl} brach zusammen, und {caller} hatte recht gehabt."
+    reveal_wrong:
+      - "Die Karten wurden umgedreht: {cards}. Alles wahr, alles {card_pl}. {caller} hatte eine ehrliche Hand angeklagt."
+      - "{target} zeigte {cards}, und alles war ehrlich. {caller} hatte falsch gerufen."
+      - "Die Wahrheit lag auf dem Tisch: {cards}. {caller} hatte den Falschen angezweifelt."
+      - "Die Karten von {target} sagten {cards}: ehrlich bis zuletzt. {caller} hatte sich verschätzt."
+    devil_revealed:
+      - "Die Karten wurden umgedreht: {cards}, und darunter die Teufelskarte! Der Tisch würde für den Ruf von {caller} zahlen."
+    trigger_click:
+      - "{player} drückte ab, Abzug {pull}, Chance {odds}. Klick. Die Kammer war leer."
+      - "{player} setzte den Lauf an die Schläfe, Abzug {pull}, und hörte nur ein Klicken."
+      - "Abzug {pull} für {player}, bei {odds}, und nur Stille antwortete."
+    trigger_close:
+      - "{player} drückte ab, Abzug {pull}, Chance {odds}, und die Kammer war leer. Knapp entkommen."
+      - "Eine Chance von {odds} auf den Tod, und {player} lebte: Abzug {pull}, und die Trommel drehte sich weiter."
+    trigger_bang:
+      - "{player} drückte ab, und der Donnerschlag sagte alles. {player} war fort."
+      - "Abzug {pull} war der scharfe für {player}, und der Tisch verstummte."
+    eliminated:
+      - "{player} verließ den Tisch auf {place}."
+      - "So belegte {player} {place}, und der Stuhl blieb leer."
+    result:
+      - "{winner} blieb nach {rounds} Runden allein übrig, der Letzte, der noch atmete."
+    ranking:
+      - "Die Endreihenfolge: {ranking}."
+news:
+  title: "LIAR'S DECK: DER VOLLSTÄNDIGE BERICHT"
+  layout: {joiner: "\n", prefix: "- ", paragraph: 0}
+  again: ["Wieder:", "Noch einmal:", "Gleiche Lage:", "Erneut:", "Weiterhin:", "Schon wieder:"]
+  chapters:
+    prologue: "Hintergrund"
+    round: "Runde {n}"
+    epilogue: "Endergebnis"
+  glance_title: "Die wichtigsten Fakten"
+  glance_labels:
+    winner: "Gewinner"
+    length: "Dauer"
+    turning_point: "Schlüsselmoment"
+    bluffer: "Größter Bluffer"
+    caller: "Bester Rufer"
+    survivor: "Glücklichster"
+    cost: "Kosten"
+  glance_values:
+    length: "{rounds} Runden"
+    bluffer: "{who} (log in {lies} von {plays} Zügen)"
+    caller: "{who} ({right} von {of} Rufen richtig)"
+    survivor: "{who} ({shots} Schüsse überlebt)"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Runde {n}: {player} überlebt einen Münzwurf-Schuss"
+    devil: "Runde {n}: Teufelskarte aufgedeckt, alle schießen"
+    big_lie_caught: "Runde {n}: {target} mit {count} falschen Karten erwischt"
+    final_duel: "Runde {n}: {winner} schlägt {loser} im letzten Duell"
+    final_shot: "Runde {n}: {loser} ausgeschieden, {winner} gewinnt"
+    wrong_call_fatal: "Runde {n}: {caller} ruft fatal falsch gegen {target}"
+  kinds:
+    cast:
+      - "{count} Spieler: {cast}."
+    cast_devil:
+      - "{count} Spieler: {cast}. Variante: Teufelskarte."
+    round_starts:
+      - "RUNDE {n}: Tischkarte {card}, {alive} Spieler, {starter} beginnt."
+      - "Runde {n} beginnt. Tischkarte: {card}. {alive} Spieler übrig."
+      - "Neu gegeben, Runde {n}. Tischkarte {card}; {starter} spielt aus."
+      - "Runde {n}: {card} auf dem Tisch, {alive} Spieler, erster Zug {starter}."
+      - "Gegeben, Runde {n}: Die Karte ist {card}. {starter} spielt aus."
+    duel:
+      - "Zu zweit: {a} gegen {b}."
+      - "Die letzten zwei: {a} und {b}."
+      - "Das Duell geht weiter, {a} gegen {b}."
+    lie_big:
+      - "{who} spielt {count} Karten als {card_pl}; {false_cards} sind falsch."
+      - "{who} blufft mit {count} Karten ({false_cards} falsch)."
+    truth_big:
+      - "{who} spielt {count} Karten, alles echte {card_pl}."
+      - "{who} sagt die Wahrheit: {count} {card_pl}."
+    claim_quote:
+      - "{who}: \"{quote}\""
+      - "{who} sagt: \"{quote}\""
+      - "Zitat, {who}: \"{quote}\""
+      - "{who} an den Tisch: \"{quote}\""
+    call:
+      - "{caller} nennt {target} einen Lügner."
+      - "{caller} fordert {target} heraus."
+      - "{caller} zweifelt {target} an."
+      - "{caller} sagt, {target} lüge."
+    call_auto:
+      - "{caller} muss {target} einen Lügner nennen."
+    reveal_caught:
+      - "Aufdeckung: {cards}. {target} hat gelogen ({n_false} falsch); {caller} hatte recht."
+      - "{target} erwischt: {cards}, die Behauptung {card} hält nicht."
+    reveal_wrong:
+      - "Aufdeckung: {cards}. Alles {card_pl}; {caller} lag falsch."
+      - "{target} war ehrlich ({cards}). {caller} rief falsch."
+      - "Falscher Ruf: {target} zeigte {cards}, alles wahr."
+      - "Der Zug von {target} war ehrlich: {cards}. {caller} verliert den Ruf."
+    devil_revealed:
+      - "Aufdeckung: {cards}, darunter die Teufelskarte. Alle außer {target} schießen."
+    trigger_click:
+      - "{player} drückt ab (Abzug {pull}, Chance {odds}): leer."
+      - "{player} schießt, Abzug {pull}: Klick."
+      - "{player} überlebt Abzug {pull} ({odds})."
+    trigger_close:
+      - "{player} drückt ab (Abzug {pull}, Chance {odds}): leer, knapp."
+      - "Knapp: {player} überlebt Abzug {pull} bei {odds}."
+    trigger_bang:
+      - "{player} drückt ab (Abzug {pull}): SCHARF. {player} ist raus."
+      - "KNALL: {player} scheidet bei Abzug {pull} aus."
+    eliminated:
+      - "{player} belegt {place}."
+      - "Raus: {player}, {place}."
+    result:
+      - "{winner} gewinnt nach {rounds} Runden."
+    ranking:
+      - "Endreihenfolge: {ranking}."
+sports:
+  title: "Liar's Deck: Die Spielkommentare"
+  layout: {joiner: "\n", prefix: "", paragraph: 0}
+  again: ["Und noch einmal,", "Da sind wir wieder,", "Gleiches Bild,", "Ein weiteres Mal,", "Und wieder,", "Schon wieder,"]
+  chapters:
+    prologue: "Anstoß: die Aufstellung"
+    round: "Runde {n}: der Pfiff"
+    epilogue: "Abpfiff"
+  glance_title: "Die Anzeigetafel"
+  glance_labels:
+    winner: "Sieger"
+    length: "Spieldauer"
+    turning_point: "Szene des Spiels"
+    bluffer: "Bester Schauspieler"
+    caller: "Schärfstes Auge"
+    survivor: "Glücksbringer"
+    cost: "Preis der Eintrittskarte"
+  glance_values:
+    length: "{rounds} Runden"
+    bluffer: "{who}, blufft in {lies} von {plays} Zügen"
+    caller: "{who}, {right} von {of} Rufen im Ziel"
+    survivor: "{who}, {shots} Schüsse überlebt"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Runde {n}: {player} übersteht einen Münzwurf mit dem Revolver"
+    devil: "Runde {n}: die Teufelskarte, und der ganze Tisch zahlt"
+    big_lie_caught: "Runde {n}: {target} fliegt mit {count} falschen Karten auf"
+    final_duel: "Runde {n}: {winner} gewinnt das letzte Duell gegen {loser}"
+    final_shot: "Runde {n}: {loser} geht zu Boden, und {winner} gewinnt es"
+    wrong_call_fatal: "Runde {n}: {caller} ruft falsch und zahlt dafür"
+  kinds:
+    cast:
+      - "Herzlich willkommen! {count} Spieler betreten das Feld: {cast}."
+    cast_devil:
+      - "Herzlich willkommen! {count} Spieler, und die Teufelskarte steckt im Stapel: {cast}."
+    round_starts:
+      - "Runde {n}, die Tischkarte ist {card}, {alive} auf dem Platz, {starter} stößt an!"
+      - "Und los geht es in Runde {n}! Es ist {card}, und {starter} führt an."
+      - "Neue Runde, {alive} Spieler, die Tischkarte ist {card}!"
+      - "Runde {n} läuft, {card} ist die Karte, {alive} übrig und {starter} am Ball!"
+      - "Zurück an den Tisch für Runde {n}: {card}, {alive} Spieler, {starter} zuerst!"
+    duel:
+      - "Es bleiben {a} und {b}, jetzt ein echtes Duell!"
+      - "Nur noch zwei: {a} gegen {b}!"
+      - "Niemand sonst auf dem Platz, {a} gegen {b}!"
+    lie_big:
+      - "{who} schiebt {count} Karten als {card_pl} vor, und {false_cards} davon sind ein Bluff! Mutig!"
+      - "Schauen Sie sich das an! {who} behauptet {count} {card_pl}, mit {false_cards} Fälschungen!"
+    truth_big:
+      - "{who} legt {count} Karten ab, und jede ist echt {card}! Eiskalt!"
+      - "Ehrliches Spiel von {who}: {count} {card_pl}, keine Tricks!"
+    claim_quote:
+      - "{who} vom Tisch: \"{quote}\""
+      - "\"{quote_bare}\", sagt {who}, und die Zuschauer lehnen sich vor."
+      - "{who} mit dem Spruch: \"{quote}\""
+      - "{who} am Mikrofon: \"{quote}\""
+    call:
+      - "{caller} ruft: LÜGNER, sagt der Zug von {target}!"
+      - "Herausforderung! {caller} geht auf {target} los!"
+      - "{caller} lässt das nicht gelten und ruft {target}!"
+      - "{caller} sagt: Nie im Leben, {target}, und ruft!"
+    call_auto:
+      - "Zwangslage für {caller}, der {target} rufen muss!"
+    reveal_caught:
+      - "Und die Karten sagen {cards}! Keine {card_pl}! {target} ist erwischt, {caller} trifft!"
+      - "Aufdeckung! {cards}, {n_false} Fälschungen, und {target} ist entlarvt!"
+    reveal_wrong:
+      - "Und die Karten sagen {cards}. Alles {card_pl}! Schrecklicher Ruf von {caller}!"
+      - "{target} dreht {cards} um, ehrlich wie der Tag! {caller} hat falsch gerufen!"
+      - "Falsch! {cards}, alles wahr, und {target} ist sauber!"
+      - "{target} ist sauber mit {cards}, und {caller} hat es verschenkt!"
+    devil_revealed:
+      - "Die Karten sagen {cards}, und da ist die TEUFELSKARTE! Alle außer {target} müssen abdrücken!"
+    trigger_click:
+      - "{player} drückt ab, Nummer {pull}... Klick! Sicher, das Publikum atmet auf!"
+      - "{player} bei {odds}... Klick! Abzug {pull} ist leer!"
+      - "{player} bei {odds}, Abzug {pull}... nichts! Puh!"
+    trigger_close:
+      - "{player} drückt ab bei {odds}, Abzug {pull}... Klick! Das war viel zu knapp!"
+      - "Ein Schuss mit {odds}, und {player} geht davon! Unglaublich!"
+    trigger_bang:
+      - "{player} drückt ab... KNALL! Das ist das Ende für {player}!"
+      - "Abzug {pull} ist scharf, und {player} ist aus dem Spiel!"
+    eliminated:
+      - "{player} belegt {place} und verlässt den Platz."
+      - "{place} für {player}, der ausscheidet."
+    result:
+      - "ABPFIFF: {winner} gewinnt nach {rounds} Runden!"
+    ranking:
+      - "Endtabelle: {ranking}."
+novel:
+  title: "Liar's Deck: Eine Geschichte"
+  layout: {joiner: " ", prefix: "", paragraph: 3}
+  again: ["Wieder einmal,", "Wie zuvor,", "Und noch immer,", "Abermals,", "Wie immer,", "Ein weiteres Mal,"]
+  chapters:
+    prologue: "Eins. Die Gesichter am Tisch"
+    round: "Runde {n}: Schwitzige Hände"
+    epilogue: "Zuletzt. Wer wegging"
+  glance_title: "Auf einen Blick"
+  glance_labels:
+    winner: "Wer wegging"
+    length: "Wie lange es dauerte"
+    turning_point: "Wo es kippte"
+    bluffer: "Wer am meisten log"
+    caller: "Wer es durchschaute"
+    survivor: "Wer sein Glück behielt"
+    cost: "Was es kostete"
+  glance_values:
+    length: "{rounds} Runden"
+    bluffer: "{who}, der in {lies} von {plays} Zügen log"
+    caller: "{who}, der bei {right} von {of} Rufen richtig lag"
+    survivor: "{who}, der {shots} Abzüge überlebte"
+    cost: "{cost}"
+  turning_points:
+    coin_flip: "Runde {n}: {player} setzte sich die Waffe mit Münzchancen an den Kopf und lebte"
+    devil: "Runde {n}: Die Teufelskarte tauchte auf, und niemand war mehr sicher"
+    big_lie_caught: "Runde {n}: Die Lüge von {target} mit {count} Karten fiel endlich auseinander"
+    final_duel: "Runde {n}: {winner} sah {loser} im letzten Duell hinaus"
+    final_shot: "Runde {n}: Der letzte Schuss fand {loser}, und {winner} war allein"
+    wrong_call_fatal: "Runde {n}: {caller} glaubte {target} nicht, und es kostete alles"
+  kinds:
+    cast:
+      - "Sie waren {count} am Tisch, jeder mit Revolver und einem stillen Plan: {cast}."
+    cast_devil:
+      - "Sie waren {count}, und im Stapel lag eine Karte, die keiner sehen wollte: {cast}."
+    round_starts:
+      - "In der {nth}n Runde war die Tischkarte {card}, und {starter} sprach zuerst, weil jemand es musste."
+      - "Runde {n}. Tischkarte {card}, {alive} von ihnen, und {starter} brach das Schweigen."
+      - "Die Karten gingen wieder herum; {card} war die Karte, und {starter} begann."
+      - "Die {nth} Runde kam, mit {card} wieder oder noch immer, und {starter} begann, als könne nichts schiefgehen."
+      - "Runde {n}, {alive} von ihnen, {card}; {starter} räusperte sich."
+    duel:
+      - "Inzwischen waren nur noch {a} und {b} übrig, und keine anderen Augen, vor denen man sich verstecken konnte."
+      - "{a} und {b}, allein, mit demselben Tisch zwischen sich."
+      - "Es war {a} gegen {b}, und beide wussten es."
+    lie_big:
+      - "{who} schob {count} Karten hinüber und sagte {card_pl}, und {false_cards} davon waren es nicht."
+      - "{who} legte {count} Karten verdeckt ab, mit fester Stimme: {card_pl}. {false_cards} waren gelogen."
+    truth_big:
+      - "{who} legte {count} Karten ab, und jede war {card}, was niemand glaubte."
+      - "{who} spielte {count} {card_pl}, sagte die Wahrheit, und es sah aus wie eine Lüge."
+    claim_quote:
+      - "\"{quote_bare}\", sagte {who}."
+      - "{who} sagte, fast sanft: \"{quote}\""
+      - "\"{quote}\" Das war {who}."
+      - "{who} fügte leise hinzu: \"{quote}\""
+    call:
+      - "Dann sah {caller} {target} lange an und sagte: Lügner."
+      - "{caller} lehnte sich zurück und rief es aus: {target} log."
+      - "\"Ich kaufe es nicht\", sagte {caller} und zeigte auf {target}."
+      - "{caller} starrte {target} an, bis es wehtat, und sagte dann: nein."
+    call_auto:
+      - "{caller} blieb nichts anderes übrig, als {target} einen Lügner zu nennen."
+    reveal_caught:
+      - "Die Karten wurden umgedreht: {cards}. Keine {card_pl} darunter. {target} hatte gelogen, und {caller} hatte es gewusst."
+      - "Die Karten von {target} lagen offen, {cards}, und die Behauptung von {card_pl} fiel in sich zusammen."
+    reveal_wrong:
+      - "Die Karten wurden umgedreht: {cards}. Alles wahr. {caller} hatte eine ehrliche Hand angeklagt."
+      - "{target} zeigte {cards}, und keine davon war gelogen. {caller} schluckte schwer."
+      - "Es war die Wahrheit, offen sichtbar: {cards}. {caller} hatte sich geirrt."
+      - "Da lag es, {cards}, ehrlich wie Brot. {caller} hatte {target} falsch eingeschätzt."
+    devil_revealed:
+      - "Unter den Karten, {cards}, lag die Teufelskarte, und einen Moment lang rührte sich niemand. Dann griffen alle außer {target} zum Abzug."
+    trigger_click:
+      - "{player} drückte ab, Abzug {pull}, Chance {odds}, und hörte ein Klicken."
+      - "{player} schloss die Augen, Abzug {pull}, und nichts geschah."
+      - "{player} drückte, Abzug {pull}, und die Welt ging weiter."
+    trigger_close:
+      - "{player} drückte ab, bei {odds}, Abzug {pull}, und die Kammer war leer. Jemand lachte zu laut."
+      - "Abzug {pull}, {odds}, und {player} war noch da, weiß wie Papier."
+    trigger_bang:
+      - "{player} drückte ab, und der Knall füllte den Raum. {player} war fort."
+      - "Die scharfe Kammer hatte auf {player} gewartet, Abzug {pull}, und sie wartete nicht länger."
+    eliminated:
+      - "{player} verließ den Tisch auf {place}."
+      - "{player} belegte {place}, und der Stuhl blieb warm."
+    result:
+      - "{winner} war nach {rounds} Runden der Letzte am Tisch."
+    ranking:
+      - "Am Ende lautete die Reihenfolge: {ranking}."
