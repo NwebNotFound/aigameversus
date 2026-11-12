@@ -951,20 +951,27 @@ uv run python -m arena.research.experiment experiments/<name>.yaml > experiments
 uv run pytest tests/research
 ```
 
-An explicit guest stage (`research/W2`: `PLAN.yaml` + `schedule.csv`) is played by
-`arena/research/guest_runner.py`, not by the generic runner.
-- **Before anything starts:** it refuses without the plan's recorded execution approval,
-  or with a CSV that is not the schedule the plan generates.
+An explicit research stage (`PLAN.yaml` + `schedule.csv`: W2, C1) is played by
+`arena/research/stage_runner.py`, not by the generic runner. `--dry-run` gives the checks
+and estimates only.
+- **Before anything starts:** it refuses without the plan's recorded execution approval.
+  It also refuses a CSV with unknown columns, gaps in `order` or the wrong length, and a
+  guest plan whose CSV is not the schedule it generates.
 - **What it sends:** only whitelisted fields, never `expected_roles`.
-- **Before each start:** the month hold, no other match running, a fresh free estimate
-  below the cap, and the cap read back. The stage's spend over every attempt plus 3×
-  that estimate must stay within 90 %, and plus the arena's full ledger cap (EUR 0.50, not
-  the 0.40 limit) within the stage. It also
-  holds if a guest's listed price has risen.
-- **After each match:** it holds on a failed match, a failed agent, a guest fallback
-  share above 10 % or a wrong role. It never retries.
-- **Restarts:** `<out>/attempts.jsonl` is written before every POST. A restart finds a
-  lost start by its batch label instead of posting again.
+- **Before each start:**
+  - the month hold, and no other match running (one research match at a time);
+  - a fresh free estimate below the match limit, and the limit read back;
+  - the stage's spend over every attempt plus 3× that estimate within 90 %;
+  - the same spend plus the arena's full ledger cap (EUR 0.50) within the stage;
+  - no guest whose listed price has risen;
+  - not at the review checkpoint (`checkpoint_after`). Going on after it needs
+    `--release-checkpoint EVIDENCE`.
+- **After each match:** it holds on a failed match, a failed agent, a fallback share above
+  10 % (the guest's, else every model's), a wrong role, or a cost above
+  `max_cost_per_match_eur`. It never retries.
+- **Logs:** `<out>/attempts.jsonl` is written before every POST. A restart finds a lost
+  start by its batch label instead of posting again. `<out>/run.json` holds the effective
+  limit, the reserve and the booked costs.
 
 ### A system
 

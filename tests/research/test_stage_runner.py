@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from arena.research.guest_runner import GuestRunner, PlanRefused
 from arena.research.runner import RunStopped
+from arena.research.stage_runner import PlanRefused, StageRunner
 
 ROOT = Path(__file__).resolve().parents[2]
 PLAN = ROOT / "research/W2/PLAN.yaml"
@@ -26,8 +26,10 @@ class FakeArena:
         self.cap = override.get("cap", 400_000)
         self.ledger_cap = override.get("ledger_cap", 0.5)  # limits.match_eur of the arena
         self.cost = override.get("cost", 200_000)
+        self.players = override.get("players", ["p1", "p2", "p3", "p4"])
+        self.turns = override.get("turns", {})  # seat -> (accepted, fallback)
         self.running = override.get("running", [])
-        self.prices = {g["id"]: dict(g) for g in plan["guests"]}
+        self.prices = {g["id"]: dict(g) for g in plan.get("guests", [])}
         self.status = override.get("status", "finished")
         self.guest_turns = override.get("guest_turns", (10, 0))  # accepted, fallback
         self.role = override.get("role")  # None: the planned one
@@ -69,12 +71,17 @@ class FakeArena:
         if method == "GET" and path.endswith("/events"):
             match = self.matches[path.split("/")[2]]
             seat = next(r for r in self.rows if int(r["order"]) == match["batch"]["index"])
-            guest = seat["guest_seat"]
-            role = self.role or seat["expected_role"]
-            accepted, fallback = self.guest_turns
-            events = [{"type": "role_assigned", "data": {"player": guest, "role": role}}]
-            events += [{"type": "action_accepted", "data": {"player": guest}}] * accepted
-            events += [{"type": "action_fallback", "data": {"player": guest}}] * fallback
+            players = [seat["guest_seat"]] if seat.get("guest_seat") else self.players
+            events = []
+            if seat.get("guest_seat"):
+                role = self.role or seat["expected_role"]
+                events.append(
+                    {"type": "role_assigned", "data": {"player": players[0], "role": role}}
+                )
+            for player in players:
+                accepted, fallback = self.turns.get(player, self.guest_turns)
+                events += [{"type": "action_accepted", "data": {"player": player}}] * accepted
+                events += [{"type": "action_fallback", "data": {"player": player}}] * fallback
             if self.agent_failed:
                 events.append({"type": "agent_failed", "data": {"player": "p1"}})
             return 200, events
@@ -102,7 +109,7 @@ def approved(tmp_path):
 
 
 def client(plan_path, out, arena, **kwargs):
-    runner = GuestRunner(
+    runner = StageRunner(
         plan_path, out, arena, poll=0, sleep=lambda s: None, say=lambda m: None, **kwargs
     )
     arena.rows = runner.matches
@@ -115,17 +122,17 @@ def arena_for(plan_path, **override):
 
 def test_the_plan_on_main_may_not_start_without_its_execution_approval(tmp_path):
     with pytest.raises(PlanRefused, match="execution approval"):
-        GuestRunner(PLAN, tmp_path / "out", arena_for(PLAN))
+        StageRunner(PLAN, tmp_path / "out", arena_for(PLAN))
 
 
 def test_a_schedule_that_is_not_the_plans_own_is_refused(approved, tmp_path):
     csv = approved.parent / "schedule.csv"
     lines = csv.read_text(encoding="utf-8").splitlines()
-    lines[1], lines[2] = lines[2], lines[1]  # two rows swapped
+    lines[1] = lines[1].replace("glm-flash", "qwen-flash", 1)  # a host swapped
     csv.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     with pytest.raises(PlanRefused, match="not the schedule"):
-        GuestRunner(approved, tmp_path / "out", arena_for(approved))
+        StageRunner(approved, tmp_path / "out", arena_for(approved))
 
 
 def test_all_eight_rows_play_serially_with_only_whitelisted_fields(approved, tmp_path):
@@ -236,7 +243,7 @@ def test_the_full_ledger_cap_is_held_for_the_next_match_and_a_lost_start_counts_
     [
         ({"status": "interrupted"}, "match interrupted"),
         ({"agent_failed": True}, "a failed agent"),
-        ({"guest_turns": (8, 2)}, "guest fallback share 20%"),
+        ({"guest_turns": (8, 2)}, "fallback share 20% \\(p4"),
         ({"role": "villager"}, "guest dealt villager"),
     ],
 )
@@ -308,3 +315,131 @@ def test_a_match_running_when_the_client_stopped_is_waited_for_not_started_again
 
     assert len(arena.matches) == 8 and len(ended) == 8
     assert [b["batch"]["index"] for b in arena.posts()] == list(range(1, 9))  # row 1 only once
+
+
+C1_SCHEDULE = """order,seed,p1,p2,p3,p4
+1,2104001,glm-flash,deepseek-flash,gpt-luna,claude-haiku
+2,2104001,deepseek-flash,gpt-luna,claude-haiku,glm-flash
+3,2104001,gpt-luna,claude-haiku,glm-flash,deepseek-flash
+4,2104001,claude-haiku,glm-flash,deepseek-flash,gpt-luna
+"""
+
+
+@pytest.fixture
+def c1(tmp_path):
+    """A C1-shaped job: 4 seats, no guest, a checkpoint after the first match (example data)."""
+    folder = tmp_path / "C1"
+    folder.mkdir()
+    plan = {
+        "id": "C1",
+        "schema": "explicit_stage_v1",
+        "game": "civ",
+        "execution_plan_approved": True,
+        "execution_approval_evidence": "Lead 454cd9d8 (test)",
+        "schedule": "schedule.csv",
+        "settings": {
+            "rounds": 20,
+            "prompt_version": "civ-p1",
+            "strategy_text": "off",
+            "private_plan": "off",
+            "answer_repair": "off",
+            "match_budget_eur": 0.2,
+        },
+        "memory": False,
+        "max_matches": 4,
+        "checkpoint_after": 1,
+        "budget": {
+            "stage_eur": 1.0,
+            "match_cap_eur": 0.2,
+            "stop_start_share": 0.9,
+            "notify_and_hold_at_month_eur": 20,
+            "automatic_retries": 0,
+            "max_cost_per_match_eur": 0.16,
+        },
+    }
+    (folder / "PLAN.yaml").write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    (folder / "schedule.csv").write_text(C1_SCHEDULE, encoding="utf-8")
+    return folder / "PLAN.yaml"
+
+
+def c1_arena(plan_path, **override):
+    return arena_for(plan_path, **{"cap": 200_000, "estimate": 60_000, "cost": 100_000, **override})
+
+
+def test_a_c1_job_plays_one_match_then_holds_at_the_checkpoint_even_after_a_restart(c1, tmp_path):
+    out = tmp_path / "out"
+    arena = c1_arena(c1)
+
+    with pytest.raises(RunStopped, match="review checkpoint after 1"):
+        client(c1, out, arena).run()
+    assert len(arena.posts()) == 1
+    body = arena.posts()[0]
+    assert body["game"] == "civ" and body["models"] == [
+        "glm-flash",
+        "deepseek-flash",
+        "gpt-luna",
+        "claude-haiku",
+    ]
+    assert body["settings"]["match_budget_eur"] == 0.2 and body["settings"]["rounds"] == 20
+
+    with pytest.raises(RunStopped, match="review checkpoint"):
+        client(c1, out, arena).run()  # a restart stays held
+    assert len(arena.posts()) == 1
+
+    with pytest.raises(PlanRefused):
+        client(c1, out, arena).release_checkpoint("  ")  # a release needs its evidence
+    client(c1, out, arena).release_checkpoint("Researcher review 2026-11-12 (test)")
+    ended = client(c1, out, arena).run()
+    assert len(ended) == 4 and len(arena.posts()) == 4
+    summary = json.loads((out / "run.json").read_text())
+    assert summary["stage_spent_micro_eur"] == summary["booked_micro_eur"] == 400_000
+    assert summary["cap_read_back_micro_eur"] == 200_000 and summary["match_budget_eur"] == 0.2
+    assert summary["reserve_micro_eur"] == 500_000  # the arena's full ledger cap
+    assert summary["released_after"] == 1 and len(summary["attempts"]) == 4
+
+
+def test_a_c1_match_above_its_cost_stop_holds(c1, tmp_path):
+    arena = c1_arena(c1, cost=170_000)
+
+    with pytest.raises(RunStopped, match="above the stop of 0.16"):
+        client(c1, tmp_path / "out", arena).run()
+
+    assert len(arena.posts()) == 1
+
+
+def test_without_a_guest_every_models_fallback_share_counts(c1, tmp_path):
+    arena = c1_arena(c1, turns={"p3": (8, 2)})  # gpt-luna on p3 in row 1
+
+    with pytest.raises(RunStopped, match="fallback share 20% \\(p3: gpt-luna\\)"):
+        client(c1, tmp_path / "out", arena).run()
+
+
+def test_a_dry_run_estimates_every_open_row_and_spends_nothing(c1, tmp_path):
+    arena = c1_arena(c1)
+    out = tmp_path / "out"
+
+    report = client(c1, out, arena, dry_run=True).run()
+
+    assert [row["order"] for row in report] == [1, 2, 3, 4]
+    assert all(row["ok"] and row["estimate_micro_eur"] == 60_000 for row in report)
+    assert arena.posts() == [] and not (out / "attempts.jsonl").exists()
+    assert json.loads((out / "dry-run.json").read_text()) == report
+    held = client(c1, out, c1_arena(c1, estimate=200_000), dry_run=True).run()
+    assert not any(row["ok"] for row in held) and "not below the match cap" in held[0]["hold"]
+
+
+@pytest.mark.parametrize(
+    "schedule",
+    [
+        C1_SCHEDULE.replace("order,seed,p1", "order,seed,notes,p1").replace(
+            "1,2104001,glm", "1,2104001,x,glm"
+        ),
+        C1_SCHEDULE.replace("\n3,", "\n5,"),  # a gap in the order
+        C1_SCHEDULE.rsplit("4,2104001", 1)[0],  # fewer rows than max_matches
+    ],
+)
+def test_a_schedule_with_anything_the_client_does_not_know_is_refused(c1, tmp_path, schedule):
+    (c1.parent / "schedule.csv").write_text(schedule, encoding="utf-8")
+
+    with pytest.raises(PlanRefused):
+        StageRunner(c1, tmp_path / "out", c1_arena(c1))
