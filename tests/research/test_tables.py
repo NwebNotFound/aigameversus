@@ -3,6 +3,7 @@
 import copy
 import csv
 import hashlib
+import shutil
 from pathlib import Path
 
 import pytest
@@ -113,7 +114,20 @@ class FakeArena:
 
 
 def client(tmp_path, api, stage="C1"):
-    return Tables(JOBS / f"{stage}.json", tmp_path, api, sleep=lambda _: None, say=lambda _: None)
+    return Tables(
+        approved_job(tmp_path, stage), tmp_path, api, sleep=lambda _: None, say=lambda _: None
+    )
+
+
+def approved_job(tmp_path, stage="C1"):
+    folder = tmp_path / "fake-approved-jobs"
+    folder.mkdir(parents=True, exist_ok=True)
+    job = read_json(JOBS / f"{stage}.json")
+    job.update(execution_plan_approved=True, execution_approval_evidence="fake-test approval only")
+    shutil.copy(JOBS / job["csv"], folder / job["csv"])
+    path = folder / f"{stage}.json"
+    save(path, job)
+    return path
 
 
 def test_reviewed_inputs_and_no_csv_tampering(tmp_path):
@@ -327,7 +341,7 @@ def test_never_ending_match_has_a_persisted_bounded_wait(tmp_path):
         clock[0] += 2
 
     runner = Tables(
-        JOBS / "C1.json",
+        approved_job(tmp_path),
         tmp_path,
         api,
         sleep=advance,
@@ -339,6 +353,16 @@ def test_never_ending_match_has_a_persisted_bounded_wait(tmp_path):
         runner.run(**EVIDENCE)
     assert len(api.bodies) == 1 and api.pauses
     assert read_json(tmp_path / "C1/run.json")["intents"]["1"]["wait_deadline_epoch"] == 1
+
+
+def test_published_jobs_are_dry_only_until_fresh_execution_approval(tmp_path):
+    for stage in ("C1", "W2"):
+        api = FakeArena()
+        runner = Tables(JOBS / f"{stage}.json", tmp_path / stage, api)
+        assert runner.run() == "dry-run"
+        with pytest.raises(RunStopped, match="post-review execution approval"):
+            runner.run(**EVIDENCE)
+        assert not api.bodies
 
 
 @pytest.mark.parametrize("change", ["duplicate", "gap", "roster", "settings"])

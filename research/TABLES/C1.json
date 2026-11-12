@@ -10,5 +10,7 @@
   "smoke": true,
   "requires_c1_smoke": false,
   "guest_price_ceilings": {},
-  "expected_history_limit_events": 120
+  "expected_history_limit_events": 120,
+  "execution_plan_approved": false,
+  "execution_approval_evidence": null
 }

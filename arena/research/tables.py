@@ -72,6 +72,8 @@ def load_job(path):
         "requires_c1_smoke",
         "guest_price_ceilings",
         "expected_history_limit_events",
+        "execution_plan_approved",
+        "execution_approval_evidence",
     }
     if set(job) != allowed or job["stage"] not in {"C1", "W2"}:
         raise RunStopped("Unknown or missing job fields")
@@ -345,6 +347,11 @@ class Tables:
             raise RunStopped("Invalid/stale smoke review release")
 
     def run(self, *, execute=False, review_evidence=None, pre_start_report=None, arena_build=None):
+        if execute and (
+            self.job["execution_plan_approved"] is not True
+            or not self.job["execution_approval_evidence"]
+        ):
+            raise RunStopped("Job has no post-review execution approval; dry-run only")
         if execute and not all((review_evidence, pre_start_report, arena_build)):
             raise RunStopped(
                 "Execution requires reviewed/merged client evidence, "

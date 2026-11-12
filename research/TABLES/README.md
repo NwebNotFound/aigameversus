@@ -84,3 +84,8 @@ An active match has a persisted one-hour deadline; it cannot wait forever or
 reset its timer on restart. Expiry holds and attempts to pause that own match.
 C1 records the expected 120-event history window (W2 remains 40); verify the
 actual deployed hook/build in the pre-start report before enabling execution.
+
+Published C1/W2 JSON jobs are dry-run only: execution_plan_approved is false
+and execution_approval_evidence is null. After the client review and Lead fresh
+go, record that explicit execution decision before live mode. Earlier scope
+approvals alone cannot start the client; fake tests use isolated approved copies.

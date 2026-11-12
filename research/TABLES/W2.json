@@ -27,5 +27,7 @@
       "output_usd_per_mtok": 10
     }
   },
-  "expected_history_limit_events": 40
+  "expected_history_limit_events": 40,
+  "execution_plan_approved": false,
+  "execution_approval_evidence": null
 }
