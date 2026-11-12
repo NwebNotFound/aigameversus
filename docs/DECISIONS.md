@@ -121,3 +121,4 @@ with `python scripts/decisions.py adopt`.
 - [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
 - [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
 - [D-126](decisions/D-126-throne-of-tokens-combat-what-a-battle-costs-the-ranged-round.md) · Throne of Tokens combat: what a battle costs, the ranged round, and which city is a capital
+- [D-128](decisions/D-128-the-throne-of-tokens-scoreboard-is-public-by-rule-positions.md) · The Throne of Tokens scoreboard is public by rule; positions and contents stay fogged
