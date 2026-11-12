@@ -152,7 +152,8 @@ barbarians, gold finds, good harvests.
 
 ## Victory
 
-- Domination: control 50 % of all cities.
+- Domination: control 50 % of all cities and more than anyone else; this
+  counts once the world has 2 cities per nation (8 with four nations).
 - Economy: hold 500 gold for 5 rounds in a row; everyone sees the countdown.
 - After round 60, highest score wins: cities × 10 + population + gold ÷ 10 +
   reputation ÷ 5.

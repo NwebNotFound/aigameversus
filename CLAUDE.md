@@ -433,8 +433,11 @@ reversed.
 ### Storage and replay
 
 - `replay(plugin, events)` in `arena/engine/replay.py` returns the state after
-  a log, or after any prefix of it. It needs no seed and runs no rules. It
-  refuses a log recorded by another game or another plugin `version`.
+  a log, or after any prefix of it. It needs no seed and runs no rules. It reads
+  a log with the rules of the `version` its `match_started` recorded (version 1
+  when the field is missing): `plugin_for(plugin, start)` asks the game's
+  `at_version` (D-139). It refuses a log of another game, or of a version the
+  game no longer has.
 - `Match(..., sink=...)` hands over the new events once per completed turn, so
   a stored log never ends in the middle of a turn.
 - `EventStore` in `arena/db/event_store.py` keeps logs in the `match_events`
@@ -711,6 +714,11 @@ for one exact configuration (D-132, `arena/qualify/`).
   one real turn of p1 from a seeded random-bot match (`fixtures.py`). Only the
   first answer counts, judged by the engine's own check (`runner.py`).
 - The job is booked in the ledger under its own id. It leaves no match record.
+- `GET /qualifications/quote?model=&game=&answer_repair=` (free) says what a click would
+  send and reserve: the cases, the calls, the worst case and the caps. The model page
+  (`/models/[id]`) shows each game's status and quote, and a "Test this model" form. The
+  form needs a ticked spend box and a limit that holds the worst case; it is hidden for
+  spectators and on a server without model seats.
 - `GET /qualifications/current?model=&game=&answer_repair=` gives the status of
   that configuration now. A result counts only for its configuration hash, and
   for 7 days.
@@ -908,6 +916,11 @@ next to it says what each does and what the generator guarantees.
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
   and `your_plan_from_last_round` exist only when it is on). A Civ prompt shows 120 events, not 40 (D-136).
+  The rules are version 2 (`CivGame.version`, in every `match_started`):
+  domination counts once the world has 2 cities per nation (D-137), and a
+  food-short start region has one plains (D-138). Version 1 stays playable
+  (`RULES` in `plugin.py`, `CivGame("1")`), and a stored match is read with its own
+  version (D-139). A new rule or data change adds a version and keeps the old ones.
   A balance sweep with random bots (no cost) is `uv run python -m
   arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
   its findings and the proposals D-137 and D-138.

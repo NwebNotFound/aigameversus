@@ -1,15 +1,18 @@
 """Throne of Tokens analytics, from seeded bot matches, scripted diplomacy and a mock model."""
 
 import asyncio
+import json
 from functools import cache
+from pathlib import Path
 
+import games.civ.tests
 from arena.agents.mock_llm import MockLLM, tool_call
 from arena.agents.model import Usage
 from arena.agents.random_bot import random_bots
 from arena.agents.runner import ModelAgent
 from arena.analytics import civ, match_analytics
 from arena.engine.match import Match
-from arena.engine.types import Action, Reply
+from arena.engine.types import Action, Event, Reply
 from games.civ.plugin import CivGame
 
 PLUGIN = CivGame()
@@ -146,3 +149,19 @@ def test_a_refusal_counts_by_its_kind_not_by_its_ids():
         "You have no army 'a4'. Your armies: a1."
     )
     assert civ.reason_kind("a3 cannot reach (4, 7) this round.") == "# cannot reach # this round."
+
+
+def test_a_match_of_an_older_rules_version_is_analysed_with_its_own_rules():
+    golden = json.loads(
+        (Path(games.civ.tests.__file__).parent / "golden" / "v1_match.json").read_text("utf-8")
+    )
+    events = [Event(**event) for event in golden["events"]]
+
+    found = match_analytics("civ", events, True)
+
+    assert found["meta"]["version"] == "1"
+    final = golden["final_state"]
+    for nation in golden["players"]:
+        cities = sum(1 for c in final["cities"] if c["owner"] == nation)
+        assert found["series"]["nations"][nation]["cities"][-1] == cities
+        assert found["series"]["nations"][nation]["stock"][-1] == final["nations"][nation]["stock"]

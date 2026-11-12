@@ -390,7 +390,7 @@ def test_map_tiles_must_be_whole_numbers(data_dir: Path, value: str):
             "map.start_regions.wood: unknown terrain 'swamp'",
         ),
         (
-            "    food: [forest, forest, hills, hills, river, river]\n",
+            "    food: [plains, forest, hills, hills, river, river] # D-138\n",
             "",
             "map.start_regions.food: missing",
         ),
