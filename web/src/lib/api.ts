@@ -326,6 +326,10 @@ export interface LeaderboardRow extends Standing {
 	cost_per_game_micro_eur: number | null;
 	/** Share of answers the server refused (a wrong tool or an illegal move). */
 	tool_error_rate: number | null;
+	/** Share of answers that were a garbled call read anyway (answer_repair). */
+	repaired_rate: number | null;
+	/** Share of answers taken exactly as sent; refused + repaired + clean = 1. */
+	clean_rate: number | null;
 }
 
 /** Who the leaderboard shows: real models (the default), random bots, or both. */
@@ -378,6 +382,8 @@ export interface Usage {
 	cost_per_game_micro_eur: number | null;
 	answers: number;
 	tool_error_rate: number | null;
+	repaired_rate: number | null;
+	clean_rate: number | null;
 }
 
 /** `GET /models/{id}`: one model across all its matches and seats. */

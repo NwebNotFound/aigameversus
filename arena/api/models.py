@@ -38,6 +38,12 @@ class UsageOut(BaseModel):
     )
     answers: int = Field(description="Answers the server took or refused")
     tool_error_rate: float | None = Field(description="Refused answers over all answers")
+    repaired_rate: float | None = Field(
+        description="Answers that were a garbled call read anyway, over all answers"
+    )
+    clean_rate: float | None = Field(
+        description="Answers taken exactly as sent (refused + repaired + clean = 1)"
+    )
 
     @classmethod
     def of(cls, used: Usage, games: int) -> "UsageOut":
@@ -49,6 +55,8 @@ class UsageOut(BaseModel):
             ),
             answers=answers,
             tool_error_rate=used.rejected / answers if answers else None,
+            repaired_rate=used.repaired / answers if answers else None,
+            clean_rate=(used.accepted - used.repaired) / answers if answers else None,
         )
 
 
