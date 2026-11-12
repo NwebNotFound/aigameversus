@@ -113,6 +113,7 @@ with `python scripts/decisions.py adopt`.
 - [D-107](decisions/D-107-the-analytics-tab-draws-the-arena-s-numbers-with-its-own.md) · The Analytics tab draws the arena's numbers with its own small SVG charts
 - [D-108](decisions/D-108-every-model-move-says-what-it-took-in-a-spectators-only.md) · Every model move says what it took, in a spectators-only event
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
+- [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
 - [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
 - [D-114](decisions/D-114-a-garbled-tool-call-that-clearly-means-one-move-is-repaired.md) · A garbled tool call that clearly means one move is repaired, and the move says so
 - [D-111](decisions/D-111-a-model-may-set-its-own-call-options-rate-limits-are-waited.md) · A model may set its own call options; rate limits are waited out longer, within a budget

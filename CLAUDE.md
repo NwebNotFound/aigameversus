@@ -728,6 +728,11 @@ which effects still wait for their system.
 
 ### The Throne of Tokens map
 
+How the parts of the game fit together (round order, the `submit_orders`
+call, combat rules, state fields, events, the observation and the
+`hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
+build against it, and change it in the same pull request as the code.
+
 The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
