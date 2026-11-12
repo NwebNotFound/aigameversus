@@ -74,7 +74,7 @@ test('the .md download is the same story as Markdown', async ({ page, request })
 	);
 	const markdown = await response.text();
 	expect(markdown).toMatch(/^# Poker: Match Commentary/);
-	expect(markdown).toContain('\n## Hand 1\n');
+	expect(markdown).toContain('\n## Level 1: deal!\n'); // a chapter per blind level (D-142)
 });
 
 test('a running match says its chronicle does not exist yet', async ({ page, request }) => {
