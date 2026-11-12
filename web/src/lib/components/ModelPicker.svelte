@@ -1,6 +1,13 @@
 <script lang="ts">
 	import type { CatalogModel } from '#lib/api.js';
-	import { filterCatalog, NO_FILTER, PRICE_STEPS, priceLabel, seatChoice } from '#lib/catalog.js';
+	import {
+		filterCatalog,
+		NO_FILTER,
+		PRICE_STEPS,
+		priceLabel,
+		reliabilityNote,
+		seatChoice
+	} from '#lib/catalog.js';
 	import { BOT } from '#lib/new-match.js';
 
 	/**
@@ -31,6 +38,8 @@
 	let reasoning = $state(false);
 	let verifiedOnly = $state(false);
 	let onlyFavourites = $state(false);
+	let showFree = $state(false);
+	let showUnreliable = $state(false);
 
 	const choice = $derived(seatChoice(value, models));
 	const chosen = $derived(choice.kind === 'model' ? choice.model : null);
@@ -41,7 +50,9 @@
 			maxOutputUsd,
 			reasoning,
 			verifiedOnly,
-			only: onlyFavourites ? favourites : null
+			only: onlyFavourites ? favourites : null,
+			showFree,
+			showUnreliable
 		})
 	);
 	// A long list is cut: the search narrows it.
@@ -106,6 +117,10 @@
 				<label><input type="checkbox" bind:checked={reasoning} /> Reasoning</label>
 				<label><input type="checkbox" bind:checked={verifiedOnly} /> Verified</label>
 				<label><input type="checkbox" bind:checked={onlyFavourites} /> Favourites</label>
+				<label
+					><input type="checkbox" bind:checked={showFree} /> Show free models (often rate-limited)</label
+				>
+				<label><input type="checkbox" bind:checked={showUnreliable} /> Show unreliable</label>
 			</div>
 			<p class="muted count" data-testid="picker-count">
 				{total}
@@ -130,8 +145,13 @@
 								{#if model.verified}<span class="tag ok">verified</span>
 								{:else}<span class="tag warn">price not checked, budgeted +25%</span>{/if}
 								{#if model.reasoning}<span class="tag">reasoning</span>{/if}
-								{#if model.free}<span class="tag">free</span>{/if}
+								{#if model.free}<span class="tag warn">free, often rate-limited</span>{/if}
 								{#if model.high_price}<span class="tag danger">high price</span>{/if}
+								{#if reliabilityNote(model)}<span
+										class="tag danger"
+										data-testid="unreliable-tag"
+										title={reliabilityNote(model)}>unreliable</span
+									>{/if}
 							</span>
 						</button>
 						<button

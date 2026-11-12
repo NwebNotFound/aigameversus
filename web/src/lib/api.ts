@@ -131,6 +131,12 @@ export interface TranscriptLine {
 	/** 1 bookkeeping, 2 normal, 3 highlight. */
 	importance: 1 | 2 | 3;
 	raw: Record<string, unknown>;
+	/**
+	 * Spoiler-free only, added by the web server: the move was repaired (tier 1, the call
+	 * read as meant; tier 2, mapped to a legal move by Jev with probability `p`). The
+	 * spectator view reads the same from the bookkeeping lines; nothing else is passed on.
+	 */
+	repair?: { tier: 1 | 2; p: number | null } | null;
 }
 
 /** Who sits in a seat; name and model null for seats nobody named. */
@@ -277,6 +283,23 @@ export interface CatalogModel {
 	high_price: boolean;
 	/** "config/models.yaml" (checked by hand) or "openrouter list" (booked at the listed price x 1.25). */
 	price_source: string;
+	/** How the model did in this arena lately; missing until the arena reports it. */
+	reliability?: Reliability | null;
+	/** A free variant: its provider limits it hard, a match may stall on it. */
+	rate_limited_likely?: boolean;
+}
+
+/** The arena's own record of a model: unreliable when it failed or was replaced by the bot a lot. */
+export interface Reliability {
+	status: 'ok' | 'unreliable' | 'unknown';
+	/** Why, in words, for the tooltip. */
+	reason?: string | null;
+	fallback_share?: number | null;
+	agent_failed_recent?: number | null;
+	/** How many recent moves the verdict rests on. */
+	n?: number | null;
+	/** Other signs, such as answers cut off at the length limit. */
+	warnings?: string[] | null;
 }
 
 export interface Catalog {
@@ -710,8 +733,10 @@ export function createArenaClient(
 		},
 
 		catalog() {
+			// With the free variants: the picker hides them behind a switch. An arena that
+			// does not know `free` lists them anyway.
 			return getJson<Catalog>(
-				'/models/catalog',
+				'/models/catalog?free=1',
 				(body) => isObject(body) && Array.isArray(body.models)
 			);
 		},

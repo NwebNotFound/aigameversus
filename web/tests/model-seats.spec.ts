@@ -160,3 +160,21 @@ test('a table with a model offers to repair garbled tool calls, ticked by defaul
 	await expect(box).toBeVisible();
 	await expect(box).toBeChecked();
 });
+
+test('free models wait behind their switch, marked as often rate-limited', async ({
+	page,
+	request
+}) => {
+	const catalog = (await (await request.get(`${ARENA}/models/catalog?free=1`)).json()).models;
+	const free = catalog.find((m: { free: boolean }) => m.free);
+	test.skip(!free, 'this catalog has no free model');
+	await page.goto('/matches/new');
+	await page.getByLabel('Player of p1').click();
+	const picker = page.getByTestId('picker-p1');
+	const row = picker.locator(`li[data-id="${free.id}"]`);
+
+	await expect(row).toHaveCount(0);
+	await picker.getByLabel('Show free models (often rate-limited)').check();
+	await expect(row).toBeVisible();
+	await expect(row).toContainText('free, often rate-limited');
+});
