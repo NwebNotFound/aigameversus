@@ -39,7 +39,7 @@ emits events:
 | 10 | `economy.grow` | economy | done |
 | 11 | `events.roll` | events | Heavy |
 | 12 | `combat.weariness` | combat | Builder |
-| 13 | `victory.check` | victory | Builder |
+| 13 | `victory.check` (sets `state.victory`; the match is over then) | victory | Heavy (#120) |
 
 Orders of one kind run in the order the nations are listed in the state
 (their seat order), so the log does not depend on who answered first. An
@@ -71,17 +71,34 @@ of truth (`games/civ/orders.py`, built in 7.6); this is its shape:
     {"type": "declare_war", "on": "p3"},
     {"type": "break_treaty", "treaty": "t2"},
     {"type": "propose_trade", "to": "p2", "gives": {"wood": 5}, "wants": {"gold": 3}, "rounds": 1}
-  ]
+  ],
+  "plan": "Hold the river with a3; settle north next round."
 }
 ```
 
-- `orders` may be empty (a nation that does nothing). At most 40 orders.
+- `orders` may be empty (a nation that does nothing). At most 40 orders, of
+  them at most 3 `message` and at most 3 `propose_treaty` / `propose_trade`
+  together; a `message` text has at most 60 words. The schema caps the
+  list; the plugin drops every message and offer beyond those numbers, and
+  a longer text, with `order_refused`.
+- `plan` (optional, at most 60 words) is the nation's own short plan. Only
+  that nation reads it again: as `your_plan` in its next observation. It is
+  kept in the state, never shown to another nation, and spectators see it.
 - `to` and tiles are `[col, row]` (`games/civ/world.py`: odd rows sit half a tile
   to the right).
 - `message` with `"to": null` is public; otherwise private to sender and
   receiver. Its text becomes the engine's `message` event, so other models
   read it as player content.
 - The runner adds `thought` to the call as for every game.
+
+**All nations at once.** The engine asks every nation of a round at the same
+time (`TurnMode.SIMULTANEOUS`); their calls go through the match's one
+`Budget`, whose ledger lock books them one after another. A nation whose
+call fails, times out, or is refused after the corrections gets the game's
+`random_action` for that round, as in every game (a few random legal
+orders, `action_fallback` and `decision` in the log), and the round is
+resolved for everyone as usual. A nation whose agent gave up plays random
+orders from then on.
 
 **What the engine refuses and what the plugin drops.** The engine checks the
 call against the schema: a wrong shape is refused and the model corrects it,
@@ -136,9 +153,10 @@ What exists stays as it is (`round`, `world`, `nations`, `cities`, `armies`,
 | `City.conquered_round` | `int` or `None` | Builder (set), Heavy (read) |
 | (walls) | a city has walls when `"wall"` is in its `buildings` | data |
 | `Army.fortified_since` | round or `None` | Builder |
-| `CivState.treaties`, `proposals`, `trades`, `wars`, `conditions` | see #105 | Heavy |
+| `CivState.treaties`, `offers`, `deals`, `wars`, `conditions`, `rich_rounds` | see #105, #120 | Heavy |
+| `CivState.victory` | `{kind, winners, placements}` or `None` (`is_over` reads it) | Heavy (#120) |
+| `Nation.plan` | the last `plan` the nation sent, at most 60 words | Builder |
 | `CivState.refused` | this round's dropped orders per nation | Builder |
-| `CivState.winner` | nation id or `None` | Builder |
 
 Every field must survive a JSON round trip (lists, not tuples).
 
@@ -163,21 +181,42 @@ A battle is seen by both sides only; what others learn of it comes from their
 fog view of the tile. Conquest is announced to everyone: the map changes
 hands, and viewers need the moment.
 
-## Observation of a nation (built in 7.7)
+## Observation of a nation (built in 7.7, #119)
 
-`get_observation(state, nation)` returns only what that nation may know,
-built from its fog view (`fog.map_view`), never from the map:
+`get_observation(state, nation)` (`games/civ/observation.py`, `observe`)
+returns only what that nation may know, built from its fog view
+(`fog.map_view`), never from the map:
 
-- `round`, `rounds_total`, `you`, `victory` (progress of every condition,
-  the public economy countdown),
+- `round`, `rounds_total`, `you`,
+- `victory`: the nation's standing in every win condition, so a model need
+  not compute it: `domination` (its share of all cities, the share needed),
+  `economy` (gold held, rounds held, the public countdown of any nation
+  close to it), `score` (its score and rank by the round-limit formula), and
+  `closest_win` (the condition it is nearest to),
 - `stock`, `reputation`, `production_modifier` (weariness, lost capital),
-- `cities` (own, full) and `armies` (own, with `reachable` tiles),
+- `cities` (own, full) and `armies` (own, with `reachable` tiles and
+  `can_settle`),
 - `seen` (foreign cities and armies on visible tiles: owner, strength,
   units), `map` (the fog view, compact),
 - `relations` (treaties, wars, reputations of all), `offers` (to answer this
   round), `messages` (received last round), `refused` (own dropped orders of
-  last round), `last_round` (own private events, in short),
-- `legal` (what each city may build and train, so a model need not guess).
+  last round), `last_round` (what changed for the nation: its private events
+  of last round, in short),
+- `legal`: what is possible now, so a model need not guess: per city what it
+  may build (with the cost) and train (with the most it can pay for), the
+  unit costs, and `orders`, the order types that can do something this round
+  with their parameters (e.g. `move` only when an army can move),
+- `your_plan`: the `plan` the nation sent last round, or `null`.
+
+**Size budget.** An observation and its prompt are what every call pays
+for: 360 calls in a 60-round match of six nations. An observation stays under
+5,000 tokens (17,500 bytes of JSON, counted as the estimate counts: bytes /
+3.5), and a plugin test fails on any observation of a 60-round bot match of
+six nations above it. With cheap models (about 0.10 USD per million input
+tokens) the observations of such a match cost about 0.18 USD. A strong model
+can pass the match cap of 0.50 EUR: `POST /matches/estimate` works for every
+plugin and must be asked before any Civ run with models, and a run above the
+cap needs its own explicit budget.
 
 `situation_summary` (p2) is built from this observation only.
 
@@ -204,9 +243,25 @@ built from its fog view (`fog.map_view`), never from the map:
 
 `terrain` is one string per row, one letter per tile (`legend` maps every letter to a terrain id of `terrain.yaml`);
 `fog` is one string per row per nation (`1` = seen this round). `battles` are
-this round's. The spoiler-free view shows the board with `stock`, unit
-lists and `fog` removed (`web/src/lib/server/redact.ts` lists `hex_map`'s
-public fields).
+this round's.
+
+**This full board is for the Spectator view only.** The spoiler-free view
+shows the board as **one nation** sees it (the viewer picks it; the first in
+seat order by default): the plugin's `render_spec_for(state, nation)`, built
+on the server, keeps only
+
+- `layout`, `round`, `rounds_total`, `cols`, `rows`, `terrain`, `legend`
+  (the land itself is no secret),
+- the cities and armies on tiles that nation sees this round, with `id`,
+  `owner`, `tile`, `population`, `capital`, `walls` for a city and `id`,
+  `owner`, `tile`, `strength` for an army (unit lists only for its own),
+- `nations` with `id`, `reputation`, `cities` and `at_war` (stock only for
+  its own), `treaties` and `wars` (public), its own `fog` row set, and the
+  `battles` it fought or saw.
+
+Every other field is dropped, and an unknown field is never passed on: the
+allowlist for `hex_map` in `web/src/lib/server/redact.ts` mirrors this list.
+"All nations" at once exists only in the Spectator view.
 
 ## Random bot (7.7)
 
