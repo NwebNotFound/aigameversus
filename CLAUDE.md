@@ -327,8 +327,9 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   times (seeds 1 to 3), every prompt a seat's model would get is built as the
   runner builds it and measured, and each seat is priced at its most
   expensive trial: prompt bytes / 3.5 as input tokens, one answer per prompt
-  at the model's mean output in the ledger (the output limit with fewer than
-  10 answers there), times 1.3 for corrections and retries. The answer has
+  at the model's mean output in the ledger (with fewer than 10 answers there,
+  the model's own output limit, as the budget books it: `call_options`), times
+  1.3 for corrections and retries. The answer has
   the month so far and whether the estimate fits the match cap and the month
   left, per seat its `basis` (`ledger history` or `output limit`), and in
   `high_price` the models above 10 USD per million output tokens. It takes

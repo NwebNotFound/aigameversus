@@ -43,6 +43,23 @@ def test_a_model_with_history_is_counted_at_its_mean_output_else_at_the_limit():
     assert known["p1"].estimate_micro_eur > output_only  # plus the prompts
 
 
+def test_a_model_without_history_is_counted_at_its_own_output_limit_not_the_global_one():
+    base = CONFIG.models["deepseek-flash"]
+    longer = base.model_copy(update={"max_output_tokens": 4000})
+    config = CONFIG.model_copy(
+        update={"models": {**CONFIG.models, "civ-alias": longer, "plain-alias": base}}
+    )
+    assert base.max_output_tokens is None and CONFIG.limits.max_output_tokens < 4000
+    seats = {"p1": "civ-alias", "p2": "plain-alias"}
+
+    found = asyncio.run(estimating.estimate(ToyGame(), seats, {}, config, {}))
+
+    assert found["p1"].calls == found["p2"].calls
+    assert found["p1"].estimate_micro_eur > found["p2"].estimate_micro_eur
+    output = found["p1"].calls * 4000 * estimating.RETRY_SHARE  # booked as the budget books it
+    assert found["p1"].estimate_micro_eur >= cost_micro_eur(config, longer, 0, output)
+
+
 def test_the_prompt_version_of_the_settings_is_measured():
     seats = {"p1": "glm-flash", "p2": "glm-flash", "p3": "glm-flash"}
     p1 = run(Poker(), seats, {"hand_limit": 3})
