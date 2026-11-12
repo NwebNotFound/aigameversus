@@ -62,6 +62,8 @@ budget:
   ledger_before_plan_micro_eur: 3756279
   estimated_eight_matches_eur: 1.724974
   automatic_retries: 0
+  cost_jump_factor: 2.0
+  max_cost_per_match_eur: 0.40
   accounting: 'Cumulative over every guest-stage attempt/run; a restart or plan revision does not reset the EUR3.50 allowance.'
 free_quotes_micro_eur:
   openai/gpt-6.1-terra: 136646
