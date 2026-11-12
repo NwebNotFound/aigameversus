@@ -146,3 +146,52 @@ export function ranking(votes: Vote[], order: string[]): { player: string; votes
 		.map(([player, n]) => ({ player, votes: n }))
 		.sort((a, b) => b.votes - a.votes || order.indexOf(a.player) - order.indexOf(b.player));
 }
+
+/** One line of the game master (#117): the event's position in the full log, its kind, its words. */
+export interface Narration {
+	seq: number;
+	key: string;
+	text: Record<string, string>;
+}
+
+export interface Recap {
+	seq: number;
+	key: string;
+	text: string;
+}
+
+/**
+ * What the game master says about the scene on screen: the newest narration up to the
+ * event at `lastSeq`, in `lang`. The arena's dramatic lines (analytics `narration`) come
+ * first; without them the transcript's own narration line stands in. Null while a player
+ * speaks (the stage is theirs) or before anything was narrated.
+ */
+export function recapOf<
+	L extends { kind: string; seq: number | null; text: string; raw: Record<string, unknown> }
+>(
+	narration: Narration[] | null,
+	lines: L[],
+	lastSeq: number | null,
+	lang: string,
+	speaking: boolean
+): Recap | null {
+	if (speaking || lastSeq === null) return null;
+	const told = (narration ?? []).filter((n) => n.seq <= lastSeq).at(-1);
+	if (told) return { seq: told.seq, key: told.key, text: told.text[lang] ?? told.text.en ?? '' };
+	const line = lines
+		.filter((l) => l.kind === 'narration' && l.seq !== null && l.seq <= lastSeq)
+		.at(-1);
+	if (!line || line.seq === null) return null;
+	const key = (line.raw?.data as { key?: unknown } | undefined)?.key;
+	return { seq: line.seq, key: typeof key === 'string' ? key : 'narration', text: line.text };
+}
+
+/** The label above a recap, by its key. */
+export function recapLabel(key: string): string {
+	if (key === 'night_falls') return 'Nightfall';
+	if (key.startsWith('morning')) return 'Morning';
+	if (key === 'execution' || key === 'no_execution') return 'The vote';
+	if (key.startsWith('captain')) return 'The captain';
+	if (key === 'game_over') return 'The end';
+	return 'The village';
+}

@@ -8,9 +8,12 @@ import {
 	isWolf,
 	onStage,
 	ranking,
+	recapLabel,
+	recapOf,
 	roleName,
 	tally,
-	themeOf
+	themeOf,
+	type Narration
 } from './werewolfCircle.js';
 
 const event = (seq: number, type: string, data: Record<string, unknown> = {}): MatchEvent => ({
@@ -136,5 +139,47 @@ describe('ranking', () => {
 			{ player: 'p2', votes: 1 },
 			{ player: 'p3', votes: 1 }
 		]);
+	});
+});
+
+describe('recapOf', () => {
+	const told: Narration[] = [
+		{ seq: 12, key: 'night_falls', text: { en: 'Night 1.', de: 'Nacht 1.' } },
+		{ seq: 40, key: 'morning_deaths', text: { en: 'Morning light falls on Wren.' } }
+	];
+	const line = (seq: number, text: string, key = 'night_falls') => ({
+		kind: 'narration',
+		seq,
+		text,
+		raw: { type: 'narration', data: { key } }
+	});
+
+	it('is the newest dramatic line up to the moment on screen, in the language', () => {
+		expect(recapOf(told, [], 39, 'de', false)).toEqual({
+			seq: 12,
+			key: 'night_falls',
+			text: 'Nacht 1.'
+		});
+		expect(recapOf(told, [], 40, 'de', false)?.text).toBe('Morning light falls on Wren.');
+		expect(recapOf(told, [], 5, 'en', false)).toBeNull();
+	});
+
+	it('gives the stage to a speaker', () => {
+		expect(recapOf(told, [], 50, 'en', true)).toBeNull();
+	});
+
+	it("falls back to the transcript's narration line without the arena's lines", () => {
+		const lines = [line(12, 'Night 1 falls.'), line(40, 'Dawn breaks.', 'morning_deaths')];
+		expect(recapOf(null, lines, 41, 'en', false)).toEqual({
+			seq: 40,
+			key: 'morning_deaths',
+			text: 'Dawn breaks.'
+		});
+	});
+
+	it('labels the scene by its key', () => {
+		expect(recapLabel('morning_quiet')).toBe('Morning');
+		expect(recapLabel('execution')).toBe('The vote');
+		expect(recapLabel('bear_growl')).toBe('The village');
 	});
 });
