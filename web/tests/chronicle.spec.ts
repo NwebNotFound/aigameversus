@@ -50,7 +50,10 @@ test('the chronicle tab tells a finished match in a chosen style and language', 
 	await page.getByTestId('chronicle-lang').selectOption('de');
 
 	await expect(page.getByTestId('chronicle-story')).toHaveAttribute('lang', 'de');
-	await expect(page.getByTestId('chronicle-chapter').first()).toHaveText(/^Runde 1/);
+	// The first chapter is the prologue; round 1 follows it (not Runde 10).
+	await expect(
+		page.getByTestId('chronicle-chapter').filter({ hasText: /^Runde 1(?!\d)/ })
+	).toHaveCount(1);
 	await expect(page.getByTestId('chronicle-story')).toContainText('Tischkarte');
 });
 
