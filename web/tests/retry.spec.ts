@@ -36,7 +36,27 @@ test('refused answers fold into a retry marker; only a random move is red', asyn
 			// No usable answer at all: the engine plays a random move.
 			line('p2', 'info', 'action_rejected', "p2's move was refused: no tool call"),
 			line('p2', 'info', 'action_fallback', 'No usable move from p2: a random move is played'),
-			line('p2', 'action', 'cards_played', 'MARKER-RANDOM p2 plays one card')
+			line('p2', 'action', 'cards_played', 'MARKER-RANDOM p2 plays one card'),
+			// Tier 1: the call was read as meant (decision.repairs).
+			line('p3', 'info', 'action_accepted', 'p3 chooses play', 1),
+			{
+				...line('p3', 'info', 'decision', "p3's move", 1),
+				raw: { type: 'decision', data: { player: 'p3', repairs: ['extracted_json'] } }
+			},
+			line('p3', 'action', 'cards_played', 'MARKER-TIER1 p3 plays one card'),
+			// Tier 2: refused, then Jev mapped it to the legal move it meant.
+			{
+				...line('p4', 'info', 'action_rejected', "p4's move was refused: no such card"),
+				raw: { type: 'action_rejected', data: { player: 'p4', error: 'no such card' } }
+			},
+			{
+				...line('p4', 'info', 'action_accepted', 'p4 chooses play', 1),
+				raw: {
+					type: 'action_accepted',
+					data: { player: 'p4', repaired_by: 'jev', top_probability: 0.93 }
+				}
+			},
+			line('p4', 'action', 'cards_played', 'MARKER-TIER2 p4 plays two cards')
 		);
 	});
 
@@ -63,6 +83,15 @@ test('refused answers fold into a retry marker; only a random move is red', asyn
 	// The retry marker is muted, not the error colour of the random move.
 	const colour = (el: Element) => getComputedStyle(el).color;
 	expect(await mark.evaluate(colour)).not.toBe(await random.evaluate(colour));
+
+	// A repaired move is a valid move: a muted marker per tier, never the random-move red.
+	const tier1 = feed.locator('li').filter({ hasText: 'MARKER-TIER1' }).getByTestId('repair-mark');
+	await expect(tier1).toHaveText('repaired');
+	await expect(tier1).toHaveAttribute('title', /tier 1.*written inside text/);
+	const tier2 = feed.locator('li').filter({ hasText: 'MARKER-TIER2' }).getByTestId('repair-mark');
+	await expect(tier2).toHaveText('repaired by Jev (p=0.93)');
+	await expect(tier2).toHaveAttribute('title', /tier 2.*no such card/);
+	expect(await tier2.evaluate(colour)).not.toBe(await random.evaluate(colour));
 
 	// "Show bookkeeping" shows the raw lines, the refused thought included.
 	await page.getByText('Show bookkeeping').click();
