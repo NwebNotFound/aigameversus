@@ -80,6 +80,26 @@
 			title="No usable answer from {name(line.actor)}: the engine played a random move"
 			>random move</span
 		>
+	{:else if a?.repair}
+		{@const r = a.repair}
+		<!-- A repaired move is a valid move: muted, never red. Tier 2 is Jev's. -->
+		<span
+			class="retry repaired"
+			data-testid="repair-mark"
+			data-tier={r.tier}
+			title="{r.tier === 2
+				? `Repaired by Jev (tier 2): ${name(line.actor)}'s call was refused${a.retries ? ` ${a.retries} ${a.retries === 1 ? 'time' : 'times'}` : ''}, and Jev mapped it to the legal move it meant${r.p !== null ? `, with probability ${r.p.toFixed(2)}` : ''}.`
+				: `Repaired (tier 1): ${name(line.actor)}'s call was read as meant.`}{r.problem
+				? ` Problem: ${r.problem}.`
+				: ''}"
+			><svg viewBox="0 0 12 12" aria-hidden="true"
+				><path
+					d="M7.5 1.8a2.6 2.6 0 0 0-3 3.4L1.8 7.9a1 1 0 0 0 1.4 1.4l2.7-2.7a2.6 2.6 0 0 0 3.4-3"
+				/></svg
+			>{r.tier === 2
+				? `repaired by Jev${r.p !== null ? ` (p=${r.p.toFixed(2)})` : ''}`
+				: 'repaired'}</span
+		>
 	{:else if a}
 		<span
 			class="retry"

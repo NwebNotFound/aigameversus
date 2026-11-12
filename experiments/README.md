@@ -8,7 +8,7 @@ the plan fixes, with seed, seating and order.
 
 | File | Question | Status |
 | --- | --- | --- |
-| [E1_liars_deck.yaml](E1_liars_deck.yaml) | Liar's Deck: do cheap models differ, does more reasoning help, do stronger models win? | approved (B and C after A); nothing played |
+| [E1_liars_deck.yaml](E1_liars_deck.yaml) | Liar's Deck: do cheap models differ, does more reasoning help, do stronger models win? | version 2: pilot played (6 matches); league A2 of six models approved; B and C after A2 |
 
 ## Rules
 
