@@ -7,9 +7,11 @@
   Deck analytics read the move figures from the `decision` event (they read
   them from `action_accepted`, where they never were) and add both counts
   per player; the behaviour report names `cut_off` and `throttled` as
-  reliability reasons of their own. A model is qualified for one exact
-  combination of provider id, route, game, prompt and runtime settings, with
-  the reasons and the ladder of [model-qualification.md](../model-qualification.md).
+  reliability reasons of their own. Whether a model is qualified is decided
+  by the Researcher's protocol (research/QUALIFY.md) for one exact
+  combination of provider id, route, game, prompt and runtime settings; the
+  arena's figures map onto its reasons as in
+  [model-qualification.md](../model-qualification.md).
 - **Why:** In match be2f808a twelve of thirteen refused answers were cut off
   at 1500 tokens and one seat failed on a free route's rate limit; a filter
   that only counts bot moves showed neither, and calling either "no tool
