@@ -7,12 +7,18 @@ import pytest
 from arena.engine.rng import derive_rng
 from games.civ import armies, economy
 from games.civ.bot import random_orders
-from games.civ.observation import FOG, observe, visible_to
+from games.civ.observation import FOG, visible_to
+from games.civ.observation import observe as observe_with
+from games.civ.plugin import scoreboard
 from games.civ.tests.realm import DATA, Realm
 from games.civ.turn import begin_round
 from games.civ.world import generate_map
 
 PLAYERS = ["ada", "bo", "cy", "di"]
+
+
+def observe(state, data, player, **kw):
+    return observe_with(state, data, player, scoreboard=scoreboard(state, data), **kw)
 
 
 def new_realm(seed: int) -> Realm:
@@ -205,3 +211,28 @@ def test_armies_on_one_tile_are_merged_as_far_as_they_fit_and_get_no_other_order
 
     assert {"type": "merge", "armies": ["a1", "a2"]} in orders["orders"]
     assert not [o for o in orders["orders"] if o.get("army") in ("a1", "a2")]
+
+
+def test_the_victory_lines_use_the_public_scoreboard_not_the_state():
+    realm = new_realm(12)
+    board = scoreboard(realm.state, DATA)
+    lie = board | {
+        "cities_total": 99,
+        "domination_needed": 50,
+        "cities": {**board["cities"], "ada": 7},
+    }
+
+    seen = observe_with(realm.state, DATA, "ada", scoreboard=lie)
+
+    assert seen["victory"]["domination"] == "7 of 50 cities needed (99 exist)"
+
+
+def test_the_observation_names_no_foreign_city_the_fog_hides_even_though_totals_are_public():
+    realm = new_realm(13)
+    board = scoreboard(realm.state, DATA)
+    seen = observe(realm.state, DATA, "ada")
+    visible = {tuple(c["tile"]) for c in seen["seen"]["cities"]}
+    everywhere = {c.tile for c in realm.state.cities if c.owner != "ada"}
+
+    assert board["cities_total"] == len(realm.state.cities)  # the count is public
+    assert visible <= everywhere and len(visible) < len(everywhere)  # where they are is not
