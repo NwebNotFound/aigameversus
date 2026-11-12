@@ -23,6 +23,8 @@ class Nation(BaseModel):
     stock: Stock  # what the nation owns of every resource; never below 0
     hungry_rounds: int = 0  # rounds in a row in which upkeep was not paid in full
     reputation: int = 50  # public, between the limits in treaties.yaml; new_game sets the start
+    weary_rounds: int = 0  # rounds in a row at war (combat.weariness)
+    capital_lost_until: int | None = None  # its capital fell: production suffers until then
 
 
 class Site(BaseModel):
@@ -63,6 +65,7 @@ class Army(BaseModel):
     row: int
     units: list[Troop]  # never empty: an army that loses its last unit is gone
     moved_in_round: int | None = None  # the round of its last move; an army moves once a round
+    fortified_from: int | None = None  # fortified from this round on, until it moves
 
     @property
     def tile(self) -> Hex:
@@ -133,6 +136,7 @@ class CivState(BaseModel):
     conditions: list[Condition] = []  # from random events, oldest first
     rich_rounds: dict[str, int] = {}  # rounds in a row a nation held the economic-victory gold
     victory: dict[str, Any] | None = None  # {kind, winners, placements} once the match is won
+    attacks: list[dict[str, Any]] = []  # this round's attacks {army, target}, until fought
 
     def city(self, city_id: str) -> City:
         return next(city for city in self.cities if city.id == city_id)
