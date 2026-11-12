@@ -1,6 +1,6 @@
 # JEV-C1: intent preservation and post-match agreement
 
-Pre-registration v1, 2026-11-12; machine-readable plan: [PLAN.yaml](PLAN.yaml).
+Pre-registration draft v2, 2026-11-12; machine-readable plan: [PLAN.yaml](PLAN.yaml).
 Owner: Researcher (design/analysis); Coder owns labeling/export tooling, Heavy
 owns client/repair/referee implementation. Lower priority than Werewolf/Civ.
 Decision: D-123. No client, API request, key access or paid calibration is
@@ -9,7 +9,7 @@ implemented or authorized here. All integration checks use a fake Jev client.
 ## Authorization and boundary
 
 Nils approved feature development, not real decisions calls. Real approval is
-empty and real budget is EUR0. The proposed EUR0.25 study envelope is **not an
+empty and real budget is EUR 0. The proposed EUR 0.25 study envelope is **not an
 approval**, nor part of the overnight W1/narrator/qualification allocations.
 Before any real run, obtain Nils' explicit yes, verify the alpha contract and
 current price, freeze input bounds and FX, and commit the manifest and settings.
@@ -33,7 +33,7 @@ to the existing fallback path, even when top probability is high.
 
 ## Repair sample and human reference
 
-Target200 naturally recorded broken decisions across available games;100 is a
+Target 200 naturally recorded broken decisions across available games; 100 is a
 pilot, not automatic permission to deploy. Eligible units are the original
 decision after same-model correction attempts and deterministic repair have
 failed. Keep all attempts linked; do not count three retries as three cases.
@@ -53,11 +53,39 @@ the sample. Fake/synthetic cases test software only and never count as evidence.
 Canonical block = game, initial scenario/seed, table/role mapping, prompt/config
 and duplicate decision fingerprint. Keep retries, near-duplicates, role rotations
 on the same scenario and replays of a decision in one split. After deduplication,
-freeze a corpus manifest and exclusions using seed2026111204. Development target60
-cases, balanced across available game/bucket cells; holdout target140, sampled
+freeze a corpus manifest and exclusions using seed 2026111204. Development target 60
+cases, balanced across available game/bucket cells; holdout target 140, sampled
 randomly from remaining independent blocks, one primary case per block. Freeze
 before seeing Jev outputs. If too few independent blocks exist, report a smaller
 pilot/inconclusive result rather than treating correlated cases as independent.
+
+### Expected yield and hard feasibility stop
+
+Reviewer's read-only inventory snapshot (review 10ae86f1, not an independently
+verified fresh export here) reports about 50 fallback decisions in the available
+history: Liar's Deck 35 of 1,897 decisions, Werewolf 15 of 803, Poker 0. This is an
+upper bound on candidate residual failures for that snapshot, not 50 independent
+recoverable intentions. Overlong speech is excluded; cutoffs with no identifiable
+decision are unrecoverable; repeated attempts, rotations and shared scenarios
+reduce the independent inventory further. The current natural logs therefore
+do not support the 100-case pilot. Inventory counts and their filters must be
+recomputed by Coder's exporter before a manifest is frozen; all rejected answers
+must not be relabelled as independent residual failures just to reach a quota.
+
+**Eligible inventory below 100 independent blocks means no study run and zero spend.**
+This blocks data-labeling/calibration execution, not synthetic CI tests.
+No synthetic augmentation, hidden relaxation of independence, paid game generation
+or opportunistic threshold fitting to make the pilot feasible. Reassess only
+after ordinary, separately authorized play supplies more naturally eligible data.
+The 100-case minimum permits a descriptive pilot only; with 60 development cases
+and 40 holdout cases it cannot meet the primary precision gate even with no errors.
+
+For the full 140-case holdout, 59 correct accepted cases require at least
+59/140 = 42.14% acceptance coverage **and zero accepted errors**. This is a
+necessary best-case yield, not an expected success forecast; errors require more
+accepted cases, and unjudgeable/unsupported cases reduce coverage. Below that
+coverage, the gate is inconclusive even at an observed 100% precision. Current
+evidence provides no justified estimate of actual Jev acceptance coverage.
 
 Two independent humans label each case, blinded to Jev outputs, originating model
 name, match outcome and each other's labels. Use pseudonymous rater ids. They
@@ -78,20 +106,34 @@ written evidence. Preserve both original labels and pre-adjudication agreement.
 If a third label is unavailable, unresolved cases remain ambiguous. Never use
 Jev or another AI as the supposedly independent human. Human availability and
 labeling time must be arranged before execution; no labels have been collected.
+`blocking_preconditions.humans_available` is currently false. The named blocking
+roles are independent human Rater A, independent human Rater B and a third human
+Adjudicator; none has been assigned. All three must confirm availability and be
+recorded under pseudonymous ids before labels or predictions are collected.
+Lead keeps any real-person identity mapping outside this public repository.
+
+### Registration freeze
+
+D-123 must record the exact registration merge commit before data labeling or
+predictions begin. It is currently pending, not an invented future hash. After
+merge, add a dated registration note with the returned merge SHA, and freeze the
+corpus manifest, split and config hashes. Every later design change is a dated
+amendment explaining its reason and whether labels/predictions had been seen.
+The registration note must not silently redefine the design it points to.
 
 ## Threshold selection and validation
 
 For a valid choice response define `p_top=max(probabilities)`; require finite
-values in[0,1], complete exact option keys, sum within1e-6 of1, and consistency
+values in [0, 1], complete exact option keys, sum within 1e-6 of 1, and consistency
 between returned choice and argmax. Malformed/tied incompatible responses abstain
 and count toward operational failure/coverage. Provider 429/timeout is unavailable,
 not a wrong semantic prediction; report it separately and retain its cost record.
 
 Use p_top directly. The documented confidence transform
 `(p_top - 1/n)/(1 - 1/n)` is concentration, not demonstrated probability of correct
-intent recovery. The fake-only initial threshold0.90 is a placeholder. On
-development data choose the lowest of[.90,.95,.975,.99] with at least10 accepted
-cases and observed precision>=.95; otherwise choose no usable threshold. Freeze
+intent recovery. The fake-only initial threshold 0.90 is a placeholder. On
+development data choose the lowest of [0.90, 0.95, 0.975, 0.99] with at least 10 accepted
+cases and observed precision >= 0.95; otherwise choose no usable threshold. Freeze
 one global threshold before holdout. No bucket-specific tuning in this initial
 small study; bucket-specific thresholds need a separately frozen enlarged design.
 
@@ -105,17 +147,17 @@ Primary metric: precision among threshold-accepted holdout cases; also coverage
 (accepted/all eligible), unsafe-accept fraction, false-repair rates per game,
 failure type/model/bucket, abstention, latency and cost. Report missing/failed API
 responses over all scheduled cases, not only valid returns. Precision denominator
-is accepted cases, not every attempted call; zero accepted means undefined, not100%.
+is accepted cases, not every attempted call; zero accepted means undefined, not 100%.
 
-Target precision>=.95 with a one-sided95% exact-binomial lower bound>=.95, using
+Target precision >= 0.95 with a one-sided 95% exact-binomial lower bound >= 0.95, using
 independent primary blocks and a fixed single holdout look. With zero errors,
-the lower bound is `0.05^(1/n)`:59 accepted independent cases are needed just to
-cross.95;20 perfect cases only give about.861. Other error counts use numerical
+the lower bound is `0.05^(1/n)`: 59 accepted independent cases are needed just to
+cross 0.95; 20 perfect cases only give about 0.861. Other error counts use numerical
 binomial-tail inversion. [NIST exact-binomial reference](https://itl.nist.gov/div898/software/dataplot/refman2/auxillar/exacbino.htm).
 
 This bound is conditional on the frozen corpus mix and binomial independence,
 not a guarantee for every future model/game. Publish per-game/bucket uncertainty;
-100-200 total labels cannot establish the same95% lower bound in every game x
+100-200 total labels cannot establish the same 95% lower bound in every game x
 bucket cell. A pooled success must not silently certify unsupported cells. If a
 deployment claim covers several scopes, it needs adequate independent holdout
 support in each and a preregistered multiplicity adjustment, not post-hoc pooling.
@@ -129,7 +171,7 @@ for the full option vector. Repeated order tests stay outside primary validation
 
 ## Referee agreement study
 
-Separate from the200 repair cases, target24 completed matches x5 key moments =120
+Separate from the 200 repair cases, target 24 completed matches x 5 key moments = 120
 moments, one future Jev request per match containing those five moments/questions.
 Choose matches/scenario blocks and moments by deterministic event rules before
 reading tags: calls, showdowns, votes, alliance changes and rejected actions as
@@ -140,9 +182,12 @@ Two humans independently label every moment. Adjudicate as above. Questions:
 
 | Question | Reference and visibility | Output/analysis |
 | --- | --- | --- |
-| Action matches stated reasoning? | Evidence supports consistency, contradiction or unjudgeable; valid action can still contradict intent | noul; freeze yes/no cutoff.50; Cohen's kappa on judgeable pairs plus raw agreement/confusion table |
-| Lie in talk? | First use deterministic engine evidence. Human residual label is knowingly contradicted statement, not merely an incorrect belief; insufficient evidence is unjudgeable | noul only for residual cases; deterministic tags stay separate; no engine label overwritten |
-| Perceived persuasiveness? | Human1-5 ordinal rubric below, hidden model identity, identical display, no subsequent votes/results | score1-5 full probability distribution; ordinal agreement, exploratory only |
+| Action matches stated reasoning? | Evidence supports consistency, contradiction or unjudgeable; valid action can still contradict intent | Yes/no probability; fixed 0.50 cutoff; Cohen's kappa on judgeable pairs plus raw agreement/confusion table |
+| Lie in talk? | First use deterministic engine evidence. Human residual label is knowingly contradicted statement, not merely an incorrect belief; insufficient evidence is unjudgeable | Yes/no probability for residual cases only; deterministic tags stay separate; no engine label overwritten |
+| Perceived persuasiveness? | Human 1-5 ordinal rubric below, hidden model identity, identical display, no subsequent votes/results | Full probability distribution across scores 1-5; ordinal agreement, exploratory only |
+
+Implementation mapping only: the alpha API names its yes/no probability type
+`noul`; reviewers and the labeling UI should see the question's plain meaning.
 
 For consistency show only information the actor knew. For post-match lie checking,
 the annotator may see the speaker's permitted private evidence needed for truth,
@@ -151,9 +196,9 @@ claiming a village role can be a deliberate lie; a villager's wrong accusation
 need not be one. Deterministic parse coverage/uncertainty is reported separately.
 Spoiler-rich labels/evidence must never enter spoiler-free replay responses.
 
-Persuasiveness anchors:1 irrelevant/incoherent assertion;2 intelligible claim
-without supporting evidence;3 coherent relevant evidence with an identifiable
-request;4 specific evidence, alternatives and a clear request;5 strong coherent
+Persuasiveness anchors: 1 irrelevant/incoherent assertion; 2 intelligible claim
+without supporting evidence; 3 coherent relevant evidence with an identifiable
+request; 4 specific evidence, alternatives and a clear request; 5 strong coherent
 support addressing salient counterarguments. This is a proposed **perceived**
 persuasiveness rubric, not observed causal influence on votes. Cap/read displayed
 length consistently; record verbosity and role, randomize option/display order.
@@ -161,7 +206,7 @@ Do not reward a false argument just because the eventual village followed it.
 
 Report human-human Cohen's kappa before adjudication and Jev-versus-adjudicated
 human kappa per nominal question, `kappa=(p_observed-p_expected)/(1-p_expected)`.
-Include marginals/prevalence and raw agreement; if expected agreement is1, kappa
+Include marginals/prevalence and raw agreement; if expected agreement is 1, kappa
 is undefined. [Cohen's original paper](https://journals.sagepub.com/doi/10.1177/001316446002000104).
 For ordinal ratings use linear-weighted kappa with weights `1-|i-j|/4`; use the
 argmax Jev category (lowest-index tie break) only for this agreement statistic,
@@ -171,11 +216,11 @@ display the full model distribution and both human label histograms.
 Unjudgeable/no-answer cases are counted explicitly. Report binary kappa restricted
 to judgeable pairs AND three-category nominal agreement with unjudgeable retained;
 missing Jev answers are operational missingness, not silently removed success.
-Bootstrap10,000 scenario blocks with seed2026111204 for95% intervals; moments in
+Bootstrap 10,000 scenario blocks with seed 2026111204 for 95% intervals; moments in
 one match/scenario stay together. With few blocks, call intervals unstable.
 
 Predeclared exploratory publication gate: both human-human and Jev-human kappa
-point>=.60 and bootstrap lower95%>=.40 for each question. These are our proposed
+point >= 0.60 and bootstrap lower 95% >= 0.40 for each question. These are our proposed
 operational thresholds, not universal scientific cutoffs. If either fails or is
 undefined, suppress that tag as a published model-quality metric and report the
 failed agreement study. Persuasiveness never determines rankings or Elo, even
@@ -218,7 +263,7 @@ not a richer annotation screen than Jev receives. Source hashes lock both.
 Before a separately approved real run, reserve each job through the existing
 Budget/Ledger with a job UUID and an explicit max input/cost bound, count actual
 usage.cost USD with frozen conservative FX, and stop before any reserve could
-exceed job, study or month allowance. Cap real requests at200 repair +24 referee,
+exceed job, study or month allowance. Cap real requests at 200 repair + 24 referee,
 no automatic real retries; unavailable cases remain missing. Reconcile records
 after each call. No API key or billing account data in exports. A post-call bill
 alone cannot enforce a pre-call cap; if the alpha API offers no usable pricing/

@@ -1,11 +1,23 @@
 id: JEV-C1
-version: 1
-registered: '2026-11-12'
+version: 2
+drafted: '2026-11-12'
 status: proposed
 owner: Arena Researcher
 kind: offline_intent_preservation_and_postmatch_agreement
 implementation_mode: fake_only
 real_call_approvals: []
+blocking_preconditions:
+  humans_available: false
+  human_raters: {rater_a: null, rater_b: null, adjudicator: null}
+  eligible_independent_blocks: null
+  eligible_inventory_verified: false
+  minimum_independent_blocks_before_any_run: 100
+  below_minimum_action: do_not_run_spend_zero
+registration:
+  state: pending_merge_freeze
+  merge_commit: null
+  freeze_record: docs/decisions/D-123-jev.md
+  later_changes: dated_amendment_before_labels_or_predictions
 model: typesafe/jev-1.14
 api_contract: provisional_alpha_verify_before_any_real_call
 budget:
@@ -25,6 +37,8 @@ repair:
   minimum_pilot_cases: 100
   development_target: 60
   validation_target: 140
+  minimum_error_free_accepted_for_precision_gate: 59
+  necessary_holdout_acceptance_coverage: 0.421429
   split_unit: canonical_scenario_block
   manifest_seed: 2026111204
   option_count_buckets: ['2', '3-5', '6-10', '11+']
