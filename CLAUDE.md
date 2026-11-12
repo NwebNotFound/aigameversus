@@ -347,7 +347,7 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
 The system message is what the server says: who the player is, the game's
 rules (`rules.md`), how to answer. The user message is game data: the game's
 summary of the turn in `<summary>` if it has one, the observation in
-`<situation>`, the last 40 visible events in `<events>`, then the ask (with
+`<situation>`, the last 40 visible events (`GamePlugin.history_limit`: 120 for Civ, D-136) in `<events>`, then the ask (with
 the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
@@ -907,7 +907,7 @@ next to it says what each does and what the generator guarantees.
   The prompt settings (`games/civ/prompt.py`, D-135): `prompt_version`
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
-  and `your_plan_from_last_round` exist only when it is on).
+  and `your_plan_from_last_round` exist only when it is on). A Civ prompt shows 120 events, not 40 (D-136).
   A balance sweep with random bots (no cost) is `uv run python -m
   arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
   its findings and the proposals D-137 and D-138.
