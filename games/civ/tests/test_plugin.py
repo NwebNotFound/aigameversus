@@ -256,6 +256,27 @@ def test_moving_onto_another_nation_is_refused_in_peace_and_an_attack_at_war():
     assert of_type(realm.events, "battle")[0].data["winner"] in ("p1", "p2")
 
 
+def test_a_move_into_the_fog_onto_a_held_tile_stops_before_it_and_cannot_probe_for_free():
+    def move_into_fog(enemy_there: bool) -> Realm:
+        realm = Realm(wide(), players=FOUR)
+        realm.start_round()
+        rider = realm.army("p1", (4, 2), "horseman")
+        if enemy_there:
+            realm.army("p2", (7, 2), "spearman")
+        assert (7, 2) not in combat.sight(realm.state, DATA, "p1")
+        orders.run(
+            realm.state, DATA, realm.ctx, {"p1": [{"type": "move", "army": rider, "to": [7, 2]}]}
+        )
+        return realm
+
+    free, held = move_into_fog(False), move_into_fog(True)
+
+    assert free.state.army("a1").tile == (7, 2) and not of_type(free.events, "order_refused")
+    assert held.state.army("a1").tile == (6, 2)  # it spent its move walking up to it
+    assert "stopped before it" in of_type(held.events, "order_refused")[0].data["reason"]
+    assert not of_type(held.events, "attack_ordered")
+
+
 def test_orders_of_one_type_run_in_seat_order_whoever_listed_them_first():
     realm = started()
     for nation in ("p1", "p2"):

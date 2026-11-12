@@ -19,7 +19,13 @@ from typing import Annotated, Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from arena.research.design import blocks_of_four, guest_seatings, mirror_seatings, rotations
+from arena.research.design import (
+    all_tables,
+    blocks_of_four,
+    guest_seatings,
+    mirror_seatings,
+    rotations,
+)
 
 Effort = Literal["minimal", "low", "medium", "high"]
 
@@ -50,17 +56,29 @@ class _Stage(_Strict):
     seeds: int = Field(gt=0)  # per table (league) or per model (mirror, guests)
     turn_timeout_s: int = Field(gt=0)
     max_output_tokens: int = Field(gt=0)
+    settings: dict[str, Any] = {}  # merged over the plan's settings for this stage only
     notes: str = ""
 
 
 class League(_Stage):
-    """Eight models, every balanced table of four, each seed with four seatings."""
+    """Six or eight models at balanced tables of four, each seed with four seatings.
+
+    Eight models: the 14 tables of `blocks_of_four`. Six models: all 15 tables.
+    """
 
     kind: Literal["league"]
-    models: list[str] = Field(min_length=8, max_length=8)
+    models: list[str] = Field(min_length=6, max_length=8)
     effort: Effort
     pilot_tables: int = Field(ge=0)  # these tables' first seed is played before the rest
-    pilot_budget_eur: Decimal = Field(gt=0)  # for the pilot matches; part of `budget_eur`
+    pilot_budget_eur: Decimal | None = Field(None, gt=0)  # for the pilot; part of `budget_eur`
+
+    @model_validator(mode="after")
+    def _size(self) -> "League":
+        if len(self.models) not in (6, 8):
+            raise ValueError("a league has 6 or 8 models")
+        if self.pilot_tables and self.pilot_budget_eur is None:
+            raise ValueError("a league with pilot tables needs pilot_budget_eur")
+        return self
 
 
 class Mirror(_Stage):
@@ -82,7 +100,20 @@ class Guests(_Stage):
     substitutes: list[str] = []
 
 
-Stage = Annotated[League | Mirror | Guests, Field(discriminator="kind")]
+class Cyclic(_Stage):
+    """A fixed list of seats (a model may hold several), each seed in every cyclic rotation.
+
+    With k seats, a seed is played k times: in rotation r the entry of seat i
+    moves to seat i + r. The seed deals the roles or cards to the seats, so
+    every entry plays every seat, and what the seed deals there, once per seed.
+    """
+
+    kind: Literal["cyclic"]
+    seats: list[str] = Field(min_length=2)
+    effort: Effort
+
+
+Stage = Annotated[League | Mirror | Guests | Cyclic, Field(discriminator="kind")]
 
 
 class Budget(_Strict):
@@ -124,7 +155,11 @@ class Experiment(_Strict):
             unknown = sorted(set(_stage_models(stage)) - set(self.models))
             if unknown:
                 raise ValueError(f"stage {stage.id} names models the plan does not list: {unknown}")
-            if isinstance(stage, League) and stage.pilot_budget_eur > stage.budget_eur:
+            if (
+                isinstance(stage, League)
+                and stage.pilot_budget_eur is not None
+                and stage.pilot_budget_eur > stage.budget_eur
+            ):
                 raise ValueError(f"stage {stage.id}: the pilot budget is above the stage budget")
         budget = self.budget
         planned = (
@@ -196,7 +231,9 @@ def schedule(experiment: Experiment) -> list[ScheduledMatch]:
     return matches
 
 
-def _stage_models(stage: League | Mirror | Guests) -> list[str]:
+def _stage_models(stage: League | Mirror | Guests | Cyclic) -> list[str]:
+    if isinstance(stage, Cyclic):
+        return stage.seats
     if isinstance(stage, League):
         return stage.models
     if isinstance(stage, Mirror):
@@ -204,12 +241,22 @@ def _stage_models(stage: League | Mirror | Guests) -> list[str]:
     return [*stage.guests, *stage.hosts, *stage.substitutes]
 
 
-def _stage_rows(stage: League | Mirror | Guests) -> list[tuple]:
+def _stage_rows(stage: League | Mirror | Guests | Cyclic) -> list[tuple]:
     """(table, seating, replicate, seed, pilot, seats) for every match of a stage."""
     rows = []
     replicates = range(1, stage.seeds + 1)
-    if isinstance(stage, League):
-        for number, block in enumerate(blocks_of_four(stage.models), start=1):
+    if isinstance(stage, Cyclic):
+        entries = [f"{model}@{stage.effort}" for model in stage.seats]
+        k = len(entries)
+        for replicate in replicates:
+            for shift in range(k):
+                seats = tuple(entries[(i - shift) % k] for i in range(k))
+                rows.append(("R", shift + 1, replicate, stage.seed_base + replicate, False, seats))
+    elif isinstance(stage, League):
+        tables = (
+            blocks_of_four(stage.models) if len(stage.models) == 8 else all_tables(stage.models)
+        )
+        for number, block in enumerate(tables, start=1):
             for replicate in replicates:
                 seed = stage.seed_base + 10 * number + replicate
                 pilot = number <= stage.pilot_tables and replicate == 1

@@ -337,18 +337,29 @@ def _settle(state: CivState, data: CivData, ctx: TurnContext, nation: str, o: Or
 
 
 def _move(state: CivState, data: CivData, ctx: TurnContext, nation: str, o: Order):
-    """A move onto a tile that another nation holds is an attack on it (or refused)."""
+    """A move onto a tile that another nation holds in sight is an attack on it (or refused).
+
+    One held out of sight is found by walking into it: the army stops on the tile before,
+    so a move cannot ask the fog what it hides without spending the move.
+    """
     if (to := _tile(o["to"])) is None:
         return "`to` of a move is a tile [col, row], for example [4, 3]."
-    if combat.holder(state, to, nation) is not None:
+    held = combat.holder(state, to, nation) is not None
+    if held and to in combat.sight(state, data, nation):
         if problem := combat.attack_problem(state, data, nation, o["army"], to):
             return problem
         combat.attack(state, data, ctx, nation, o["army"], to)
         return None
     if problem := armies.move_problem(state, data, nation, o["army"], to):
         return problem
-    armies.move(state, data, ctx, nation, o["army"], to)
-    return None
+    if not held:
+        armies.move(state, data, ctx, nation, o["army"], to)
+        return None
+    path = armies.reachable(state, data, o["army"])[to]
+    if len(path) > 1:
+        armies.move(state, data, ctx, nation, o["army"], path[-2])
+    col, row = to
+    return f"({col}, {row}) is held by another nation; {o['army']} stopped before it."
 
 
 def _fortify(state: CivState, data: CivData, ctx: TurnContext, nation: str, o: Order):

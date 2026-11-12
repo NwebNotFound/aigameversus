@@ -124,7 +124,11 @@ observation. A list of twenty orders is never thrown away for one mistake.
   nation it is **at war with**, or of `NEUTRAL`, the move is an **attack**:
   the army stops on the last free tile of its path and fights for the target
   in `combat.resolve`. Moving onto a tile of a nation it is not at war with
-  is refused (`order_refused`).
+  is refused (`order_refused`). This holds for tiles in the nation's sight
+  (`combat.sight`); a move onto a held tile out of sight stops on the tile
+  before it and is refused, so the fog is found out only by spending the
+  move. An attack needs its target in sight, and every unseen tile gets the
+  same refusal (D-126).
 - Being at war: `diplomacy.at_war(state, a, b)`, or either side is
   `NEUTRAL`. War is entered only through `declare_war`, which is never
   refused for a treaty: it ends every treaty between the two, each counted as

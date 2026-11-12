@@ -192,6 +192,26 @@ describe('parseForm', () => {
 			expect(parsed.ok && 'seats' in parsed.match).toBe(false);
 		});
 
+		it('asks for a second tick when an unreliable model takes a seat', () => {
+			const ticked = { ...THREE, confirm_spend: 'on' };
+
+			expect(parseForm(form(ticked), GAMES, MODELS, false, false, ['qwen-flash'])).toEqual({
+				ok: false,
+				errors: {
+					confirm_unreliable:
+						'An unreliable model often fails or is replaced by the bot: tick the box to seat it anyway.'
+				}
+			});
+			expect(
+				parseForm(form({ ...ticked, confirm_unreliable: 'on' }), GAMES, MODELS, false, false, [
+					'qwen-flash'
+				])
+			).toMatchObject({ ok: true });
+			expect(parseForm(form(ticked), GAMES, MODELS, false, false, ['other/model'])).toMatchObject({
+				ok: true
+			});
+		});
+
 		it('sends a personality per model seat where the arena takes one, never for a bot', () => {
 			const body = {
 				...LIARS,

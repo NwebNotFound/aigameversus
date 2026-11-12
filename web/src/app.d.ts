@@ -3,7 +3,10 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			/** Spectators only: no controls, no new-match form (hooks.server.ts). */
+			readOnly: boolean;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

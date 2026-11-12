@@ -7,10 +7,15 @@
   - A counter works by the share of enemy units it counters: a swordsman
     against an army that is half spearmen is 1.5 times as strong.
   - The loser of a battle loses (winner power ÷ loser power) × 0.5 of its
-    units, at least one; the winner loses (loser ÷ winner) × 40 %
+    units (`loser_loss_factor`), at least one and at most all: 1.2:1 costs it
+    60 %, 2:1 or more all of them. The winner loses (loser ÷ winner) × 40 %
     (`winner_loss_factor`). A tie holds the tile.
   - Archers fire one ranged round first: each side loses (the other side's
-    ranged power ÷ its own power) × 0.5 of its units.
+    ranged power ÷ its own power) × 0.5 of its units (`ranged_loss_factor`).
+    All three factors are in `balance.yaml` under `combat`.
+  - An attack needs its target in the attacker's sight. Every tile out of
+    sight gets the same refusal, so a refusal never tells what the fog
+    hides. Barbarians have no fog.
   - Which units fall is drawn from `ctx.rng("combat", round, battle)`.
   - An attacker that wins against a tile with no army left takes it; a city
     on it changes hands (`city_conquered`, public). A nation's capital is the
