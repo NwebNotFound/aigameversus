@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from arena.agents.budget import MICRO, Budget
 from arena.agents.model import ModelCall
+from arena.agents.runner import MAX_RETRIES
 from arena.api.matches import ALLOW_MODEL_SEATS, Live, _seat_config
 from arena.config import Config, load_keys
 from arena.db.qualification_store import Qualification, QualificationStore
@@ -224,6 +225,64 @@ async def list_qualifications(
 ) -> list[Qualification]:
     """Qualification results, newest first; filter by model and game. Read-only."""
     return await _jobs(request).store.recent(model, game)
+
+
+class Quote(BaseModel):
+    model: str
+    game: str
+    answer_repair: str
+    scope: str
+    cases: list[dict[str, str]] = Field(description="Each core case: its id, check and thought")
+    calls: int = Field(description="Model calls of the job, one per case, before retries")
+    tries_per_call: int = Field(description="Transport attempts per call the reserve covers")
+    reserved_micro_eur: int = Field(description="The job's worst case: what a start reserves")
+    default_cap_micro_eur: int = Field(description="The cap of a click unless raised")
+    max_cap_micro_eur: int = Field(description="The highest cap a click may set")
+    fits_default: bool = Field(description="Whether the worst case fits the default cap")
+    config_hash: str
+
+
+@router.get("/qualifications/quote")
+async def quote_qualification(
+    live: Live,
+    model: str,
+    game: str,
+    answer_repair: Literal["off", "v1"] = "off",
+    thought_headline: bool = False,
+) -> Quote:
+    """What a "Test this model" click would send and reserve, before anyone confirms it.
+
+    Spends nothing and starts nothing. The worst case covers every case at its booking
+    bound and every permitted transport retry; a click whose cap is below it is refused.
+    """
+    plugin = _plugin(live, game)
+    config = await _seat_config([model])
+    settings = settings_of(answer_repair, thought_headline)
+    fixtures, sent, conf = await _prepared(plugin, config, model, settings)
+    bound = bound_micro_eur(config, model, sent)
+    default = int(CLICK_CAP_EUR * MICRO)
+    return Quote(
+        model=model,
+        game=game,
+        answer_repair=answer_repair,
+        scope=SCOPE,
+        cases=[
+            {
+                "case": case.id,
+                "check": case.check,
+                "thought": "required" if case.thought_required else "optional",
+            }
+            for case in MANIFESTS[game].cases
+            if fixtures.get(case.id) is not None
+        ],
+        calls=len(sent),
+        tries_per_call=1 + MAX_RETRIES,
+        reserved_micro_eur=bound,
+        default_cap_micro_eur=default,
+        max_cap_micro_eur=int(config.limits.match_eur * MICRO),
+        fits_default=bound <= default,
+        config_hash=config_hash(conf),
+    )
 
 
 @router.get("/qualifications/current")

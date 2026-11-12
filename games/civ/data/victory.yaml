@@ -2,6 +2,7 @@
 # The first condition met ends the match.
 domination:
   city_share: 0.5 # control at least this share of all cities
+  min_cities_per_nation: 2 # ... once the world has this many cities per nation (D-137)
 
 economy:
   gold: 500 # hold at least this much gold ...

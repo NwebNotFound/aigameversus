@@ -131,11 +131,16 @@ class Ledger:
             )
 
     async def output_tokens(self, model_ids: Sequence[str]) -> dict[str, tuple[int, float]]:
-        """For each of these models with reported answers: (answers, output tokens per answer)."""
+        """For each of these models with reported answers: (answers, output tokens per answer).
+
+        Only moves count: a chronicle (`chronicler`) or a qualification case (`q-<case>`) is
+        booked here too, but its answer is not a move's, and would skew a match's estimate.
+        """
         async with _reading():
             rows = await self._pool.fetch(
                 "SELECT model, count(*) AS answers, avg(output_tokens) AS mean FROM model_calls "
-                "WHERE model = ANY($1::text[]) AND output_tokens IS NOT NULL GROUP BY model",
+                "WHERE model = ANY($1::text[]) AND output_tokens IS NOT NULL "
+                "AND player <> 'chronicler' AND player NOT LIKE 'q-%' GROUP BY model",
                 list(model_ids),
             )
         return {row["model"]: (int(row["answers"]), float(row["mean"])) for row in rows}

@@ -47,7 +47,16 @@ export const actions: Actions = {
 				? catalog.data.models.filter((m) => m.reliability?.status === 'unreliable').map((m) => m.id)
 				: [];
 		const personalities = setup.state === 'ok' && setup.data.seat_personalities === true;
-		const parsed = parseForm(form, games.data, models, mixed, personalities, unreliable);
+		const seatOptions = setup.state === 'ok' ? (setup.data.seat_options ?? []) : [];
+		const parsed = parseForm(
+			form,
+			games.data,
+			models,
+			mixed,
+			personalities,
+			unreliable,
+			seatOptions
+		);
 		if (!parsed.ok) return fail(400, { values, errors: parsed.errors });
 
 		const roles = parsed.match.settings.roles as Record<string, number> | undefined;

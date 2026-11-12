@@ -125,7 +125,11 @@ Three ways:
   `POST /matches/estimate` takes `null` for a bot seat. A model seat may add
   `"personality": "<id>"` (see "A personality" below); a bot seat may not.
   `GET /setup` says `mixed_seats: true` and `seat_personalities: true` on a
-  server that takes them. Model
+  server that takes them.
+  In the new-match form each model seat has a "Configure" panel: options, presets, and copy
+  to one or all seats (`web/src/lib/seat-config.ts`, D-145). The form sends a changed option as
+  `options` only when `seat_options` in `GET /setup` lists it, next to a live estimate and the
+  worst case. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
   ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
@@ -205,6 +209,22 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   - Jev sees only what that player saw, its own thought and its own move.
   - The tags are unvalidated research data (`referee_runs`). GET answers only with
     `spoilers=true`, and nothing goes back into the match.
+- The AI-written chronicle (`arena/chronicle/ai.py`, D-140).
+  - `POST /matches/{id}/chronicle/ai {style, lang, model, confirm_spend}` has a model retell
+    the template chronicle of a finished match, in one call. It has the guards of a paid
+    match.
+  - The call is booked under its own uuid5 id, with a cap of EUR 0.03 for every retry
+    together. A worst case above that is refused before booking.
+  - Because of that id, the cost is in the month's total, but not under the match's
+    `/cost`.
+  - Estimates leave chronicle (`chronicler`) and qualification (`q-<case>`) answers out of
+    a model's history.
+  - Each chapter may add no name, number, card or role word. Events and verbs are not
+    checked. A chapter that does add one keeps its template text, and `checks` says why.
+  - No usable chapter is a failure (502), not cached, and may be retried. So may a running
+    row older than 10 minutes.
+  - The answer is labelled AI-written and cached in `ai_chronicles` per match, style,
+    language and model. `GET` serves the cached chronicle, free.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
@@ -327,8 +347,9 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
   times (seeds 1 to 3), every prompt a seat's model would get is built as the
   runner builds it and measured, and each seat is priced at its most
   expensive trial: prompt bytes / 3.5 as input tokens, one answer per prompt
-  at the model's mean output in the ledger (the output limit with fewer than
-  10 answers there), times 1.3 for corrections and retries. The answer has
+  at the model's mean output in the ledger (with fewer than 10 answers there,
+  the model's own output limit, as the budget books it: `call_options`), times
+  1.3 for corrections and retries. The answer has
   the month so far and whether the estimate fits the match cap and the month
   left, per seat its `basis` (`ledger history` or `output limit`), and in
   `high_price` the models above 10 USD per million output tokens. It takes
@@ -347,7 +368,7 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
 The system message is what the server says: who the player is, the game's
 rules (`rules.md`), how to answer. The user message is game data: the game's
 summary of the turn in `<summary>` if it has one, the observation in
-`<situation>`, the last 40 visible events in `<events>`, then the ask (with
+`<situation>`, the last 40 visible events (`GamePlugin.history_limit`: 120 for Civ, D-136) in `<events>`, then the ask (with
 the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
@@ -433,8 +454,11 @@ reversed.
 ### Storage and replay
 
 - `replay(plugin, events)` in `arena/engine/replay.py` returns the state after
-  a log, or after any prefix of it. It needs no seed and runs no rules. It
-  refuses a log recorded by another game or another plugin `version`.
+  a log, or after any prefix of it. It needs no seed and runs no rules. It reads
+  a log with the rules of the `version` its `match_started` recorded (version 1
+  when the field is missing): `plugin_for(plugin, start)` asks the game's
+  `at_version` (D-139). It refuses a log of another game, or of a version the
+  game no longer has.
 - `Match(..., sink=...)` hands over the new events once per completed turn, so
   a stored log never ends in the middle of a turn.
 - `EventStore` in `arena/db/event_store.py` keeps logs in the `match_events`
@@ -711,6 +735,11 @@ for one exact configuration (D-132, `arena/qualify/`).
   one real turn of p1 from a seeded random-bot match (`fixtures.py`). Only the
   first answer counts, judged by the engine's own check (`runner.py`).
 - The job is booked in the ledger under its own id. It leaves no match record.
+- `GET /qualifications/quote?model=&game=&answer_repair=` (free) says what a click would
+  send and reserve: the cases, the calls, the worst case and the caps. The model page
+  (`/models/[id]`) shows each game's status and quote, and a "Test this model" form. The
+  form needs a ticked spend box and a limit that holds the worst case; it is hidden for
+  spectators and on a server without model seats.
 - `GET /qualifications/current?model=&game=&answer_repair=` gives the status of
   that configuration now. A result counts only for its configuration hash, and
   for 7 days.
@@ -907,7 +936,19 @@ next to it says what each does and what the generator guarantees.
   The prompt settings (`games/civ/prompt.py`, D-135): `prompt_version`
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
-  and `your_plan_from_last_round` exist only when it is on).
+  and `your_plan_from_last_round` exist only when it is on). A Civ prompt shows 120 events, not 40 (D-136).
+  The rules are version 2 (`CivGame.version`, in every `match_started`):
+  domination counts once the world has 2 cities per nation (D-137), and a
+  food-short start region has one plains (D-138). Version 1 stays playable
+  (`RULES` in `plugin.py`, `CivGame("1")`), and a stored match is read with its own
+  version (D-139). A new rule or data change adds a version and keeps the old ones.
+  A balance sweep with random bots (no cost) is `uv run python -m
+  arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
+  its findings and the proposals D-137 and D-138.
+  `GET /matches/{id}/analytics` answers for Civ too (`arena/analytics/civ.py`,
+  `analytics_version: "civ/1"`). It gives per-round series per nation, battles,
+  conquests, diplomacy, orders, decision metrics and behaviour tags.
+  docs/METRICS.md defines them, and which need `spoilers=true`.
 
 How these follow the engine's rules, and what the next systems should copy:
 
@@ -950,6 +991,38 @@ has the rules; a plan spends nothing until it is approved.
 uv run python -m arena.research.experiment experiments/<name>.yaml > experiments/<name>_schedule.csv
 uv run pytest tests/research
 ```
+
+An explicit research stage (`PLAN.yaml` + `schedule.csv`: W2, C1) is played by
+`arena/research/stage_runner.py`, not by the generic runner. `--dry-run` gives the checks
+and estimates only.
+- **Before anything starts:** it refuses without the plan's recorded execution approval.
+  It also refuses a CSV with unknown columns, gaps in `order` or the wrong length, and a
+  guest plan whose CSV is not the schedule it generates.
+- **What it sends:** only whitelisted fields, never `expected_roles`.
+- **Before each start:**
+  - the month hold, and no other match running (one research match at a time);
+  - a fresh free estimate below the match limit, and the limit read back;
+  - the stage's spend over every attempt plus 3× that estimate within 90 %;
+  - the same spend plus the table's own limit (`match_budget_eur`) within the stage;
+  - no guest whose listed price has risen;
+  - not at the review checkpoint (`checkpoint_after`). Going on after it needs
+    `--release-checkpoint EVIDENCE`.
+- **After each match:** it holds on a failed match, a failed agent, a fallback share above
+  10 % (the guest's, else every model's), a wrong role, or a cost above
+  `max_cost_per_match_eur`. It never retries.
+- **Logs:** `<out>/attempts.jsonl` is written and fsynced before every POST. A restart
+  adopts a lost start by its batch label. If the arena shows none, it holds until
+  `--mark-unstarted ATTEMPT_ID EVIDENCE`; it never posts again on its own.
+- **Spend:** the stage's spend is read from the arena's batch history, so a new out folder
+  resets nothing.
+- **Paid runs:** they need `--pre-start-report` and `--arena-build`. One client runs at a
+  time across stages (the lock `<out>/../.stage-runner.lock`). A resume with a changed plan
+  or schedule is refused. While a match runs, a pause or a failed agent holds at once; the
+  match is not aborted. A row played outside the client (a directly approved smoke) is
+  named in `adopted_matches: {order: {match_id, evidence}}` and adopted, never replayed.
+- **`<out>/run.json`:** the hashes (client included), the evidence, the effective limit,
+  the reserve, every attempt with its body, quote, month and seat counts, and the stop
+  reasons.
 
 ### A system
 
