@@ -28,7 +28,9 @@ be played: High Card (`games/toy`), the reference plugin, Liar's Deck
 Throne of Tokens (`games/civ`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard, player
-profiles with their game statistics (`GET /profiles/{id}/stats`), the
+profiles with their game statistics (`GET /profiles/{id}/stats`), cross-match
+insights per model (`GET /insights`: win rate and placement with resampled intervals,
+head-to-head, cost, reliability; D-146, docs/METRICS.md), the
 Werewolf setup endpoints and `GET /setup` (models, personalities and cost
 caps for the form). The worker is a heartbeat placeholder, the web UI
 (`web/`, SvelteKit) has a home page, the leaderboard, player profiles and the

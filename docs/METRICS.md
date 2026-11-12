@@ -401,6 +401,33 @@ checked and false statements per player. Read it as a rate with its n, never as 
 a missed sentence is not counted, and a false statement may be a slip. Needs spoilers except for
 Werewolf claims a death has disproved.
 
+## Across matches (`GET /insights`, `insights/1`)
+
+Per model over its rated matches (`match_placements`) of one game, or of every game
+without `?game=`; demo profiles only with `demo=true`. Finished, rated matches only, so
+nothing in it is a spoiler.
+
+- **`win_rate`**: per match 1 for a win (rank 1), else 0; a model in several seats of
+  one match gets their mean, so the match counts once. `{value, low, high, n}`, `n` the
+  matches.
+- **`placement_score`**: `(players - rank) / (players - 1)` per seat, 1 for first and 0
+  for last, so tables of any size compare; per match the mean of the model's seats.
+- **Intervals**: the 95 % percentile interval of 2000 resamples of the model's matches,
+  each drawn whole (`arena/ratings/insights.py`). The resampling is seeded per model and
+  number, so the same data gives the same interval.
+- **`provisional`**: fewer than 10 matches (shown grey, not ranked).
+- **`head_to_head`**: every pair of models that shared a rated match. One result per
+  match: the model with the better mean rank of its seats there placed above; an equal
+  mean is a tie. `a_share` is `a_above / (a_above + b_above)` with a Wilson interval.
+  It is provisional below 10 matches together.
+- **`cost_per_match_micro_eur`**: the ledger's cost of the model's seats in these matches,
+  divided by its matches; null while the ledger cannot be read.
+- **`reliability`**: the model's verdict from `arena/db/reliability.py` (every game, its
+  newest moves): `status`, `fallback_share`, `cutoff_share`, `rate_limits_per_move`,
+  `rejected_rate`, `n`, `matches`, `warnings`.
+- Not yet: a rating interval, and the per-game behaviour numbers (lies, calls, treaties)
+  across matches.
+
 ## Played but not rated (`unrated`)
 
 `GET /leaderboard` (not for `kind=bots`) and `GET /models/{id}` list, per model and game,
