@@ -19,7 +19,8 @@ test('read-only, a running match shows no controls and the form is nowhere', asy
 	await expect(page.getByTestId('read-only')).toBeVisible();
 	for (const name of ['Pause', 'Resume', 'Abort'])
 		await expect(page.getByRole('button', { name })).toHaveCount(0);
-	await expect(page.getByLabel('Speed')).toHaveCount(0);
+	// The arena's controls are gone; the viewer's own playback speed stays (it changes nothing).
+	await expect(page.getByRole('group', { name: 'Controls' })).toHaveCount(0);
 	await expect(page.getByRole('navigation', { name: 'Main' }).getByText('New match')).toHaveCount(
 		0
 	);
