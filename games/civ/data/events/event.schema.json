@@ -133,7 +133,7 @@
     },
     "duration_rounds": {
       "default": 1,
-      "description": "1 = this round only",
+      "description": "Productions it holds, from the next round on (events strike after production)",
       "minimum": 1,
       "title": "Duration Rounds",
       "type": "integer"

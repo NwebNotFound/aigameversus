@@ -52,6 +52,23 @@ def test_domination_needs_half_the_cities_and_more_than_anyone_else():
     assert won.data["placements"][0] == {"player": "ada", "rank": 1}
 
 
+@pytest.mark.parametrize(
+    ("held", "winner"),
+    [
+        ({"ada": 2, "bo": 1, "cy": 1}, "ada"),  # exactly half, more than anyone else
+        ({"ada": 1, "bo": 1, "cy": 1, "di": 1}, None),  # a quarter
+        ({"ada": 2, "bo": 2}, None),  # half, but tied
+    ],
+)
+def test_domination_at_exactly_the_share(held, winner):
+    world = realm()
+    for owner, count in held.items():
+        cities(world, owner, count)
+
+    assert DATA.victory.domination.city_share == 0.5
+    assert victory.dominating(world.state, DATA) == winner
+
+
 def test_the_economic_countdown_is_public_and_resets_when_the_gold_drops():
     world = realm()
     cities(world, "ada", 1)

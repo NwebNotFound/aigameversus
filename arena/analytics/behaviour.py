@@ -33,6 +33,8 @@ RISK_TAKER_TIMES = 3
 RISK_TAKER_SHARE = 0.5  # and those risky lies are at least half of the plays at that risk
 RULE_BREAKER_ABOVE = 0.25  # rejected answers per own move
 REPLACED_ABOVE = 0.10  # share of moves the random bot played instead
+CUT_OFF_ABOVE = 0.10  # answers cut off at the output limit, per move
+THROTTLED_ABOVE = 0.20  # calls refused as too many requests, per move
 SLOW_FACTOR = 2.0  # median response time against the other seats' median
 QUICK_FACTOR = 0.5
 
@@ -45,6 +47,8 @@ LABELS = {
     "risk_taker": ("Risk-taker", "Risikofreudig"),
     "rule_breaker": ("Rule-breaker", "Regelbrecher"),
     "replaced": ("Often replaced by the bot", "Oft vom Bot ersetzt"),
+    "cut_off": ("Answers cut off", "Antworten abgeschnitten"),
+    "throttled": ("Often rate-limited", "Oft gedrosselt"),
     "slow": ("Slow to answer", "Antwortet langsam"),
     "quick": ("Quick to answer", "Antwortet schnell"),
 }
@@ -162,6 +166,8 @@ def liars_deck(
             # Refused answers and bot moves are private events: judged in the spectator view.
             tags.append(_rule_breaker(mine))
             tags.append(_replaced(totals))
+            tags.append(_cut_off(totals))
+            tags.append(_throttled(totals))
         tags.append(
             _rate_tag(
                 "cautious",
@@ -270,6 +276,48 @@ def _replaced(totals: dict) -> dict | None:
         share["of"],
         f"the random bot played {share['n']} of {share['of']} moves",
         f"der Zufallsbot spielte {share['n']} von {share['of']} Zügen",
+    )
+
+
+def _per_move(totals: dict, field: str, above: float) -> float | None:
+    moves = totals.get("moves") or 0
+    value = totals.get(field) or 0
+    return value / moves if moves >= MIN_N and value / moves > above else None
+
+
+def _cut_off(totals: dict) -> dict | None:
+    """Answers that ran into the output limit: a setting to raise, not a missing skill."""
+    rate = _per_move(totals, "cutoffs", CUT_OFF_ABOVE)
+    if rate is None:
+        return None
+    n, of = totals["cutoffs"], totals["moves"]
+    return _tag(
+        "cut_off",
+        "reliability",
+        True,
+        rate,
+        n,
+        of,
+        f"{n} answers in {of} moves ran into the output limit (a setting, not missing tools)",
+        f"{n} Antworten in {of} Zügen liefen ins Ausgabelimit (eine Einstellung, keine fehlenden Tools)",
+    )
+
+
+def _throttled(totals: dict) -> dict | None:
+    """Calls the provider refused as too many requests: the route, not the model."""
+    rate = _per_move(totals, "rate_limits", THROTTLED_ABOVE)
+    if rate is None:
+        return None
+    n, of = totals["rate_limits"], totals["moves"]
+    return _tag(
+        "throttled",
+        "reliability",
+        True,
+        rate,
+        n,
+        of,
+        f"{n} calls in {of} moves were refused as too many requests (the provider route)",
+        f"{n} Aufrufe in {of} Zügen wurden als zu viele Anfragen abgelehnt (der Anbieterweg)",
     )
 
 
