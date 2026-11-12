@@ -908,6 +908,10 @@ next to it says what each does and what the generator guarantees.
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
   and `your_plan_from_last_round` exist only when it is on).
+  The rules are version 2 (`CivGame.version`, in every `match_started`):
+  domination counts once the world has 2 cities per nation (D-137), and a
+  food-short start region has one plains (D-138). A log of version 1 no longer
+  replays; bump the version again with any rule or data change.
   A balance sweep with random bots (no cost) is `uv run python -m
   arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
   its findings and the proposals D-137 and D-138.

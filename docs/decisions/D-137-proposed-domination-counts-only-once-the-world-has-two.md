@@ -1,9 +1,9 @@
 # D-137 · Proposed: domination counts only once the world has two cities per nation
 
 - **Date:** 2026-11-12
-- **Status:** proposed, not in force. The rules are unchanged until the lead
-  accepts this (research/civ-balance.md has the numbers).
-- **Decision:** Proposed, not in force: a domination victory is checked only when the world holds at
+- **Status:** accepted by the lead on 2026-11-12, in force from Throne of Tokens
+  version 2 (`CivGame.version`, recorded in `match_started`).
+- **Decision:** A domination victory is checked only when the world holds at
   least two cities per nation (8 for four nations), as a number in
   `victory.yaml`: `domination.min_cities_per_nation: 2`. Nothing else changes.
 - **Why:** In the bot sweep, 10 of 80 four-nation matches of 60 rounds end by

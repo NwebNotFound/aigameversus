@@ -40,7 +40,7 @@ DATA = load_civ_data()
 class CivGame(GamePlugin[CivState]):
     id = "civ"
     name = "Throne of Tokens"
-    version = "1"
+    version = "2"  # rules: D-137 (domination needs 2 cities per nation), D-138 (food region)
     min_players = DATA.balance.map.nations.min
     max_players = DATA.balance.map.nations.max
     turn_mode = TurnMode.SIMULTANEOUS

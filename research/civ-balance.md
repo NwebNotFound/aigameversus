@@ -148,3 +148,34 @@ Trials in memory, not in the rules (scripts not kept, the numbers are for the pr
 | domination only with 2 cities per nation (D-137) | 4 nations, 60 rounds: 7 dominations, from round 18 on (was from round 7) |
 | food-short region: one plains instead of a forest (D-138) | food-short rank 2.64 -> 2.33 (4 nations), 3.30 -> 3.06 (5), 3.92 -> 3.79 (6) |
 | gold-short region: one river instead of a hills | gold-short rank 2.85 -> 2.81 (4), 3.20 -> 3.23 (5): no effect, not proposed |
+
+## After the rule changes (Throne of Tokens version 2)
+
+Lead accepted D-137 (domination only once the world has 2 cities per nation) and
+D-138 (one plains for a food-short start region) on 2026-11-12. The same sweep, same
+seeds, bots only, on version 2:
+
+| table | matches | round limit / domination / economy | mean rounds | dropped orders | countdown reached (best) | eliminated | neutral cities | barbarian conquests | median score gap 1st-2nd |
+|---|---|---|---|---|---|---|---|---|---|
+| 4x60 | 20 | 16 / 3 / 1 | 53.0 | 2.2% | 1 (5) | 0.15 | 0.75 | 0.75 | 27.5 |
+| 5x60 | 20 | 17 / 0 / 3 | 58.1 | 2.1% | 4 (5) | 0.45 | 1.45 | 1.45 | 18.5 |
+| 6x60 | 20 | 18 / 0 / 2 | 59.0 | 2.8% | 2 (5) | 0.15 | 1.1 | 1.1 | 13.5 |
+| 4x20 | 20 | 19 / 1 / 0 | 19.8 | 1.1% | 0 (0) | 0.15 | 0.35 | 0.35 | 11.0 |
+| 5x20 | 20 | 20 / 0 / 0 | 20 | 1.2% | 0 (0) | 0.3 | 0.85 | 0.85 | 9.0 |
+| 6x20 | 20 | 20 / 0 / 0 | 20 | 1.7% | 0 (0) | 0.1 | 0.65 | 0.65 | 6.0 |
+
+Against the targets, 80 seeds each:
+
+| Target | Before (version 1) | After (version 2) | Verdict |
+|---|---|---|---|
+| No domination win before round ~15, 4 nations, 60 rounds | 10 dominations, at rounds 7, 9, 14, 15, 18, 18, 20, 21, 26, 43 | 12 dominations, at rounds 12, 15, 20, 22, 24, 24, 25, 33, 33, 42, 49, 50 | Mostly met: the earliest is round 12 (was 7), the next 15; wins come later but slightly more often |
+| Food-short penalty gone, 4 nations, 20 rounds (food / gold / iron / wood) | 2.64 / 2.85 / 2.20 / 2.23 | 2.45 / 3.00 / 2.17 / 2.35 | Gone with 4 nations: food sits between iron and wood |
+| ... 5 nations, 20 rounds | 3.30 / 3.20 / 2.71 / 2.60 | 3.13 / 3.31 / 2.77 / 2.58 | Smaller, not gone |
+| ... 6 nations, 20 rounds | 3.92 / 3.90 / 2.95 / 3.16 | 3.66 / 3.93 / 3.08 / 3.17 | Smaller, not gone |
+| ... 4 nations, 60 rounds | 2.69 / 2.71 / 2.27 / 2.21 | 2.58 / 2.90 / 2.36 / 2.08 | Smaller, not gone |
+| Still no seat bias | 4x20: 2.39, 2.59, 2.41, 2.52 | 4x20: 2.58, 2.36, 2.65, 2.39; 5x20 and 6x20 flat within 0.2 except p3 with 6 (3.81) | No consistent seat: the best seat changes from table to table |
+
+Also new: the economic victory now happens in four-nation 60-round matches (5 of 80,
+was 0), probably because food-short nations grow more. Gold-short start regions stay
+the weakest (0.5 to 0.9 places behind iron- or wood-short ones); D-138 leaves them
+open on purpose.

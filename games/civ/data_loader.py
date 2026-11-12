@@ -209,6 +209,9 @@ class TreatiesFile(_Model):
 
 class Domination(_Model):
     city_share: Annotated[float, Field(gt=0, le=1)]
+    min_cities_per_nation: Annotated[int, Field(ge=0)] = Field(
+        0, description="domination counts once the world has this many cities per nation"
+    )
 
 
 class Economy(_Model):
