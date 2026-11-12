@@ -34,6 +34,9 @@
 				<th scope="col">Calls: right · wrong</th>
 				<th scope="col" class="num">Lie rate</th>
 				<th scope="col" class="num">Call accuracy</th>
+				<th scope="col" class="num" title="Refused answers fixed on retry · moves the engine played"
+					>Retries · random</th
+				>
 			</tr>
 		</thead>
 		<tbody>
@@ -70,6 +73,14 @@
 						>{pct(t.lie_rate?.value)}</td
 					>
 					<td class="num" title={rateTitle(t.call_accuracy)}>{pct(t.call_accuracy?.value)}</td>
+					<td
+						class="num quality"
+						data-testid="answer-quality"
+						title="{t.rejected} refused {t.rejected === 1
+							? 'answer'
+							: 'answers'}, {t.fallbacks} random {t.fallbacks === 1 ? 'move' : 'moves'}"
+						>{t.rejected} · <span class:random={t.fallbacks > 0}>{t.fallbacks}</span></td
+					>
 				</tr>
 			{/each}
 		</tbody>
@@ -80,7 +91,10 @@
 			spectator view.
 		</p>
 	{/if}
-	<p class="note">Moves the engine played for a model (random fallbacks) are not counted here.</p>
+	<p class="note">
+		Retries are answers the engine refused and the model fixed: a measure of answer quality. Random
+		moves (the engine played for a model) are not counted in the other columns.
+	</p>
 </figure>
 
 <style>
@@ -153,9 +167,20 @@
 		background: color-mix(in srgb, var(--accent) 35%, #3a3346);
 	}
 
+	.quality {
+		color: var(--muted);
+	}
+
+	.random {
+		color: var(--danger);
+		font-weight: 650;
+	}
+
 	@media (max-width: 30rem) {
 		thead th:nth-child(5),
-		tbody td:nth-child(5) {
+		tbody td:nth-child(5),
+		thead th:nth-child(6),
+		tbody td:nth-child(6) {
 			display: none;
 		}
 	}
