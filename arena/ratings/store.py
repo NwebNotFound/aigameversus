@@ -23,7 +23,8 @@ class Usage:
     cost_micro_eur: int | None = 0  # None while the ledger cannot be read
     accepted: int = 0  # answers the server took
     rejected: int = 0  # answers the server refused (a wrong tool, bad arguments, an illegal move)
-    repaired: int = 0  # moves whose call was garbled and read anyway (answer_repair); in `accepted`
+    # moves taken as answers whose garbled call was read anyway (answer_repair); at most `accepted`
+    repaired: int = 0
 
 
 @dataclass(frozen=True)
@@ -290,6 +291,7 @@ class RatingStore:
             "  count(*) FILTER (WHERE e.type = 'action_accepted') AS accepted, "
             "  count(*) FILTER (WHERE e.type = 'action_rejected') AS rejected, "
             "  count(*) FILTER (WHERE e.type = 'decision' "
+            "    AND e.data->>'fallback' IS NULL "  # a random move is no repaired answer
             "    AND jsonb_typeof(e.data->'repairs') = 'array' "
             "    AND jsonb_array_length(e.data->'repairs') > 0) AS repaired "
             "FROM seats s JOIN match_events e ON e.match_id = s.match_id "

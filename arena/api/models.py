@@ -39,7 +39,8 @@ class UsageOut(BaseModel):
     answers: int = Field(description="Answers the server took or refused")
     tool_error_rate: float | None = Field(description="Refused answers over all answers")
     repaired_rate: float | None = Field(
-        description="Answers that were a garbled call read anyway, over all answers"
+        description="Moves taken from a garbled call read anyway (refused counts attempts, "
+        "repaired and clean count moves taken), over all answers"
     )
     clean_rate: float | None = Field(
         description="Answers taken exactly as sent (refused + repaired + clean = 1)"

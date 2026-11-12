@@ -66,6 +66,7 @@ class LeaderboardRow(StandingOut):
     repaired_rate: float | None = Field(
         None,
         description="Share of answers that were a garbled call read anyway (answer_repair); "
+        "refused counts refused attempts, repaired and clean count moves taken; "
         "refused + repaired + clean = 1",
     )
     clean_rate: float | None = Field(
