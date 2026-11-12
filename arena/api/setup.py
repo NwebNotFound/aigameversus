@@ -10,6 +10,7 @@ from arena.agents.budget import MICRO
 from arena.api.matches import ALLOW_MODEL_SEATS
 from arena.config import display_name, load_config, load_keys
 from arena.engine.types import ANSWER_REPAIR_VERSIONS
+from arena.jev.client import ALLOW_JEV
 from arena.personalities import Personality, load_personalities
 
 router = APIRouter(tags=["setup"])
@@ -36,7 +37,8 @@ class SetupOptions(BaseModel):
     )
     answer_repair: list[str] = Field(
         default_factory=lambda: list(ANSWER_REPAIR_VERSIONS),
-        description="The values the match setting `answer_repair` takes; the first is the default",
+        description="The values the match setting `answer_repair` takes here; the first is "
+        'the default. "v2" (Jev) only on a server started with ARENA_ALLOW_JEV=1',
     )
     seat_personalities: bool = Field(
         True, description="Whether a model seat in `seats` may name a personality"
@@ -55,8 +57,10 @@ def setup_options() -> SetupOptions:
     """Models, personalities and cost caps for the new-match form."""
     config = load_config()
     allowed = os.environ.get(ALLOW_MODEL_SEATS) == "1" and not load_keys(config, config.models)
+    jev = os.environ.get(ALLOW_JEV) == "1"  # POST /matches refuses "v2" otherwise
     return SetupOptions(
         model_seats=allowed,
+        answer_repair=[v for v in ANSWER_REPAIR_VERSIONS if jev or v != "v2"],
         models=[
             ModelOption(
                 id=key,

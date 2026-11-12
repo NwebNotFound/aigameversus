@@ -25,6 +25,7 @@ from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import MATCH_BUDGET, Event, match_budget_of
+from arena.jev.client import ALLOW_JEV
 from arena.personalities import load_personalities
 
 router = APIRouter(tags=["matches"])
@@ -130,6 +131,12 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
     if MATCH_BUDGET in new.settings:
         _check_match_budget(new.settings[MATCH_BUDGET])
+    if new.settings.get("answer_repair") == "v2" and os.environ.get(ALLOW_JEV) != "1":
+        raise HTTPException(
+            403,
+            'answer_repair "v2" asks Jev to repair broken calls, which is off on this server. '
+            f"Start it with {ALLOW_JEV}=1 to allow it.",
+        )
     if new.models is not None and new.seats is not None:
         raise HTTPException(422, "Name the seats with `seats` or with `models`, not both.")
     models = None

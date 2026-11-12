@@ -28,6 +28,9 @@ from arena.engine.types import (
     MatchPaused,
     Placement,
     PlayerId,
+    Repairer,
+    RepairOutcome,
+    RepairRequest,
     Reply,
     ToolSpec,
     TurnMode,
@@ -38,6 +41,7 @@ from arena.engine.types import (
 )
 
 MAX_CORRECTIONS = 2  # retries after a rejected action, before the random fallback plays
+REPAIR_SAMPLES = 64  # random legal moves drawn as a Repairer's candidates
 DEFAULT_TURN_TIMEOUT = 60.0  # seconds a player has for one turn, corrections included
 
 # Postgres cannot store these in JSON text: NUL and halves of a surrogate pair.
@@ -75,6 +79,7 @@ class Match[StateT: BaseModel]:
         turn_timeout: float = DEFAULT_TURN_TIMEOUT,
         max_turns: int | None = None,
         clock: Callable[[], float] | None = None,
+        repairer: Repairer | None = None,
         personalities: Mapping[PlayerId, str] | None = None,
     ):
         """`clock` (seconds, e.g. time.monotonic) times every move into its `decision` event.
@@ -110,6 +115,7 @@ class Match[StateT: BaseModel]:
         self._sink = sink
         self._turn_timeout = turn_timeout
         self._clock = clock
+        self._repairer = repairer  # tier 2 of answer_repair "v2" (arena/jev/repair.py)
         self._personalities = dict(personalities or {})
         self._max_turns = plugin.max_turns if max_turns is None else max_turns
         self._turns = 0  # completed turns
@@ -254,6 +260,14 @@ class Match[StateT: BaseModel]:
                     )
                 )
 
+        jev = None
+        if reason == "rejected" and self._repairer is not None and repair_of(self.settings) == "v2":
+            # Still broken after the corrections: which legal move did the model mean?
+            repaired, jev = await self._repair(player, observation, tools, trail, answers)
+            if repaired is not None:
+                trail.append(self._decision(player, started, answers, None, jev=jev))
+                return repaired, trail
+
         action = plugin.random_action(
             observation, tools, derive_rng(self.seed, "fallback", player, self._game_events)
         )
@@ -272,8 +286,70 @@ class Match[StateT: BaseModel]:
                 visible_to=(player,),
             )
         )
-        trail.append(self._decision(player, started, answers, reason))
+        trail.append(self._decision(player, started, answers, reason, jev=jev))
         return action, trail
+
+    async def _repair(
+        self,
+        player: PlayerId,
+        observation: dict[str, Any],
+        tools: list[ToolSpec],
+        trail: list[Event],
+        answers: list[AnswerStats | None],
+    ) -> tuple[Action | None, dict[str, Any]]:
+        """Ask the Repairer to map the broken call to a legal move; the move and the verdict.
+
+        The candidates are the game's own random legal moves, drawn from a stream of their
+        own and checked here, so the game's randomness is untouched and the Repairer can
+        only pick a legal move. Its pick is checked again before it is played.
+        """
+        assert self._repairer is not None
+        plugin = self.plugin
+        rng = derive_rng(self.seed, "repair", player, self._game_events)
+        candidates = []
+        for _ in range(getattr(self._repairer, "samples", REPAIR_SAMPLES)):
+            candidate = plugin.random_action(observation, tools, rng)
+            if self._check(player, candidate, tools) is None:
+                candidates.append(candidate)
+        request = RepairRequest(
+            game=plugin.name,
+            player=player,
+            observation=observation,
+            tools=tools,
+            summary=plugin.situation_summary(observation, game_settings(self.settings)),
+            thought=next((e.data["text"] for e in reversed(trail) if e.type == "thought"), None),
+            attempts=[e.data for e in trail if e.type == "action_rejected"],
+            raw=[s.raw_arguments for s in answers if s is not None and s.raw_arguments],
+        )
+        try:
+            outcome = await self._repairer.repair(request, candidates)
+        except MatchPaused:
+            raise  # a cap reached by Jev's booking pauses the match, as a model call's does
+        except Exception:  # an alpha API: whatever else goes wrong, the random fallback plays
+            outcome = RepairOutcome(action=None, reason="error")
+        verdict = {
+            "reason": outcome.reason,
+            "top_probability": outcome.top_probability,
+            "options": outcome.options,
+        }
+        if outcome.action is None:
+            return None, verdict
+        if self._check(player, outcome.action, tools) is not None:
+            return None, verdict | {"reason": "illegal"}
+        trail.append(
+            _engine_event(
+                "action_accepted",
+                {
+                    "player": player,
+                    "tool": outcome.action.tool,
+                    "arguments": outcome.action.arguments,
+                    "repaired_by": "jev",
+                    "top_probability": outcome.top_probability,
+                },
+                visible_to=(player,),
+            )
+        )
+        return outcome.action, verdict
 
     def _decision(
         self,
@@ -281,6 +357,8 @@ class Match[StateT: BaseModel]:
         started: float | None,
         answers: list[AnswerStats | None],
         fallback: str | None,
+        *,
+        jev: dict[str, Any] | None = None,
     ) -> Event:
         """What a move took: time, tokens, calls tried again, and the fallback if one played.
 
@@ -315,6 +393,8 @@ class Match[StateT: BaseModel]:
                 "repairs": sorted({repair for stats in reported for repair in stats.repairs}),
                 "raw_arguments": [s.raw_arguments for s in reported if s.raw_arguments],
                 "simple_schema": any(stats.simple_schema for stats in reported),
+                # Only when tier 2 was asked: its verdict, and whether it played the move.
+                **({"jev": jev} if jev is not None else {}),
             },
             visible_to=(),
         )
