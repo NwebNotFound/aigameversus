@@ -5,6 +5,7 @@ import {
 	chapterLabel,
 	commentary,
 	langOf,
+	attempts,
 	mentionParts,
 	mergeSeats,
 	namedText,
@@ -351,5 +352,86 @@ describe('mentionParts', () => {
 			'p3'
 		]);
 		expect(parts.map((p) => p.text).join('')).toBe('P3 bluffs; p4 called p3.');
+	});
+});
+
+describe('mentions with what a language glues to them', () => {
+	const seats = withDisplayNames(['p1', 'p2', 'p3', 'p4'], {
+		p1: { name: 'gpt-luna', model: 'gpt-luna', kind: 'model' },
+		p2: { name: 'mistral-small', model: 'mistral-small', kind: 'model' },
+		p3: { name: 'deepseek-flash', model: 'deepseek-flash', kind: 'model' },
+		p4: { name: 'gemini-flash-lite', model: 'gemini-flash-lite', kind: 'model' }
+	});
+	const seatsOf = (text: string) =>
+		mentionParts(text, seats).flatMap((p) => ('seat' in p ? [p.seat] : []));
+
+	it('takes "Auf p4s Frage" as p4, with the "s" left as text', () => {
+		expect(mentionParts('Auf p4s Frage: …', seats)).toEqual([
+			{ text: 'Auf ' },
+			{ seat: 'p4', text: 'p4' },
+			{ text: 's Frage: …' }
+		]);
+	});
+
+	it("takes p3's vote, p4’s, p4-Antwort and p4: as mentions", () => {
+		expect(seatsOf("p3's vote")).toEqual(['p3']);
+		expect(seatsOf('p4’s turn, p4-Antwort, p4: yes')).toEqual(['p4', 'p4', 'p4']);
+	});
+
+	it('reads upper case and lists', () => {
+		expect(seatsOf('P4 lügt; p1/p2/p3 stimmen')).toEqual(['p4', 'p1', 'p2', 'p3']);
+	});
+
+	it('leaves seats not in the match, ids inside words and longer numbers alone', () => {
+		expect(seatsOf('p9, mp3, top2, p41')).toEqual([]);
+	});
+
+	it('names plain text by the same rule', () => {
+		expect(namedText('Auf p4s Frage', seats)).toBe('Auf gemini-flash-lites Frage');
+		expect(namedText('P2 calls p9', seats)).toBe('mistral-small calls p9');
+	});
+});
+
+describe('attempts', () => {
+	const at = (kind: TranscriptLine['kind'], type: string, actor = 'p2'): TranscriptLine => ({
+		seq: 0,
+		kind,
+		actor,
+		text: type,
+		detail: null,
+		importance: kind === 'info' ? 2 : 2,
+		raw: { type }
+	});
+
+	it("folds a refused attempt's thought and marks the move that counted", () => {
+		// The shape of gpt-luna's flop check in Nils' Poker match: two refusals, then a check.
+		const lines = [
+			at('thought', 'thought'),
+			at('info', 'action_rejected'),
+			at('thought', 'thought'),
+			at('info', 'action_rejected'),
+			at('thought', 'thought'),
+			at('info', 'action_accepted'),
+			at('action', 'bet_action'),
+			at('thought', 'thought', 'p1'),
+			at('action', 'bet_action', 'p1')
+		];
+		const { hidden, marks } = attempts(lines);
+		expect([...hidden]).toEqual([lines[0], lines[2]]);
+		expect(marks.get(lines[6])).toEqual({ retries: 2, fallback: false });
+		expect(marks.has(lines[8])).toBe(false);
+	});
+
+	it('marks a random fallback', () => {
+		const lines = [
+			at('info', 'action_rejected'),
+			at('info', 'action_fallback'),
+			at('action', 'bet_action'),
+			at('info', 'agent_failed', 'p1'),
+			at('action', 'bet_action', 'p1')
+		];
+		const { marks } = attempts(lines);
+		expect(marks.get(lines[2])).toEqual({ retries: 1, fallback: true });
+		expect(marks.get(lines[4])).toEqual({ retries: 0, fallback: true });
 	});
 });

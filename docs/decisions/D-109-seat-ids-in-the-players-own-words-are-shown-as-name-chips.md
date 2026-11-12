@@ -5,6 +5,8 @@
   "p2, two kings with your history?". In speech, whisper and thought bubbles,
   the web draws each such id as that seat's name chip: its avatar, colour and
   display name (`mentionParts`, `Mention.svelte`).
+  - What a language glues to an id stays text after the chip ("p4s Frage",
+    "p3's vote", "p4-Antwort", "p4:"); upper case and lists ("P4", "p1/p2") count too.
   - Only seats of the match count: "p9" in a four-seat match, or "top2",
     stays text.
   - A "Show raw words" switch in the commentary shows the words exactly as
@@ -20,3 +22,6 @@
 - **Alternatives:** Model names in the prompts (bias); replacing the ids with
   plain names in the bubbles (it hides that the model wrote an id, and the
   chip shows whom it meant at a glance).
+  The players' little markup (**bold**, *italic*, "- " lists, paragraphs, a bold-only line
+  as a reasoning-step label) is drawn from a parsed tree element by element, never as HTML;
+  chips work inside it, and the raw switch shows the text with its markup.

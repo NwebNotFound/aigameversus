@@ -53,12 +53,12 @@ class _Measured:
 
 async def estimate(
     plugin: GamePlugin,
-    seats: Mapping[PlayerId, str],
+    seats: Mapping[PlayerId, str | None],
     settings: Mapping[str, Any],
     config: Config,
     output_history: Mapping[str, tuple[int, float]],
 ) -> dict[PlayerId, SeatEstimate]:
-    """The estimated cost of every seat: seat -> model id from config/models.yaml.
+    """The estimated cost of every model seat: seat -> model id, None for a bot seat.
 
     `output_history` is what the ledger knows: model id -> (answers, mean output tokens).
     A model with fewer than HISTORY_MIN answers is counted at the output limit, the most
@@ -70,6 +70,8 @@ async def estimate(
         agents = {seat: _Measured(bots[seat], plugin, settings) for seat in seats}
         await Match(plugin, agents, seed=seed, settings=settings).run()
         for seat, model_id in seats.items():
+            if model_id is None:  # a bot seat plays, so the others' prompts are real, but is free
+                continue
             priced = _priced(config, model_id, agents[seat].sizes, output_history)
             if seat not in worst or priced.estimate_micro_eur > worst[seat].estimate_micro_eur:
                 worst[seat] = priced

@@ -6,13 +6,14 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	const arena = createArenaClient(ARENA_API_URL, fetch);
-	const [games, setup, werewolfRoles, month] = await Promise.all([
+	const [games, setup, werewolfRoles, month, catalog] = await Promise.all([
 		arena.games(),
 		arena.setup(),
 		arena.werewolfRoles(),
-		arena.monthSpend()
+		arena.monthSpend(),
+		arena.catalog()
 	]);
-	return { games, setup, werewolfRoles, month };
+	return { games, setup, werewolfRoles, month, catalog };
 };
 
 export const actions: Actions = {
@@ -30,9 +31,18 @@ export const actions: Actions = {
 		}
 		// The models a seat may take: none unless the server allows paid matches.
 		const setup = await arena.setup();
-		const models =
-			setup.state === 'ok' && setup.data.model_seats ? setup.data.models.map((m) => m.id) : [];
-		const parsed = parseForm(form, games.data, models);
+		// Any model of the catalog may take a seat; without the catalog, the verified ones.
+		const catalog = await arena.catalog();
+		const allowed = setup.state === 'ok' && setup.data.model_seats;
+		const models = !allowed
+			? []
+			: catalog.state === 'ok'
+				? catalog.data.models.map((m) => m.id)
+				: setup.state === 'ok'
+					? setup.data.models.map((m) => m.id)
+					: [];
+		const mixed = setup.state === 'ok' && setup.data.mixed_seats === true;
+		const parsed = parseForm(form, games.data, models, mixed);
 		if (!parsed.ok) return fail(400, { values, errors: parsed.errors });
 
 		const roles = parsed.match.settings.roles as Record<string, number> | undefined;

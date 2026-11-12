@@ -22,6 +22,7 @@ class Usage:
 
     input_tokens: int
     output_tokens: int
+    reasoning_tokens: int | None = None  # the part of the output spent thinking, if reported
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,9 @@ class ModelReply:
     tool_calls: tuple[ToolCall, ...] = ()
     usage: Usage | None = None  # None: the provider did not say
     cut_off: bool = False  # the answer ran into the output limit before it was finished
+
+
+RATE_LIMITED = "RateLimitError"  # the reason of a call the provider refused: too many requests
 
 
 class ModelError(Exception):

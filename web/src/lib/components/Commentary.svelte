@@ -3,11 +3,11 @@
 	import type { Seat, TranscriptLine } from '#lib/api.js';
 	import { card } from '#lib/boards/pokerTable.js';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import Mention from '#lib/components/Mention.svelte';
+	import RichText from '#lib/components/RichText.svelte';
 	import {
+		attempts,
 		colourKey,
 		commentary,
-		mentionParts,
 		ordinal,
 		seatModel,
 		seatName,
@@ -41,8 +41,11 @@
 	let list = $state<HTMLOListElement>();
 	let pinned = true;
 
+	/** Refused answers fold into a small marker on the move that counted. */
+	const tries = $derived(attempts(lines));
 	const shown = $derived(
 		commentary(lines, bookkeeping)
+			.filter((line) => bookkeeping || !tries.hidden.has(line))
 			.filter((line) => tab === 'all' || line.kind === 'thought' || line.kind === 'whisper')
 			.filter((line) => who === 'all' || line.actor === who)
 	);
@@ -67,6 +70,29 @@
 		);
 	const colour = (seat: string) => colourKey(seat, players);
 </script>
+
+{#snippet retry(line: TranscriptLine)}
+	{@const a = tries.marks.get(line)}
+	{#if a?.fallback}
+		<span
+			class="retry fallback"
+			data-testid="fallback-mark"
+			title="No usable answer from {name(line.actor)}: the engine played a random move"
+			>random move</span
+		>
+	{:else if a}
+		<span
+			class="retry"
+			data-testid="retry-mark"
+			title="{name(line.actor)}'s first {a.retries > 1
+				? `${a.retries} answers were`
+				: 'answer was'} malformed, fixed on retry"
+			><svg viewBox="0 0 12 12" aria-hidden="true"
+				><path d="M9.5 6a3.5 3.5 0 1 1-1-2.5M9.5 1.5v2.2H7.3" /></svg
+			>retry{a.retries > 1 ? ` ×${a.retries}` : ''}</span
+		>
+	{/if}
+{/snippet}
 
 <section class="commentary" aria-labelledby="commentary-title">
 	<header>
@@ -127,16 +153,14 @@
 							{:else if line.kind === 'whisper'}
 								<span class="tag whisper-tag">whispers</span>
 							{/if}
+							{@render retry(line)}
 						</span>
-						<p class="bubble">
-							{#if raw}{words(line) ??
-									line.text}{:else}{#each mentionParts(words(line) ?? line.text, players) as part, i (i)}{#if 'seat' in part}<Mention
-											seat={part.seat}
-											name={name(part.seat)}
-											colourKey={colour(part.seat)}
-											written={part.text}
-										/>{:else}{part.text}{/if}{/each}{/if}
-						</p>
+						<div class="bubble">
+							{#if raw}<span class="raw-words">{words(line) ?? line.text}</span>{:else}<RichText
+									text={words(line) ?? line.text}
+									{players}
+								/>{/if}
+						</div>
 					</div>
 				{:else if line.raw?.type === 'match_finished' && ranksOf(line).length}
 					<div class="final" data-testid="final-ranks">
@@ -180,7 +204,7 @@
 						<Avatar name={name(line.actor)} colourKey={colour(line.actor)} size={24} />
 					{/if}
 					<div class="told">
-						<span>{line.text}</span>
+						<span>{line.text}{@render retry(line)}</span>
 						{#if line.detail}<small>{line.detail}</small>{/if}
 					</div>
 				{/if}
@@ -261,6 +285,35 @@
 		border-color: var(--accent);
 	}
 
+	.retry {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		margin-left: 0.4rem;
+		padding: 0 0.4rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		font-size: 0.7rem;
+		font-weight: 500;
+		color: var(--muted);
+		vertical-align: 0.1em;
+		cursor: help;
+	}
+
+	.retry svg {
+		width: 0.7rem;
+		height: 0.7rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.4;
+		stroke-linecap: round;
+	}
+
+	.retry.fallback {
+		color: var(--danger);
+		border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+	}
+
 	.feed {
 		flex: 1;
 		min-height: 0;
@@ -327,6 +380,10 @@
 		color: var(--muted);
 	}
 
+	.raw-words {
+		white-space: pre-wrap;
+	}
+
 	.bubble {
 		margin: 0;
 		padding: 0.5rem 0.75rem;
@@ -336,18 +393,19 @@
 		line-height: 1.4;
 	}
 
-	.speech .bubble::before {
-		content: '“';
-		color: var(--accent);
-		font-weight: 700;
-		margin-right: 0.1rem;
+	/* Speech: one hanging opening quote, so text of several paragraphs still reads as said. */
+	.speech .bubble {
+		position: relative;
+		padding-left: 1.1rem;
 	}
 
-	.speech .bubble::after {
-		content: '”';
+	.speech .bubble::before {
+		content: '“';
+		position: absolute;
+		left: 0.4rem;
+		top: 0.35rem;
 		color: var(--accent);
 		font-weight: 700;
-		margin-left: 0.1rem;
 	}
 
 	/* A thought is never a bubble: a dashed, tinted cloud with a lock. */
