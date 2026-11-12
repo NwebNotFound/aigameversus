@@ -30,7 +30,8 @@ Before every start, all of these must hold, or it holds and reports (exit 3):
 After every match it holds on a failed, interrupted or aborted match, a failed agent, a
 fallback share above 10 % (the guest's, or with no guest column every model's), a guest
 not dealt its planned role (with `expected_role`), or a match that cost more than
-`budget.max_cost_per_match_eur`, or more than `budget.cost_jump_factor` (required for a paid run, >= 1) x the estimate it
+`budget.max_cost_per_match_eur`, or more than `budget.cost_jump_factor` (required for a
+paid run, at least 1) x the estimate it
 started with (a cost jump); a match still running after `--max-wait` holds too.
 `<out>/run.json` keeps the effective limit, the reserve
 and every attempt's booked cost.
