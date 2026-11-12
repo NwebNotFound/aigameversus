@@ -7,7 +7,7 @@ of the prompt proposal):
 - `prompt_version`: `civ-p1` (the baseline: `rules.md` and the observation) or `civ-p2` (the same
   rules plus a short summary above the situation, worked out from the observation only: the
   standing in each way to win, what can be done now, what was refused, who is near).
-- `strategy_text`: `off` or `v1`, one neutral paragraph about playing for the whole match, the
+- `strategy_text`: `off` or `v1`, one strategy paragraph about playing for the whole match, the
   same words for every model.
 - `private_plan`: `off` or `on`, whether `submit_orders` takes a `plan` that comes back to the
   nation next round (the plugin removes the field when it is off).

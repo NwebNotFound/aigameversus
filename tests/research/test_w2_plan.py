@@ -51,7 +51,9 @@ def test_proposal_does_not_grant_execution_or_increase_allocation(plan):
     assert all(quote < 400_000 for quote in plan["free_quotes_micro_eur"].values())
     assert plan["settings"]["answer_repair"] == "off"
     assert plan["budget"]["stage_eur"] == 3.50
-    assert plan["budget"]["match_cap_eur"] <= 0.50
+    assert plan["settings"]["match_budget_eur"] == plan["budget"]["match_cap_eur"] == 0.40
+    assert plan["max_matches"] * plan["budget"]["match_cap_eur"] <= plan["budget"]["stage_eur"]
+    assert len(plan["prerequisites"]) == len(set(plan["prerequisites"]))
     assert 2 * sum(plan["free_quotes_micro_eur"].values()) / 1_000_000 == pytest.approx(
         plan["budget"]["estimated_eight_matches_eur"]
     )
