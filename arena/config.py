@@ -67,6 +67,10 @@ class ReliabilityRules(_Strict):
     fallback_above: Decimal = Field(Decimal("0.5"), ge=0, le=1)  # share of bot moves
     cut_off_above: Decimal = Field(Decimal("0.1"), ge=0, le=1)  # share of cut-off moves
     throttled_above: Decimal = Field(Decimal("0.2"), ge=0)  # rate-limited calls per move
+    # the warning that cut-offs explain the refusals: more than this share of the refused
+    # answers ran into the output limit, with at least `cut_off_dominates_min` of them
+    cut_off_dominates_above: Decimal = Field(Decimal("0.5"), ge=0, le=1)
+    cut_off_dominates_min: int = Field(3, gt=0)
 
 
 class Config(_Strict):

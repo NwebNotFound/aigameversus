@@ -12,7 +12,11 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	const roster = setup.state === 'ok' ? setup.data.models : [];
 	if (result.state === 'not_found') error(404, 'No match with this id');
 	if (result.state === 'ok' && view === 'spoiler-free') {
-		return { view, roster, result: { ...result, data: publicState(result.data) } };
+		return {
+			view,
+			roster,
+			result: { ...result, data: publicState(result.data, url.searchParams.get('nation')) }
+		};
 	}
 	return { view, roster, result };
 };

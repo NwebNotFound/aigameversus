@@ -13,6 +13,7 @@ from arena.db.database import connect, migrate
 from arena.db.match_store import MatchStore
 from arena.engine.replay import replay
 from arena.engine.types import Placement
+from games.civ.plugin import CivGame
 from games.liars_deck.plugin import LiarsDeck
 from tests.db.test_matches_api import as_events, follow, start
 
@@ -159,6 +160,22 @@ def test_board_of_a_running_match_shows_its_completed_turns(client):
     plugin = LiarsDeck()
     assert board["events"] == len(stored) > 0
     assert board["spec"] == plugin.render_spec(replay(plugin, as_events(stored)))
+
+
+def test_a_board_as_one_nation_sees_it_is_the_games_spoiler_free_view(client):
+    match = start(client, game="civ", seed=2)
+    log, _ = follow(client, match["id"])
+    url = f"/matches/{match['id']}/board"
+
+    board = client.get(url, params={"nation": "p1", "events": 40}).json()
+
+    plugin = CivGame()
+    expected = plugin.render_spec_for(replay(plugin, as_events(log[:40])), "p1")
+    assert board["spec"] == expected and set(board["spec"]["fog"]) == {"p1"}
+    assert client.get(url, params={"nation": "p9"}).status_code == 422
+    toy = start(client, game="toy")
+    follow(client, toy["id"])
+    assert client.get(f"/matches/{toy['id']}/board", params={"nation": "p1"}).status_code == 422
 
 
 def test_game_without_a_board_says_so(client):

@@ -12,8 +12,9 @@ against each other; humans watch. Each game is a plugin. Model connection,
 memory, spectator UI, replays and rankings are shared by all games.
 
 **State of the build:** phases 1 to 6 are built (platform, Liar's Deck, Poker, Werewolf,
-spectator UI, profiles with statistics and trust); the Throne of Tokens match (phase 7)
-is not playable yet. The engine runs
+spectator UI, profiles with statistics and trust); Throne of Tokens (phase 7)
+plays with random bots and the mock model, without a prompt version for real models
+yet. The engine runs
 complete matches of any plugin, stores their event logs in Postgres and
 rebuilds the state from a log. A seat is played by a random bot or by the
 agent runner, which prompts a model and reads its answer; in tests and CI that
@@ -21,9 +22,10 @@ model is the mock LLM. Model calls are counted against cost caps, and a match
 pauses at a cap.
 `config/models.yaml` lists the caps and a roster of real models. The `arena`
 command (`--models`) and `POST /matches` (`models`, on a server started with
-`ARENA_ALLOW_MODEL_SEATS=1`) can seat them, paid calls inside the caps. Four games can
+`ARENA_ALLOW_MODEL_SEATS=1`) can seat them, paid calls inside the caps. Five games can
 be played: High Card (`games/toy`), the reference plugin, Liar's Deck
-(`games/liars_deck`), Poker (`games/poker`) and Werewolf (`games/werewolf`). The arena API starts bot
+(`games/liars_deck`), Poker (`games/poker`), Werewolf (`games/werewolf`) and
+Throne of Tokens (`games/civ`). The arena API starts bot
 matches, lists, controls and streams them over WebSocket, next to
 `GET /health` (it migrates the database at startup), the leaderboard, player
 profiles with their game statistics (`GET /profiles/{id}/stats`), the
@@ -465,7 +467,7 @@ games/          one package per game: plugin.py, rules.md, data, tests/
   liars_deck/   Liar's Deck: the bluff card game (plugin, variants, rules.md)
   poker/        No-Limit Hold'em tournament: cards, evaluator, betting, plugin
   werewolf/     Werewolf: plugin, abilities, roles, templates, selection
-  civ/          Throne of Tokens, in parts: data, map, fog of war, economy, armies
+  civ/          Throne of Tokens: data, map, fog, economy, armies, combat, diplomacy, events, plugin
 config/         models.yaml, personalities/*.yaml
 mods/           content that overrides or extends game data
 web/            spectator UI
@@ -642,7 +644,9 @@ model out (and `:free` variants are listed only with `?free=1`, marked
 `rate_limited_likely`); every entry and model page has `reliability` from
 the arena's own logs (`arena/db/reliability.py`: unreliable after a seat that
 gave up in its last 2 matches or more than half of its last 20 moves by the
-bot, unknown below 20 moves, warnings for cut-off answers and rate limits);
+bot, unknown below 20 moves, warnings for cut-off answers and rate limits, and `rejected_rate` with its counts, `rejected_cut_off`
+(of the refused answers, those that ran into the output limit; null in logs without the counter,
+with a warning when they are most of them) and `last_seen`);
 `catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
@@ -769,8 +773,10 @@ call, combat rules, state fields, events, the observation and the
 `hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
 build against it, and change it in the same pull request as the code.
 
-The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
+The game is built in parts (roadmap steps 7.1 to 7.5 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
+The game is built in parts (roadmap steps 7.1 to 7.6); `games/civ/plugin.py`
+wires them to the engine (below). The map:
 
 - `games/civ/world.py`: `generate_map(players, data, rng)` returns a
   `WorldMap`: rows of terrain ids and one `Start` per nation. A tile is
@@ -809,16 +815,51 @@ next to it says what each does and what the generator guarantees.
   steps `expire` (start) and `settle` (the trade step). Offers and trades are
   private to the two nations; signed, broken and expired treaties and wars are
   public.
-- `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
-  through which every event changes the state. Its docstring has the order
-  of the steps of a round.
+- `games/civ/combat.py`: battles. Who may fight (`hostile`: at war, or a
+  `NEUTRAL` side), orders with a check each (`attack_problem` and `attack`,
+  `fortify`, `pillage`), the round steps `resolve` (every attack of the round,
+  in order) and `weariness`, and `capital` (the city on a nation's start
+  tile). `economy.production_modifier` applies war weariness and a lost
+  capital to the yields (D-126).
+- `games/civ/events.py`: random events from `data/events/`. `roll` is a round
+  step (one random stream per event and round); `strike` lets one event happen
+  now (also for a spectator's God mode). Plague, gold find and good harvest touch
+  one city or nation, a drought adds a `Condition` that halves the food of the
+  cities in its region for its rounds (`economy.city_yields` reads it), a
+  rebellion makes a recently conquered city (`City.conquered_round`) neutral,
+  barbarians raise a neutral army on a free tile. `NEUTRAL` in `state.py` owns
+  rebel cities and barbarians.
+- `games/civ/victory.py`: `check` is the last round step: the public economic
+  countdown, then domination (at least half the cities and more than anyone),
+  economy (the gold held long enough) or the round limit's score; it emits
+  `victory` with the placements, and `state.victory` is set. `score` and
+  `standings` rank the nations.
+- `games/civ/turn.py`: `open_round` and `close_round`, the steps of a round
+  in their order (the docstring lists them), and `apply_event`, the one
+  function through which every event changes the state.
+- `games/civ/orders.py`: the `submit_orders` tool (one flat order object, at
+  most 40 orders) and `run`, which carries a round's orders out type by type
+  and nation by nation in seat order. Each order is checked with its system's
+  `*_problem` when its turn comes; a bad one is dropped with `order_refused`
+  (private) and the rest go on. A `move` onto a tile another nation holds is
+  an attack (at war, or on barbarians) or refused.
+- `games/civ/neutrals.py`: `act`, the barbarians' step: attack what is in
+  reach, else walk towards the nearest city. No random draw.
+- `games/civ/plugin.py`: `CivGame`. The setup draws the map (`map_drawn`,
+  spectators only), founds the capitals, deploys the start units and opens
+  round 1; each engine turn closes the round and opens the next (D-130). The
+  observation is `observation.observe` plus `legal.orders` and the public
+  `scoreboard` (D-128), always under 5,000 tokens (a test plays six bot
+  nations through 60 rounds). `render_spec` is the full `hex_map` board for
+  spectators, `render_spec_for(state, nation)` what one nation sees
+  (`GET /matches/{id}/board?nation=`). The random bot is `bot.random_orders`.
 
 How these follow the engine's rules, and what the next systems should copy:
 
 - A function that changes something takes the `TurnContext` and emits events;
   only the functions in a module's `APPLIERS` touch the state, and
-  `turn.apply_event` routes each event to its applier. The plugin (step 7.6)
-  passes its context through and calls `turn.apply_event`.
+  `turn.apply_event` routes each event to its applier. The plugin passes its
+  context through and calls `turn.apply_event`.
 - An event carries the outcome (the cost paid, the new stock, the path
   walked, which units were lost), so applying it reads no game data. Every
   event except `round_started` is private to the nation it concerns: what

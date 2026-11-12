@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import type { Board, ControlAction, LiveState, MatchEvent, Transcript } from '#lib/api.js';
 	import ViewSwitch from '#lib/components/ViewSwitch.svelte';
 	import AnalyticsPanel from '#lib/components/analytics/AnalyticsPanel.svelte';
@@ -23,7 +24,13 @@
 
 	const view = $derived(data.view);
 	/** `?view=spoiler-free` on every call, so the web server sends public data only. */
-	const viewQuery = $derived(view === 'spoiler-free' ? '?view=spoiler-free' : '');
+	/** A spoiler-free Civ map is seen through one nation's eyes (`?nation=`, D-124). */
+	const nation = $derived(page.url.searchParams.get('nation'));
+	const viewQuery = $derived(
+		view === 'spoiler-free'
+			? `?view=spoiler-free${nation ? `&nation=${encodeURIComponent(nation)}` : ''}`
+			: ''
+	);
 
 	/** The latest snapshot from /state; until the first one, what the page was loaded with. */
 	let fresh = $state<LiveState | null>(null);
