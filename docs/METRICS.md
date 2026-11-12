@@ -401,3 +401,13 @@ checked and false statements per player. Read it as a rate with its n, never as 
 a missed sentence is not counted, and a false statement may be a slip. Needs spoilers except for
 Werewolf claims a death has disproved.
 
+## Played but not rated (`unrated`)
+
+`GET /leaderboard` (not for `kind=bots`) and `GET /models/{id}` list, per model and game,
+finished matches that no rating counted: `matches_played`, `matches_rated`, `matches_unrated`,
+the most common `reason` code with `text` (en, de), and `reasons` (code -> matches). Never an Elo.
+Codes: `duplicate_model` (the model sat in several seats of one match), `table_repeats_a_model`
+(another model did, so the whole table is unrated, as in W2), `fewer_than_two_models` (one model
+among random bots), `not_rated` (none of those; the log does not say why). Read from the match
+records against `rated_matches`; running and failed matches are not counted.
+
