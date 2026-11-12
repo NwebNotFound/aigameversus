@@ -17,6 +17,9 @@ from games.civ.world import Hex, WorldMap
 
 Stock = dict[Resource, int]
 
+# The owner of barbarians and of rebel cities: at war with everyone, without a declaration.
+NEUTRAL = "neutral"
+
 
 class Nation(BaseModel):
     stock: Stock  # what the nation owns of every resource; never below 0
