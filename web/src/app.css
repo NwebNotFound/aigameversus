@@ -1,22 +1,62 @@
 :root {
-	--bg: #100f16;
-	--surface: #1a1824;
-	--surface-raised: #232030;
-	--border: #2e2a3d;
-	--text: #ece8f4;
-	--muted: #a59eb8;
-	--accent: #f0b35a;
-	--accent-2: #7fb8ff;
+	/* Surfaces and text (docs/UI-DESIGN.md, from the design review 3.2). */
+	--bg: #0b0d12;
+	--sunken: #080a0e;
+	--surface: #12161f;
+	--raised: #1a202c;
+	--line: #252c3b;
+	--line-strong: #39425a;
+	--text: #e9ecf3;
+	--muted: #9aa4b8;
+	/* Captions and axis labels only, never body text (3.4:1). */
+	--faint: #626c82;
+
+	/* Meaning colours: one job each. */
+	--brand: #f2b84b;
+	--info: #6cb6ff;
+	--ok: #4cd4a0;
 	--danger: #ff6b6b;
-	--ok: #6ee7a8;
 	/* Thoughts and everything only spectators see. */
 	--thought: #b79cff;
+
+	/* Player slots (Okabe-Ito, lightened for the dark ground); lib/players.ts pairs each with a
+	   shape and a dash pattern, so colour is never the only cue. */
+	--p1: #56b4e9;
+	--p2: #e69f00;
+	--p3: #cc79a7;
+	--p4: #2fbf95;
+	--p5: #f0e442;
+	--p6: #e8643a;
+	--p-neutral: #8a93a6;
+
+	/* Older names, kept as aliases until every component uses the ones above. */
+	--surface-raised: var(--raised);
+	--border: var(--line);
+	--accent: var(--brand);
+	--accent-2: var(--info);
+
+	/* Shape and spacing: 4 px grid; radius 6 controls, 10 rows, 14 cards. */
 	--radius: 14px;
-	--gap: clamp(1rem, 3vw, 1.75rem);
-	--content: 72rem;
-	--font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-	/* The narrator's voice: headings and narration in the commentary. */
-	--font-narrator: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--radius-row: 10px;
+	--radius-control: 6px;
+	--gap: clamp(0.75rem, 2.5vw, 1.5rem);
+	--content: 80rem;
+
+	--font: Inter, 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+	/* Every number that is compared: scores, tables, axes, costs. */
+	--font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+	/* The serif narrator face is dropped; narration is body text at weight 600. */
+	--font-narrator: var(--font);
+
+	/* Type scale (size / line). */
+	--t-display: 650 1.375rem/1.75rem var(--font);
+	--t-title: 650 1.25rem/1.625rem var(--font);
+	--t-question: 600 0.9375rem/1.25rem var(--font);
+	--t-body: 400 0.875rem/1.25rem var(--font);
+	--t-small: 400 0.78125rem/1.125rem var(--font);
+	--t-caption: 600 0.6875rem/0.875rem var(--font);
+
+	--ease: 150ms ease-out;
 
 	color-scheme: dark;
 }
@@ -38,9 +78,23 @@ html {
 body {
 	margin: 0;
 	min-height: 100vh;
-	background:
-		radial-gradient(60rem 30rem at 10% -10%, rgb(240 179 90 / 0.08), transparent),
-		radial-gradient(50rem 30rem at 100% 0%, rgb(127 184 255 / 0.07), transparent), var(--bg);
+	/* No gradient page background: the board and the data carry the colour. */
+	background: var(--bg);
+}
+
+/* Numbers that are compared line up. */
+.num,
+.mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* A caption: section labels and table heads. */
+.caption {
+	font: var(--t-caption);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted);
 }
 
 a {

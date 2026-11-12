@@ -278,8 +278,15 @@ speech by simple rules, each marked `heuristic: true`.
   abstention), `abstained`, `tally` (the game's own count, in which a captain's
   vote may weigh double; abstentions are not in it) and `executed`.
 - **`votes.accuracy`** (spoilers only): per village-side voter, votes for a wolf
-  / votes cast, as `{value, n, of}`; abstentions are not votes. Planned: for
-  wolves, the share of votes on fellow wolves (bussing).
+  / votes cast, as `{value, n, of}`; abstentions are not votes.
+- **`votes.bussing`** (spoilers only): per wolf, its votes on a fellow wolf / the
+  votes it cast, as `{value, n, of}`; null without spoilers.
+- **`suspicion`** (suspicion over time): per day in order, `received` per player
+  `{votes, speech, total}`. `votes` are the ballots cast for them that day (a
+  fact; a captain's ballot counts once here, unlike `tally`), and `speech` is the
+  day's accusations of them (`accusations`, heuristic). `most_suspected` lists the
+  players with the highest total (all of them on a tie). Night speech (the wolves'
+  chat) is not counted, and a vote's reason is not counted again.
 - **`claims`** (heuristic): a sentence in the first person that names a role
   ("I'm p3, a villager", "I am the seer", "Ich bin die Seherin"), not negated.
   Each claim once per player and role, with `changed_from` (the same player
