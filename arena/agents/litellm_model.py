@@ -38,19 +38,26 @@ class LiteLLMModel:
         # Reasoning is billed as output and counts against the output limit.
         self._options = {} if reasoning_effort is None else {"reasoning_effort": reasoning_effort}
 
-    async def __call__(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
+    async def __call__(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]],
+        *,
+        max_output_tokens: int | None = None,
+    ) -> ModelReply:
+        limit = max_output_tokens or self._max_output_tokens
         # A turn is one tool call: left free, some models answer in prose instead. A model
         # that cannot think and be forced at once gets "auto" (config/models.yaml).
         extras = {**({"tool_choice": self._tool_choice} if tools else {}), **self._options}
         try:
             try:
-                response = await self._send(messages, tools, extras)
+                response = await self._send(messages, tools, extras, limit)
             except Exception as error:
                 # One model name can stand for several providers, and not all of them take
                 # every option. A request refused with the extras goes out once more without.
                 if not extras or getattr(error, "status_code", None) not in _REFUSED_STATUS:
                     raise
-                response = await self._send(messages, tools, {})
+                response = await self._send(messages, tools, {}, limit)
             choice = response.choices[0]
             message = choice.message
             usage = getattr(response, "usage", None)
@@ -74,13 +81,17 @@ class LiteLLMModel:
             raise ModelError(type(error).__name__, retryable=retryable) from None
 
     async def _send(
-        self, messages: list[Message], tools: list[dict[str, Any]], extras: dict[str, Any]
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]],
+        extras: dict[str, Any],
+        limit: int,
     ) -> Any:
         return await _litellm().acompletion(
             model=self._model,
             messages=messages,
             tools=tools,
-            max_tokens=self._max_output_tokens,
+            max_tokens=limit,
             num_retries=0,  # the agent runner retries, with its own backoff
             **extras,
         )

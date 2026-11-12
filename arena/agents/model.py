@@ -52,9 +52,14 @@ class ModelError(Exception):
 class ModelCall(Protocol):
     """Sends one prompt with the allowed tools to a model and returns its answer.
 
-    Raises ModelError when the call fails.
+    Raises ModelError when the call fails. `max_output_tokens` raises the output limit
+    of this one call (adaptive_output, D-143); None keeps the model's own.
     """
 
     async def __call__(
-        self, messages: list[Message], tools: list[dict[str, Any]]
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]],
+        *,
+        max_output_tokens: int | None = None,
     ) -> ModelReply: ...

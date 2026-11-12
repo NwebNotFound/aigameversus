@@ -38,9 +38,17 @@ class MockLLM:
             raise ValueError("The script needs at least one step")
         self._script = list(script)
         self.calls: list[tuple[list[Message], list[dict[str, Any]]]] = []
+        self.output_limits: list[int | None] = []  # the raised limit of each call, or None
 
-    async def __call__(self, messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
+    async def __call__(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]],
+        *,
+        max_output_tokens: int | None = None,
+    ) -> ModelReply:
         self.calls.append((messages, tools))
+        self.output_limits.append(max_output_tokens)
         step = self._script.pop(0) if len(self._script) > 1 else self._script[0]
         if isinstance(step, _Hangs):
             await asyncio.Event().wait()

@@ -258,6 +258,10 @@ class SeatEstimateOut(BaseModel):
         "output limit while the ledger knows fewer than 10 of its answers (then several "
         "times too high)"
     )
+    worst_case_micro_eur: int = Field(
+        description="Every answer at its output limit; with adaptive_output every raised "
+        "limit up to the ceiling as well (D-143)"
+    )
 
 
 class EstimateOut(BaseModel):
@@ -268,6 +272,7 @@ class EstimateOut(BaseModel):
     month_spent_micro_eur: int = Field(description="What this calendar month has cost so far")
     month_cap_micro_eur: int
     seats: dict[str, SeatEstimateOut]
+    worst_case_micro_eur: int = Field(description="All seats together, at their worst case")
     fits: bool = Field(description="Whether the estimate fits the match cap and the month left")
     high_price: list[str] = Field(
         description="Models whose output costs more than 10 USD per million tokens, as booked"
@@ -351,9 +356,11 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
                 calls=e.calls,
                 estimate_micro_eur=e.estimate_micro_eur,
                 basis=e.basis,
+                worst_case_micro_eur=e.worst_case_micro_eur,
             )
             for seat, e in per_seat.items()
         },
+        worst_case_micro_eur=sum(e.worst_case_micro_eur for e in per_seat.values()),
         fits=total <= cap and spent + total <= month_cap,
         high_price=sorted(
             {

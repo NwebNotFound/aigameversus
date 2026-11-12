@@ -15,7 +15,7 @@ import asyncpg
 from arena.agents.budget import Budget
 from arena.agents.prompt import personality_text
 from arena.agents.random_bot import random_bots
-from arena.agents.runner import ModelAgent
+from arena.agents.runner import ModelAgent, output_limits
 from arena.catalog import resolve
 from arena.config import display_name, load_config
 from arena.db.event_store import EventStore
@@ -173,6 +173,7 @@ class LiveMatches:
                     plugin,
                     settings=settings,
                     personality=texts.get(played.get(seat, "")),
+                    output=output_limits(config, models[seat]),
                 )
                 if seat in models
                 else bots[seat]

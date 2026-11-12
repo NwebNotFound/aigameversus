@@ -149,6 +149,18 @@ def answer(litellm, *, finish, content, reasoning=None):
     )
 
 
+def test_a_raised_output_limit_is_sent_for_that_call_only(answer_with):
+    sent = answer_with(mock_response="Short.")
+    model = LiteLLMModel(MODEL, max_output_tokens=300)
+
+    asyncio.run(model(MESSAGES, TOOLS, max_output_tokens=1200))
+    assert sent["max_tokens"] == 1200
+
+    sent.clear()
+    asyncio.run(model(MESSAGES, TOOLS))
+    assert sent["max_tokens"] == 300
+
+
 def test_reasoning_effort_is_sent_only_when_the_model_is_given_one(answer_with):
     sent = answer_with(mock_response="Short.")
 

@@ -543,3 +543,30 @@ def test_a_rate_limited_call_costs_nothing_but_a_failed_one_keeps_its_bound(data
 
     # Refused before anything was generated: void. A timeout may have been billed: kept.
     assert with_pool(database_url, scenario) == [0, UPPER_BOUND]
+
+
+def test_a_raised_output_limit_is_passed_on_and_booked_at_that_limit(database_url):
+    async def scenario(pool):
+        mock = MockLLM(ModelReply(text="cut", cut_off=True))  # reports no tokens: booking stays
+        call = budget_of(pool).meter("p1", "cheap", mock)
+        await call(MESSAGES, TOOLS, max_output_tokens=3 * MAX_OUTPUT)
+        return mock.output_limits, await booked(pool)
+
+    limits, rows = with_pool(database_url, scenario)
+
+    assert limits == [3 * MAX_OUTPUT]
+    assert rows[0][-1] == INPUT_BOUND * 1 + 3 * MAX_OUTPUT * 2  # the raised limit, not 100
+
+
+def test_a_raised_output_limit_that_would_pass_the_match_cap_pauses_before_it_is_sent(database_url):
+    async def scenario(pool):
+        mock = MockLLM(PLAY_3)
+        call = budget_of(pool).meter("p1", "cheap", mock)
+        await call(MESSAGES, TOOLS)  # at its own limit it fits the 0.01 EUR cap
+        with pytest.raises(MatchPaused) as paused:
+            await call(MESSAGES, TOOLS, max_output_tokens=6000)  # 12,000 millionths alone
+        return paused.value.reason, len(mock.calls)
+
+    reason, sent = with_pool(database_url, scenario)
+
+    assert reason == "match_cap" and sent == 1

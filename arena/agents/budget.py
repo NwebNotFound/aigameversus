@@ -75,7 +75,14 @@ class Budget:
         model = self._config.models[model_id]
         limits = self._config.limits
 
-        async def metered(messages: list[Message], tools: list[dict[str, Any]]) -> ModelReply:
+        async def metered(
+            messages: list[Message],
+            tools: list[dict[str, Any]],
+            *,
+            max_output_tokens: int | None = None,
+        ) -> ModelReply:
+            # A raised limit (adaptive_output) is booked at that limit: still the most it costs.
+            limit = max_output_tokens or call_options(self._config, model_id).max_output_tokens
             # No tokenizer makes more tokens than its text has bytes, so the
             # size of the request is an upper bound of its input tokens.
             input_bound = len(json.dumps([messages, tools]))
@@ -86,9 +93,7 @@ class Budget:
                 player,
                 model_id,
                 # The most it can cost: this model's own output limit, if it has one.
-                self._cost(
-                    model, input_bound, call_options(self._config, model_id).max_output_tokens
-                ),
+                self._cost(model, input_bound, limit),
                 match_cap=self.match_cap,
                 month_cap=self.month_cap,
                 now=self._now(),
@@ -98,7 +103,11 @@ class Budget:
             # refused before anything is generated, so it costs nothing.
             sent = self._clock()
             try:
-                reply = await call(messages, tools)
+                reply = await (
+                    call(messages, tools, max_output_tokens=max_output_tokens)
+                    if max_output_tokens
+                    else call(messages, tools)
+                )
             except ModelError as error:
                 if error.reason == RATE_LIMITED:
                     latency_ms = round((self._clock() - sent) * 1000)

@@ -23,7 +23,7 @@ from uuid import UUID, uuid4
 
 from arena.agents.budget import MICRO, Budget
 from arena.agents.random_bot import random_bots
-from arena.agents.runner import ModelAgent
+from arena.agents.runner import ModelAgent, output_limits
 from arena.catalog import resolve
 from arena.config import display_name, load_config, load_keys
 from arena.db.database import connect, ledger_url, migrate
@@ -329,7 +329,12 @@ async def _play_models(
 
         show = _printer(plugin.id, labels(seats), args)
         agents = {
-            player: ModelAgent(budget.model(player, model_id), plugin, settings=options["settings"])
+            player: ModelAgent(
+                budget.model(player, model_id),
+                plugin,
+                settings=options["settings"],
+                output=output_limits(config, model_id),
+            )
             for player, model_id in seats.items()
         }
         match = _match(plugin, agents, {**options, "clock": time.monotonic}, store_and_print)
