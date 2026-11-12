@@ -322,6 +322,8 @@ class CombatBalance(_Model):
     random_factor: Range
     ranged_rounds: Annotated[int, Field(ge=0)]
     winner_loss_factor: Ratio
+    loser_loss_factor: Ratio
+    ranged_loss_factor: Ratio
 
 
 class ConquestBalance(_Model):

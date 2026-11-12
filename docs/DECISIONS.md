@@ -127,5 +127,7 @@ with `python scripts/decisions.py adopt`.
 - [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule
 - [D-123](decisions/D-123-jev.md) · Jev calibration preserves intent and separates human agreement from ground truth
 - [D-124](decisions/D-124-the-throne-of-tokens-board-draws-the-hex-map-in-svg-with-a.md) · The Throne of Tokens board draws the hex map in SVG, with a nation's fog on request
+- [D-126](decisions/D-126-throne-of-tokens-combat-what-a-battle-costs-the-ranged-round.md) · Throne of Tokens combat: what a battle costs, the ranged round, and which city is a capital
 - [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
+- [D-128](decisions/D-128-the-throne-of-tokens-scoreboard-is-public-by-rule-positions.md) · The Throne of Tokens scoreboard is public by rule; positions and contents stay fogged
 - [D-129](decisions/D-129-a-repaired-move-carries-a-muted-marker-per-tier-spoiler-free.md) · A repaired move carries a muted marker per tier; spoiler-free shows the tier and probability only
