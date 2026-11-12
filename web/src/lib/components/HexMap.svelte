@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import {
 		NEUTRAL,
 		SIZE,
@@ -16,15 +18,19 @@
 
 	/**
 	 * The Throne of Tokens board: the hex map with its terrain, cities, armies and this
-	 * round's battles, the nations beside it, and (spectator view) the map as one nation
-	 * sees it. Every mark is drawn here in SVG; nothing comes from another game.
+	 * round's battles, the nations beside it, and the map as one nation sees it: a lens in
+	 * the spectator view; in the spoiler-free view the only map there is, filtered on the
+	 * server (`?nation=`, hexNationView). Every mark is drawn here in SVG.
 	 */
 	let {
 		spec,
-		names = {}
+		names = {},
+		spoilers = true
 	}: {
 		spec: HexSpec;
 		names?: Record<string, string>;
+		/** Spectator view: the whole map, with a fog lens. Spoiler-free: one nation's map. */
+		spoilers?: boolean;
 	} = $props();
 
 	const colours = $derived(nationColours(spec.nations));
@@ -34,7 +40,17 @@
 	const hasFog = $derived(!!spec.fog && Object.keys(spec.fog).length > 0);
 	/** Whose eyes the map is seen through; null for everything (the spectator's map). */
 	let eyes = $state<string | null>(null);
-	const visible = (tile: [number, number]) => seen(spec.fog, eyes, tile);
+	/** Spoiler-free: the nation the server filtered the map for (its fog row is the only one). */
+	const through = $derived(spoilers ? null : (Object.keys(spec.fog ?? {})[0] ?? null));
+	const lens = $derived(spoilers ? eyes : through);
+	const visible = (tile: [number, number]) => seen(spec.fog, lens, tile);
+	/** Another nation's eyes in the spoiler-free view: the server sends that nation's map. */
+	function seeAs(nation: string) {
+		const url = new URL(page.url.href);
+		url.searchParams.set('nation', nation);
+		// The page's load reads `?nation=`, so it reruns and brings that nation's map.
+		goto(url, { replace: true, reset: false });
+	}
 	const capitals = $derived(
 		Object.fromEntries(spec.cities.filter((c) => c.capital).map((c) => [c.owner, c.tile]))
 	);
@@ -83,7 +99,20 @@
 		<strong data-testid="hex-round">{spec.round}</strong>
 		<span class="of">of {spec.rounds_total}</span>
 		<span class="track" aria-hidden="true"><i style="width: {progress * 100}%"></i></span>
-		{#if hasFog}
+		{#if !spoilers}
+			<label class="eyes">
+				<span>Map as seen by</span>
+				<select
+					value={through ?? spec.nations[0]?.id}
+					onchange={(e) => seeAs(e.currentTarget.value)}
+					data-testid="hex-nation"
+				>
+					{#each spec.nations as nation (nation.id)}
+						<option value={nation.id}>{name(nation.id)}</option>
+					{/each}
+				</select>
+			</label>
+		{:else if hasFog}
 			<label class="eyes">
 				<span>Map as seen by</span>
 				<select bind:value={eyes} data-testid="hex-eyes">

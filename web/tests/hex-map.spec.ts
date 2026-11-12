@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { type Page } from '@playwright/test';
+import { hexNationView } from '../src/lib/server/redact.js';
 import { expect, rewrite, test } from './routes.js';
 
 // The Throne of Tokens board (`hex_map`, docs/civ-interfaces.md). The plugin is not built yet,
@@ -62,27 +63,47 @@ test('the hex map draws every tile, city, army and battle, and shows a nation it
 	await request.post(`${ARENA}/matches/${match.id}/abort`);
 });
 
-test('spoiler-free, the map has no fog switch, stocks or unit lists', async ({ page, request }) => {
+test("spoiler-free, the map is one nation's: what it sees, its stock, and a switch to another", async ({
+	page,
+	request
+}) => {
 	const match = await (
 		await request.post(`${ARENA}/matches`, { data: { game: 'toy', turn_delay: 2 } })
 	).json();
-	// What the web server's allowlist leaves of the map (checked in redact.test.ts).
-	const { fog: _fog, ...rest } = MAP;
-	const free = {
-		...rest,
-		armies: MAP.armies.map(({ units: _units, ...army }: Record<string, unknown>) => army),
-		nations: MAP.nations.map(({ stock: _stock, ...nation }: Record<string, unknown>) => nation)
-	};
-	await withMap(page, match.id, free);
-	await page.goto(`/matches/${match.id}?view=spoiler-free`);
+	// What the web server sends (hexNationView, the code it runs), for the nation in the URL.
+	await page.route(`**/matches/${match.id}/state*`, async (route) => {
+		const nation = new URL(route.request().url()).searchParams.get('nation');
+		try {
+			const response = await route.fetch();
+			const body = await response.json();
+			body.board = { ...body.board, spec: hexNationView(MAP, nation) };
+			body.match.players = NATIONS;
+			await route.fulfill({ response, json: body });
+		} catch {
+			await route.abort().catch(() => {});
+		}
+	});
+	const seen = (nation: string, tile: [number, number]) =>
+		MAP.fog[nation][tile[1]][tile[0]] === '1';
+	type Placed = { owner: string; tile: [number, number] };
+	const sees = (nation: string) => (x: Placed) => x.owner === nation || seen(nation, x.tile);
 
+	await page.goto(`/matches/${match.id}?view=spoiler-free`);
 	await expect(page.locator('[data-layout="hex_map"]')).toBeVisible({ timeout: 15_000 });
+	// By default the first nation's eyes: only what it sees, its own stock, no spectator lens.
 	await expect(page.getByTestId('hex-eyes')).toHaveCount(0);
-	await expect(page.getByTestId('hex-stock')).toHaveCount(0);
-	await expect(page.getByTestId('hex-army')).toHaveCount(MAP.armies.length);
-	await expect(page.locator('[data-testid="hex-army"] title').first()).not.toContainText(
-		'spearman'
-	);
+	await expect(page.getByTestId('hex-nation')).toHaveValue('p1');
+	await expect(page.getByTestId('hex-city')).toHaveCount(MAP.cities.filter(sees('p1')).length);
+	await expect(page.getByTestId('hex-army')).toHaveCount(MAP.armies.filter(sees('p1')).length);
+	await expect(page.getByTestId('hex-stock')).toHaveCount(1);
+	const unseen = (MAP.fog.p1 as string[]).join('').split('0').length - 1;
+	await expect(page.locator('[data-testid="hex-tile"].fogged')).toHaveCount(unseen);
+
+	// The switch asks the server for another nation's map.
+	await page.getByTestId('hex-nation').selectOption('p2');
+	await expect(page).toHaveURL(/nation=p2/);
+	await expect(page.getByTestId('hex-nation')).toHaveValue('p2');
+	await expect(page.getByTestId('hex-city')).toHaveCount(MAP.cities.filter(sees('p2')).length);
 	await request.post(`${ARENA}/matches/${match.id}/abort`);
 });
 

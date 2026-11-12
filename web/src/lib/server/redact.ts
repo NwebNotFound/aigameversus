@@ -62,7 +62,7 @@ const PUBLIC: Record<string, Shape> = {
 				walls: 'keep'
 			}
 		],
-		armies: [{ id: 'keep', owner: 'keep', tile: 'keep', strength: 'keep', fortified: 'keep' }],
+		armies: [{ id: 'keep', owner: 'keep', tile: 'keep', strength: 'keep' }],
 		nations: [{ id: 'keep', reputation: 'keep', cities: 'keep', at_war: 'keep' }],
 		treaties: 'keep',
 		wars: 'keep',
@@ -91,11 +91,68 @@ function apply(rule: Rule, value: unknown): unknown {
 	);
 }
 
-/** The board as a spoiler-free page may see it, or null for a layout without an allowlist. */
-export function publicBoard(spec: Record<string, unknown> | null): Record<string, unknown> | null {
+/**
+ * The board as a spoiler-free page may see it, or null for a layout without an allowlist.
+ * `nation` picks whose eyes a Throne of Tokens map is seen through (hexNationView).
+ */
+export function publicBoard(
+	spec: Record<string, unknown> | null,
+	nation: string | null = null
+): Record<string, unknown> | null {
 	if (!spec) return null;
+	if (spec.layout === 'hex_map') return hexNationView(spec, nation);
 	const shape = PUBLIC[String(spec.layout)];
 	return shape ? (apply(shape, spec) as Record<string, unknown>) : null;
+}
+
+type Item = Record<string, unknown>;
+const list = (value: unknown): Item[] =>
+	Array.isArray(value) ? value.filter((v): v is Item => !!v && typeof v === 'object') : [];
+
+/**
+ * A Throne of Tokens map as one nation sees it this round (docs/civ-interfaces.md, "Board
+ * for spectators"): the land, and only the cities, armies and battles on tiles in its own
+ * fog row (its own always), with the public fields; unit lists and stock only for its own;
+ * its fog row and no other. `nation` is the viewer's pick, else the first nation.
+ */
+export function hexNationView(spec: Record<string, unknown>, nation: string | null): Item {
+	const ids = list(spec.nations)
+		.map((n) => n.id)
+		.filter((id): id is string => typeof id === 'string');
+	const who = nation && ids.includes(nation) ? nation : (ids[0] ?? null);
+	const fog = spec.fog as Record<string, unknown> | null | undefined;
+	const rows = who && Array.isArray(fog?.[who]) ? (fog[who] as unknown[]) : null;
+	const sees = (item: Item) => {
+		if (who !== null && item.owner === who) return true;
+		const tile = item.tile;
+		if (!rows || !Array.isArray(tile)) return false;
+		const [col, row] = tile;
+		const line = typeof row === 'number' ? rows[row] : undefined;
+		return typeof line === 'string' && typeof col === 'number' && line[col] === '1';
+	};
+	const shape = PUBLIC.hex_map;
+	const view = apply(shape, {
+		...spec,
+		cities: list(spec.cities).filter(sees),
+		armies: list(spec.armies).filter(sees)
+	}) as Item;
+	// Its own units and stock: what that nation knows of itself.
+	view.armies = list(view.armies).map((army) => {
+		const source = list(spec.armies).find((a) => a.id === army.id);
+		return army.owner === who && source?.units ? { ...army, units: source.units } : army;
+	});
+	view.nations = list(view.nations).map((n) => {
+		const source = list(spec.nations).find((s) => s.id === n.id);
+		return n.id === who && source?.stock ? { ...n, stock: source.stock } : n;
+	});
+	view.battles = list(spec.battles)
+		.filter((b) => {
+			const tile = b.tile;
+			return Array.isArray(tile) && sees({ tile });
+		})
+		.map((b) => ({ tile: b.tile, winner: b.winner ?? null }));
+	if (rows && who) view.fog = { [who]: rows.filter((r) => typeof r === 'string') };
+	return view;
 }
 
 /** The events every player could see. Spectator-only and private events are left out. */
@@ -145,10 +202,10 @@ export function publicTranscript(transcript: Transcript): Transcript {
 }
 
 /** A live-state snapshot for a spoiler-free page: the public board and settings, and no seed. */
-export function publicState(state: LiveState): LiveState {
+export function publicState(state: LiveState, nation: string | null = null): LiveState {
 	return {
 		...state,
 		match: { ...state.match, seed: null, settings: publicSettings(state.match.settings) },
-		board: { ...state.board, spec: publicBoard(state.board.spec) }
+		board: { ...state.board, spec: publicBoard(state.board.spec, nation) }
 	};
 }

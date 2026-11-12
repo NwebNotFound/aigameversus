@@ -22,7 +22,10 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	return {
 		view,
 		roster: setup.state === 'ok' ? setup.data.models : [],
-		match: match.state === 'ok' && !spectator ? { ...match, data: publicState(match.data) } : match,
+		match:
+			match.state === 'ok' && !spectator
+				? { ...match, data: publicState(match.data, url.searchParams.get('nation')) }
+				: match,
 		events:
 			events.state === 'ok' && !spectator ? { ...events, data: publicEvents(events.data) } : events,
 		transcript:
