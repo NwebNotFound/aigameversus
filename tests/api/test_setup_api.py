@@ -77,7 +77,11 @@ def test_model_seats_need_the_server_switch_and_the_key(monkeypatch):
     assert client.get("/setup").json()["model_seats"] is False
 
 
-def test_setup_says_which_answer_repair_values_the_arena_takes():
+def test_setup_says_which_answer_repair_values_the_arena_takes(monkeypatch):
+    monkeypatch.delenv("ARENA_ALLOW_JEV", raising=False)
     options = client.get("/setup").json()
 
     assert options["answer_repair"] == ["off", "v1"]  # the first is the default
+    # "v2" (Jev) only where POST /matches takes it.
+    monkeypatch.setenv("ARENA_ALLOW_JEV", "1")
+    assert client.get("/setup").json()["answer_repair"] == ["off", "v1", "v2"]

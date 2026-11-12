@@ -184,7 +184,7 @@ def test_the_setting_is_recorded_and_checked_and_games_never_see_it():
     default, _ = play({}, settings={})
     assert of_type(default, "match_started")[0].data["answer_repair"] == "off"
     with pytest.raises(ValueError, match="answer_repair"):
-        Match(ToyGame(), {"p1": None, "p2": None}, seed=1, settings={"answer_repair": "v2"})
+        Match(ToyGame(), {"p1": None, "p2": None}, seed=1, settings={"answer_repair": "v3"})
     # Poker refuses any setting it does not know; this one never reaches it.
     poker = Match(Poker(), {"p1": None, "p2": None}, seed=1, settings=REPAIR_ON)
     assert poker.settings == REPAIR_ON

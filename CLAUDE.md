@@ -178,6 +178,23 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   records it. The same holds for `thought_headline: true`: every tool
   call also asks for a `headline` (at most 120 characters), which the
   `thought` event keeps for viewers; default `false`.
+- `answer_repair: "v2"` adds Jev (`arena/jev/`, D-125): a move still refused
+  after the corrections goes to the `Repairer` given to `Match(..., repairer=)`.
+  The engine offers it the game's own random legal moves (checked, drawn from a
+  stream of their own; speech never, optional free text dropped, a bet only at the
+  one amount the model itself wrote; never cut down: more than `max_options`, or
+  a single option, and Jev is not asked), Jev's `choice` maps the model's broken
+  call to one of them, and it plays only above the top-probability threshold of
+  `config/jev.yaml` (checked again, marked `repaired_by: "jev"`, the verdict in
+  `decision.jev`); otherwise the random fallback, which stays. Jev's answer must
+  be a probability distribution over exactly the options with the choice on top,
+  else `bad_answer`. Jev reads only the player's own view, its reasoning tail and
+  its refused calls. Every call goes through `Budget.jev` (booked, settled at
+  `usage.cost`, inside the caps; a cap pauses the match; a bill above its booking
+  stops Jev for the match). No Jev call is sent unless the server runs with
+  `ARENA_ALLOW_JEV=1`, which stays off until Nils approves real calls and the
+  placeholder thresholds are frozen; `POST /matches` refuses `"v2"` otherwise.
+  Tests use `FakeJev` only.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool

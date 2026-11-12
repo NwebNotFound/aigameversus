@@ -93,6 +93,8 @@ BETTER = {
     "vote_accuracy": "higher",
     "refused": "lower",
     "fallbacks": "lower",
+    "repaired": "lower",
+    "jev_repaired": "lower",
     "response_ms_mean": "lower",
     "tokens": "lower",
     "cost_micro_eur": "lower",
@@ -112,6 +114,7 @@ def cell(column: dict[str, Any], raw: Any) -> dict[str, Any]:
     return out
 
 
+PRIVATE_COUNTS = ("moves", "refused", "fallbacks", "repaired", "jev_repaired")
 ENGINE_COLUMNS = [
     {"key": "moves", "label": _label("Moves", "Züge"), "kind": "number", "spoilers": True},
     {
@@ -123,6 +126,18 @@ ENGINE_COLUMNS = [
     {
         "key": "fallbacks",
         "label": _label("Bot moves", "Bot-Züge"),
+        "kind": "number",
+        "spoilers": True,
+    },
+    {
+        "key": "repaired",
+        "label": _label("Repaired calls", "Reparierte Aufrufe"),
+        "kind": "number",
+        "spoilers": True,
+    },
+    {
+        "key": "jev_repaired",
+        "label": _label("Repaired by Jev", "Von Jev repariert"),
         "kind": "number",
         "spoilers": True,
     },
@@ -152,6 +167,11 @@ def _engine_counts(log: Log, players: list[str], spoilers: bool) -> dict[str, An
         if event.type == "action_fallback":
             count[player]["fallbacks"] += 1
         if event.type == "decision":
+            # The tiers of the move repair: read as meant (v1), mapped by Jev (v2).
+            if event.data.get("repairs"):
+                count[player]["repaired"] += 1
+            if (event.data.get("jev") or {}).get("reason") == "accepted":
+                count[player]["jev_repaired"] += 1
             if event.data.get("latency_ms") is not None:
                 times[player].append(event.data["latency_ms"])
             tokens[player] += (event.data.get("tokens_in") or 0) + (
@@ -159,7 +179,7 @@ def _engine_counts(log: Log, players: list[str], spoilers: bool) -> dict[str, An
             )
     per_player = {}
     for p in players:
-        private = {k: count[p][k] if spoilers else None for k in ("moves", "refused", "fallbacks")}
+        private = {k: count[p][k] if spoilers else None for k in PRIVATE_COUNTS}
         per_player[p] = {
             **private,
             "response_ms_mean": round(sum(times[p]) / len(times[p])) if times[p] else None,
@@ -170,6 +190,8 @@ def _engine_counts(log: Log, players: list[str], spoilers: bool) -> dict[str, An
         "moves": sum(c["moves"] for c in count.values()) if spoilers else None,
         "refused": sum(c["refused"] for c in count.values()) if spoilers else None,
         "fallbacks": sum(c["fallbacks"] for c in count.values()) if spoilers else None,
+        "repaired": sum(c["repaired"] for c in count.values()) if spoilers else None,
+        "jev_repaired": sum(c["jev_repaired"] for c in count.values()) if spoilers else None,
         "response_ms_mean": round(sum(all_times) / len(all_times)) if all_times else None,
         "tokens": sum(tokens.values()) or None,
     }

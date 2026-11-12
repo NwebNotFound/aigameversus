@@ -99,7 +99,11 @@ Liar's Deck, Poker, Werewolf):
   won, biggest pot, the hand a player went out in. Werewolf: role (spoilers, or
   once revealed at death), survived, died (phase), accused by others,
   accusations made, roles claimed, votes on wolves. Then moves, refused answers,
-  bot moves, response time, tokens and cost for every game.
+  bot moves, repaired calls (`repaired`: moves read by answer_repair v1),
+  repaired by Jev (`jev_repaired`: moves Jev mapped to a legal move, v2), response
+  time, tokens and cost for every game. The repair counts are spectator-only, like
+  the other engine counts; a model's refused attempts still count as refused, so
+  the tiers sit beside its tool errors, not instead of them.
 - **`key_moments`:** `{seq, kind, players, importance 1-3, text{en,de}}` in log
   order. Liar's Deck: a wrong call, a player caught lying, each elimination, the
   win. Poker: each elimination, the three biggest pots. Werewolf: each death and
