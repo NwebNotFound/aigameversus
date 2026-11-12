@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { type APIRequestContext } from '@playwright/test';
+import { expect, test } from './routes.js';
 import { readFileSync } from 'node:fs';
 
 // The Analytics tab of Liar's Deck, on bot matches started on the arena (ARENA_URL).

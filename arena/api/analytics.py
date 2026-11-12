@@ -11,6 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from arena.analytics import NoAnalytics, match_analytics
+from arena.analytics.talk import talk_checks
 from arena.api.live import LiveMatches
 from arena.db.ledger import LedgerUnavailable
 
@@ -64,4 +65,30 @@ async def analytics(
         for row in result["report"]["ranking"]:
             value = None if by_seat is None else by_seat[row["seat"]]
             row["values"].append({**column, "value": value})
+    return result
+
+
+@router.get("/matches/{match_id}/talk-checks")
+async def talk_check(
+    request: Request,
+    match_id: UUID,
+    spoilers: Annotated[
+        bool, Query(description="Include checks that need the players' hidden cards")
+    ] = False,
+) -> dict[str, Any]:
+    """What players said about their cards or role, against what the engine knows.
+
+    Each tag has the quote, the claim as read, `true` or `false`, and the evidence. The words
+    are read with patterns, so a tag is research data (`heuristic`), never a verdict. Without
+    `spoilers` Liar's Deck and Poker give no tags, and Werewolf only claims a death disproved.
+    """
+    live: LiveMatches = request.app.state.live
+    record = await live.matches.get(match_id)
+    if record is None:
+        raise HTTPException(404, f"No match {match_id}")
+    names = await live.matches.display_names(record)
+    log = list(enumerate(await live.log(match_id)))  # (seq, event), as the analyzers read it
+    result = talk_checks(record.game, log, spoilers, names)
+    if not result["available"] and "no talk check" in result.get("reason", ""):
+        raise HTTPException(404, f"No talk check for {record.game} yet")
     return result

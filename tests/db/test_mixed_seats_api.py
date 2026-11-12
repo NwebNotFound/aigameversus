@@ -108,7 +108,16 @@ def test_a_table_of_bots_named_by_seats_is_a_free_bot_match(client, database_url
         ({"seats": [BOT, BOT], "models": ["glm-flash", "glm-flash"]}, 422, "not both"),
         ({"seats": [{"kind": "model"}, BOT]}, 422, "names its model"),
         ({"seats": [{"kind": "bot", "model": "glm-flash"}, BOT]}, 422, "names its model"),
-        ({"seats": [{**model("glm-flash"), "personality": "bold"}, BOT]}, 422, "not supported yet"),
+        (
+            {"seats": [{**model("glm-flash"), "personality": "bold"}, BOT]},
+            422,
+            "Unknown personality",
+        ),
+        (
+            {"seats": [{"kind": "bot", "personality": "opportunist"}, BOT]},
+            422,
+            "plays no personality",
+        ),
         ({"seats": [BOT, BOT], "players": 3}, 422, "players is 3"),
         ({"seats": [model("no/such-model"), BOT], "confirm_spend": True}, 422, "Unknown model"),
     ],
@@ -142,3 +151,36 @@ def test_the_estimate_prices_the_model_seats_and_lets_the_bots_play_for_free(cli
     assert response.json()["estimate_micro_eur"] == seats["p1"]["estimate_micro_eur"] > 0
     only_bots = client.post("/matches/estimate", json={"game": "toy", "models": [None, None]})
     assert only_bots.status_code == 422
+
+
+def test_a_model_seat_plays_its_personality_and_the_match_records_it(
+    client, database_url, litellm, monkeypatch
+):
+    systems = []
+    real = litellm.acompletion
+
+    async def acompletion(**arguments):
+        systems.append(arguments["messages"][0]["content"])
+        return await real(**arguments, **NO_TOOL)
+
+    monkeypatch.setattr(litellm, "acompletion", acompletion)
+    seats = [
+        {**model("glm-flash"), "personality": "honourable_knight"},
+        model("deepseek-flash"),
+        BOT,
+    ]
+
+    response = client.post(
+        "/matches", json={"game": "toy", "seats": seats, "confirm_spend": True, "seed": 5}
+    )
+
+    assert response.status_code == 201, response.text
+    match = finish(client, response.json()["id"])
+    assert match["seats"]["p1"]["personality"] == "honourable_knight"
+    assert match["seats"]["p2"]["personality"] is None
+    started = client.get(f"/matches/{match['id']}/events").json()[0]
+    assert started["type"] == "match_started"
+    assert started["data"]["personalities"] == {"p1": "honourable_knight"}
+    knight = [s for s in systems if "# Your personality" in s]
+    assert knight and all("Honourable Knight" in s for s in knight)
+    assert any("# Your personality" not in s for s in systems)  # p2 plays without one
