@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-11-12T05:32:48.441121+00:00",
+  "request": {
+    "game": "civ",
+    "models": [
+      "glm-flash",
+      "deepseek-flash",
+      "gpt-luna",
+      "claude-haiku"
+    ],
+    "settings": {}
+  },
+  "http_status": 404,
+  "response": {
+    "detail": "Unknown game 'civ'. Games: liars_deck, poker, toy, werewolf"
+  },
+  "paid_calls": 0,
+  "limitation": "No supported 20-round setting exists in inspected draft; empty settings probe only, not a 20-round quote."
+}
