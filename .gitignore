@@ -30,3 +30,6 @@ htmlcov/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Certificates and keys of the LAN proxy (scripts/make_lan_cert.sh): never committed
+deploy/lan/certs/
