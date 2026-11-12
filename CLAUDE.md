@@ -951,6 +951,20 @@ uv run python -m arena.research.experiment experiments/<name>.yaml > experiments
 uv run pytest tests/research
 ```
 
+An explicit guest stage (`research/W2`: `PLAN.yaml` + `schedule.csv`) is played by
+`arena/research/guest_runner.py`, not by the generic runner.
+- **Before anything starts:** it refuses without the plan's recorded execution approval,
+  or with a CSV that is not the schedule the plan generates.
+- **What it sends:** only whitelisted fields, never `expected_roles`.
+- **Before each start:** the month hold, no other match running, a fresh free estimate
+  below the cap, and the cap read back. The stage's spend over every attempt plus 3×
+  that estimate must stay within 90 %, and plus the full cap within the stage. It also
+  holds if a guest's listed price has risen.
+- **After each match:** it holds on a failed match, a failed agent, a guest fallback
+  share above 10 % or a wrong role. It never retries.
+- **Restarts:** `<out>/attempts.jsonl` is written before every POST. A restart finds a
+  lost start by its batch label instead of posting again.
+
 ### A system
 
 *Not built yet: phase 7.* Target: a module that registers its tools and hooks
