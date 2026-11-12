@@ -35,7 +35,10 @@ GAMES = {
     "liars_deck": (4, {}),
     "poker": (3, {"hand_limit": 4}),
     "werewolf": (8, {}),
+    "civ": (4, {}),
 }
+# A seeded Throne of Tokens match is 60 rounds, thousands of lines: too long for a golden file.
+GOLDEN_GAMES = sorted(set(GAMES) - {"civ"})
 ENGINE_TYPES = {
     "match_started",
     "thought",
@@ -294,7 +297,7 @@ def check_golden(name: str, text: str) -> None:
     assert text == path.read_text(encoding="utf-8"), f"{name} changed; UPDATE_GOLDEN=1 if intended"
 
 
-@pytest.mark.parametrize("game", sorted(GAMES))
+@pytest.mark.parametrize("game", GOLDEN_GAMES)
 @pytest.mark.parametrize("lang", LANGS)
 def test_golden_seeded_bot_match_with_spoilers(game, lang):
     lines = render_match(bot_events(game, 7), lang=lang, spoilers=True)
