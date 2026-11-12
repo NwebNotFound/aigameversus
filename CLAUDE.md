@@ -908,6 +908,9 @@ next to it says what each does and what the generator guarantees.
   `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
   and `your_plan_from_last_round` exist only when it is on).
+  A balance sweep with random bots (no cost) is `uv run python -m
+  arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
+  its findings and the proposals D-137 and D-138.
 
 How these follow the engine's rules, and what the next systems should copy:
 
