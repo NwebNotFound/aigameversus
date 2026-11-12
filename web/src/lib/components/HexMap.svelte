@@ -65,6 +65,14 @@
 	);
 	const progress = $derived(spec.rounds_total ? spec.round / spec.rounds_total : 0);
 	const legendTerrains = $derived([...new Set(all.map((t) => t.terrain))]);
+	/** The largest stock of each resource on the board, so the bars compare the nations. */
+	const most = $derived(
+		spec.nations.reduce<Record<string, number>>((acc, n) => {
+			for (const [resource, amount] of Object.entries(n.stock ?? {}))
+				acc[resource] = Math.max(acc[resource] ?? 0, amount);
+			return acc;
+		}, {})
+	);
 </script>
 
 {#snippet glyph(terrain: string, x: number, y: number)}
@@ -262,8 +270,19 @@
 				{#if nation.stock}
 					<span class="stock" data-testid="hex-stock">
 						{#each Object.entries(nation.stock) as [resource, amount] (resource)}
-							<span title={resource}><i class="res {resource}" aria-hidden="true"></i>{amount}</span
-							>
+							<span class="res-cell" title="{resource}: {amount}">
+								<span class="res-top"
+									><i class="res {resource}" aria-hidden="true"></i><small>{resource}</small><b
+										>{amount}</b
+									></span
+								>
+								<span class="res-bar" aria-hidden="true"
+									><i
+										class="res {resource}"
+										style="width: {(amount / (most[resource] || 1)) * 100}%"
+									></i></span
+								>
+							</span>
 						{/each}
 					</span>
 				{/if}
@@ -591,16 +610,51 @@
 
 	.stock {
 		grid-column: 1 / -1;
-		display: flex;
-		gap: 0.6rem;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.25rem 0.6rem;
 		font-variant-numeric: tabular-nums;
 		color: var(--muted);
 	}
 
-	.stock span {
-		display: inline-flex;
+	.res-cell {
+		display: grid;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+
+	.res-top {
+		display: flex;
 		align-items: center;
-		gap: 0.2rem;
+		gap: 0.25rem;
+		font-size: 0.72rem;
+	}
+
+	.res-top small {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.res-top b {
+		margin-left: auto;
+		font-weight: 650;
+		color: var(--text);
+	}
+
+	.res-bar {
+		display: block;
+		height: 0.25rem;
+		border-radius: 999px;
+		background: var(--surface-raised);
+		overflow: hidden;
+	}
+
+	.res-bar .res {
+		display: block;
+		height: 100%;
+		width: 0;
+		border-radius: 0;
 	}
 
 	.res {
