@@ -62,7 +62,22 @@ def test_shipped_config_has_the_project_caps_and_a_roster():
     assert config.limits.reasoning_effort == "low"
     # Enough different models for a Poker table.
     assert len(config.models) >= 6
-    assert len({model.model for model in config.models.values()}) == len(config.models)
+    # One entry per provider model, except the documented Civ treatment of deepseek-flash,
+    # which shares its model and prices on purpose (its own id = its own rating and ledger).
+    entries = {k: m for k, m in config.models.items() if k != "deepseek-flash-civ"}
+    assert len({model.model for model in entries.values()}) == len(entries)
+    civ, plain = config.models["deepseek-flash-civ"], config.models["deepseek-flash"]
+    assert (civ.model, civ.input_usd_per_mtok, civ.output_usd_per_mtok) == (
+        plain.model,
+        plain.input_usd_per_mtok,
+        plain.output_usd_per_mtok,
+    )
+    assert (civ.max_output_tokens, civ.reasoning_effort, civ.tool_choice) == (
+        4000,
+        "low",
+        "required",
+    )
+    assert plain.max_output_tokens is None  # the global entry stays untouched
     assert all(model.output_usd_per_mtok > 0 for model in config.models.values())
 
 
