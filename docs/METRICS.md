@@ -46,8 +46,8 @@ same numbers for the same log. The definitions follow the Researcher's review
 ## Sections (`sections`, `numbers`)
 
 Every answer lists the parts it has besides `game`, `spoilers`, `events` and
-`meta`, in order: `["situation"]` for a game with a situation only (Poker
-today), `["situation", "players", "moves", ...]` for Liar's Deck. A client
+`meta`, in order: `["situation"]` for a game with a situation only (Throne of
+Tokens today), `["situation", "players", "moves", ...]` for Liar's Deck and Poker. A client
 checks this list instead of probing for keys. `numbers` is `false` when the
 answer has the situation only, `true` otherwise.
 
@@ -239,15 +239,35 @@ truth), `calls` and `fallbacks`.
 plus jokers held, cards played, truth, called or not, risk, response time and
 tokens. The research export will write it as one row per move.
 
-## Poker (planned)
+## Poker
 
-- VPIP and PFR the standard way (blinds and a free check excluded). Aggression
-  factor = (bets + raises) / calls, `null` with no call.
-- A **bluff** is a bet or raise when the hand's equity against random hands at
-  that street is below 0.33; a **value bet** above 0.6. Equity from a seeded
-  Monte Carlo with a fixed, documented number of samples, stored per decision;
-  the win-probability curve uses the same function. Showdowns alone do not
-  define bluffs: most bluffs never reach one.
+`numbers` (`arena/analytics/poker.py`): `hands` (one per hand: button, board, streets reached,
+pot, winners, net chips per player, whether it went to a showdown and the hands shown, who
+bet or raised, who put chips in before the flop), `chips` (each player's stack before the first
+hand and after every hand), `moves` (every bet action with its street, kind, amount and the
+decision telemetry of the move) and `totals` per player. All of it is read from public events,
+so a spoiler-free viewer gets it, except the decision telemetry (the `decision` events are for
+spectators only) and the two numbers that read hole cards.
+
+- `hands`, `hands_won` (won part of a pot), `net_chips`, `final_chips`.
+- `folds`, `checks`, `calls`, `raises`, `all_ins` and `fold_rate`, `call_rate`, `raise_rate`,
+  `all_in_rate` (each a rate with its n, over the player's moves).
+- `vpip`: hands in which the player put chips in before the flop voluntarily (a call, a raise
+  or an all-in; blinds and a free check do not count), over hands dealt in.
+- `aggression_factor`: aggressive actions / calls over all streets (a raise is aggressive; an
+  all-in is aggressive if it goes above the highest bet of the street so far, else it is a
+  call); `null` with no call. The same numbers as `arena/stats/poker.py`; a test keeps them equal.
+- `showdowns`, `showdowns_won`; `showdown_bluffs`: hands in which the player bet or raised and
+  lost the showdown; `showdown_value_bets`: bet or raised and won it. Public once the hands
+  are shown.
+- `bluff_hands`, `bluff_rate`, `worst_decisions`: spoilers only (`null` without), because they
+  need hole cards nobody showed (a bluff that took the pot without a showdown; a fold that
+  would have won). Defined as in `arena/stats/poker.py`.
+- `fallbacks`, `refused`, `response_ms_mean`, `tokens`, `retries_total`, ...: from the
+  decision telemetry, spoilers only.
+
+Later: bluffs and value bets by equity against random hands (below 0.33 / above 0.6, a seeded
+Monte Carlo stored per decision), which also finds the bluffs that never reach a showdown.
 
 ## Werewolf
 
