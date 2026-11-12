@@ -313,7 +313,8 @@ the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
   (Liar's Deck, Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
-  prompt as it was, or `<game>-p2`). `ModelAgent(call, plugin,
+  prompt as it was; `<game>-p1.1`, p1 with its sentence about thoughts made to
+  agree with the system message (`with_thought_in_the_call`); or `<game>-p2`). `ModelAgent(call, plugin,
   settings=...)` asks the plugin for `rules(settings)` once and for
   `situation_summary(observation, settings)` on every turn; the API and the
   command pass the match settings. `prompt_version(settings)` is recorded in

@@ -16,7 +16,9 @@ from collections.abc import Mapping
 from importlib import resources
 from typing import Any
 
-VERSIONS = ("werewolf-p1", "werewolf-p2", "werewolf-p3")
+from arena.agents.prompt import with_thought_in_the_call
+
+VERSIONS = ("werewolf-p1", "werewolf-p1.1", "werewolf-p2", "werewolf-p3")
 DEFAULT_VERSION = "werewolf-p1"
 _FILES = {
     "werewolf-p1": "rules.md",
@@ -40,6 +42,8 @@ def version_of(settings: Mapping[str, Any] | None) -> str:
 
 
 def rules_text(version: str) -> str:
+    if version == "werewolf-p1.1":  # p1, with the thought where the system message asks for it
+        return with_thought_in_the_call(rules_text("werewolf-p1"))
     return resources.files("games.werewolf").joinpath(_FILES[version]).read_text(encoding="utf-8")
 
 
