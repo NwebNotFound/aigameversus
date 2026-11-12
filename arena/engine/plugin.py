@@ -93,6 +93,14 @@ class GamePlugin[StateT: BaseModel](ABC):
         """Which prompt the models of a match get; recorded in `match_started`."""
         return "v1"
 
+    def history_limit(self, settings: Mapping[str, Any] | None = None) -> int:
+        """How many of the latest events a prompt shows (the older ones are only counted).
+
+        A game in which one turn can produce more than this for a player (a simultaneous game
+        with talk) raises it for a prompt version, so nothing of the turn is dropped.
+        """
+        return 40
+
     def situation_summary(
         self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
     ) -> str | None:
