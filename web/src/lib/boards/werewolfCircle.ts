@@ -66,3 +66,83 @@ const WOLF_ROLES = new Set(['werewolf', 'prime_wolf', 'white_wolf']);
 
 /** Whether a role hunts with the pack, for the colour of its label. */
 export const isWolf = (role: unknown) => typeof role === 'string' && WOLF_ROLES.has(role);
+
+export interface Death {
+	role: string | null;
+	cause: string | null;
+	/** Which death of the match it was, from 1, for the order of the reveal. */
+	order: number;
+}
+
+/**
+ * Who has died, with the role the game announced at the death (`player_died` is public, so
+ * this holds in the spoiler-free view too) and how they died.
+ */
+export function deathsOf(events: MatchEvent[]): Record<string, Death> {
+	const deaths: Record<string, Death> = {};
+	let order = 0;
+	for (const event of events) {
+		if (event.type !== 'player_died') continue;
+		const { player, role, cause } = event.data as Record<string, unknown>;
+		if (typeof player !== 'string' || deaths[player]) continue;
+		deaths[player] = {
+			role: typeof role === 'string' ? role : null,
+			cause: typeof cause === 'string' ? cause : null,
+			order: ++order
+		};
+	}
+	return deaths;
+}
+
+/** How a death reads on the seat: "killed at night", "executed", … */
+export function causeWords(cause: string | null): string {
+	switch (cause) {
+		case 'wolves':
+			return 'killed at night';
+		case 'executed':
+			return 'executed';
+		case 'poison':
+		case 'poisoned':
+			return 'poisoned';
+		case 'hunter':
+		case 'shot':
+			return 'shot';
+		case null:
+			return 'died';
+		default:
+			return cause.replaceAll('_', ' ');
+	}
+}
+
+/** Events that end what was said: a new phase, a vote result, a death. */
+const SCENE_ENDS = new Set([
+	'night_started',
+	'morning_started',
+	'day_started',
+	'vote_result',
+	'player_died',
+	'game_over'
+]);
+
+/**
+ * The words on stage: the newest speech (or pack whisper) line, as long as no later line
+ * ended its scene. The board draws it at the speaker's seat; the commentary keeps them all.
+ */
+export function onStage<
+	L extends { kind: string; actor: string | null; raw: Record<string, unknown> }
+>(lines: L[]): L | null {
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const line = lines[i];
+		if ((line.kind === 'speech' || line.kind === 'whisper') && line.actor) return line;
+		if (SCENE_ENDS.has(String(line.raw?.type ?? ''))) return null;
+	}
+	return null;
+}
+
+/** The tally as a ranking, most votes first, then by seat order. */
+export function ranking(votes: Vote[], order: string[]): { player: string; votes: number }[] {
+	const counts = tally(votes);
+	return Object.entries(counts)
+		.map(([player, n]) => ({ player, votes: n }))
+		.sort((a, b) => b.votes - a.votes || order.indexOf(a.player) - order.indexOf(b.player));
+}

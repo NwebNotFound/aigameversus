@@ -116,7 +116,13 @@ Three ways:
   429 to a start beyond that; a match that never ends stops at its turn limit
   and is marked `failed`.
   With `"models": ["glm-flash", ...]` (one per seat) and `"confirm_spend":
-  true` the seats are models behind one `Budget`, as with the command. Model
+  true` the seats are models behind one `Budget`, as with the command.
+  `"seats": [{"kind": "model", "model": "glm-flash"}, {"kind": "bot"}, ...]`
+  instead of `models` lets models and random bots share a table: the bots play
+  free, a mixed match rates its models only, among themselves, and
+  `POST /matches/estimate` takes `null` for a bot seat. A personality per seat is
+  refused (422) until the agent runner puts one in the prompt; `GET /setup` says
+  `mixed_seats: true` on a server that takes `seats`. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
   ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
@@ -157,7 +163,16 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   first tool call is the action, and its `thought` argument is the private
   thought. `tool_schemas` adds that argument to every tool and the runner
   takes it out again, so a game never sees it and no game tool may use the
-  name. Text beside the call counts as the thought when the argument is empty.
+  name. Text beside the call counts as the thought when the argument is empty. Garbled
+  arguments are repaired where the meaning is clear (`arena/agents/arguments.py`:
+  JSON inside text, unknown keys dropped, `{}` for a tool without arguments,
+  numbers written as text); each repair is named on the move's `decision`
+  event (`repairs`, `raw_arguments`), and after 3 garbled answers in a match
+  the model gets its tools without `thought` (`simple_schema`). Only with the
+  match setting `answer_repair: "v1"`: the default `"off"` reads every call as
+  sent, as before. It is the engine's setting, not the game's: `game_settings`
+  removes it before the plugin and replay see the settings; `match_started`
+  records it.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
@@ -490,6 +505,12 @@ npm run test:unit             # vitest
 npx playwright test           # smoke tests on 3100 (WEB_URL overrides); needs demo_seed data
 ```
 
+A spec that changes network answers (`page.route`) imports `test` and `expect` from
+`web/tests/routes.ts`, not from `@playwright/test`, and rewrites a real answer with
+`rewrite(page, url, edit)`: a handler that outlives its test is then dropped instead of
+failing a green run ("route.fetch: Test ended"). `npm run lint` refuses a spec that
+routes without it.
+
 Secret scan (same as CI):
 
 ```bash
@@ -713,6 +734,11 @@ which effects still wait for their system.
 
 ### The Throne of Tokens map
 
+How the parts of the game fit together (round order, the `submit_orders`
+call, combat rules, state fields, events, the observation and the
+`hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
+build against it, and change it in the same pull request as the code.
+
 The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
@@ -745,6 +771,14 @@ next to it says what each does and what the generator guarantees.
   `reachable`, `training_cost`, `army_viewpoints`), orders with a check each
   (`train`, `move`, `split`, `merge`, `disband`, `settle`),
   `deploy_start_units` for the setup and the round step `starve`.
+- `games/civ/diplomacy.py`: messages, treaties (offer, answer, break, expire),
+  wars, reputation, tributes and trade. Questions for combat and the turn flow
+  (`at_war`, `may_attack`, `allies`, `open_borders`, `wars_of`, `trade_fee`),
+  orders with a check each (`message`, `propose_treaty`, `respond_treaty`,
+  `propose_trade`, `respond_trade`, `break_treaty`, `declare_war`) and the round
+  steps `expire` (start) and `settle` (the trade step). Offers and trades are
+  private to the two nations; signed, broken and expired treaties and wars are
+  public.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.

@@ -58,17 +58,25 @@ test('a match of models does not start without the spend box', async ({ page, re
 	await expect(page).toHaveURL('/matches/new');
 });
 
-test('bots and models do not mix at one table', async ({ page, request }) => {
-	const [first] = (await (await request.get(`${ARENA}/setup`)).json()).models;
+test('a table mixes a model and a bot where the arena takes seats, else says why not', async ({
+	page,
+	request
+}) => {
+	const setup = await (await request.get(`${ARENA}/setup`)).json();
+	const [first] = setup.models;
 	await chooseModels(page, [first]);
 	await page.getByLabel('Number of players').fill('2');
 	await page.getByLabel(/I understand that this match spends money/).check();
 
+	if (setup.mixed_seats) {
+		await expect(page.getByText('a table may mix them')).toBeVisible();
+		return; // starting it would make a paid call; the API tests cover the start
+	}
 	await page.getByRole('button', { name: 'Start match (spends money)' }).click();
 
 	await expect(
 		page.getByText(
-			'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.'
+			'A table is all models or all random bots on this server: it cannot mix them yet.'
 		)
 	).toBeVisible();
 	await expect(page).toHaveURL('/matches/new');

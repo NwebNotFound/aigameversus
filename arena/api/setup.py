@@ -44,6 +44,10 @@ class SetupOptions(BaseModel):
         "ARENA_ALLOW_MODEL_SEATS=1 and has the providers' API keys. Otherwise every seat is "
         "a random bot."
     )
+    mixed_seats: bool = Field(
+        True,
+        description="Whether POST /matches takes `seats`, so models and random bots share a table",
+    )
     models: list[ModelOption]
     personalities: list[Personality]
     caps: Caps

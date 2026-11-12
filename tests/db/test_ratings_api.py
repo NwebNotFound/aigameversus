@@ -78,6 +78,8 @@ def test_leaderboard_per_game(database_url, client):
         "members": 1,
         "cost_per_game_micro_eur": None,
         "tool_error_rate": None,
+        "repaired_rate": None,
+        "clean_rate": None,
     }
     assert first["rating"] > 1000 > second["rating"]
     assert second["rank"] == 2 and second["win_rate"] == 0.0
@@ -133,7 +135,9 @@ def test_endpoints_are_in_the_openapi_docs(client):
     assert "/profiles/{profile_id}" in paths
 
 
-def add_usage(database_url, profile_id, game, *, cost, accepted, rejected):
+def add_usage(
+    database_url, profile_id, game, *, cost, accepted, rejected, repaired=0, fallback_repaired=0
+):
     """Put a rated match of one seat into the database with its booked cost and answers."""
 
     async def go():
@@ -156,14 +160,22 @@ def add_usage(database_url, profile_id, game, *, cost, accepted, rejected):
             )
             events = [("action_accepted", "p1")] * accepted + [("action_rejected", "p1")] * rejected
             events += [("action_accepted", "p2")]  # another seat's answer is not counted
+            events += [("decision", "p1")] * repaired + [
+                ("decision_fallback", "p1")
+            ] * fallback_repaired
             for seq, (kind, player) in enumerate(events):
+                data = {"player": player}
+                if kind.startswith("decision"):
+                    data["repairs"] = ["ignored_thought"]
+                    data["fallback"] = "rejected" if kind == "decision_fallback" else None
+                    kind = "decision"
                 await pool.execute(
                     "INSERT INTO match_events (match_id, seq, source, type, data, visible_to) "
                     "VALUES ($1, $2, 'engine', $3, $4, '{}')",
                     match_id,
                     seq,
                     kind,
-                    {"player": player},
+                    data,
                 )
         finally:
             await pool.close()
@@ -364,3 +376,45 @@ def test_the_leaderboard_marks_provisional_ratings_at_the_threshold(database_url
     assert {row["provisional"] for row in werewolf["rows"]} == {True}  # 1 game
     assert {row["provisional"] for row in poker.values()} == {False}  # exactly 10 games
     assert {row["provisional"] for row in overall.values()} == {False}  # 11 games overall
+
+
+def test_the_board_splits_answers_into_refused_repaired_and_clean(database_url, client):
+    ids = seed(database_url, [("poker", [1, 2]), ("poker", [2, 1])])
+    add_usage(database_url, ids[0], "poker", cost=6000, accepted=8, rejected=2, repaired=3)
+
+    rows = {
+        r["name"]: r for r in client.get("/leaderboard", params={"game": "poker"}).json()["rows"]
+    }
+
+    row = rows["p0"]
+    assert row["tool_error_rate"] == pytest.approx(0.2)
+    assert row["repaired_rate"] == pytest.approx(0.3)
+    assert row["clean_rate"] == pytest.approx(0.5)
+    assert row["tool_error_rate"] + row["repaired_rate"] + row["clean_rate"] == pytest.approx(1)
+    assert rows["p1"]["repaired_rate"] is None and rows["p1"]["clean_rate"] is None
+
+
+def test_a_repaired_call_that_ended_in_a_random_move_is_not_counted_as_repaired(
+    database_url, client
+):
+    ids = seed(database_url, [("poker", [1, 2]), ("poker", [2, 1])])
+    add_usage(
+        database_url,
+        ids[0],
+        "poker",
+        cost=0,
+        accepted=6,
+        rejected=2,
+        repaired=1,
+        fallback_repaired=5,
+    )
+
+    row = next(
+        r
+        for r in client.get("/leaderboard", params={"game": "poker"}).json()["rows"]
+        if r["name"] == "p0"
+    )
+
+    assert row["repaired_rate"] == pytest.approx(1 / 8)  # the 5 that fell back are not answers
+    assert row["clean_rate"] == pytest.approx(5 / 8) and row["clean_rate"] >= 0
+    assert row["tool_error_rate"] + row["repaired_rate"] + row["clean_rate"] == pytest.approx(1)

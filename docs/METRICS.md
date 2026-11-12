@@ -275,6 +275,20 @@ speech by simple rules, each marked `heuristic: true`.
   (speech), the tally and the execution; `recap[].text.en/de` is one sentence
   per phase from a template (`TemplateNarrator`). A `Narrator` with the same
   method can replace it, such as a cheap model later; none is called by default.
+- **`claims[].lie`:** with spoilers, whether the player claimed a role they do
+  not have (a wolf claiming "villager" lies). Without spoilers, `true` only once
+  a death revealed another role, else null (not known).
+- **`narration`** (`arena/gamemaster/drama.py`): every public `narration` event
+  as `{seq, key, text{en,de}}`, a dramatic line in place of the plain template,
+  with display names; several variants per moment, rotating with each occurrence
+  so night 2 does not open like night 1, and the same for every replay. The line
+  says only what the event's facts say. A `Voice` (a model, later) may replace
+  it; the template line stands when it says nothing. No model is called by
+  default.
+- **`report.at_a_glance.awards`:** `[{id, seat, text{en,de}, ...}]`.
+  `most_deceptive` (most claims that were lies), `most_accurate_voter`
+  (spoilers; the highest share of votes on wolves, at least 2 votes and 1 hit),
+  `most_accused` (heuristic, from speech and votes).
 - Without spoilers only public events are read: no wolf chat, no lover chat,
   no roles but those revealed at death (`meta.revealed`); `meta.roles` is
   null.

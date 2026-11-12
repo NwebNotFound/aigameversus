@@ -51,6 +51,7 @@ export function parseForm(
 	form: FormData,
 	games: GameInfo[],
 	models: string[] = [],
+	mixed = false,
 	unreliable: string[] = []
 ): Parsed {
 	const errors: Partial<Record<Field, string>> = {};
@@ -69,18 +70,23 @@ export function parseForm(
 	const seats = form.getAll('seat').map(String);
 	const modelSeats = seats.filter((seat) => seat !== BOT);
 	let seatModels: string[] | undefined;
+	let seatSpecs: NewMatch['seats'];
 	if (modelSeats.length) {
 		if (!models.length) {
 			errors.seats = 'This server plays random bots only; models cannot take a seat here.';
 		} else if (modelSeats.some((seat) => !models.includes(seat))) {
 			errors.seats = 'Choose a model from the list for every seat.';
-		} else if (modelSeats.length !== seats.length) {
+		} else if (modelSeats.length !== seats.length && !mixed) {
 			errors.seats =
-				'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.';
+				'A table is all models or all random bots on this server: it cannot mix them yet.';
 		} else if (Number.isInteger(players) && seats.length !== players) {
-			errors.seats = 'Choose one model per player.';
+			errors.seats = 'Choose a player for every seat.';
 		} else {
-			seatModels = modelSeats;
+			if (modelSeats.length === seats.length) seatModels = modelSeats;
+			else
+				seatSpecs = seats.map((seat) =>
+					seat === BOT ? { kind: 'bot' as const } : { kind: 'model' as const, model: seat }
+				);
 			if (form.get('confirm_spend') === null) {
 				errors.confirm_spend = 'A match of models spends real money: tick the box to start it.';
 			}
@@ -135,7 +141,8 @@ export function parseForm(
 			turn_delay: turnDelay,
 			// The box says "without memory", so a form that leaves it out keeps memory on.
 			memory: form.get('no_memory') === null,
-			...(seatModels ? { models: seatModels, confirm_spend: true } : {})
+			...(seatModels ? { models: seatModels, confirm_spend: true } : {}),
+			...(seatSpecs ? { seats: seatSpecs, confirm_spend: true } : {})
 		}
 	};
 }

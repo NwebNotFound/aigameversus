@@ -1,0 +1,497 @@
+# Die Worte der Werwolf-Chronik auf Deutsch: vier Stile, die sich im Aufbau (Kapitelüberschriften,
+# Anordnung) und in den Worten unterscheiden. Zu jeder Art gibt es mehrere Varianten; der Komponist
+# wählt eine nach dem Seed des Spiels und benutzt denselben fertigen Satz nie zweimal.
+# Felder: siehe `FIELDS` in arena/chronicle/compose.py.
+epic:
+  title: "Die Chronik des Werwolfdorfes"
+  layout: {joiner: " ", prefix: "", paragraph: 0}
+  chapters:
+    prologue: "Prolog: Die Versammlung"
+    night: "Die {nth} Nacht"
+    day: "Der {nth} Tag"
+    epilogue: "Epilog: Was blieb"
+  glance_title: "Auf einen Blick"
+  glance_labels:
+    winner: "Sieger"
+    length: "Dauer"
+    turning_point: "Der Wendepunkt"
+    accurate_voter: "Schärfstes Auge"
+    deceptive: "Meister der Masken"
+    cost: "Preis der Geschichte"
+  glance_values:
+    length: "{days} Tage"
+    accurate_voter: "{who}, richtig in {right} von {of} Abstimmungen"
+    deceptive: "{who}, {deceptive_note}"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Tag {n}: Das Dorf schickte {player} ({role}) an den Galgen, und es traf den Falschen"
+    wolf_executed: "Tag {n}: Das Dorf fand in {player} einen Wolf"
+    seer_killed: "Nacht {n}: Die Wölfe brachten {player}, die Seherin, zum Schweigen"
+    lover_grief: "Nacht {n}: {player} starb vor Gram um die verlorene Liebe"
+    hunter_shot: "{hunter} feuerte einen letzten Schuss und nahm {target} mit"
+    false_claim: "{who} gab eine Rolle vor, die nicht die eigene war"
+    save: "Nacht {n}: Im Dunkeln wurde ein Leben gerettet ({target})"
+  deceptive_notes:
+    survived: "von niemandem entlarvt, nach {days} Tagen noch am Leben"
+    fell: "trug die Maske bis Tag {days}"
+    lies: " und log {lies}-mal über die eigene Rolle"
+  kinds:
+    cast:
+      - "Das Dorf versammelte sich, {count} Seelen unter einem Dach: {cast}."
+      - "{count} Spieler nahmen Platz, und das Schicksal gab jedem ein Geheimnis: {cast}."
+    lovers:
+      - "Amors Pfeil traf {a} und {b}, und von dieser Stunde an waren ihre Leben eins."
+    night_falls:
+      - "Nacht {n} legte sich über die Dächer, und {alive} Seelen schlossen die Augen."
+      - "Die {nth} Nacht kam kalt und still über {alive} Schlafende."
+      - "Zum {nth}n Mal kehrte die Dunkelheit zurück; {alive} lebten noch, um sie zu fürchten."
+    wolf_plan:
+      - "Im Dunkeln flüsterte {who} dem Rudel zu: \"{quote}\""
+      - "Zähne blitzten, als {who} murmelte: \"{quote}\""
+    wolf_target:
+      - "Das Rudel wählte {target}."
+    wolf_missed_witch:
+      - "Die Wölfe kamen für {target}, doch der Trank der Hexe holte das Opfer vom Abgrund zurück."
+    wolf_missed_protector:
+      - "Die Wölfe kamen für {target}, doch ein verborgener Wächter stand im Weg."
+    wolf_missed_unknown:
+      - "Die Wölfe kamen für {target}, und irgendwie erlebte {target} den Morgen."
+    seer_found_wolf:
+      - "{seer} richtete den Blick der Seherin auf {target} und sah hinter dem Gesicht einen Wolf."
+    seer_found_village:
+      - "{seer} sah in {target} nur {role_acc}, ehrlich wie Brot."
+      - "Die Seherin {seer} blickte auf {target}: {role_a}, nicht mehr."
+    witch_heal:
+      - "{witch} setzte {target} den Heiltrank an die Lippen."
+    witch_poison:
+      - "{witch} maß das Gift ab, und {target} war zum Tode gezeichnet."
+    night_quiet:
+      - "Und doch verging die Nacht, und niemand fiel."
+      - "Der Morgen fand jedes Bett besetzt."
+      - "Das Dunkel gab jeden Schläfer zurück: Niemand fehlte."
+    death_wolves:
+      - "Bei Tagesanbruch fand man {player}, {role_the}, von den Wölfen zerrissen."
+      - "Das Dorf erwachte von einem Schrei: {player} ({role}) lag tot da, {cause}."
+      - "{player} ({role}) erwachte nicht mehr; die Wölfe waren da gewesen."
+    death_poison:
+      - "{player} ({role}) lag tot da, vergiftet."
+    death_grief:
+      - "{player} ({role}) ertrug den Verlust nicht und folgte der Liebe in den Tod."
+    death_other:
+      - "{player} ({role}) war tot: {cause}."
+    hunter_shot:
+      - "Mit dem letzten Atemzug hob {hunter} der Jäger das Gewehr und riss {target} mit sich."
+    day_breaks:
+      - "Der {nth} Tag dämmerte über {alive} Überlebenden, und das Streiten begann."
+      - "Tag {n}: {alive} von ihnen versammelten sich auf dem Platz und suchten in den Gesichtern."
+      - "Tag {n}: Der Platz füllte sich mit {alive} misstrauischen Gesichtern."
+    captain:
+      - "Das Dorf wählte {player} mit {votes} Stimmen zum Hauptmann, eine Stimme, die doppelt zählte."
+    vote_reason:
+      - "{who} nannte {target}: \"{quote}\""
+      - "\"{quote_bare}\", sagte {who} und stimmte gegen {target}."
+      - "Gegen {target} führte {who} diesen Grund an: \"{quote}\""
+    speech_own:
+      - "{who} ergriff das Wort: \"{quote}\""
+    speech_accuser:
+      - "{who} wandte sich gegen {focus}: \"{quote}\""
+    tally_decided:
+      - "Die Stimmen wurden gezählt: {tally}. {executed} war verurteilt."
+    tally_none:
+      - "Die Stimmen wurden gezählt: {tally}, und niemand setzte sich durch."
+    execution_wrong:
+      - "{player}, {role_a}, wurde mit {votes} Stimmen zum Galgen geführt, doch kein Wolf, und die Wölfe lächelten."
+      - "{votes} Hände hoben sich gegen {player}, der gar kein Wolf war, sondern {role_a}."
+    execution_wolf:
+      - "{votes} Stimmen schickten {player} an den Galgen, und endlich fiel ein Wolf."
+    execution_other:
+      - "{player} ({role}) wurde mit {votes} Stimmen verurteilt."
+    no_execution:
+      - "Das Dorf konnte sich nicht einigen, und der Galgen blieb leer."
+      - "Die Abstimmung zerbrach wie trockenes Holz, und niemand wurde abgeführt."
+      - "Stimmen prallten aufeinander und hoben sich auf; der Galgen wartete vergebens."
+    claim_lie:
+      - "{who} schwor, {claimed_a} zu sein, war aber in Wahrheit {actual_a}."
+    claim_true:
+      - "{who} erklärte, {role_the} zu sein, und das war keine Lüge."
+    counterclaim:
+      - "{claimants} behaupteten alle, {role_the} zu sein, und nicht alle konnten die Wahrheit sagen."
+    result_wolves:
+      - "Die Wölfe ({winners}) waren dem Dorf nun überlegen, und die Nacht gehörte ihnen nach {days} Tagen für immer."
+    result_village:
+      - "Der letzte Wolf fiel, und das Dorf ({winners}) hatte nach {days} Tagen gewonnen."
+    result_lovers:
+      - "Nur das Liebespaar ({winners}) war übrig, und die Liebe hatte alle überdauert."
+    result_white_wolf:
+      - "Der Weiße Werwolf ({winners}) stand allein unter den Toten."
+    result_nobody:
+      - "Die Tage liefen ab, und keine Seite hatte gewonnen."
+    reveal:
+      - "Hinter den Masken: {reveal}."
+news:
+  title: "WERWOLFDORF: DER VOLLSTÄNDIGE BERICHT"
+  layout: {joiner: "\n", prefix: "- ", paragraph: 0}
+  chapters:
+    prologue: "Hintergrund"
+    night: "Nacht {n}: Bericht der Nacht"
+    day: "Tag {n}: Die Dorfversammlung"
+    epilogue: "Endergebnis"
+  glance_title: "Die wichtigsten Fakten"
+  glance_labels:
+    winner: "Gewinner"
+    length: "Dauer"
+    turning_point: "Schlüsselmoment"
+    accurate_voter: "Bester Abstimmer"
+    deceptive: "Größter Bluffer"
+    cost: "Kosten"
+  glance_values:
+    length: "{days} Tage"
+    accurate_voter: "{who} ({right} von {of} Stimmen richtig)"
+    deceptive: "{who} ({deceptive_note})"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Tag {n}: {player} ({role}) irrtümlich hingerichtet"
+    wolf_executed: "Tag {n}: Wolf {player} hingerichtet"
+    seer_killed: "Nacht {n}: Seherin {player} von den Wölfen getötet"
+    lover_grief: "Nacht {n}: {player} stirbt vor Gram"
+    hunter_shot: "{hunter} erschießt {target} im Abgang"
+    false_claim: "{who} gibt eine falsche Rolle an"
+    save: "Nacht {n}: Ein Opfer ({target}) wird gerettet"
+  deceptive_notes:
+    survived: "nie erwischt, nach {days} Tagen am Leben"
+    fell: "hielt die Tarnung bis Tag {days}"
+    lies: ", {lies} falsche Rollenangabe(n)"
+  kinds:
+    cast:
+      - "{count} Spieler, geheime Rollen: {cast}."
+    lovers:
+      - "Liebespaar: {a} und {b}. Stirbt einer, stirbt der andere mit."
+    night_falls:
+      - "Nacht {n} beginnt mit {alive} lebenden Spielern."
+      - "{alive} Spieler gehen in Nacht {n} schlafen."
+      - "Nacht {n}: {alive} Spieler übrig."
+    wolf_plan:
+      - "Rudel-Chat, {who}: \"{quote}\""
+    wolf_target:
+      - "Das Rudel wählt {target} als Ziel."
+    wolf_missed_witch:
+      - "Angriff auf {target} vereitelt: Die Hexe heilt das Opfer."
+    wolf_missed_protector:
+      - "Angriff auf {target} vereitelt: Die Wache des Beschützers hält."
+    wolf_missed_unknown:
+      - "Angriff auf {target} scheitert, das Opfer überlebt."
+    seer_found_wolf:
+      - "Seherin {seer} prüft {target}: ein Wolf."
+    seer_found_village:
+      - "Seherin {seer} prüft {target}: {role_a}, keine Gefahr."
+    witch_heal:
+      - "{witch} setzt den Heiltrank bei {target} ein."
+    witch_poison:
+      - "{witch} setzt das Gift bei {target} ein."
+    night_quiet:
+      - "Morgenbericht: keine Toten."
+      - "Nichts zu berichten aus der Nacht: Alle Spieler leben."
+      - "Keine Toten über Nacht."
+    death_wolves:
+      - "TOT: {player} ({role}), von den Wölfen getötet."
+      - "Bei Tagesanbruch tot aufgefunden: {player}, {role_the}."
+      - "Opfer des Wolfsangriffs: {player} ({role})."
+    death_poison:
+      - "TOT: {player} ({role}), vergiftet."
+    death_grief:
+      - "TOT: {player} ({role}), vor Gram."
+    death_other:
+      - "TOT: {player} ({role}), {cause}."
+    hunter_shot:
+      - "Jäger {hunter} feuert einen letzten Schuss und tötet {target}."
+    day_breaks:
+      - "Tag {n} beginnt: {alive} Spieler leben."
+      - "Tag {n}: {alive} Spieler nehmen an der Versammlung teil."
+      - "Die Diskussion an Tag {n} beginnt ({alive} am Leben)."
+    captain:
+      - "{player} mit {votes} Stimmen zum Hauptmann gewählt (doppelte Stimme)."
+    vote_reason:
+      - "{who} stimmt für {target}: \"{quote}\""
+      - "{who} zu {target}: \"{quote}\""
+      - "Begründung von {who} gegen {target}: \"{quote}\""
+    speech_own:
+      - "{who} in der Debatte: \"{quote}\""
+    speech_accuser:
+      - "{who} zu {focus}: \"{quote}\""
+    tally_decided:
+      - "Stimmenzahl: {tally}. {executed} wird hingerichtet."
+    tally_none:
+      - "Stimmenzahl: {tally}. Keine Mehrheit."
+    execution_wrong:
+      - "IRRTÜMLICH HINGERICHTET: {player} war {role_a}, kein Wolf ({votes} Stimmen)."
+    execution_wolf:
+      - "HINGERICHTET: {player}, ein Wolf ({votes} Stimmen)."
+    execution_other:
+      - "HINGERICHTET: {player} ({role}), {votes} Stimmen."
+    no_execution:
+      - "Heute keine Hinrichtung."
+      - "Die Abstimmung endet ohne Mehrheit; niemand wird hingerichtet."
+      - "Abstimmung ohne Ergebnis: keine Hinrichtung."
+    claim_lie:
+      - "Falsche Angabe: {who} sagt, {claimed_a} zu sein, ist aber {actual_a}."
+    claim_true:
+      - "Rollenangabe: {who} sagt, {role_the} zu sein, und das stimmt."
+    counterclaim:
+      - "Konflikt: {claimants} geben alle an, {role_the} zu sein."
+    result_wolves:
+      - "WÖLFE GEWINNEN nach {days} Tagen: {winners}."
+    result_village:
+      - "DORF GEWINNT nach {days} Tagen: {winners}."
+    result_lovers:
+      - "LIEBESPAAR GEWINNT: {winners}."
+    result_white_wolf:
+      - "WEISSER WERWOLF GEWINNT: {winners}."
+    result_nobody:
+      - "KEIN GEWINNER: Das Tageslimit wurde erreicht."
+    reveal:
+      - "Rollen: {reveal}."
+sports:
+  title: "Live aus dem Dorf: Die Spielkommentierung"
+  layout: {joiner: "\n", prefix: "", paragraph: 0}
+  chapters:
+    prologue: "Anstoß: die Aufstellung"
+    night: "Nacht {n}: das Rudel jagt"
+    day: "Tag {n}: das Dorf schlägt zurück"
+    epilogue: "Abpfiff"
+  glance_title: "Die Anzeigetafel"
+  glance_labels:
+    winner: "Sieger"
+    length: "Spieldauer"
+    turning_point: "Szene des Spiels"
+    accurate_voter: "Treffsicherster Abstimmer"
+    deceptive: "Bester Schauspieler"
+    cost: "Preis der Eintrittskarte"
+  glance_values:
+    length: "{days} Tage"
+    accurate_voter: "{who}, {right} von {of} Stimmen im Ziel"
+    deceptive: "{who}, {deceptive_note}"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Tag {n}: eine verheerende Abstimmung, {player} ({role}) hingerichtet"
+    wolf_executed: "Tag {n}: ein Wolf erwischt, {player}"
+    seer_killed: "Nacht {n}: Die Seherin {player} wird ausgeschaltet"
+    lover_grief: "Nacht {n}: {player} folgt der Liebe aus dem Spiel"
+    hunter_shot: "{hunter} nimmt {target} mit einem letzten Schuss mit"
+    false_claim: "{who} blufft eine Rolle"
+    save: "Nacht {n}: {target} auf der Linie gerettet"
+  deceptive_notes:
+    survived: "nie erwischt, nach {days} Tagen noch im Spiel"
+    fell: "hielt die Show bis Tag {days} aufrecht"
+    lies: ", {lies} Bluff(s) über eine Rolle"
+  kinds:
+    cast:
+      - "Herzlich willkommen! {count} Spieler betreten das Feld: {cast}."
+    lovers:
+      - "Eine Wendung vor dem Anpfiff: {a} und {b} sind ein Paar. Fällt einer, fallen beide."
+    night_falls:
+      - "Nacht {n}, {alive} Spieler auf dem Platz, und das Rudel ist auf der Jagd!"
+      - "Und wieder geht es in die {nth} Nacht, mit noch {alive} Mann!"
+      - "Nacht {n} wird angepfiffen, {alive} Spieler müssen sie überstehen!"
+    wolf_plan:
+      - "Hören Sie, wie das Rudel sich bespricht! {who}: \"{quote}\""
+    wolf_target:
+      - "Die Wölfe gehen auf {target}!"
+    wolf_missed_witch:
+      - "Was für eine Rettung! Die Hexe heilt {target} auf der Linie!"
+    wolf_missed_protector:
+      - "Geblockt! Ein Wächter stoppt den Angriff auf {target}!"
+    wolf_missed_unknown:
+      - "Die Wölfe stürzen sich auf {target} und verfehlen!"
+    seer_found_wolf:
+      - "{seer} prüft {target}, und es ist ein Wolf! Große, große Information!"
+    seer_found_village:
+      - "{seer} schaut auf {target}: nur {role_acc}. Nichts zu sehen."
+    witch_heal:
+      - "{witch} greift zum Heiltrank, gezielt auf {target}!"
+    witch_poison:
+      - "{witch} greift zum Gift, und {target} steht in der Schusslinie!"
+    night_quiet:
+      - "Eine ruhige Nacht: Niemand geht zu Boden!"
+      - "Kein einziger Spieler fällt heute Nacht, was für eine Nacht für das Dorf!"
+      - "Die Wölfe gehen leer aus: keine Opfer."
+    death_wolves:
+      - "{player} ({role}) ist am Boden! Die Wölfe schlagen zu!"
+      - "Autsch! {player} ({role}) ist raus, vom Rudel geholt."
+      - "Und das ist das Ende für {player}, {role_the}."
+    death_poison:
+      - "{player} ({role}) ist raus, vergiftet!"
+    death_grief:
+      - "{player} ({role}) scheidet aus Gram aus, ein herzzerreißender Abgang."
+    death_other:
+      - "{player} ({role}) ist raus: {cause}."
+    hunter_shot:
+      - "WAS FÜR EIN SCHUSS! {hunter} der Jäger reißt {target} mit sich!"
+    day_breaks:
+      - "Tag {n}, und {alive} Spieler sind übrig, um die Rechnung zu begleichen."
+      - "Es ist Tag {n}, und noch {alive} Spieler stehen auf dem Platz!"
+      - "Das Dorf berät sich an Tag {n}: {alive} Spieler übrig."
+    captain:
+      - "{player} gewinnt das Kapitänsamt mit {votes} Stimmen. Eine doppelte Stimme, meine Damen und Herren."
+    vote_reason:
+      - "{who} unterstützt die Wahl von {target}: \"{quote}\""
+      - "Hier ist die Anklage von {who} gegen {target}: \"{quote}\""
+      - "{who} geht auf {target} los: \"{quote}\""
+    speech_own:
+      - "{who} aus der Mitte: \"{quote}\""
+    speech_accuser:
+      - "{who} holt gegen {focus} aus: \"{quote}\""
+    tally_decided:
+      - "Die Stimmen sind da: {tally}. {executed} ist weg!"
+    tally_none:
+      - "Die Stimmen sind da: {tally}. Keine Entscheidung!"
+    execution_wrong:
+      - "EIN DESASTER! {player} war {role_a}, und das Dorf hat gerade die eigene Seite getroffen ({votes} Stimmen)."
+    execution_wolf:
+      - "ERWISCHT! {player} war ein Wolf, und das Dorf trifft mit {votes} Stimmen."
+    execution_other:
+      - "{player} ({role}) fliegt mit {votes} Stimmen vom Platz."
+    no_execution:
+      - "Heute geht niemand: Patt."
+      - "Keine Mehrheit, kein Platzverweis: Weiterspielen!"
+      - "Die Abstimmung endet unentschieden: Niemand muss vom Platz."
+    claim_lie:
+      - "Ein Bluff! {who} sagt, {claimed_a} zu sein, ist aber {actual_a}."
+    claim_true:
+      - "{who} gibt die eigene Rolle an, {role_the}, und es ist die Wahrheit."
+    counterclaim:
+      - "Ärger! {claimants} nennen sich alle {role_the}."
+    result_wolves:
+      - "ABPFIFF: Die Wölfe ({winners}) gewinnen nach {days} Tagen!"
+    result_village:
+      - "ABPFIFF: Das Dorf ({winners}) gewinnt nach {days} Tagen!"
+    result_lovers:
+      - "ABPFIFF: Das Liebespaar ({winners}) holt sich den Sieg!"
+    result_white_wolf:
+      - "ABPFIFF: Der Weiße Werwolf ({winners}) gewinnt es allein!"
+    result_nobody:
+      - "ABPFIFF: kein Sieger, die Uhr ist abgelaufen."
+    reveal:
+      - "Fürs Protokoll, die Aufstellungen: {reveal}."
+novel:
+  title: "Ein stilles Dorf, eine hungrige Dunkelheit"
+  layout: {joiner: " ", prefix: "", paragraph: 3}
+  chapters:
+    prologue: "Eins. Die Gesichter"
+    night: "Die {nth} Nacht: Das Dunkel"
+    day: "Der {nth} Tag: Der Platz"
+    epilogue: "Zuletzt. Der Morgen danach"
+  glance_title: "Auf einen Blick"
+  glance_labels:
+    winner: "Wer gewann"
+    length: "Wie lange es dauerte"
+    turning_point: "Wo es kippte"
+    accurate_voter: "Wer klar sah"
+    deceptive: "Wer sich am besten verbarg"
+    cost: "Was es kostete"
+  glance_values:
+    length: "{days} Tage"
+    accurate_voter: "{who}, der {right}-mal von {of} richtig stimmte"
+    deceptive: "{who}, {deceptive_note}"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Tag {n}: Das Dorf wählte {player} ({role}) und wählte falsch"
+    wolf_executed: "Tag {n}: Das Dorf fing endlich einen Wolf, {player}"
+    seer_killed: "Nacht {n}: {player}, die Seherin, wachte nicht mehr auf"
+    lover_grief: "Nacht {n}: {player} konnte ohne den anderen nicht leben"
+    hunter_shot: "Der letzte Schuss von {hunter}, und {target} mit ihm"
+    false_claim: "{who} log darüber, wer er war"
+    save: "Nacht {n}: {target} lebte, obwohl es nicht sein sollte"
+  deceptive_notes:
+    survived: "nie entdeckt, nach {days} Tagen noch da"
+    fell: "trug die Maske bis Tag {days}"
+    lies: ", {lies}-mal über eine Rolle gelogen"
+  kinds:
+    cast:
+      - "Sie waren {count}, und jeder trug ein Geheimnis: {cast}."
+    lovers:
+      - "Irgendwo in der ersten Dunkelheit merkten {a} und {b}, dass sie verbunden waren, und keiner sagte es laut."
+    night_falls:
+      - "Die Nacht {n} kam, und {alive} Lichter gingen eins nach dem anderen aus."
+      - "Die {nth} Nacht war nicht freundlicher als die vorige; {alive} schliefen, oder taten so."
+      - "Nacht {n}: {alive} Türen wurden verriegelt, obwohl Riegel nie geholfen hatten."
+    wolf_plan:
+      - "Im Dunkeln beugte sich {who} zu den anderen und flüsterte: \"{quote}\""
+    wolf_target:
+      - "Sie einigten sich auf {target}."
+    wolf_missed_witch:
+      - "Doch eine Hand mit einem kleinen grünen Fläschchen war schneller, und {target} atmete weiter."
+    wolf_missed_protector:
+      - "Doch jemand hielt vor der Tür von {target} Wache, und die Wölfe zogen hungrig ab."
+    wolf_missed_unknown:
+      - "Doch {target} war nicht dort, wo man es suchte, oder hatte mehr Glück, als sie ahnten."
+    seer_found_wolf:
+      - "{seer} sah lange auf {target}, und was zurückblickte, hatte Zähne."
+    seer_found_village:
+      - "{seer} sah auf {target} und erkannte {role_acc}, und spürte die seltsame Scham, gezweifelt zu haben."
+    witch_heal:
+      - "{witch} drückte {target} das Fläschchen an den Mund, bevor die Kälte ihn nahm."
+    witch_poison:
+      - "{witch} hielt das Gift einen Moment, dann setzte sie es bei {target} ein."
+    night_quiet:
+      - "Der Morgen kam, und ausnahmsweise brachte er keine schlechte Nachricht."
+      - "Bei Tagesanbruch fehlte niemand, und niemand wagte es ganz zu glauben."
+      - "Die Hähne krähten über einem Dorf, das ausnahmsweise vollständig war."
+    death_wolves:
+      - "{player} wurde am Brunnen gefunden, zerrissen und still, {role_the} nicht mehr."
+      - "Sie fanden zuerst {player}; {role_the} hatte den Morgen nicht erreicht."
+      - "Die Tür von {player} stand offen. {role_the} war aus der Welt."
+    death_poison:
+      - "{player} lag bleich und still: Gift, sagten die alten Frauen, und sie hatten recht."
+    death_grief:
+      - "{player} aß nicht, sprach nicht, und am Abend war es vorbei, aus Liebe zu dem, der gestorben war."
+    death_other:
+      - "{player} ({role}) war fort: {cause}."
+    hunter_shot:
+      - "Als {hunter} fiel, sprach das alte Gewehr ein einziges Mal, und {target} fiel mit."
+    day_breaks:
+      - "Tag {n}. {alive} von ihnen standen auf dem Platz und wollten einander nicht in die Augen sehen."
+      - "Tag {n}, und {alive} von ihnen versammelten sich und beobachteten einander."
+      - "Am {nth} Tag standen {alive} auf dem Platz und sagten wenig."
+    captain:
+      - "Sie wählten {player} zum Hauptmann, {votes} Stimmen, und eine Stimme, die doppelt zählte."
+    vote_reason:
+      - "\"{quote_bare}\", sagte {who} und zeigte auf {target}."
+      - "{who} nannte den Namen von {target} und einen Grund: \"{quote}\""
+      - "{who} sah nicht von {target} weg. \"{quote}\""
+    speech_own:
+      - "{who} antwortete: \"{quote}\""
+    speech_accuser:
+      - "{who} fuhr auf {focus} los. \"{quote}\""
+    tally_decided:
+      - "Die Hände gingen hoch: {tally}. {executed} war gewählt."
+    tally_none:
+      - "Die Hände gingen hoch, {tally}, und sanken wieder, ohne dass etwas entschieden war."
+    execution_wrong:
+      - "{player} war {role_a}, und ehrlich. {votes} Hände hatten sich gegen ihn gehoben, und es war zu spät, sie zurückzunehmen."
+      - "Sie führten {player} hinaus und erfuhren erst danach, dass {role_a} gestorben war."
+    execution_wolf:
+      - "{player} wehrte sich nicht, als {votes} Hände entschieden; der Wolf wusste, dass man ihn gefunden hatte."
+    execution_other:
+      - "{player} ({role}) wurde von {votes} Stimmen abgeführt."
+    no_execution:
+      - "Niemand wurde gewählt, und der Tag endete damit, dass alle verdächtig waren."
+      - "Die Hände blieben im Schoß; niemand hatte den Mut zu entscheiden."
+      - "Sie stritten bis zum Abend und wählten niemanden."
+    claim_lie:
+      - "{who} sagte, {claimed_a} zu sein. Es war gelogen; es war {actual_a}."
+    claim_true:
+      - "{who} sagte schlicht, {role_the} zu sein. Ausnahmsweise klang die Wahrheit wie eine Lüge und war doch wahr."
+    counterclaim:
+      - "{claimants} sagten alle, {role_the} zu sein, und der Platz wurde sehr still."
+    result_wolves:
+      - "Am Ende waren die Wölfe ({winners}) so viele wie der Rest, und das Dorf gehörte ihnen nach {days} Tagen."
+    result_village:
+      - "Der letzte Wolf war fort, und das Dorf ({winners}) konnte endlich schlafen, {days} Tage nach der ersten Angst."
+    result_lovers:
+      - "Nur das Liebespaar ({winners}) ging aus dem Dorf hinaus, gemeinsam."
+    result_white_wolf:
+      - "{winners}, der Weiße Werwolf, war der Einzige, der es verließ."
+    result_nobody:
+      - "Am Ende hatte niemand gewonnen, und das Dorf stand im Grau seines letzten Tages."
+    reveal:
+      - "Und das waren die Gesichter hinter den Gesichtern: {reveal}."

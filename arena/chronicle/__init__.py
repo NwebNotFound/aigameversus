@@ -9,9 +9,11 @@ chapter later; nothing here calls one.
 """
 
 from collections.abc import Iterable, Mapping
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from arena.chronicle import compose, liars_deck, werewolf
 from arena.chronicle.beats import BEATS, Beat, Chapter
 from arena.chronicle.text import LANGS, STYLES, Narrator, TemplateNarrator
 from arena.engine.types import Event, EventSource
@@ -23,6 +25,7 @@ __all__ = [
     "Chapter",
     "ChapterText",
     "Chronicle",
+    "GlanceItem",
     "ChronicleError",
     "Narrator",
     "TemplateNarrator",
@@ -40,6 +43,13 @@ class ChapterText(BaseModel):
     number: int
     title: str
     text: str
+    kind: str = "round"  # prologue, night, day or epilogue; round, hand for the other games
+    seq: int | None = None  # where in the whole log the chapter begins
+
+
+class GlanceItem(BaseModel):
+    label: str
+    value: str
 
 
 class Chronicle(BaseModel):
@@ -48,6 +58,9 @@ class Chronicle(BaseModel):
     lang: str
     title: str
     chapters: list[ChapterText]
+    glance_title: str = ""
+    glance: list[GlanceItem] = Field(default_factory=list)  # the "At a glance" box
+    key_moments: list[dict[str, Any]] = Field(default_factory=list)  # {seq, kind, players, ...}
 
 
 def chronicle_games() -> list[str]:
@@ -62,6 +75,7 @@ def tell(
     lang: str = "en",
     names: Mapping[str, str] | None = None,
     narrator: Narrator | None = None,
+    cost_micro_eur: int | None = None,
 ) -> Chronicle:
     """The chronicle of a finished match, from its whole event log.
 
@@ -88,8 +102,10 @@ def tell(
             "so it exists only afterwards"
         )
 
-    narrator = narrator or TemplateNarrator()
     names = names or {}
+    if game in NEW_GAMES:
+        return _compose(events, game, style, lang, names, cost_micro_eur)
+    narrator = narrator or TemplateNarrator()
     chapters = [
         ChapterText(
             number=chapter.number,
@@ -107,9 +123,32 @@ def tell(
     )
 
 
+NEW_GAMES = {"werewolf": werewolf.build, "liars_deck": liars_deck.build}
+
+
+def _compose(events, game, style, lang, names, cost_micro_eur) -> Chronicle:
+    """The rewritten chronicle: facts of the match, told in a style (see `compose`)."""
+    digest = NEW_GAMES[game](events, names)
+    teller = compose.Teller(digest, style, lang, names)
+    return Chronicle(
+        game=game,
+        style=style,
+        lang=lang,
+        title=teller.tpl["title"],
+        chapters=[ChapterText(**c) for c in compose.chapters(teller)],
+        glance_title=teller.tpl["glance_title"],
+        glance=[GlanceItem(**g) for g in compose.glance(teller, cost_micro_eur)],
+        key_moments=compose.key_moments(digest),
+    )
+
+
 def to_markdown(chronicle: Chronicle) -> str:
-    """The chronicle as a Markdown document: a title and one section per chapter."""
+    """The chronicle as a Markdown document: a title, the glance box, one section per chapter."""
     parts = [f"# {chronicle.title}", ""]
+    if chronicle.glance:
+        parts += [f"## {chronicle.glance_title}", ""]
+        parts += [f"- **{item.label}:** {item.value}" for item in chronicle.glance]
+        parts.append("")
     for chapter in chronicle.chapters:
         parts += [f"## {chapter.title}", "", chapter.text, ""]
     return "\n".join(parts)
