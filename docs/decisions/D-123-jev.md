@@ -1,0 +1,6 @@
+# D-123 · Jev calibration preserves intent and separates human agreement from ground truth
+
+- **Date:** 2026-11-12
+- **Decision:** Step4 is a proposed calibration/agreement study under research/JEV, with fake clients only until Nils explicitly approves real decision calls. Use dual independent human labels, blocked development/holdout splits, threshold on top probability and a95% precision target with uncertainty. Ambiguous intent and invented amounts cannot become repaired strategy. Referee tags require human agreement and remain research data. Repair-OFF sensitivity drops whole affected matches; causal effects require actual separately approved paired games.
+- **Why:** API concentration is not demonstrated correctness; sparse labels and repaired outcomes cannot establish intent preservation or a counterfactual Elo. The study must make abstention, failures, sampling and uncertainty visible before enabling a paid repair tier.
+- **Alternatives:** use the confidence field or20 labels as sufficient calibration (overstates evidence); let Jev infer a strategically sensible move (violates the boundary); remove repaired moves and reuse unchanged match outcomes as OFF results (invalid counterfactual); treat AI referee tags as ground truth (unvalidated).
