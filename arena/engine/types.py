@@ -1,6 +1,7 @@
 """Value types shared by the engine, game plugins and agents."""
 
 from collections.abc import Mapping
+from decimal import Decimal
 from enum import StrEnum
 from typing import Any, Protocol, Self
 
@@ -87,7 +88,16 @@ class TurnRequest(_Frozen):
 # is read ("off": as sent; "v1": arena/agents/arguments.py). Games never see it.
 ANSWER_REPAIR = "answer_repair"
 ANSWER_REPAIR_VERSIONS = ("off", "v1")
-ENGINE_SETTINGS = (ANSWER_REPAIR,)
+# What one match may spend at most, in euros: lowers the config's per-match cap for this
+# match, never raises it (arena/agents/budget.py). Games never see it either.
+MATCH_BUDGET = "match_budget_eur"
+ENGINE_SETTINGS = (ANSWER_REPAIR, MATCH_BUDGET)
+
+
+def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
+    """The match's own spend limit in euros, if it set one."""
+    value = settings.get(MATCH_BUDGET)
+    return None if value is None else Decimal(str(value))
 
 
 def repair_of(settings: Mapping[str, Any]) -> str:

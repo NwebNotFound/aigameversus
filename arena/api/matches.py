@@ -23,7 +23,7 @@ from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
-from arena.engine.types import Event
+from arena.engine.types import MATCH_BUDGET, Event
 from arena.personalities import load_personalities
 
 router = APIRouter(tags=["matches"])
@@ -127,6 +127,8 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
+    if MATCH_BUDGET in new.settings:
+        _check_match_budget(new.settings[MATCH_BUDGET])
     if new.models is not None and new.seats is not None:
         raise HTTPException(422, "Name the seats with `seats` or with `models`, not both.")
     models = None
@@ -177,6 +179,17 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         raise HTTPException(422, str(refused)) from refused
     except ArenaBusy as busy:
         raise HTTPException(429, str(busy)) from busy
+
+
+def _check_match_budget(value: Any) -> None:
+    """A match's own spend limit: euros above 0, at most the config's per-match cap (422)."""
+    cap = load_config().limits.match_eur
+    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 < value <= cap:
+        raise HTTPException(
+            422,
+            f"{MATCH_BUDGET} is what this match may spend at most: a number of euros above 0 "
+            f"and at most the per-match cap of {cap}, not {value!r}.",
+        )
 
 
 async def _model_seats(new: NewMatch, models: dict[str, str]) -> dict[str, str]:

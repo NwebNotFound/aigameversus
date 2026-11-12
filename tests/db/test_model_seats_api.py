@@ -395,3 +395,46 @@ def test_every_model_move_of_an_api_match_is_timed(client, database_url, answer_
     moves = [e for e in events if e["type"] == "decision"]
     assert moves and all(isinstance(m["data"]["latency_ms"], int) for m in moves)
     assert all(m["visible_to"] == [] for m in moves)
+
+
+def test_a_matchs_own_spend_limit_stops_it_before_a_call_passes_it(
+    client, database_url, answer_with
+):
+    answer_with(**PLAY_3)
+    tiny = 0.000001  # one millionth of a euro: no call fits under it
+
+    response = client.post(
+        "/matches",
+        json={
+            "game": "toy",
+            "models": MODELS,
+            "confirm_spend": True,
+            "seed": 4,
+            "settings": {"match_budget_eur": tiny},
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    match = finish(client, response.json()["id"])
+    assert match["status"] == "interrupted"  # the cap of this match ended it
+    assert match["settings"]["match_budget_eur"] == tiny  # recorded with the match
+    assert calls(database_url) == []  # nothing was booked, nothing was sent
+    started = client.get(f"/matches/{match['id']}/events").json()[0]
+    assert started["data"]["settings"]["match_budget_eur"] == tiny
+
+
+@pytest.mark.parametrize("value", [0, -1, 0.51, "0.2", True])
+def test_a_spend_limit_outside_zero_to_the_cap_is_refused(client, value):
+    response = client.post(
+        "/matches",
+        json={
+            "game": "toy",
+            "models": MODELS,
+            "confirm_spend": True,
+            "settings": {"match_budget_eur": value},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "match_budget_eur" in response.text
+    assert client.get("/matches").json() == []

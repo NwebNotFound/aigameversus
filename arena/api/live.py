@@ -23,7 +23,7 @@ from arena.db.ledger import Ledger
 from arena.db.match_store import Batch, MatchRecord, MatchStore, Seat, bot_seats
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Event, MatchPaused, Placement
+from arena.engine.types import Event, MatchPaused, Placement, match_budget_of
 from arena.memory.store import MemoryStore
 from arena.personalities import load_personalities
 from arena.ratings.store import RatingStore
@@ -151,7 +151,7 @@ class LiveMatches:
         else:
             await self.ledger.check(await self.matches.model_matches())
             config = await resolve(load_config(), models.values())
-            budget = Budget(self.ledger, match_id, config)
+            budget = Budget(self.ledger, match_id, config, match_eur=match_budget_of(settings))
             # A table may mix models and random bots: a seat without a model is a bot.
             bots = random_bots(plugin, [seat for seat in players if seat not in models], seed)
             bot_seat = bot_seats(list(bots))
