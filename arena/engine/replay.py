@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pydantic import BaseModel
 
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Event, EventSource
+from arena.engine.types import Event, EventSource, game_settings
 
 
 class ReplayError(Exception):
@@ -28,7 +28,7 @@ def replay[StateT: BaseModel](plugin: GamePlugin[StateT], events: Iterable[Event
             f"The log was recorded with {recorded[0]} version {recorded[1]}, "
             f"but the plugin is {plugin.id} version {plugin.version}"
         )
-    state = plugin.initial_state(start.data["players"], start.data["settings"])
+    state = plugin.initial_state(start.data["players"], game_settings(start.data["settings"]))
     for event in events:
         if event.source is EventSource.GAME:
             plugin.apply_event(state, event)

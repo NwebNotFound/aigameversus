@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test } from './routes.js';
 
 // The live view of bot matches. The tests start their matches on the arena API
 // directly (ARENA_URL, default the Compose port 8100), as the new-match form will.
@@ -188,12 +189,14 @@ test('the commentary filters by player, and spoiler-free hides roles and thought
 	expect(actors.length).toBeLessThan(all);
 	for (const actor of actors) expect(actor).toBe('p1');
 
-	// Spectators see every role; spoiler-free shows none, and no private line.
+	// Spectators see every role; spoiler-free only those announced at a death, and no private line.
 	await expect(page.getByTestId('secret')).toHaveCount(0);
 	await page.getByRole('link', { name: 'Spoiler-free' }).click();
 	await expect(page).toHaveURL(/view=spoiler-free/);
 
-	await expect(page.getByTestId('secret')).toHaveCount(8);
+	await expect(page.getByTestId('role')).toHaveCount(0);
+	await expect(page.locator('[data-testid="secret"], [data-testid="revealed"]')).toHaveCount(8);
+	await expect(page.locator('.seat:not(.dead) [data-testid="revealed"]')).toHaveCount(0);
 	await expect(page.getByTestId('tab-thoughts')).toHaveCount(0);
 	await expect(page.locator('[data-kind="whisper"], [data-kind="thought"]')).toHaveCount(0);
 	await expect(lines.first()).toBeVisible();

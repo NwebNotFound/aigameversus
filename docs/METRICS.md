@@ -74,6 +74,40 @@ reads public events only (`arena/analytics/situation.py`).
   alive** (village, wolves, on their own) only with spoilers: roles are private
   until a player dies.
 
+## Report (`report`), every game with one
+
+The stats screen in one object, so the web does no maths (`arena/analytics/report.py`;
+Liar's Deck, Poker, Werewolf):
+
+- **`at_a_glance`:** `over`, `winners` (seats of rank 1 in `match_finished`),
+  `players`, `length` (`{unit: rounds|hands|days, count}`), `moves`, `refused`
+  (= `tool_errors`), `fallbacks` (engine events private to a player: spoilers
+  only, else null), `response_ms_mean` and `tokens` (from the per-move
+  `decision` events, null until a log has them), `turning_point`
+  (`{seq, kind, players, text}` or null). The API adds `duration_s` (start to
+  end, or to now while running), `cost_micro_eur` and `cost_by_seat` (null while
+  the ledger cannot be read).
+- **`columns`:** the table header, one entry per field: `{key, label{en,de},
+  kind, better}`. kind is `number`, `rate` (0..1), `bool`, `text`, `role`,
+  `roles` or `micro_eur`. better is `higher`, `lower` or null (a style, not a
+  score). `spoilers: true` marks a field that is null without spoilers,
+  `heuristic: true` one read from speech.
+- **`ranking`:** one row per player in rank order: `{seat, rank, values}`, where
+  `values` lists the cells in column order, each the column's fields plus
+  `value` (a rate also has `n` and `of`). Liar's Deck: plays, lies, lie rate,
+  liar calls, calls right, trigger pulls, highest risk taken. Poker: chips, pots
+  won, biggest pot, the hand a player went out in. Werewolf: role (spoilers, or
+  once revealed at death), survived, died (phase), accused by others,
+  accusations made, roles claimed, votes on wolves. Then moves, refused answers,
+  bot moves, response time, tokens and cost for every game.
+- **`key_moments`:** `{seq, kind, players, importance 1-3, text{en,de}}` in log
+  order. Liar's Deck: a wrong call, a player caught lying, each elimination, the
+  win. Poker: each elimination, the three biggest pots. Werewolf: each death and
+  execution, a claim a death disproved, a counterclaim of a unique role.
+- **Turning point:** Liar's Deck: the elimination that decided the match.
+  Poker: the biggest pot. Werewolf: the first execution of a village player
+  in a match the wolves won (null otherwise, for now).
+
 ## Behaviour (`behaviour`), Liar's Deck so far
 
 Per player: `tags` (descriptive style tags with their evidence), `too_early`,
@@ -241,6 +275,20 @@ speech by simple rules, each marked `heuristic: true`.
   (speech), the tally and the execution; `recap[].text.en/de` is one sentence
   per phase from a template (`TemplateNarrator`). A `Narrator` with the same
   method can replace it, such as a cheap model later; none is called by default.
+- **`claims[].lie`:** with spoilers, whether the player claimed a role they do
+  not have (a wolf claiming "villager" lies). Without spoilers, `true` only once
+  a death revealed another role, else null (not known).
+- **`narration`** (`arena/gamemaster/drama.py`): every public `narration` event
+  as `{seq, key, text{en,de}}`, a dramatic line in place of the plain template,
+  with display names; several variants per moment, rotating with each occurrence
+  so night 2 does not open like night 1, and the same for every replay. The line
+  says only what the event's facts say. A `Voice` (a model, later) may replace
+  it; the template line stands when it says nothing. No model is called by
+  default.
+- **`report.at_a_glance.awards`:** `[{id, seat, text{en,de}, ...}]`.
+  `most_deceptive` (most claims that were lies), `most_accurate_voter`
+  (spoilers; the highest share of votes on wolves, at least 2 votes and 1 hit),
+  `most_accused` (heuristic, from speech and votes).
 - Without spoilers only public events are read: no wolf chat, no lover chat,
   no roles but those revealed at death (`meta.revealed`); `meta.roles` is
   null.

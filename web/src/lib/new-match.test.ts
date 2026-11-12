@@ -156,7 +156,7 @@ describe('parseForm', () => {
 		it.each([
 			[
 				[BOT, 'qwen-flash', BOT],
-				'A table is all models or all random bots for now. Mixing them needs an arena update that is not live yet.'
+				'A table is all models or all random bots on this server: it cannot mix them yet.'
 			],
 			[['qwen-flash', 'gpt-x', 'qwen-flash'], 'Choose a model from the list for every seat.']
 		])('refuses the seats %o', (seat, message) => {
@@ -164,6 +164,32 @@ describe('parseForm', () => {
 				ok: false,
 				errors: { seats: message }
 			});
+		});
+
+		it('sends a mixed table as seats where the arena takes them', () => {
+			const parsed = parseForm(
+				form({ ...LIARS, seat: [BOT, 'qwen-flash', BOT], confirm_spend: 'on' }),
+				GAMES,
+				MODELS,
+				true
+			);
+
+			expect(parsed).toMatchObject({
+				ok: true,
+				match: {
+					players: 3,
+					seats: [{ kind: 'bot' }, { kind: 'model', model: 'qwen-flash' }, { kind: 'bot' }],
+					confirm_spend: true
+				}
+			});
+			expect(parsed.ok && 'models' in parsed.match).toBe(false);
+		});
+
+		it('still sends an all-model table as models', () => {
+			const parsed = parseForm(form({ ...THREE, confirm_spend: 'on' }), GAMES, MODELS, true);
+
+			expect(parsed.ok && parsed.match.models).toEqual(THREE.seat);
+			expect(parsed.ok && 'seats' in parsed.match).toBe(false);
 		});
 
 		it('sends no models and no spend for a bot match', () => {
