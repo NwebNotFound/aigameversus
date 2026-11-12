@@ -48,7 +48,10 @@ holds). A schedule may also be in the job form (`order,game,models,seed,settings
 estimate_micro_eur`, pinned by `schedule_sha256`; every row equal to the frozen plan). A
 paid run needs `--pre-start-report` and `--arena-build` (operator-supplied; the arena shows
 no commit); a plan may wait for another stage's released checkpoint
-(`requires_release_from`) and hold a stricter reserve (`budget.reserve_eur`).
+(`requires_release_from`) and hold a stricter reserve (`budget.reserve_eur`). One client
+runs at a time across stages (`<out>/../.stage-runner.lock`, or `lock_path`); a resume
+with another plan or schedule hash is refused; while a match runs, a pause or a failed
+agent holds at once (the match is not aborted: a person decides).
 """
 
 from __future__ import annotations
@@ -156,6 +159,9 @@ class StageRunner:
         self.batch_id = str(self.plan["id"])
         # Another stage's out folder whose review checkpoint must be released first.
         self.after = self.plan.get("requires_release_from")
+        # One client at a time across stages: a lock file beside the stages' out folders.
+        lock = self.plan.get("lock_path")
+        self.lock_path = Path(lock) if lock else out.parent / ".stage-runner.lock"
         self.matches = self._checked_schedule()
 
     # --- the plan ----------------------------------------------------------------------
@@ -558,12 +564,37 @@ class StageRunner:
         """Play the open rows in order, one at a time. RunStopped on any hold."""
         if self.dry_run:
             return self.dry()
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            handle = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            held_by = self.lock_path.read_text(encoding="utf-8", errors="replace").strip()
+            raise RunStopped(
+                f"another stage client holds {self.lock_path} ({held_by}): one at a time; "
+                "delete the file only after checking that no client runs"
+            ) from None
+        with os.fdopen(handle, "w", encoding="utf-8") as lock:
+            lock.write(f"{self.batch_id} pid {os.getpid()} since {self._at()}\n")
+        try:
+            return self._run()
+        finally:
+            self.lock_path.unlink(missing_ok=True)
+
+    def _run(self) -> list[dict[str, Any]]:
         missing = [k for k in ("pre_start_report", "arena_build") if not self.evidence.get(k)]
         if missing:
             raise PlanRefused(
                 f"a paid run needs {', '.join('--' + k.replace('_', '-') for k in missing)}"
             )
         self.out.mkdir(parents=True, exist_ok=True)
+        hashes = (_sha256(self.plan_path), _sha256(self.schedule_path))
+        for attempt in self.attempts().values():
+            recorded = (attempt.get("plan_sha256"), attempt.get("schedule_sha256"))
+            if recorded != (None, None) and recorded != hashes:
+                raise PlanRefused(
+                    f"attempt {attempt['attempt_id']} ran with another plan or schedule: a "
+                    "changed plan is a new stage with its own out folder, never a resume"
+                )
         held = [a for a in self.attempts().values() if a.get("hold")]
         if held and not self.resume_after_hold:
             raise RunStopped(
@@ -628,6 +659,32 @@ class StageRunner:
         self.write_summary()
         return self.ended()
 
+    def _watch(self, attempt_id: str, attempt: dict[str, Any], match_id: str) -> None:
+        """While a match runs: a pause (a cap, or a person) or a failed agent holds now. The
+        match is not aborted (a person decides that); a later run waits for it again."""
+        status, control = self.request("GET", f"/matches/{match_id}/control", None)
+        problem = None
+        if status == 200 and isinstance(control, dict) and control.get("paused"):
+            problem = "paused"
+        else:
+            events = self._get(f"/matches/{match_id}/events")
+            failed = sorted(
+                {
+                    (e.get("data") or {}).get("player")
+                    for e in events
+                    if e.get("type") == "agent_failed"
+                }
+            )
+            if failed:
+                problem = f"agent failed ({', '.join(failed)}) while it runs"
+        if problem:
+            self._write({"attempt_id": attempt_id, "hold": f"match {match_id} {problem}"})
+            self.write_summary()
+            raise RunStopped(
+                f"row {attempt['order']}: match {match_id} {problem}: hold and report "
+                "(the match is not aborted; a person decides)"
+            )
+
     def _finish(self, attempt_id: str, attempt: dict[str, Any]) -> None:
         match_id = attempt["match_id"]
         record = {"status": "running"}
@@ -635,6 +692,7 @@ class StageRunner:
         while record["status"] not in ENDED:
             record = self._get(f"/matches/{match_id}")
             if record["status"] not in ENDED:
+                self._watch(attempt_id, attempt, match_id)
                 if self.clock() - started > self.max_wait:
                     raise RunStopped(
                         f"match {match_id} still {record['status']} after {self.max_wait:g} s: "

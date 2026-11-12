@@ -28,6 +28,7 @@ class FakeArena:
         self.cost = override.get("cost", 200_000)
         self.players = override.get("players", ["p1", "p2", "p3", "p4"])
         self.turns = override.get("turns", {})  # seat -> (accepted, fallback)
+        self.paused = override.get("paused", False)
         self.running = override.get("running", [])
         self.prices = {g["id"]: dict(g) for g in plan.get("guests", [])}
         self.status = override.get("status", "finished")
@@ -85,6 +86,8 @@ class FakeArena:
             if self.agent_failed:
                 events.append({"type": "agent_failed", "data": {"player": "p1"}})
             return 200, events
+        if method == "GET" and path.endswith("/control"):
+            return 200, {"paused": self.paused, "turn_delay": 0}
         if method == "GET" and path.endswith("/cost"):
             return 200, {"total_micro_eur": self.cost}
         if method == "GET" and path.startswith("/matches/"):
@@ -683,3 +686,48 @@ def test_a_job_form_csv_without_a_pinned_hash_is_refused(c1_job, tmp_path):
 
     with pytest.raises(PlanRefused, match="must be pinned"):
         StageRunner(c1_job, tmp_path / "out", c1_arena(c1_job))
+
+
+def test_one_stage_client_at_a_time_and_the_lock_is_released_after(approved, tmp_path):
+    out = tmp_path / "out"
+    lock = tmp_path / ".stage-runner.lock"
+    lock.write_text("C1 pid 1 since earlier\n")
+    arena = arena_for(approved)
+
+    with pytest.raises(RunStopped, match="another stage client holds"):
+        client(approved, out, arena).run()
+    assert arena.posts() == []
+
+    lock.unlink()
+    client(approved, out, arena).run()
+    assert not lock.exists() and len(arena.posts()) == 8
+
+
+def test_a_resume_with_a_changed_plan_is_refused(c1, tmp_path):
+    out = tmp_path / "out"
+    with pytest.raises(RunStopped, match="review checkpoint"):
+        client(c1, out, c1_arena(c1)).run()
+    c1.write_text(c1.read_text(encoding="utf-8") + "# changed\n", encoding="utf-8")
+
+    with pytest.raises(PlanRefused, match="another plan or schedule"):
+        client(c1, out, c1_arena(c1)).run()
+
+
+@pytest.mark.parametrize(
+    ("override", "says"),
+    [
+        ({"paused": True}, "paused"),
+        ({"agent_failed": True}, "agent failed"),
+    ],
+)
+def test_a_running_match_that_pauses_or_loses_an_agent_holds_at_once(
+    approved, tmp_path, override, says
+):
+    arena = arena_for(approved, status="running", **override)
+    ticks = iter(range(0, 100_000, 600))  # without the watch: "still running" after an hour
+
+    with pytest.raises(RunStopped, match=says):
+        client(approved, tmp_path / "out", arena, max_wait=3600, clock=lambda: next(ticks)).run()
+
+    assert len(arena.posts()) == 1  # nothing more started, the match is not aborted
+    assert not any(path.endswith("/abort") for _, path, _ in arena.calls)

@@ -974,7 +974,10 @@ and estimates only.
   `--mark-unstarted ATTEMPT_ID EVIDENCE`; it never posts again on its own.
 - **Spend:** the stage's spend is read from the arena's batch history, so a new out folder
   resets nothing.
-- **Paid runs:** they need `--pre-start-report` and `--arena-build`.
+- **Paid runs:** they need `--pre-start-report` and `--arena-build`. One client runs at a
+  time across stages (the lock `<out>/../.stage-runner.lock`). A resume with a changed plan
+  or schedule is refused. While a match runs, a pause or a failed agent holds at once; the
+  match is not aborted.
 - **`<out>/run.json`:** the hashes (client included), the evidence, the effective limit,
   the reserve, every attempt with its body, quote, month and seat counts, and the stop
   reasons.
