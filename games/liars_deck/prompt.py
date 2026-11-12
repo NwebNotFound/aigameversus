@@ -16,7 +16,9 @@ from importlib import resources
 from math import comb
 from typing import Any
 
-VERSIONS = ("liars_deck-p1", "liars_deck-p2")
+from arena.agents.prompt import with_thought_in_the_call
+
+VERSIONS = ("liars_deck-p1", "liars_deck-p1.1", "liars_deck-p2")
 DEFAULT_VERSION = "liars_deck-p1"
 _FILES = {"liars_deck-p1": "rules.md", "liars_deck-p2": "rules_v2.md"}
 
@@ -33,6 +35,8 @@ def version_of(settings: Mapping[str, Any] | None) -> str:
 
 
 def rules_text(version: str) -> str:
+    if version == "liars_deck-p1.1":  # p1, with the thought where the system message asks for it
+        return with_thought_in_the_call(rules_text("liars_deck-p1"))
     return resources.files("games.liars_deck").joinpath(_FILES[version]).read_text(encoding="utf-8")
 
 

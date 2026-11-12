@@ -161,10 +161,12 @@ class Werewolf(GamePlugin[WerewolfState]):
     ) -> str | None:
         """A short text for the top of the turn's prompt; only version p2 has one."""
         version = prompt.version_of(settings)
-        if version == "werewolf-p1":
+        if version in ("werewolf-p1", "werewolf-p1.1"):
             return None
         if version == "werewolf-p3":
             return prompt.situation_summary_v3(observation)
+        if version == "werewolf-p4":
+            return prompt.situation_summary_v4(observation)
         return prompt.situation_summary(observation)
 
     # --- setup -------------------------------------------------------------

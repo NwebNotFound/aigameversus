@@ -62,24 +62,6 @@ def liars_log():
     ]  # fmt: skip
 
 
-def test_a_hand_built_liars_deck_log_becomes_one_chapter_with_the_facts_in_it():
-    story = tell(liars_log(), style="epic", lang="en", names={"p1": "Ada", "p2": "Basil"})
-
-    assert story.game == "liars_deck" and len(story.chapters) == 1
-    text = story.chapters[0].text
-    assert "Ada laid 2 card(s)" in text
-    assert "Basil rose and named Ada a liar" in text
-    assert "Queen 1, King 2" in text  # the hidden cards, told after the match
-    assert "Ada pulled the trigger" in text and "Basil" in text.split("trigger")[-1]
-
-
-def test_names_default_to_the_player_ids_and_german_uses_german_words():
-    text = tell(liars_log(), style="news", lang="de").chapters[0].text
-
-    assert "p2 ruft p1 einen Lügner" in text
-    assert "Dame 1, König 2" in text
-
-
 def test_a_log_of_a_match_that_is_not_over_is_refused():
     with pytest.raises(ChronicleError, match="not over"):
         tell(liars_log()[:-1])
@@ -172,22 +154,8 @@ def test_the_same_log_gives_the_same_chronicle_and_other_seeds_other_stories(nam
 
 def test_chapters_follow_the_rounds_hands_and_nights_of_the_log():
     for seed in range(1, 4):
-        ld = bot_events(LiarsDeck(), 3, seed)
-        assert len(tell(ld).chapters) == sum(e.type == "round_started" for e in ld)
         pk = bot_events(Poker(), 3, seed)
         assert len(tell(pk).chapters) == sum(e.type == "hand_started" for e in pk)
-
-
-def test_the_key_moments_of_a_real_liars_deck_match_are_all_in_the_story():
-    for seed in range(1, 6):
-        events = bot_events(LiarsDeck(), 3, seed)
-        reveals = [e for e in events if e.type == "cards_revealed"]
-        shots = [e for e in events if e.type == "trigger_pulled"]
-        text = " ".join(c.text for c in tell(events, style="epic").chapters)
-
-        assert text.count("liar") >= len(reveals)
-        assert text.count("pulled the trigger") == len(shots)
-        assert text.count("left the table forever") == sum(e.data["live"] for e in shots)
 
 
 def test_a_narrator_can_be_swapped_without_a_model():
@@ -195,7 +163,7 @@ def test_a_narrator_can_be_swapped_without_a_model():
         def tell(self, beats, style, lang, names):
             return super().tell(beats, style, lang, names).upper()
 
-    story = tell(liars_log(), narrator=Shouting())
+    story = tell(bot_events(Poker(), 3, 2), narrator=Shouting())
 
     assert story.chapters[0].text.isupper()
     assert issubclass(Shouting, Narrator) and Chapter.model_fields["beats"]

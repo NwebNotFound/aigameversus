@@ -4,10 +4,12 @@ import { footerLine } from '#lib/format.js';
 import type { LayoutServerLoad } from './$types';
 
 /** The footer's line about real models and this month's spend; neutral when the arena is down. */
-export const load: LayoutServerLoad = async ({ fetch }) => {
+export const load: LayoutServerLoad = async ({ fetch, locals }) => {
 	const arena = createArenaClient(ARENA_API_URL, fetch);
 	const [setup, month] = await Promise.all([arena.setup(), arena.monthSpend()]);
 	return {
+		/** Spectators only: pages hide what they could not do (hooks.server.ts). */
+		readOnly: locals.readOnly,
 		footer: footerLine(
 			setup.state === 'ok' ? setup.data.model_seats : null,
 			month.state === 'ok' ? month.data : null

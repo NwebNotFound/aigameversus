@@ -18,6 +18,7 @@ from typing import Any
 
 import yaml
 
+from arena.chronicle import tell_liars_deck
 from arena.chronicle.digest import Digest, Fact
 from arena.chronicle.text import CAUSES
 from games.werewolf.selection import load_roles
@@ -208,12 +209,25 @@ class Teller:
         fresh = [p for p in parts if p not in self.used]
         if fresh and len(fresh) < len(parts):
             text = " ".join(fresh)
+        elif not fresh:  # every variant has been told: mark the repeat instead of echoing it
+            last = parts[-1]  # the sentence with the facts; a stock opener would repeat as it is
+            text = next(
+                (
+                    c
+                    for prefix in self.tpl.get("again", [])
+                    if (c := f"{prefix} {last}") not in self.used
+                ),
+                text,
+            )
+            parts = SENTENCES.split(text)
         self.used.update(parts)
         return text
 
     # --- one fact -> (template kind, fields) -------------------------------------------
 
     def fields_of(self, fact: Fact) -> tuple[str, dict[str, Any]] | None:
+        if self.digest.game == "liars_deck":
+            return tell_liars_deck.fields_of(self, fact)
         d, who, lang = fact.data, self.who, self.lang
         match fact.kind:
             case "cast":
@@ -385,6 +399,10 @@ def glance(teller: Teller, cost_micro_eur: int | None) -> list[dict[str, str]]:
     items = []
     for fact in teller.digest.glance:
         d = fact.data
+        if teller.digest.game == "liars_deck":
+            if (value := tell_liars_deck.glance_value(teller, fact)) is not None:
+                items.append({"label": tpl["glance_labels"][fact.kind], "value": value})
+            continue
         match fact.kind:
             case "winner":
                 side = SIDES[lang][d["winner"]]
@@ -427,7 +445,11 @@ def glance(teller: Teller, cost_micro_eur: int | None) -> list[dict[str, str]]:
     return items
 
 
-KEY_KINDS = ("death", "execution", "hunter_shot", "claim_lie", "captain", "wolf_missed")
+KEY_KINDS = {
+    "werewolf": ("death", "execution", "hunter_shot", "claim_lie", "captain", "wolf_missed"),
+    "liars_deck": ("reveal", "trigger", "eliminated", "duel", "devil_shots", "lie_big"),
+}
+FIELDS_BY_GAME = {"werewolf": FIELDS, "liars_deck": tell_liars_deck.FIELDS}
 
 
 def key_moments(digest: Digest) -> list[dict[str, Any]]:
@@ -435,9 +457,10 @@ def key_moments(digest: Digest) -> list[dict[str, Any]]:
     out = []
     for section in digest.sections:
         for fact in section.facts:
-            if fact.kind in KEY_KINDS:
+            if fact.kind in KEY_KINDS[digest.game]:
                 d = fact.data
-                players = [d[k] for k in ("player", "who", "hunter", "target") if d.get(k)]
+                keys = ("player", "who", "hunter", "target", "caller", "a", "b")
+                players = [d[k] for k in keys if d.get(k)] + list(d.get("players", []))
                 out.append(
                     {
                         "seq": d["seq"],

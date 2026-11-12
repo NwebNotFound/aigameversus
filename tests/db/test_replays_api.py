@@ -46,7 +46,12 @@ def test_replays_are_the_finished_matches_newest_first(client, database_url):
         "finished_at": newer["finished_at"],
         "cost_micro_eur": 150,
         "seats": {
-            seat: {"name": f"Random Bot {seat}", "model_id": None, "kind": "bot"}
+            seat: {
+                "name": f"Random Bot {seat}",
+                "model_id": None,
+                "kind": "bot",
+                "personality": None,
+            }
             for seat in ("p1", "p2", "p3")
         },
         "origin": "played",

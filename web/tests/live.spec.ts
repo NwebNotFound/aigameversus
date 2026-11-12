@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test } from './routes.js';
 
 // The live view of bot matches. The tests start their matches on the arena API
 // directly (ARENA_URL, default the Compose port 8100), as the new-match form will.
