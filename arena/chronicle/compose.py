@@ -18,7 +18,7 @@ from typing import Any
 
 import yaml
 
-from arena.chronicle import tell_civ, tell_liars_deck
+from arena.chronicle import tell_civ, tell_liars_deck, tell_poker
 from arena.chronicle.digest import Digest, Fact
 from arena.chronicle.text import CAUSES
 from games.werewolf.selection import load_roles
@@ -106,7 +106,7 @@ FIELDS: dict[str, tuple[str, ...]] = {
     "reveal": ("reveal",),
 }
 # The games whose words live in a module of their own; Werewolf's are in `Teller` itself.
-GAME_TELLERS = {"liars_deck": tell_liars_deck, "civ": tell_civ}
+GAME_TELLERS = {"liars_deck": tell_liars_deck, "poker": tell_poker, "civ": tell_civ}
 PLAIN_VILLAGERS = {
     "en": "plus the plain villagers {names}",
     "de": "dazu die einfachen Dorfbewohner {names}",
@@ -453,11 +453,13 @@ KEY_KINDS = {
     "werewolf": ("death", "execution", "hunter_shot", "claim_lie", "captain", "wolf_missed"),
     "liars_deck": ("reveal", "trigger", "eliminated", "duel", "devil_shots", "lie_big"),
     "civ": ("conquest", "battle", "war", "treaty", "broken", "event"),
+    "poker": ("pot", "busted"),
 }
 FIELDS_BY_GAME = {
     "werewolf": FIELDS,
     "liars_deck": tell_liars_deck.FIELDS,
     "civ": tell_civ.FIELDS,
+    "poker": tell_poker.FIELDS,
 }
 
 
@@ -469,10 +471,11 @@ def key_moments(digest: Digest) -> list[dict[str, Any]]:
             if fact.kind in KEY_KINDS[digest.game]:
                 d = fact.data
                 keys = ("player", "who", "hunter", "target", "caller", "a", "b")
-                keys += ("taker", "loser", "attacker", "defender", "by", "on", "other")
+                keys += ("taker", "loser", "attacker", "defender", "by", "on", "other", "winner")
                 named = [d[k] for k in keys if d.get(k)] + list(d.get("players", []))
                 named += list(d.get("nations", []))
-                players = [p for p in named if p in digest.seats]  # not the barbarians
+                # Each player once, in order, and only players: not the barbarians.
+                players = list(dict.fromkeys(p for p in named if p in digest.seats))
                 out.append(
                     {
                         "seq": d["seq"],

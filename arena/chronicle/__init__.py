@@ -3,9 +3,9 @@
     chronicle = tell(events, style="epic", lang="en")
     print(to_markdown(chronicle))
 
-The story is built from fixed templates, so it costs nothing and the same log
-always gives the same text. `Narrator` is the seam for a model that retells a
-chapter later; nothing here calls one.
+Each game has a digest of the facts of its match (`<game>.py`) and templates in four
+styles and two languages (`templates/`, worded by `compose`), so the story costs nothing
+and the same log always gives the same text. `arena.chronicle.ai` has a model retell it.
 """
 
 from collections.abc import Iterable, Mapping
@@ -13,26 +13,30 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from arena.chronicle import civ, compose, liars_deck, werewolf
-from arena.chronicle.beats import BEATS, Beat, Chapter
-from arena.chronicle.text import LANGS, STYLES, Narrator, TemplateNarrator
+from arena.chronicle import civ, compose, liars_deck, poker, werewolf
+from arena.chronicle.text import LANGS, STYLES
 from arena.engine.types import Event, EventSource
 
 __all__ = [
     "LANGS",
     "STYLES",
-    "Beat",
-    "Chapter",
     "ChapterText",
     "Chronicle",
     "GlanceItem",
     "ChronicleError",
-    "Narrator",
-    "TemplateNarrator",
     "chronicle_games",
     "to_markdown",
     "tell",
 ]
+
+
+# The digest of each game that has a chronicle.
+GAMES = {
+    "werewolf": werewolf.build,
+    "liars_deck": liars_deck.build,
+    "poker": poker.build,
+    "civ": civ.build,
+}
 
 
 class ChronicleError(ValueError):
@@ -43,7 +47,7 @@ class ChapterText(BaseModel):
     number: int
     title: str
     text: str
-    kind: str = "round"  # prologue, night, day or epilogue; round, hand for the other games
+    kind: str = "round"  # prologue and epilogue; night or day, round, level, age by game
     seq: int | None = None  # where in the whole log the chapter begins
 
 
@@ -65,7 +69,7 @@ class Chronicle(BaseModel):
 
 def chronicle_games() -> list[str]:
     """The ids of the games that have a chronicle."""
-    return sorted({*BEATS, *NEW_GAMES})
+    return sorted(GAMES)
 
 
 def tell(
@@ -74,7 +78,6 @@ def tell(
     style: str = "epic",
     lang: str = "en",
     names: Mapping[str, str] | None = None,
-    narrator: Narrator | None = None,
     cost_micro_eur: int | None = None,
 ) -> Chronicle:
     """The chronicle of a finished match, from its whole event log.
@@ -104,32 +107,7 @@ def tell(
         )
 
     names = names or {}
-    if game in NEW_GAMES:
-        return _compose(events, game, style, lang, names, cost_micro_eur)
-    narrator = narrator or TemplateNarrator()
-    chapters = [
-        ChapterText(
-            number=chapter.number,
-            title=narrator.chapter_title(chapter.kind, chapter.number, style, lang),
-            text=narrator.tell(chapter.beats, style, lang, names),
-        )
-        for chapter in BEATS[game](events)
-    ]
-    return Chronicle(
-        game=game,
-        style=style,
-        lang=lang,
-        title=narrator.title(game, style, lang),
-        chapters=chapters,
-    )
-
-
-NEW_GAMES = {"werewolf": werewolf.build, "liars_deck": liars_deck.build, "civ": civ.build}
-
-
-def _compose(events, game, style, lang, names, cost_micro_eur) -> Chronicle:
-    """The rewritten chronicle: facts of the match, told in a style (see `compose`)."""
-    digest = NEW_GAMES[game](events, names)
+    digest = GAMES[game](events, names)
     teller = compose.Teller(digest, style, lang, names)
     return Chronicle(
         game=game,

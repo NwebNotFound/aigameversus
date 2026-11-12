@@ -1,0 +1,284 @@
+# The words of the Poker chronicle in English: four styles that differ in structure and in wording.
+# Fields: see `FIELDS` in arena/chronicle/tell_poker.py (the tests format every variant).
+# `with_hand` and `loser_hand` are written to follow "with" ("with a flush").
+# `again` prefixes a sentence that every variant of its kind has already used in this chronicle.
+epic:
+  title: "The Saga of the Green Felt"
+  layout: {joiner: " ", prefix: "", paragraph: 0}
+  again: ["Once more:", "Yet again:", "And still:", "Again:", "As before:", "One more time:"]
+  chapters:
+    prologue: "Prologue: The Players Take Their Seats"
+    level: "The {Nth} Level of the Blinds"
+    epilogue: "Epilogue: The Last Stack Standing"
+  glance_title: "At a glance"
+  glance_labels:
+    winner: "Champion of the felt"
+    length: "Duration"
+    turning_point: "The turning point"
+    best_hand: "Mightiest hand"
+    aggressor: "Boldest raiser"
+    cost: "Cost of the saga"
+  glance_values:
+    winner: "{winner}, holder of every chip"
+    leader: "{leaders}, with the most chips when the cards ran out"
+    length: "{hands} hands"
+    best_hand: "{who}, with {with_hand}"
+    aggressor: "{who}, who raised or went all in {moves} times"
+    cost: "{cost}"
+  turning_points:
+    pot: "Hand {hand}: {winner} took a pot of {amount} chips"
+  kinds:
+    cast:
+      - "{count} players sat down at the green felt, each with {stack} chips and {hands} hands to play: {cast}."
+      - "{count} challengers, {stack} chips apiece, and at most {hands} hands to settle it: {cast}."
+    blinds_open:
+      - "The blinds stood at {small} and {big} as the first cards flew."
+      - "The first cards were dealt with blinds of {small} and {big}."
+    level_starts:
+      - "The blinds rose to {small} and {big} from hand {first}, with {players} players at the table."
+      - "From hand {first} the blinds stood at {small} and {big}; {players} players remained."
+      - "Hand {first} began the {nth} level: blinds of {small} and {big}, {players} still seated."
+      - "The price of sitting rose again at hand {first}: {small} and {big}, and {players} players paid it."
+    pot_showdown:
+      - "In hand {hand}, {winner} turned over {with_hand} against {loser_hand} from {loser}, and took {amount} chips."
+      - "Hand {hand}: the cards were shown, and {with_hand} for {winner} beat {loser_hand} for {loser}. The pot of {amount} chips changed hands."
+      - "{winner} won hand {hand} at the showdown with {with_hand}; {loser} had {loser_hand}. {amount} chips, {big_blinds} big blinds."
+    pot_allin:
+      - "Hand {hand}: all in from {allin}! At the showdown {winner} held {with_hand}, {loser} {loser_hand}, and {winner} took {amount} chips."
+      - "With everything on the line in hand {hand}, {winner} showed {with_hand} against {loser_hand} from {loser} and won {amount} chips."
+      - "{allin} pushed every chip forward in hand {hand}; {winner} had {with_hand}, {loser} had {loser_hand}, and the pot of {amount} went to {winner}."
+    pot_bluff:
+      - "In hand {hand}, {winner} raised with nothing at all, and nobody dared to call: {amount} chips stolen."
+      - "Hand {hand}: {winner} held no pair, yet bet as if holding the crown, and took {amount} chips without a fight."
+      - "{winner} bluffed the table in hand {hand} and raked in {amount} chips with nothing."
+    pot_won:
+      - "{winner} took hand {hand} and its {amount} chips without a showdown."
+      - "In hand {hand} the others laid down their cards, and {winner} gathered {amount} chips."
+      - "Hand {hand} went to {winner}, uncontested at the end, for {amount} chips."
+    pot_split:
+      - "Hand {hand} ended in a draw, and the pot of {amount} chips was split."
+      - "In hand {hand} the hands were equal, and {amount} chips were shared."
+    busted:
+      - "In hand {hand}, {player} lost the last chip and left the table in {place} place."
+      - "{player} was out after hand {hand}, finishing {place}."
+      - "The stack of {player} was gone in hand {hand}; {place} place."
+    talk:
+      - "{who} spoke across the table: \"{quote}\""
+      - "\"{quote}\" said {who}."
+      - "{who} leaned forward: \"{quote}\""
+    result_winner:
+      - "After {hands} hands {winner} held every chip at the table."
+    result_limit:
+      - "The last of {hands} hands was played, the chips were counted, and {leaders} stood highest."
+    ranking:
+      - "The final order: {ranking}."
+news:
+  title: "POKER: THE FULL REPORT"
+  layout: {joiner: "\n", prefix: "- ", paragraph: 0}
+  again: ["Again:", "Once more:", "Same story:", "Repeat:", "Still:", "Another one:"]
+  chapters:
+    prologue: "Background"
+    level: "Blind level {n}"
+    epilogue: "Final result"
+  glance_title: "Key facts"
+  glance_labels:
+    winner: "Winner"
+    length: "Length"
+    turning_point: "Biggest pot"
+    best_hand: "Best hand shown"
+    aggressor: "Most aggressive"
+    cost: "Cost"
+  glance_values:
+    winner: "{winner}"
+    leader: "{leaders} (chip leader at the hand limit)"
+    length: "{hands} hands"
+    best_hand: "{who} ({with_hand})"
+    aggressor: "{who} ({moves} raises and all-ins)"
+    cost: "{cost}"
+  turning_points:
+    pot: "Hand {hand}: {winner} wins {amount} chips"
+  kinds:
+    cast:
+      - "{count} players, {stack} chips each, hand limit {hands}: {cast}."
+      - "Field ({count}): {cast}. Starting stack {stack}, at most {hands} hands."
+    blinds_open:
+      - "Opening blinds: {small}/{big}."
+      - "Blinds start at {small}/{big}."
+    level_starts:
+      - "From hand {first}: blinds {small}/{big}, {players} players."
+      - "Blinds {small}/{big} from hand {first}; {players} players left."
+      - "Hand {first} onwards: {small}/{big}, {players} at the table."
+      - "New level at hand {first}: {small}/{big} with {players} players."
+    pot_showdown:
+      - "Hand {hand}: {winner} wins {amount} chips at showdown with {with_hand} against {loser_hand} ({loser})."
+      - "Showdown in hand {hand}: {winner} ({with_hand}) beats {loser} ({loser_hand}), pot {amount}."
+      - "{winner} takes hand {hand} with {with_hand}; {loser} shows {loser_hand}. Pot: {amount} chips ({big_blinds} big blinds)."
+    pot_allin:
+      - "Hand {hand}: all-in by {allin}. {winner} ({with_hand}) beats {loser} ({loser_hand}) for {amount} chips."
+      - "All-in showdown, hand {hand}: {winner} wins {amount} with {with_hand} against {loser_hand} ({loser})."
+      - "{allin} all in during hand {hand}; {winner} wins it with {with_hand}, {loser} had {loser_hand}. Pot {amount}."
+    pot_bluff:
+      - "Hand {hand}: {winner} wins {amount} chips with no pair after betting; nobody called."
+      - "Bluff in hand {hand}: {winner} takes {amount} chips holding nothing."
+      - "{winner} bluffs successfully in hand {hand}, pot {amount}."
+    pot_won:
+      - "Hand {hand}: {winner} wins {amount} chips without a showdown."
+      - "{winner} takes hand {hand} uncontested, pot {amount}."
+      - "No showdown in hand {hand}; {winner} collects {amount} chips."
+    pot_split:
+      - "Hand {hand}: split pot of {amount} chips."
+      - "Pot of {amount} chips split in hand {hand}."
+    busted:
+      - "{player} is eliminated in hand {hand} and finishes {place}."
+      - "Out in hand {hand}: {player} ({place})."
+      - "{player} busts in hand {hand}, {place} place."
+    talk:
+      - "{who} says: \"{quote}\""
+      - "Table talk from {who}: \"{quote}\""
+      - "\"{quote}\" ({who})"
+    result_winner:
+      - "{winner} wins the tournament after {hands} hands."
+    result_limit:
+      - "Hand limit of {hands} reached; {leaders} leads on chips."
+    ranking:
+      - "Final standings: {ranking}."
+sports:
+  title: "Poker: Match Commentary"
+  layout: {joiner: "\n", prefix: "", paragraph: 0}
+  again: ["And once more,", "Here we go again,", "Same again,", "One more time,", "And again,", "Yet again,"]
+  chapters:
+    prologue: "Shuffle up: the line-up"
+    level: "Level {n}: deal!"
+    epilogue: "Final whistle"
+  glance_title: "The scoreboard"
+  glance_labels:
+    winner: "Winner"
+    length: "Match length"
+    turning_point: "Pot of the match"
+    best_hand: "Monster hand"
+    aggressor: "Most fearless"
+    cost: "Price of the ticket"
+  glance_values:
+    winner: "{winner}, last one standing"
+    leader: "{leaders}, top of the chip count at the final whistle"
+    length: "{hands} hands"
+    best_hand: "{who}, with {with_hand}"
+    aggressor: "{who}, {moves} raises and all-ins"
+    cost: "{cost}"
+  turning_points:
+    pot: "Hand {hand}: {winner} drags in {amount} chips"
+  kinds:
+    cast:
+      - "Welcome! {count} players, {stack} chips each, up to {hands} hands: {cast}."
+      - "What a field! {count} players, {stack} chips apiece, {hands} hands max: {cast}."
+    blinds_open:
+      - "Shuffle up and deal! Blinds {small}/{big} to start!"
+      - "Cards in the air, blinds at {small}/{big}!"
+    level_starts:
+      - "Blinds go up to {small}/{big} at hand {first}, {players} players still in it!"
+      - "Hand {first}, and it's {small}/{big} now, {players} at the table!"
+      - "Up we go: {small}/{big} from hand {first}, {players} left!"
+      - "The pressure's on, {small}/{big} from hand {first}, {players} players!"
+    pot_showdown:
+      - "Hand {hand}, cards on their backs! {winner} with {with_hand} beats {loser} with {loser_hand}! {amount} chips!"
+      - "Showdown, hand {hand}: {winner} has {with_hand}, {loser} {loser_hand}, and {winner} drags {amount} chips!"
+      - "{winner} wins hand {hand} with {with_hand}! {loser} had {loser_hand}! {big_blinds} big blinds!"
+    pot_allin:
+      - "ALL IN from {allin} in hand {hand}! {winner} with {with_hand}, {loser} with {loser_hand}, and {winner} takes {amount}!"
+      - "It's all on the line in hand {hand}! {winner} holds {with_hand} against {loser_hand} and wins {amount} chips!"
+      - "{allin} shoves in hand {hand}! {winner} shows {with_hand}, {loser} {loser_hand}, {amount} chips to {winner}!"
+    pot_bluff:
+      - "What a bluff! {winner} has nothing in hand {hand} and still takes {amount} chips!"
+      - "{winner} fires with air in hand {hand}, and everybody folds! {amount} chips!"
+      - "Hand {hand}: {winner} bets with nothing and gets away with {amount} chips!"
+    pot_won:
+      - "{winner} takes hand {hand} without a fight, {amount} chips!"
+      - "Everybody folds to {winner} in hand {hand}, {amount} chips!"
+      - "Hand {hand} to {winner}, no showdown, {amount} chips!"
+    pot_split:
+      - "Hand {hand}, a dead heat! The {amount} chips are split!"
+      - "Split pot in hand {hand}, {amount} chips shared!"
+    busted:
+      - "{player} is OUT in hand {hand}! Finishes {place}!"
+      - "That's it for {player} in hand {hand}, {place} place!"
+      - "Hand {hand}, and {player} hits the rail in {place}!"
+    talk:
+      - "{who} with some table talk: \"{quote}\""
+      - "And {who} says it out loud: \"{quote}\""
+      - "\"{quote}\", says {who}, big words!"
+    result_winner:
+      - "It's over after {hands} hands! {winner} has every chip!"
+    result_limit:
+      - "That's the hand limit, {hands} hands! {leaders} on top of the chip count!"
+    ranking:
+      - "The final table: {ranking}."
+novel:
+  title: "Poker: A Story"
+  layout: {joiner: " ", prefix: "", paragraph: 3}
+  again: ["Once again,", "As before,", "And still,", "Yet again,", "As always,", "One more time,"]
+  chapters:
+    prologue: "One. Chips and Faces"
+    level: "{Nth}: Another Round of Blinds"
+    epilogue: "Last. Who Cashed Out"
+  glance_title: "At a glance"
+  glance_labels:
+    winner: "Who walked away with it"
+    length: "How long it lasted"
+    turning_point: "Where it turned"
+    best_hand: "The best cards anyone showed"
+    aggressor: "Who pushed hardest"
+    cost: "What it cost"
+  glance_values:
+    winner: "{winner}, who ended with every chip"
+    leader: "{leaders}, who had the most when the last hand was dealt"
+    length: "{hands} hands"
+    best_hand: "{who}, with {with_hand}"
+    aggressor: "{who}, who raised or went all in {moves} times"
+    cost: "{cost}"
+  turning_points:
+    pot: "Hand {hand}: {winner} pulled in {amount} chips"
+  kinds:
+    cast:
+      - "They were {count} at the table, each with {stack} chips and a face they tried to keep still, and {hands} hands at most ahead: {cast}."
+      - "{count} players, {stack} chips each, and a long night of up to {hands} hands. {cast}."
+    blinds_open:
+      - "The first hands were cheap: {small} and {big}."
+      - "It began slowly, blinds of {small} and {big}."
+    level_starts:
+      - "From hand {first} the blinds were {small} and {big}, and {players} of them were still there."
+      - "The blinds went up at hand {first}, to {small} and {big}; {players} players were left to pay them."
+      - "By hand {first} it cost {small} and {big} just to sit there, and {players} still did."
+      - "Hand {first}: the blinds climbed to {small} and {big}, with {players} at the table."
+    pot_showdown:
+      - "In hand {hand} it came to a showdown. {winner} had {with_hand}, {loser} had {loser_hand}, and {amount} chips slid across the table to {winner}."
+      - "Hand {hand}: {loser} turned over {loser_hand} and waited, but {winner} had {with_hand}. {amount} chips."
+      - "{winner} won hand {hand} with {with_hand}, against {loser_hand} from {loser}, and stacked {amount} chips."
+    pot_allin:
+      - "In hand {hand}, {allin} pushed everything in. {winner} had {with_hand}, {loser} had {loser_hand}, and the {amount} chips went to {winner}."
+      - "Everything was in the middle in hand {hand}. {winner} with {with_hand}, {loser} with {loser_hand}: {amount} chips to {winner}."
+      - "{allin} went all in during hand {hand}. When the cards came up, {winner} had {with_hand} and {loser} {loser_hand}; {amount} chips."
+    pot_bluff:
+      - "In hand {hand}, {winner} had nothing, and bet anyway. Nobody called, and {amount} chips came over without a word."
+      - "Hand {hand}: {winner} held no pair at all, raised as if it did not matter, and took {amount} chips."
+      - "{winner} bluffed in hand {hand}, and it worked; {amount} chips."
+    pot_won:
+      - "Hand {hand} went to {winner} when the others let go, {amount} chips."
+      - "In hand {hand} the others folded, one after another, and {winner} took {amount} chips."
+      - "{winner} won hand {hand} without showing anything, {amount} chips."
+    pot_split:
+      - "Hand {hand} ended even, and the {amount} chips were split."
+      - "In hand {hand} nobody was better, and they shared the {amount} chips."
+    busted:
+      - "In hand {hand}, {player} lost the last chips and stood up; {place} place."
+      - "{player} was gone after hand {hand}, in {place} place."
+      - "Hand {hand} took the last of what {player} had; {place}."
+    talk:
+      - "{who} said, to nobody in particular: \"{quote}\""
+      - "\"{quote}\" {who} said."
+      - "{who} put it plainly: \"{quote}\""
+    result_winner:
+      - "After {hands} hands, every chip was in front of {winner}."
+    result_limit:
+      - "After {hands} hands the dealer stopped, and when the chips were counted {leaders} had the most."
+    ranking:
+      - "In the end it went like this: {ranking}."

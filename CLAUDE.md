@@ -797,20 +797,21 @@ it in the prompt inside `<memory>`, marked as data. `"memory": false` in
 
 ### A chronicle
 
-Werewolf, Liar's Deck and Throne of Tokens tell a finished match through one pipeline
-(`arena/chronicle/`). Poker still uses the older `beats.py`. A new game needs three parts:
+Every game with a chronicle (Werewolf, Liar's Deck, Poker, Throne of Tokens) tells a finished
+match through one pipeline (`arena/chronicle/`, `GAMES` in its `__init__`). A new game needs
+three parts:
 
 - `<game>.py`: `build(events, names)` returns a `Digest`. It has sections (prologue, the
   game's chapters, epilogue), and each section has facts with the `seq` of their event and
   seat ids only.
 - `tell_<game>.py`: `FIELDS` (the fields per template kind), `fields_of` and `glance_value`.
   Register the module in `compose.GAME_TELLERS`, `KEY_KINDS` and `FIELDS_BY_GAME`, and the
-  builder in `NEW_GAMES`.
+  builder in `GAMES`.
 - `templates/<game>.{en,de}.yaml`: four styles with their own structure (see
   `tests/chronicle/test_civ_chronicle.py`). A game's fact words (cards, roles, units) go into
   the AI fact check, `arena/chronicle/ai.py`.
 
-Civ tells ages of 10 rounds (D-141).
+Civ tells ages of 10 rounds (D-141), Poker one chapter per blind level (D-142).
 
 ```bash
 uv run pytest tests/chronicle   # UPDATE_GOLDEN=1 rewrites the golden stories

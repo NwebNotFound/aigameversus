@@ -144,3 +144,4 @@ with `python scripts/decisions.py adopt`.
 - [D-139](decisions/D-139-a-game-keeps-its-old-rules-versions-and-a-stored-match-is.md) · A game keeps its old rules versions, and a stored match is read with its own
 - [D-140](decisions/D-140-ai-written-chronicle-one-capped-call-fact-checked-per.md) · AI-written chronicle: one capped call, fact-checked per chapter, cached
 - [D-141](decisions/D-141-throne-of-tokens-chronicle-ages-of-ten-rounds-what-changed.md) · Throne of Tokens chronicle: ages of ten rounds, what changed the map
+- [D-142](decisions/D-142-poker-chronicle-a-chapter-per-blind-level-the-old-beats-path.md) · Poker chronicle: a chapter per blind level; the old beats path removed
