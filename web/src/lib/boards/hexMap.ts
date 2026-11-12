@@ -1,3 +1,5 @@
+import { identity } from '../players.js';
+
 /**
  * Pure helpers of the Throne of Tokens board (`hex_map` render_spec, docs/civ-interfaces.md):
  * where a tile sits, what its letter means, the colour of a nation and what a nation sees.
@@ -108,15 +110,11 @@ export function seen(fog: HexSpec['fog'], nation: string | null, [col, row]: Til
 	return fog[nation][row]?.[col] === '1';
 }
 
-/**
- * The colours of the nations, in the order of `nations`: four originals that keep apart in
- * the dark theme and for the common colour blindnesses (blue, orange, purple, teal), and
- * slate for the neutral cities and raiders.
- */
-const PALETTE = ['#4f8fe6', '#f08a3e', '#a46ee0', '#2fb5a0', '#e05a7a', '#c9b23b'];
+/** The colours of the nations: each nation's player slot (lib/players.ts), neutral slate. */
 export function nationColours(nations: { id: string }[]): Record<string, string> {
-	const colours: Record<string, string> = { [NEUTRAL]: '#8a8f99' };
-	nations.forEach((n, i) => (colours[n.id] = PALETTE[i % PALETTE.length]));
+	const seats = nations.map((n) => n.id);
+	const colours: Record<string, string> = { [NEUTRAL]: identity(NEUTRAL, seats).colour };
+	for (const seat of seats) colours[seat] = identity(seat, seats).colour;
 	return colours;
 }
 
