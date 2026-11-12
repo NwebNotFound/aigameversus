@@ -25,6 +25,7 @@ script from the running UI; no image file was downloaded or copied.
 | Name chip for a seat a player named | `web/src/lib/components/Mention.svelte` | speech and thought bubbles | original, CSS |
 | Result card (podium, team banner) | `web/src/lib/components/ResultCard.svelte` | the end of a match on the watch screen | original, CSS |
 | Stage beats (call-out, light rings, night tint) and the revolver hammer | `web/src/lib/components/Beats.svelte`, `LiarsDeckTable.svelte` | the watch screen | original, CSS and inline SVG |
+| Throne of Tokens map: hexagons, terrain marks (trees, hills, peaks, waves, river, iron, gold, grass), city crests with walls and capital star, army banners, battle flare, war fronts, resource dots | `web/src/lib/components/HexMap.svelte` | the live view and replays of Throne of Tokens | original, inline SVG and CSS |
 | View switch and thought icons (eye, crossed eye, lock) | `web/src/lib/components/ViewSwitch.svelte`, `Commentary.svelte` | the watch screen | original, inline SVG |
 | GIFs | `docs/images/showcase-*.gif` | README | recorded from this UI by `scripts/make_showcase.sh` (Playwright frames, assembled with Pillow); random bots only |
 

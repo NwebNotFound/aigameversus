@@ -360,7 +360,10 @@ A match is a list of `Event`s. Engine events (`match_started`, `thought`,
 
 `decision` (spectators only) closes every move of a model and every move that
 ended in a random one: `{player, answers, latency_ms, tokens_in, tokens_out,
-reasoning_tokens, retries, fallback}`. `answers` counts the replies of the
+reasoning_tokens, retries, rate_limits, cutoffs, fallback}`. `rate_limits`
+are the retries the provider refused as too many requests, `cutoffs` the
+answers that ran into the output limit: neither means a model cannot call
+tools ([docs/model-qualification.md](docs/model-qualification.md)). `answers` counts the replies of the
 move (corrections included), the token counts add up what they reported
 (`null` when none did), `retries` counts failed calls tried again, `fallback`
 is the reason of a random move or `null`. `latency_ms` is the wall time of the
@@ -803,6 +806,19 @@ next to it says what each does and what the generator guarantees.
   steps `expire` (start) and `settle` (the trade step). Offers and trades are
   private to the two nations; signed, broken and expired treaties and wars are
   public.
+- `games/civ/events.py`: random events from `data/events/`. `roll` is a round
+  step (one random stream per event and round); `strike` lets one event happen
+  now (also for a spectator's God mode). Plague, gold find and good harvest touch
+  one city or nation, a drought adds a `Condition` that halves the food of the
+  cities in its region for its rounds (`economy.city_yields` reads it), a
+  rebellion makes a recently conquered city (`City.conquered_round`) neutral,
+  barbarians raise a neutral army on a free tile. `NEUTRAL` in `state.py` owns
+  rebel cities and barbarians.
+- `games/civ/victory.py`: `check` is the last round step: the public economic
+  countdown, then domination (at least half the cities and more than anyone),
+  economy (the gold held long enough) or the round limit's score; it emits
+  `victory` with the placements, and `state.victory` is set. `score` and
+  `standings` rank the nations.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.
