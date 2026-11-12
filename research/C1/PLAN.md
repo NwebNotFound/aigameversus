@@ -92,3 +92,23 @@ and release the first EUR 0.20-bounded match; inspect its reliability and cost
 before releasing the remaining three. Freeze actual start build/config and
 recheck fresh quotes/ledger before execution. These history-based estimates
 remain uncertain until model-driven Civ observations exist.
+
+## Approved history-window amendment and explicit job data
+
+Lead f4f4fc8f changes the entire unstarted baseline to civ-p1.1: identical p1
+text with a120-event history window. Old civ-p1 stays frozen at40. Approval
+carries over only if new quotes stay within EUR0.20 per match and EUR1.00 total.
+Until #166 is merged/deployed and Reviewer sends the build GO, start_build and
+the new free_estimate_eur remain null. Old p1 quotes above are superseded prices,
+not a quote for p1.1. No model match has started.
+
+schedule.csv is four cyclic rotations, with all four models sharing each match.
+Top-level settings/budget/max_matches/checkpoint_after fields form the shared
+client job contract requested by Heavy. Scope budget approval is recorded, but
+execution_plan_approved remains false until the outstanding runtime/release
+conditions are met; the dry fixture must not silently enable paid execution.
+The one direct smoke is separately authorized by Lead5664932f after hook GO.
+When the reviewed client later takes over, it must adopt that C1 batch/index1
+from server history and account its ledger cost, never play the first cell twice.
+Remaining three rotations still need smoke review and explicit Lead release;
+the strategy/private-plan factorial remains unapproved.

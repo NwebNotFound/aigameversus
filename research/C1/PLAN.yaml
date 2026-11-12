@@ -1,11 +1,22 @@
 id: C1
 schema: civ_design_only_v1
-version: 2
-status: quoted_baseline_waiting_approval
+version: 3
+status: approved_scope_waiting_history_hook_and_requote
 owner: Arena Researcher
 date: '2026-11-12'
 execution_approved: false
-approved_budget_eur: 0
+approved_budget_eur: 1.00
+scope_approval_evidence: 'Lead454cd9d8 and5792dfbd: four Haiku-roster rotations, EUR1.00'
+prompt_amendment_evidence: 'Leadf4f4fc8f: civ-p1.1, 120-event window, quote after deployment'
+execution_plan_approved: false
+execution_approval_evidence: null
+schedule: schedule.csv
+max_matches: 4
+checkpoint_after: 1
+settings: {rounds: 20, prompt_version: civ-p1.1, strategy_text: 'off', private_plan: 'off', answer_repair: 'off', match_budget_eur: 0.20}
+memory: false
+remaining_release: 'Researcher smoke review AND explicit Lead go, reviewed merged client; no automatic release'
+start_build: null
 game: civ
 requested_preset:
   nations: 4
@@ -19,7 +30,7 @@ seed: 2104001
 baseline:
   matches: 4
   rotation: cyclic_all_four_starting_positions
-  prompt_version: civ-p1
+  prompt_version: civ-p1.1
   strategy_text: 'off'
   private_plan: 'off'
   memory: false
@@ -30,7 +41,7 @@ baseline:
   expected_base_calls_upper: 80
 later_factorial:
   status: proposal_only_separate_approval
-  prompt_version: civ-p1
+  prompt_version: civ-p1.1
   strategy_text: ['off', v1]
   private_plan: ['off', 'on']
   cells: 4
@@ -42,7 +53,14 @@ later_factorial:
   note: 'Enhanced civ-p2 context is a separate future experiment, never changed inside this 2x2.'
 budget:
   proposed_stage_eur: 1.00
-  free_estimate_eur: 0.246445
+  free_estimate_eur: null
+  superseded_p1_estimate_eur: 0.246445
+  stage_eur: 1.00
+  match_cap_eur: 0.20
+  stop_start_share: 0.90
+  notify_and_hold_at_month_eur: 20
+  automatic_retries: 0
+  max_cost_per_match_eur: 0.16
   required_estimate_per_match_below_eur: 0.40
   maximum_match_eur: 0.50
   monthly_cap_eur: 25
@@ -54,7 +72,8 @@ budget:
 gates:
   - 'Civ plugin, combat, victory and scoreboard merged; Reviewer free 20/60-round bot and leak checks passed.'
   - 'Verified deployed 20-round preset, terminal score/victory semantics and API setting; do not simulate truncation by aborting.'
-  - 'Supported civ-p1, strategy_text off and private_plan off; optional submitted plan cannot bypass off.'
+  - '#166 merged and Reviewer verifies deployed civ-p1.1/120-event window; quotes/build recorded before start.'
+  - 'Supported civ-p1.1, strategy_text off and private_plan off; optional submitted plan cannot bypass off.'
   - 'Estimate all four rotated tables for free; record exact ids, prices, tool flags, build and settings.'
   - 'Lead approves exact quotes, total stage ceiling and frozen plan before any real match.'
   - 'Verified enforceable per-match spending setting; paid endpoint uses existing guards and ledger.'
