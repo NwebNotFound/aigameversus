@@ -173,7 +173,9 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   match setting `answer_repair: "v1"`: the default `"off"` reads every call as
   sent, as before. It is the engine's setting, not the game's: `game_settings`
   removes it before the plugin and replay see the settings; `match_started`
-  records it.
+  records it. The same holds for `thought_headline: true`: every tool
+  call also asks for a `headline` (at most 120 characters), which the
+  `thought` event keeps for viewers; default `false`.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
@@ -321,7 +323,8 @@ the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
   (Liar's Deck, Poker and Werewolf: `prompt_version` `<game>-p1`, the default and the
-  prompt as it was, or `<game>-p2`). `ModelAgent(call, plugin,
+  prompt as it was; `<game>-p1.1`, p1 with its sentence about thoughts made to
+  agree with the system message (`with_thought_in_the_call`); or `<game>-p2`). `ModelAgent(call, plugin,
   settings=...)` asks the plugin for `rules(settings)` once and for
   `situation_summary(observation, settings)` on every turn; the API and the
   command pass the match settings. `prompt_version(settings)` is recorded in
@@ -634,7 +637,12 @@ Such a model goes by its OpenRouter id (`vendor/model`) and is booked at
 OpenRouter's listed price times 1.25 (`UNVERIFIED_PRICE_MARGIN`: not checked
 by hand), behind the same caps; a price that is not a finite number up to
 10,000 USD per million tokens, and every `:` variant but `:free`, leave a
-model out; `catalog.resolve` adds it to the config where
+model out (and `:free` variants are listed only with `?free=1`, marked
+`rate_limited_likely`); every entry and model page has `reliability` from
+the arena's own logs (`arena/db/reliability.py`: unreliable after a seat that
+gave up in its last 2 matches or more than half of its last 20 moves by the
+bot, unknown below 20 moves, warnings for cut-off answers and rate limits);
+`catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
 `tests/conftest.py` refuses, and `tests/test_catalog.py` hands over a sample.

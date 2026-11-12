@@ -2,7 +2,13 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { cheapSeats, loadFavourites, saveFavourites } from '#lib/catalog.js';
+	import {
+		cheapSeats,
+		loadFavourites,
+		reliabilityNote,
+		saveFavourites,
+		unreliable
+	} from '#lib/catalog.js';
 	import ModelPicker from '#lib/components/ModelPicker.svelte';
 	import WerewolfRoles from '#lib/components/WerewolfRoles.svelte';
 	import { gameName } from '#lib/games.js';
@@ -68,6 +74,7 @@
 	const unverified = $derived(
 		catalog.filter((m) => !m.verified && seatIds.includes(m.id)).map((m) => m.name)
 	);
+	const shaky = $derived(catalog.filter((m) => unreliable(m) && seatIds.includes(m.id)));
 
 	let favourites = $state(new Set<string>());
 	onMount(() => (favourites = loadFavourites(localStorage)));
@@ -228,6 +235,20 @@
 					>
 						All random bots
 					</button>
+				</div>
+			{/if}
+			{#if shaky.length}
+				<div class="field-error" role="alert" data-testid="unreliable-models">
+					<p>
+						Unreliable in this arena: {#each shaky as model, i (model.id)}{i ? ', ' : ''}<span
+								title={reliabilityNote(model)}>{model.name}</span
+							>{/each}. Such a model often fails or is replaced by the random bot.
+					</p>
+					<label>
+						<input type="checkbox" name="confirm_unreliable" />
+						Seat {shaky.length === 1 ? 'it' : 'them'} anyway
+					</label>
+					{#if errors.confirm_unreliable}<p>{errors.confirm_unreliable}</p>{/if}
 				</div>
 			{/if}
 			{#if expensive.length}

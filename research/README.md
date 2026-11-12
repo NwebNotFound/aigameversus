@@ -40,6 +40,23 @@ A call cost 0.0001 to 0.001 EUR with the cheap roster. Random bots need about
 42 moves for a Liar's Deck match (4 000 matches, 5 % to 95 %: 19 to 69) and win
 24.1, 24.2, 26.0 and 25.7 % of them from seats `p1` to `p4`.
 
+## Notes from matches outside the experiments
+
+- **Poker, heads-up, deepseek-flash against gpt-luna (match 0cee2bac, played
+  by the owner on 2026-11-11):** 14 of 66 answers were rejected, all of them
+  gpt-luna's, none caused by the game. Three kinds: arguments with the model's
+  own reasoning text inside ("} } (oops syntax) } (Malformed) {"), garbled or
+  empty keys on tools that take no arguments (call, check, fold, all_in), and
+  arguments that were not a JSON object. A single match, so not a finding
+  about the model yet. It shows that "rejected answers" mixes format failures
+  with real rule mistakes, so the analysis counts clean, repaired and
+  rejected moves separately.
+- **Answer repair is a setting, like the prompt version.** The arena is
+  getting an optional repair of malformed tool calls. For research it must be
+  chosen per match in the settings, recorded in `match_started`, and off by
+  default, so that matches with and without repair are never mixed in one
+  comparison. Experiment 1 runs without repair in every stage (plan version 3).
+
 ## What blocks serious experiments
 
 Needed from the arena core (Arena Builder), most of it already planned:
@@ -75,11 +92,12 @@ the cap stays unplanned.
 | Line | Matches | Estimate | Budget |
 | --- | --- | --- | --- |
 | Spent before | 6 | | 0.18 |
-| E1 stage A: league of the 8 cheap models, Liar's Deck (approved; pilot of 8 matches up to 0.30, stop at 90 %) | 112 | 2.20 | 3.00 |
+| E1 stage A: pilot of the 8 cheap models (played: 6 matches, 0.23 EUR, stopped by the budget rule; league dropped in version 2) | 6 | 0.30 | 0.30 |
+| E1 stage A2: league of the 6 models that passed the pilot (approved) | 120 | 2.40 | 3.00 |
 | E1 stage B: one model at high and low reasoning effort (approved, after A) | 96 | 4.20 | 4.50 |
 | E1 stage C: 4 stronger models as guests among cheap hosts (approved, after A) | 96 | 7.20 | 7.50 |
 | Poker in duplicate mode, cheap roster (own plan, later; not approved) | 48 | 2.60 | 2.80 |
-| Not assigned | | | 2.02 |
+| Not assigned | | | 1.72 |
 | Reserve, 20 % | | | 5.00 |
 | **Sum** | | | **25.00** |
 
@@ -126,6 +144,126 @@ Seen by Arena Coder while writing v2: the Werewolf rules of p1 do not name
 the tools `stay_in_bed` and `let_them_die`. That is a likely cause of tool
 errors in Werewolf and a confound for any Werewolf comparison across the two
 versions.
+
+## Proposal: a short headline next to the thought (`thought_headline`, not approved, no spend)
+
+Viewers read long thoughts badly. A match setting `thought_headline: true`
+(default `false`, recorded in `match_started`, independent of `prompt_version`)
+would ask for a required `headline` (at most 15 words) next to the private
+`thought` in every tool call; the UI shows the headline and keeps the full
+thought one click away. Until the flag exists the UI takes the first sentence
+of the thought.
+
+What could go wrong, and so what the pilot measures: one more required
+argument may make weak models fail tool calls more often, cost more output
+tokens, or change how they play.
+
+- **Design:** paired replays. Matches already played with the flag off are
+  played again on the same seeds and seatings with the flag on, everything
+  else equal (prompt version, arena commit as far as possible). For Werewolf,
+  where headlines matter most: the 8 matches of W1 P1 (or P3, if that becomes
+  the default prompt); for Liar's Deck, if wanted, the first 24 of league A2.
+- **Outcomes, per model and pooled:** rejected answers per move, share of
+  moves played by the fallback, output tokens and response time per move, cost
+  per match; as a check on play, vote accuracy (Werewolf) or lie and call rate
+  (Liar's Deck). Win shares of models cannot move, because every seat has the
+  same setting.
+- **Test:** Wilcoxon signed rank on the paired per-match rejected answers per
+  move, two-sided, alpha 0.05; the rest as paired differences with bootstrap
+  intervals over pairs. A safety check: with 8 to 24 pairs it finds only large
+  changes, and "no change found" is not "no change".
+- **Stop rule:** the flag does not become the default if the fallback share
+  of any model rises above 10 % or the pooled rejected answers per move rise
+  by more than 0.1.
+- **Cost:** about 0.40 EUR for the 8 Werewolf pairs' second half (0.036 EUR a
+  match plus the headline tokens), about 0.50 EUR for 24 Liar's Deck matches.
+  Needs the owner's yes.
+- **Needs from the arena:** the setting, `headline` as a required argument
+  only when it is on, stored as `data.headline` in the `thought` event (Builder).
+
+## Proposal: Throne of Tokens pilot (C1, not approved, waits for the plugin)
+
+For when the Civ plugin plays a whole match (roadmap 7.6). Nothing can be measured
+before that, so the numbers below are rough and the first step is a free check.
+
+- **Preset:** 4 nations, a short match of 20 rounds (score at the round limit),
+  the smallest map the generator allows for 4, default balance data, memory off.
+- **Design:** the seed draws the map and the start positions, which belong to
+  the seats. Each seed is played in its 4 cyclic rotations, so every model
+  starts from every position once (the `cyclic` stage kind of W1). The pilot
+  is 1 seed x 4 rotations = 4 matches with 4 clean models (glm-flash,
+  deepseek-flash, gpt-luna, claude-haiku: the most reliable of E1-A2).
+- **Cost, before measuring:** per nation and round about 3 to 6 calls (info
+  tools, two diplomacy turns, one `submit_orders`), so 240 to 480 calls a match.
+  Civ prompts carry a map view and the diplomacy log, perhaps 4 000 to 8 000
+  input tokens. At the cheap models' prices that is 0.15 to 0.60 EUR a match,
+  which may hit the 0.50 EUR cap per match.
+- **Step 0 (free):** play the preset with random bots and run
+  `POST /matches/estimate` on it. Prompt sizes are built exactly as for models,
+  without a call. If the estimate is above 0.40 EUR, shorten the preset to 10
+  rounds or cap the info calls per round before any paid match.
+- **Measures:** reliability per model and per tool (submit_orders rejected,
+  orders refused at resolution), cost and time per round, score, cities and
+  wars per nation, treaties kept and broken, trades made.
+- **Needs from the arena:** the plugin with `submit_orders` and win conditions
+  (Builder, 7.6), a random bot (Coder), Civ analytics later (Heavy).
+- **Budget:** about 1.50 EUR for the 4 pilot matches, to be set from step 0
+  and approved by the owner.
+
+## Plan: stronger models in every game (the owner's wish, 2026-11-12; not approved yet)
+
+After each game's pilot with cheap models, the stronger models get their turn in
+every game: Liar's Deck (E1 stage C, approved), Werewolf (a W1 stage) and Throne of
+Tokens (a C1 stage). Candidates, with OpenRouter's prices on 2026-11-11 (USD per
+million tokens, input / output; all take tools and a forced tool call):
+
+| Model | OpenRouter id | Price |
+| --- | --- | --- |
+| GPT terra | openai/gpt-6.1-terra | 1.00 / 5.00 |
+| Claude Sonnet | anthropic/claude-sonnet-5.5 | 2.00 / 10.00 |
+| Kimi | moonshotai/kimi-k3.1-pro | 2.00 / 10.00 |
+| Gemini carbon | google/gemini-4-carbon | 2.00 / 10.00 |
+| Grok | x-ai/grok-4.7 | 2.00 / 6.00 |
+| Qwen max | qwen/qwen3.8-max-0902 | 2.00 / 6.00 |
+| DeepSeek pro | deepseek/deepseek-v4-pro-0813 | 0.111 / 4.44 |
+| Gemini flash | google/gemini-3.8-flash | 0.825 / 4.125 |
+
+Builder checks ids and prices before any run (the catalog books unchecked
+prices 25 % higher).
+
+- **Design:** the guest design of E1 stage C in every game. One strong model
+  joins a table of cheap hosts and sits in every seat (in Werewolf, so in every
+  role). The hosts are the same for every guest, so the guests can be compared
+  with each other and with the cheap models on one scale (Plackett-Luce).
+- **Rough cost per match with one strong guest:**
+  - Liar's Deck: about 0.08 EUR (E1 stage C's estimate).
+  - Werewolf, 8 seats: 0.10 to 0.20 EUR. One seat makes about 8 to 10 calls of
+    3 000 input and 700 output tokens, so the guest costs 0.05 (terra) to 0.10
+    EUR (Sonnet, Kimi), plus about 0.04 for seven cheap hosts.
+  - Throne of Tokens: not known before the plugin plays. A strong nation over
+    20 rounds may cost 0.50 EUR or more on its own, above today's cap per match.
+    The free estimate (step 0 of C1) comes first; a higher cap per match is the
+    owner's decision.
+- **Thinking:** strong models are run at low effort first, like the cheap ones,
+  so the comparison is fair. A higher effort is its own factor, as in E1 stage B.
+- **Order:** Werewolf P1 and P2 with cheap models, then a Werewolf guest stage
+  (about 4 guests x 8 rotations = 32 matches, about 4 to 6 EUR), E1 stage C,
+  then Civ once its cheap pilot has run.
+
+**Context for Throne of Tokens.** A strategy game needs more than the rules
+in the prompt. Every turn the model should see, from its own view only:
+- the moves it can actually make now (affordable buildings and units, armies
+  that can still move, treaties on offer);
+- the win conditions with where it stands on each (cities held against the 50
+  % needed, gold against 500 and for how many rounds, score and rank at the
+  round limit, rounds left);
+- what changed since its last turn.
+
+The model also keeps a short plan of its own ("goal: economic win; next:
+market in the capital, a trade for iron"), carried to its next turn, so it
+plays towards a goal instead of move by move. Asked of Arena Coder (Civ
+rules.md and the civ-p1 prompt); whether a plan carried between turns
+changes play is a factor worth a paired test later, like prompt_version.
 
 ## Build steps
 

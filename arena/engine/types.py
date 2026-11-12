@@ -88,10 +88,13 @@ class TurnRequest(_Frozen):
 # is read ("off": as sent; "v1": arena/agents/arguments.py). Games never see it.
 ANSWER_REPAIR = "answer_repair"
 ANSWER_REPAIR_VERSIONS = ("off", "v1")
+# Whether every tool call also asks for a `headline`: the thought in a line, for viewers.
+# Not a prompt version: it is the same prompt for every game, turned on or off.
+THOUGHT_HEADLINE = "thought_headline"
 # What one match may spend at most, in euros: lowers the config's per-match cap for this
 # match, never raises it (arena/agents/budget.py). Games never see it either.
 MATCH_BUDGET = "match_budget_eur"
-ENGINE_SETTINGS = (ANSWER_REPAIR, MATCH_BUDGET)
+ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE, MATCH_BUDGET)
 
 
 def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
@@ -103,6 +106,11 @@ def match_budget_of(settings: Mapping[str, Any]) -> Decimal | None:
 def repair_of(settings: Mapping[str, Any]) -> str:
     """The answer_repair of a match: its setting, else "off" (the call as sent)."""
     return settings.get(ANSWER_REPAIR, "off")
+
+
+def headline_of(settings: Mapping[str, Any]) -> bool:
+    """Whether a match asks its models for a headline with every thought (default no)."""
+    return settings.get(THOUGHT_HEADLINE, False) is True
 
 
 def game_settings(settings: Mapping[str, Any]) -> dict[str, Any]:
@@ -134,6 +142,7 @@ class Reply(_Frozen):
     action: Action | None = None
     problem: str | None = None  # set instead of `action`: what was wrong with the answer
     thought: str | None = None
+    headline: str | None = None  # the thought in a line, for viewers (thought_headline)
     stats: AnswerStats | None = None
 
     @model_validator(mode="after")

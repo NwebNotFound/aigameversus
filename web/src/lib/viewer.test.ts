@@ -418,7 +418,7 @@ describe('attempts', () => {
 		];
 		const { hidden, marks } = attempts(lines);
 		expect([...hidden]).toEqual([lines[0], lines[2]]);
-		expect(marks.get(lines[6])).toEqual({ retries: 2, fallback: false });
+		expect(marks.get(lines[6])).toEqual({ retries: 2, fallback: false, repair: null });
 		expect(marks.has(lines[8])).toBe(false);
 	});
 
@@ -431,7 +431,58 @@ describe('attempts', () => {
 			at('action', 'bet_action', 'p1')
 		];
 		const { marks } = attempts(lines);
-		expect(marks.get(lines[2])).toEqual({ retries: 1, fallback: true });
-		expect(marks.get(lines[4])).toEqual({ retries: 0, fallback: true });
+		expect(marks.get(lines[2])).toEqual({ retries: 1, fallback: true, repair: null });
+		expect(marks.get(lines[4])).toEqual({ retries: 0, fallback: true, repair: null });
+	});
+});
+
+describe('attempts: repairs', () => {
+	const at = (
+		kind: TranscriptLine['kind'],
+		type: string,
+		data: Record<string, unknown> = {},
+		actor = 'p2'
+	): TranscriptLine => ({
+		seq: 0,
+		kind,
+		actor,
+		text: type,
+		detail: null,
+		importance: 2,
+		raw: { type, data: { player: actor, ...data } }
+	});
+
+	it('marks a call read as meant (tier 1) with what was wrong', () => {
+		const lines = [
+			at('info', 'action_accepted'),
+			at('info', 'decision', { repairs: ['extracted_json'] }),
+			at('action', 'bet_action')
+		];
+		expect(attempts(lines).marks.get(lines[2])).toEqual({
+			retries: 0,
+			fallback: false,
+			repair: { tier: 1, p: null, problem: 'the call was written inside text' }
+		});
+	});
+
+	it("marks Jev's repair (tier 2) with its probability and the refusal, never as random", () => {
+		const lines = [
+			at('info', 'action_rejected', { error: 'Unknown card "K9"' }),
+			at('info', 'action_rejected', { error: 'Unknown card "K9"' }),
+			at('info', 'action_rejected', { error: 'Unknown card "K9"' }),
+			at('info', 'action_accepted', { repaired_by: 'jev', top_probability: 0.93 }),
+			at('info', 'decision', { repairs: [], jev: { reason: 'played' } }),
+			at('action', 'cards_played')
+		];
+		expect(attempts(lines).marks.get(lines[5])).toEqual({
+			retries: 3,
+			fallback: false,
+			repair: { tier: 2, p: 0.93, problem: 'Unknown card "K9"' }
+		});
+	});
+
+	it('takes the spoiler-free marker the web server put on a public line, without details', () => {
+		const move = { ...at('action', 'cards_played'), repair: { tier: 2 as const, p: 0.9 } };
+		expect(attempts([move]).marks.get(move)?.repair).toEqual({ tier: 2, p: 0.9, problem: null });
 	});
 });

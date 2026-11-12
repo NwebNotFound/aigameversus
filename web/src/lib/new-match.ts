@@ -23,6 +23,7 @@ export type Field =
 	| 'turn_delay'
 	| 'roles'
 	| 'confirm_spend'
+	| 'confirm_unreliable'
 	| 'match_budget_eur';
 
 /** The Werewolf role selection: a template id, or CUSTOM for the counts of the checklist. */
@@ -43,12 +44,17 @@ export type Parsed =
  * server plays bots only. A match is all bots or all models: the arena does not
  * mix them yet. A model match needs the "spends money" box ticked.
  */
+/**
+ * The form as a match to start, or what to fix. `unreliable` are the ids the arena marks
+ * unreliable: choosing one needs its own tick, on purpose possible.
+ */
 export function parseForm(
 	form: FormData,
 	games: GameInfo[],
 	models: string[] = [],
 	mixed = false,
-	personalities = false
+	personalities = false,
+	unreliable: string[] = []
 ): Parsed {
 	const errors: Partial<Record<Field, string>> = {};
 	const text = (name: string) => String(form.get(name) ?? '').trim();
@@ -95,6 +101,13 @@ export function parseForm(
 				);
 			if (form.get('confirm_spend') === null) {
 				errors.confirm_spend = 'A match of models spends real money: tick the box to start it.';
+			}
+			if (
+				modelSeats.some((seat) => unreliable.includes(seat)) &&
+				form.get('confirm_unreliable') === null
+			) {
+				errors.confirm_unreliable =
+					'An unreliable model often fails or is replaced by the bot: tick the box to seat it anyway.';
 			}
 		}
 	}

@@ -18,6 +18,7 @@ from arena.engine.types import (
     ANSWER_REPAIR_VERSIONS,
     MATCH_BUDGET,
     MESSAGE,
+    THOUGHT_HEADLINE,
     Action,
     Agent,
     AgentError,
@@ -32,6 +33,7 @@ from arena.engine.types import (
     TurnMode,
     TurnRequest,
     game_settings,
+    headline_of,
     repair_of,
 )
 
@@ -95,6 +97,8 @@ class Match[StateT: BaseModel]:
             raise ValueError(
                 f"Unknown {ANSWER_REPAIR} {repair!r}; choose one of {list(ANSWER_REPAIR_VERSIONS)}"
             )
+        if not isinstance(self.settings.get(THOUGHT_HEADLINE, False), bool):
+            raise ValueError(f"{THOUGHT_HEADLINE} is true or false")
         budget = self.settings.get(MATCH_BUDGET)
         if budget is not None and (
             isinstance(budget, bool) or not isinstance(budget, int | float) or not budget > 0
@@ -139,6 +143,7 @@ class Match[StateT: BaseModel]:
                     "settings": dict(self.settings),
                     "prompt_version": plugin.prompt_version(self.settings),
                     ANSWER_REPAIR: repair_of(self.settings),
+                    THOUGHT_HEADLINE: headline_of(self.settings),
                     "seed": self.seed,
                     # Only with a personality: a match without one logs what it always did.
                     **({"personalities": self._personalities} if self._personalities else {}),
@@ -331,13 +336,12 @@ class Match[StateT: BaseModel]:
             reply = await self._agents[player].act(request)
             reply = Reply.model_validate(_storable(reply.model_dump()))
             answers.append(reply.stats)
-            if reply.thought:
+            if reply.thought or reply.headline:
                 # Spectators only: no player gets a thought, not even its author.
-                trail.append(
-                    _engine_event(
-                        "thought", {"player": player, "text": reply.thought}, visible_to=()
-                    )
-                )
+                thought = {"player": player, "text": reply.thought or ""}
+                if reply.headline:
+                    thought["headline"] = reply.headline
+                trail.append(_engine_event("thought", thought, visible_to=()))
             action = reply.action
             error = reply.problem if action is None else self._check(player, action, tools)
             attempt = {
