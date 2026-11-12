@@ -86,3 +86,24 @@ def test_the_report_adds_duration_and_cost_from_the_record_and_the_ledger(client
     )
     assert report["columns"][-1]["key"] == "cost_micro_eur"
     assert glance["winners"] == [report["ranking"][0]["seat"]]
+
+
+def test_talk_checks_are_served_with_spoilers_and_hold_back_hidden_cards_without(client):
+    match = start(client, game="liars_deck", seed=3)
+    follow(client, match["id"])
+
+    full = client.get(f"/matches/{match['id']}/talk-checks", params={"spoilers": True}).json()
+    public = client.get(f"/matches/{match['id']}/talk-checks").json()
+
+    assert full["game"] == "liars_deck" and full["available"] is True
+    assert public["available"] is False and public["tags"] == []
+
+
+def test_talk_checks_of_unknown_match_or_game_are_404(client):
+    toy = start(client, game="toy", seed=1)
+    follow(client, toy["id"])
+
+    assert (
+        client.get("/matches/00000000-0000-0000-0000-000000000000/talk-checks").status_code == 404
+    )
+    assert client.get(f"/matches/{toy['id']}/talk-checks").status_code == 404
