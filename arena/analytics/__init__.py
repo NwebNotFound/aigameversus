@@ -11,6 +11,8 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from arena.analytics import behaviour, liars_deck, werewolf
+from arena.analytics.report import GAMES as REPORTS
+from arena.analytics.report import report
 from arena.analytics.situation import BUILDERS as SITUATIONS
 from arena.analytics.situation import situation
 from arena.engine.types import Event
@@ -57,13 +59,24 @@ def match_analytics(
         # Only a spectator reads thoughts; without spoilers the log has none anyway.
         thoughts = {e.data["player"]: e.data["text"] for _, e in log if e.type == "thought"}
         numbers["behaviour"] = behaviour.liars_deck(numbers, spoilers, thoughts)
-    return {
+    if game in REPORTS:
+        numbers["report"] = report(game, log, spoilers, numbers, names or {})
+    result = {
         "game": game,
         "spoilers": spoilers,
         "events": len(log),
         "situation": situation(game, log, spoilers, names or {}),
         **numbers,
     }
+    # Which parts this answer has, so a client checks one list instead of probing keys:
+    # Poker answers with ["situation"] only, Liar's Deck with its moves, totals and more.
+    result["sections"] = [key for key in result if key not in _HEAD]
+    # False: a situation only, no numbers yet for this game (Poker today).
+    result["numbers"] = result["sections"] != ["situation"]
+    return result
+
+
+_HEAD = {"game", "spoilers", "events", "meta", "sections", "numbers"}
 
 
 def _public_start(event: Event) -> Event:

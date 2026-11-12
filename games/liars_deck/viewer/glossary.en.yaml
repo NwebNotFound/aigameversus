@@ -1,0 +1,25 @@
+terms:
+  - term: Table card
+    meaning: "The card kind of the round (king, queen or ace). Everyone claims their face-down cards are this kind."
+  - term: Play
+    meaning: "Putting 1 to 3 cards face down on the table and claiming they are all the table card."
+  - term: Bluff
+    meaning: "Claiming something untrue, here: saying the cards are the table card when at least one is not."
+  - term: Call
+    meaning: "Saying 'Liar!' to doubt the last play. Only those cards are turned over."
+  - term: Revolver
+    meaning: "Each player's gun with 6 chambers. One chamber holds a live bullet, and nobody can see which."
+  - term: Chamber
+    meaning: "One of the 6 slots of a revolver. Every trigger pull moves the cylinder to the next slot."
+  - term: Live chamber
+    meaning: "The slot with the bullet. If the cylinder stops there, the player is out."
+  - term: Joker
+    meaning: "A wild card: it always counts as the table card, so playing one is never a lie."
+  - term: Devil card
+    meaning: "A special joker in one variant. If a call reveals it, everyone but the player who played it pulls the trigger."
+  - term: Eliminated
+    meaning: "Out of the game after a live shot. The last player left wins."
+  - term: Round
+    meaning: "One deal: new cards, a new table card, and turns until someone pulls a trigger."
+  - term: Shot risk
+    meaning: "The chance that the next pull is live. It rises with every pull: 1 in 6, 1 in 5, down to 1 in 1."

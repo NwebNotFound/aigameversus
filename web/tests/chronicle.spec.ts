@@ -40,8 +40,10 @@ test('the chronicle tab tells a finished match in a chosen style and language', 
 	await page.getByTestId('tab-chronicle').click();
 
 	await expect(page.getByTestId('chronicle-story')).toBeVisible();
-	await expect(page.getByTestId('chronicle-chapter')).toHaveCount(rounds);
-	await expect(page.getByTestId('chronicle-story')).toContainText('p1');
+	await expect(page.getByTestId('chronicle-chapter')).toHaveCount(rounds + 2); // a prologue, the rounds, an epilogue
+	// Players go by their display names, never by seat id.
+	await expect(page.getByTestId('chronicle-story')).toContainText('Bot 1');
+	expect(await page.getByTestId('chronicle-story').innerText()).not.toMatch(/\bp[1-9]\b/);
 	await expect(page.getByRole('heading', { level: 2 })).toContainText("Liar's Deck");
 
 	await page.getByTestId('chronicle-style').selectOption('news');

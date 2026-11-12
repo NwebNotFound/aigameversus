@@ -109,13 +109,15 @@ def build_messages(
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
-def tool_schemas(tools: Sequence[ToolSpec]) -> list[dict[str, Any]]:
+def tool_schemas(tools: Sequence[ToolSpec], *, with_thought: bool = True) -> list[dict[str, Any]]:
     """The tools in the function-calling format that models expect.
 
     Every tool gets one more argument, `thought`, for the player's private
     thinking: many models cannot write text and call a tool in one answer.
     It comes first, so that a model thinks before it fills in its move. The
-    agent runner takes it out again; a game never sees it.
+    agent runner takes it out again; a game never sees it. Without it
+    (`with_thought=False`, for a model that keeps garbling its calls) the
+    thought is the text beside the call.
     """
     schemas = []
     for tool in tools:
@@ -126,7 +128,9 @@ def tool_schemas(tools: Sequence[ToolSpec]) -> list[dict[str, Any]]:
             "type": "string",
             "description": "Your private thinking about this move, in one or two sentences.",
         }
-        parameters = {**tool.parameters, "properties": {THOUGHT: thought, **properties}}
+        if with_thought:
+            properties = {THOUGHT: thought, **properties}
+        parameters = {**tool.parameters, "properties": properties}
         function = {"name": tool.name, "description": tool.description, "parameters": parameters}
         schemas.append({"type": "function", "function": function})
     return schemas

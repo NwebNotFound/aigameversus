@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { LeaderboardKind } from '#lib/api.js';
+	import ProvisionalBadge from '#lib/components/ProvisionalBadge.svelte';
 	import { gameName } from '#lib/games.js';
 	import { percent, placement, rating } from '#lib/format.js';
 	import { euros } from '#lib/live.js';
@@ -126,12 +127,18 @@
 								{:else}
 									<a href="/profiles/{row.profile_id}">{row.name}</a>
 								{/if}
-								<span class="narrow model">{row.model_id}</span>
+								{#if row.model_id !== row.name}<span class="narrow model">{row.model_id}</span>{/if}
 							</td>
 							<td class="wide model">
-								{row.model_id}{#if row.vendor}<span class="vendor"> · {row.vendor}</span>{/if}
+								{#if row.model_id !== row.name}{row.model_id}{/if}{#if row.vendor}<span
+										class="vendor">{row.model_id !== row.name ? ' · ' : ''}{row.vendor}</span
+									>{/if}
 							</td>
-							<td class="num strong">{rating(row.rating)}</td>
+							<td class="num strong">
+								{rating(row.rating)}{#if row.provisional}<ProvisionalBadge
+										limit={board.provisional_games}
+									/>{/if}
+							</td>
 							<td class="num">{row.games_played}</td>
 							<td class="num">{percent(row.win_rate)}</td>
 							<td class="num wide">{placement(row.average_placement)}</td>

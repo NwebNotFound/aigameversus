@@ -147,7 +147,12 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
             enter("day", data["day"], seq)
         elif event.type == "player_died":
             phase["deaths"].append(
-                {"player": data["player"], "cause": data.get("cause"), "role": data.get("role")}
+                {
+                    "seq": seq,
+                    "player": data["player"],
+                    "cause": data.get("cause"),
+                    "role": data.get("role"),
+                }
             )
             if data.get("role"):
                 revealed[data["player"]] = data["role"]

@@ -70,3 +70,19 @@ def test_every_game_with_a_situation_says_how_it_is_going_by_display_name(client
         if game == "werewolf":
             recap = answer.json()["recap"]
             assert recap and all("p1" not in r["text"]["en"] for r in recap)
+
+
+def test_the_report_adds_duration_and_cost_from_the_record_and_the_ledger(client):
+    match = start(client, game="liars_deck", seed=6)
+    follow(client, match["id"])
+
+    report = client.get(f"/matches/{match['id']}/analytics").json()["report"]
+
+    glance = report["at_a_glance"]
+    assert glance["duration_s"] >= 0 and glance["cost_micro_eur"] == 0  # bots cost nothing
+    assert glance["cost_by_seat"] == {"p1": 0, "p2": 0}
+    assert all(
+        row["values"][-1] == {**report["columns"][-1], "value": 0} for row in report["ranking"]
+    )
+    assert report["columns"][-1]["key"] == "cost_micro_eur"
+    assert glance["winners"] == [report["ranking"][0]["seat"]]

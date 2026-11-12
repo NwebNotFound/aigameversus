@@ -92,6 +92,9 @@ def test_a_model_page_has_rating_cost_and_tool_errors_per_game_and_overall(datab
     assert games["liars_deck"]["usage"]["tool_error_rate"] == pytest.approx(0.1)
     assert games["poker"]["usage"]["tool_error_rate"] is None
     assert page["usage"]["cost_total_micro_eur"] == 6000
+    # two rated games each: the overall rating and every game rating are still provisional
+    assert page["overall"]["provisional"] is True
+    assert {game["provisional"] for game in page["games"]} == {True}
     assert page["usage"]["cost_per_game_micro_eur"] == 2000  # over its 3 rated games
     assert page["overall"]["games_played"] == 3
     assert len(page["recent_matches"]) == 3

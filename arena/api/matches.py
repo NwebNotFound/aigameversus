@@ -4,19 +4,24 @@ Everything here shows a match the way a spectator sees it: all events, also
 thoughts and hidden cards. The API listens on localhost only.
 """
 
+import asyncio
 import os
-from datetime import datetime
-from typing import Annotated, Any
+import time
+from datetime import UTC, datetime
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.websockets import WebSocketDisconnect
 
+from arena.agents.budget import MICRO
+from arena.agents.estimate import Basis, estimate
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
-from arena.config import load_config, load_keys
+from arena.catalog import HIGH_OUTPUT_USD_PER_MTOK, resolve
+from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
-from arena.db.match_store import MatchRecord, Origin, Seat, Status
+from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
 from arena.engine.replay import replay
 from arena.engine.types import Event
 
@@ -39,6 +44,26 @@ class Game(BaseModel):
     max_players: int
 
 
+class SeatSpec(BaseModel):
+    """Who takes one seat: a model (paid) or a random bot (free)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["model", "bot"]
+    model: str | None = Field(None, description="For a model seat: an id of GET /models/catalog")
+    personality: str | None = Field(
+        None, description="Not supported yet: the agent runner has no personality in its prompt"
+    )
+
+    @model_validator(mode="after")
+    def _check(self) -> "SeatSpec":
+        if (self.kind == "model") != (self.model is not None):
+            raise ValueError("a model seat names its model, a bot seat names none")
+        if self.personality is not None:
+            raise ValueError("a personality per seat is not supported yet")
+        return self
+
+
 class NewMatch(BaseModel):
     game: str = Field(description="Game id, see GET /games")
     players: int | None = Field(None, description="Number of seats; default: the game's minimum")
@@ -48,6 +73,12 @@ class NewMatch(BaseModel):
         description="Model ids from config/models.yaml, one per seat in order (p1, p2, ...). "
         "Makes paid model calls inside the cost caps. Only on a server started with "
         "ARENA_ALLOW_MODEL_SEATS=1, and with confirm_spend. Without: every seat is a random bot",
+    )
+    seats: list[SeatSpec] | None = Field(
+        None,
+        min_length=1,
+        description="One entry per seat in order, a model or a bot: a table may mix them. "
+        "Instead of `models`; any model seat needs what `models` needs.",
     )
     confirm_spend: bool = Field(
         False, description="Must be true for a match with model seats: it spends money."
@@ -61,6 +92,9 @@ class NewMatch(BaseModel):
         True,
         description="False: a fair benchmark. The match neither reads nor writes any memory "
         "(relationships, match summaries).",
+    )
+    batch: Batch | None = Field(
+        None, description="The batch this match belongs to, e.g. an experiment stage or a league"
     )
 
 
@@ -85,17 +119,34 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
     """Start a match of random bots, or of models (`models`). It plays on in the background.
 
     Model seats cost money and are refused (403) unless the server was started
-    with ARENA_ALLOW_MODEL_SEATS=1: the API has no login. Answers 429 while the
+    with ARENA_ALLOW_MODEL_SEATS=1: the API has no login. A model is an id of
+    config/models.yaml or any other id of GET /models/catalog. Answers 429 while the
     server already plays as many matches as it does at a time.
     """
     plugin = live.games.get(new.game)
     if plugin is None:
         raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
+    if new.models is not None and new.seats is not None:
+        raise HTTPException(422, "Name the seats with `seats` or with `models`, not both.")
     models = None
-    if new.models is None:
+    if new.seats is not None:
+        count = len(new.seats)
+        if new.players is not None and new.players != count:
+            raise HTTPException(422, f"players is {new.players}, but {count} seats are named")
+        chosen = {f"p{i}": s.model for i, s in enumerate(new.seats, start=1) if s.kind == "model"}
+        if chosen:
+            models = await _model_seats(new, chosen)
+    elif new.models is None:
         count = new.players or plugin.min_players
     else:
-        models = _model_seats(new)
+        if new.players is not None and new.players != len(new.models):
+            raise HTTPException(
+                422,
+                f"players is {new.players}, but {len(new.models)} models are named: one per seat",
+            )
+        models = await _model_seats(
+            new, {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
+        )
         count = len(models)
     players = [f"p{seat}" for seat in range(1, count + 1)]
     try:
@@ -107,6 +158,7 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
             turn_delay=new.turn_delay,
             models=models,
             memory=new.memory,
+            batch=new.batch,
         )
     except ValueError as refused:
         raise HTTPException(422, str(refused)) from refused
@@ -114,46 +166,171 @@ async def start_match(new: NewMatch, live: Live) -> MatchRecord:
         raise HTTPException(429, str(busy)) from busy
 
 
-def _model_seats(new: NewMatch) -> dict[str, str]:
-    """Seat -> model id, after every check that can refuse a paid match before it starts."""
+async def _model_seats(new: NewMatch, models: dict[str, str]) -> dict[str, str]:
+    """Seat -> model id of the model seats, after every check that can refuse a paid match."""
     if os.environ.get(ALLOW_MODEL_SEATS) != "1":
         raise HTTPException(
             403,
             f"Model seats make paid calls and are off on this server. Start it with "
             f"{ALLOW_MODEL_SEATS}=1 to allow them.",
         )
-    assert new.models is not None
     if not new.confirm_spend:
         raise HTTPException(
             422, "A match with model seats spends money: send confirm_spend: true to start it."
         )
-    if new.players is not None and new.players != len(new.models):
-        raise HTTPException(
-            422, f"players is {new.players}, but {len(new.models)} models are named: one per seat"
-        )
-    config = load_config()
-    unknown = [model_id for model_id in new.models if model_id not in config.models]
-    if unknown:
-        raise HTTPException(
-            422,
-            f"Unknown model {', '.join(unknown)}. config/models.yaml has: "
-            f"{', '.join(config.models)}",
-        )
-    if missing := load_keys(config, new.models):
+    ids = list(models.values())
+    config = await _seat_config(ids)
+    if missing := load_keys(config, ids):
         raise HTTPException(
             503,
             f"The server lacks {', '.join(missing)}, the provider's API key. Nothing was started.",
         )
-    return {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
+    return models
+
+
+async def _seat_config(model_ids: list[str]) -> Config:
+    """The config with these models in it: config/models.yaml's, or the catalog's.
+
+    An unverified catalog model comes at its listed price x1.25, as the budget books it.
+    Refuses (422) an id that is in neither.
+    """
+    config = await resolve(load_config(), model_ids)
+    unknown = [model_id for model_id in model_ids if model_id not in config.models]
+    if unknown:
+        raise HTTPException(
+            422,
+            f"Unknown model {', '.join(unknown)}. Take an id of GET /models/catalog; "
+            f"config/models.yaml has: {', '.join(load_config().models)}",
+        )
+    return config
+
+
+class EstimateRequest(BaseModel):
+    game: str = Field(description="Game id, see GET /games")
+    models: list[str | None] = Field(
+        min_length=1,
+        description="Model ids of GET /models/catalog, one per seat in order; null for a bot "
+        "seat, which plays but costs nothing",
+    )
+    settings: dict[str, Any] = Field(default_factory=dict, description="Settings of the game")
+
+
+class SeatEstimateOut(BaseModel):
+    model_id: str
+    calls: int = Field(description="Prompts the seat got in the most expensive trial match")
+    estimate_micro_eur: int
+    basis: Basis = Field(
+        description="Answers counted at the model's mean output in the ledger, or at the "
+        "output limit while the ledger knows fewer than 10 of its answers (then several "
+        "times too high)"
+    )
+
+
+class EstimateOut(BaseModel):
+    estimate_micro_eur: int = Field(description="All seats together, in millionths of a euro")
+    cap_micro_eur: int = Field(description="The cap of one match")
+    month_spent_micro_eur: int = Field(description="What this calendar month has cost so far")
+    month_cap_micro_eur: int
+    seats: dict[str, SeatEstimateOut]
+    fits: bool = Field(description="Whether the estimate fits the match cap and the month left")
+    high_price: list[str] = Field(
+        description="Models whose output costs more than 10 USD per million tokens, as booked"
+    )
+
+
+class Estimates:
+    """One estimate at a time, and an answer kept for ESTIMATE_TTL seconds.
+
+    The trial matches take the server's CPU, and the API has no login: without this,
+    a client that asks again and again would slow every live match down.
+    """
+
+    def __init__(self):
+        self.lock = asyncio.Lock()
+        self.answers: dict[str, tuple[float, EstimateOut]] = {}
+
+
+ESTIMATE_TTL = 30.0
+_clock = time.monotonic  # seconds; a test moves it on
+
+
+@router.post("/matches/estimate")
+async def estimate_match(new: EstimateRequest, request: Request, live: Live) -> EstimateOut:
+    """What a match of these models would cost, estimated without calling any model.
+
+    Random bots play the match three times and every prompt a seat's model would get is
+    measured; answers are counted at the model's mean output in the ledger, or at the output
+    limit for a model with little history. A guide, not a promise: the caps still stop a
+    match that costs more. Spends nothing and needs no flag. 503 while the ledger is down.
+    One estimate runs at a time; the same request within 30 seconds gets the same answer.
+    """
+    estimates: Estimates = request.app.state.estimates
+    key = new.model_dump_json()
+    async with estimates.lock:
+        kept = estimates.answers.get(key)
+        if kept is not None and _clock() - kept[0] < ESTIMATE_TTL:
+            return kept[1]
+        answer = await _estimate(new, live)
+        estimates.answers = {
+            k: v for k, v in estimates.answers.items() if _clock() - v[0] < ESTIMATE_TTL
+        }
+        estimates.answers[key] = (_clock(), answer)
+        return answer
+
+
+async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
+    plugin = live.games.get(new.game)
+    if plugin is None:
+        raise HTTPException(404, f"Unknown game {new.game!r}. Games: {', '.join(live.games)}")
+    ids = [model_id for model_id in new.models if model_id is not None]
+    if not ids:
+        raise HTTPException(422, "Every seat is a bot: a match of bots costs nothing.")
+    config = await _seat_config(ids)
+    seats = {f"p{seat}": model_id for seat, model_id in enumerate(new.models, start=1)}
+    history = await live.ledger.output_tokens(sorted(set(ids)))
+    spent = await live.ledger.month_spent(datetime.now(UTC))
+    try:  # bot matches take a moment of CPU: off the server's event loop
+        per_seat = await asyncio.to_thread(
+            lambda: asyncio.run(estimate(plugin, seats, new.settings, config, history))
+        )
+    except ValueError as refused:
+        raise HTTPException(422, str(refused)) from refused
+    total = sum(seat.estimate_micro_eur for seat in per_seat.values())
+    cap = int(config.limits.match_eur * MICRO)
+    month_cap = int(config.limits.month_eur * MICRO)
+    return EstimateOut(
+        estimate_micro_eur=total,
+        cap_micro_eur=cap,
+        month_spent_micro_eur=spent,
+        month_cap_micro_eur=month_cap,
+        seats={
+            seat: SeatEstimateOut(
+                model_id=e.model_id,
+                calls=e.calls,
+                estimate_micro_eur=e.estimate_micro_eur,
+                basis=e.basis,
+            )
+            for seat, e in per_seat.items()
+        },
+        fits=total <= cap and spent + total <= month_cap,
+        high_price=sorted(
+            {
+                model_id
+                for model_id in ids
+                if config.models[model_id].output_usd_per_mtok > HIGH_OUTPUT_USD_PER_MTOK
+            }
+        ),
+    )
 
 
 @router.get("/matches")
 async def list_matches(
     live: Live,
     status: Annotated[list[Status] | None, Query(description="Only these statuses")] = None,
+    batch: Annotated[str | None, Query(description="Only the matches of this batch id")] = None,
 ) -> list[MatchRecord]:
-    """The newest 100 matches, newest first."""
-    return await live.matches.recent(status)
+    """The newest 100 matches, newest first; with `batch`, every match of that batch."""
+    return await live.matches.recent(status, batch)
 
 
 @router.get("/matches/{match_id}")

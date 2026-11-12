@@ -17,6 +17,33 @@ export interface MatchSummary {
 	status: MatchStatus;
 	players: string[];
 	started_at: string;
+	/** Who sits where: set for every match since model seats (D-082). */
+	seats?: Record<string, RecordSeat>;
+	/** The batch it was played in (a league, an experiment stage); null or missing: none. */
+	batch?: MatchBatch | null;
+}
+
+/** A match's batch, as `POST /matches` took it. */
+export interface MatchBatch {
+	id: string;
+	label: string;
+	index: number | null;
+	of: number | null;
+	budget_eur: number | null;
+}
+
+/** `GET /batches/{id}`: how far a batch is and what it cost. */
+export interface BatchSummary {
+	id: string;
+	label: string;
+	of: number | null;
+	budget_eur: number | null;
+	matches: number;
+	statuses: Partial<Record<MatchStatus, number>>;
+	/** null while the ledger cannot be read. */
+	cost_micro_eur: number | null;
+	first_started_at: string;
+	last_started_at: string;
 }
 
 /** A match as `GET /matches/{id}` returns it. */
@@ -26,8 +53,6 @@ export interface MatchRecord extends MatchSummary {
 	settings: Record<string, unknown>;
 	finished_at: string | null;
 	placements: { player: string; rank: number }[] | null;
-	/** Who sits where: set for every match since model seats (D-082). */
-	seats?: Record<string, RecordSeat>;
 	origin?: 'played' | 'imported';
 }
 
@@ -72,6 +97,8 @@ export interface ReplaySummary {
 	started_at: string;
 	finished_at: string;
 	cost_micro_eur: number;
+	seats?: Record<string, RecordSeat>;
+	real?: boolean;
 }
 
 /** `GET /matches/{id}/cost`, in millionths of a euro. */
@@ -157,6 +184,8 @@ export interface GameInfo {
 export interface SetupOptions {
 	/** Whether a seat can be a model yet; until then every seat is a random bot. */
 	model_seats: boolean;
+	/** Whether a table may mix models and random bots (`seats` in POST /matches). */
+	mixed_seats?: boolean;
 	models: {
 		id: string;
 		model: string;
@@ -219,8 +248,38 @@ export interface NewMatch {
 	memory: boolean;
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
-	/** Must be true with `models`: the match spends money. */
+	/** One entry per seat, a model or a bot: a table that mixes them. Instead of `models`. */
+	seats?: ({ kind: 'model'; model: string } | { kind: 'bot' })[];
+	/** Must be true with `models` or a model in `seats`: the match spends money. */
 	confirm_spend?: boolean;
+}
+
+/** One model of `GET /models/catalog`: every model that can take a seat. */
+export interface CatalogModel {
+	/** The id for POST /matches: config/models.yaml's when verified, else OpenRouter's. */
+	id: string;
+	openrouter_id: string;
+	name: string;
+	vendor: string;
+	context_length: number | null;
+	input_usd_per_mtok: number;
+	output_usd_per_mtok: number;
+	reasoning: boolean;
+	moderated: boolean;
+	free: boolean;
+	/** In config/models.yaml: prices and behaviour checked by the team. */
+	verified: boolean;
+	/** Output above 10 USD per million tokens: the form warns. */
+	high_price: boolean;
+	/** "config/models.yaml" (checked by hand) or "openrouter list" (booked at the listed price x 1.25). */
+	price_source: string;
+}
+
+export interface Catalog {
+	models: CatalogModel[];
+	fetched_at: string | null;
+	/** Read within the last hour; false: an older copy or only the verified models. */
+	fresh: boolean;
 }
 
 /** `GET /profiles/{id}/memories`: the player's own summaries of past matches. */
@@ -251,6 +310,8 @@ export interface Standing {
 	games_played: number;
 	win_rate: number | null;
 	average_placement: number | null;
+	/** Fewer rated games than `provisional_games`: the rating is not reliable yet. */
+	provisional: boolean;
 }
 
 export interface LeaderboardRow extends Standing {
@@ -281,6 +342,8 @@ export interface Leaderboard {
 	fallback: boolean;
 	/** Rows per kind with the other filters applied. */
 	counts: { models: number; bots: number };
+	/** Rated games a rating needs before it counts as reliable. */
+	provisional_games: number;
 	/** Whether the demo profiles are included (the default is no). */
 	show_demo: boolean;
 	/** Demo profiles left out. */
@@ -292,6 +355,8 @@ export interface RecentMatch {
 	match_id: string;
 	game_id: string;
 	rated_at: string;
+	/** When the match itself ended; `rated_at` is when its rating was applied. */
+	played_at: string;
 	rank: number;
 	players: number;
 	rating_change: number;
@@ -328,6 +393,8 @@ export interface ModelPage {
 	/** The profile without a personality; null until the model has played. */
 	profile_id: string | null;
 	overall: Standing | null;
+	/** Rated games a rating needs before it counts as reliable. */
+	provisional_games: number;
 	usage: Usage;
 	games: (Standing & { game_id: string; usage: Usage })[];
 	recent_matches: RecentMatch[];
@@ -378,6 +445,10 @@ export interface ArenaClient {
 	replays(): Promise<ApiResult<ReplaySummary[]>>;
 	/** The whole stored log of a match. */
 	events(id: string): Promise<ApiResult<MatchEvent[]>>;
+	/** The board after the stored turns, and what the match cost so far. */
+	board(id: string): Promise<ApiResult<Board>>;
+	cost(id: string): Promise<ApiResult<Cost>>;
+	batch(id: string): Promise<ApiResult<BatchSummary>>;
 	/** The board after the first `events` events of the log. */
 	boardAt(id: string, events: number): Promise<ApiResult<Board>>;
 	/** The readable play-by-play; without `spoilers`, only what every player could see. */
@@ -391,6 +462,7 @@ export interface ArenaClient {
 	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
 	monthSpend(): Promise<ApiResult<MonthSpend>>;
+	catalog(): Promise<ApiResult<Catalog>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
@@ -505,6 +577,29 @@ export function createArenaClient(
 			);
 		},
 
+		board(id) {
+			return getJson<Board>(
+				`/matches/${encodeURIComponent(id)}/board`,
+				(body) => isObject(body) && 'spec' in body,
+				[404, 422]
+			);
+		},
+
+		cost(id) {
+			return getJson<Cost>(
+				`/matches/${encodeURIComponent(id)}/cost`,
+				(body) => isObject(body) && isObject(body.players),
+				[404, 422]
+			);
+		},
+
+		batch(id) {
+			return getJson<BatchSummary>(
+				`/batches/${encodeURIComponent(id)}`,
+				(body) => isObject(body) && isObject(body.statuses)
+			);
+		},
+
 		async liveState(id) {
 			const match = encodeURIComponent(id);
 			// 422: not a valid match id, so no such match either.
@@ -601,6 +696,13 @@ export function createArenaClient(
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ roles, player_count: players })
 				}
+			);
+		},
+
+		catalog() {
+			return getJson<Catalog>(
+				'/models/catalog',
+				(body) => isObject(body) && Array.isArray(body.models)
 			);
 		},
 
