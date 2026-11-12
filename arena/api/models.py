@@ -86,6 +86,7 @@ class ReliabilityOut(BaseModel):
     cutoff_share: float | None
     rate_limits_per_move: float | None
     rejected_rate: float | None = Field(description="Refused answers over all answers")
+    answers: int = Field(description="All answers of the n moves: the base of rejected_rate")
     rejected_cut_off: int = Field(description="Refused answers cut off at the output limit")
     last_seen: str | None = Field(description="When its newest move here was logged")
     warnings: list[str] = Field(description="What costs time without being a failure")

@@ -31,6 +31,7 @@ class Reliability:
     cutoff_share: float | None  # of those, the share with an answer cut off; None without any
     rate_limits_per_move: float | None  # of those, rate-limited calls per move
     rejected_rate: float | None  # refused answers over all answers of the n moves
+    answers: int  # all answers of the n moves, corrections included: rejected_rate's base
     rejected_cut_off: int  # of the refused answers, those cut off at the output limit
     last_seen: str | None  # when its newest move was logged (ISO), None if never
     warnings: list[str] = field(default_factory=list)  # what costs time without being a failure
@@ -84,6 +85,7 @@ def verdict(
             cut,
             limited,
             rejected_rate,
+            answers,
             rejected_cut,
             last_seen,
             warnings,

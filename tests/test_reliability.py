@@ -79,7 +79,7 @@ def test_refused_answers_and_how_many_of_them_were_cut_off_are_counted():
     found = verdict(hard + one + clean, 0, RULES, last_seen="2026-11-12T01:00:00+00:00")
 
     assert found.rejected_cut_off == 12
-    assert found.rejected_rate == 13 / 33
+    assert (found.rejected_rate, found.answers) == (13 / 33, 33)
     assert found.last_seen == "2026-11-12T01:00:00+00:00"
     assert any("12 of 13 refused answers ran into the output limit" in w for w in found.warnings)
     assert found.status == "ok"  # every move ended valid: a warning, not a failure
