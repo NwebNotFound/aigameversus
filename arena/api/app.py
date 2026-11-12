@@ -18,6 +18,7 @@ from arena.api import (
     models,
     qualify,
     ratings,
+    referee,
     setup,
     transcript,
     viewer_help,
@@ -86,6 +87,7 @@ app.include_router(analytics.router)
 app.include_router(viewer_help.router)
 app.include_router(batches.router)
 app.include_router(qualify.router)
+app.include_router(referee.router)
 
 
 @app.exception_handler(LedgerUnavailable)

@@ -195,6 +195,16 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   `ARENA_ALLOW_JEV=1`, which stays off until Nils approves real calls and the
   placeholder thresholds are frozen; `POST /matches` refuses `"v2"` otherwise.
   Tests use `FakeJev` only.
+- The post-match referee (`arena/jev/referee.py`, D-134). `POST /matches/{id}/referee`
+  with `confirm_spend` judges a finished model match, once, with one Jev call booked
+  under the match id. It is gated like v2 by `ARENA_ALLOW_JEV`.
+  - It picks up to 5 moments by rule: model moves as decision, talk or rejected,
+    round-robin, earliest first.
+  - Per moment it asks: does the move match its own reasoning, a residual lie question
+    for talk the talk check left open, and persuasiveness from 1 to 5.
+  - Jev sees only what that player saw, its own thought and its own move.
+  - The tags are unvalidated research data (`referee_runs`). GET answers only with
+    `spoilers=true`, and nothing goes back into the match.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool
