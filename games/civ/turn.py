@@ -14,6 +14,8 @@ The steps of a round, in the order they must run:
     economy.produce(state, data, ctx)
     armies.starve(state, data, ctx)
     economy.grow(state, data, ctx)
+    events.roll(state, data, ctx)  # random events
+    victory.check(state, data, ctx)  # the match may be won
 
 The round number is what "once per round" is counted against: an army
 remembers the round of its last move.
@@ -25,7 +27,7 @@ from typing import Any
 
 from arena.engine.plugin import TurnContext
 from arena.engine.types import Event
-from games.civ import armies, diplomacy, economy
+from games.civ import armies, diplomacy, economy, events, victory
 from games.civ.state import CivState
 
 
@@ -47,4 +49,6 @@ _APPLY = {
     **economy.APPLIERS,
     **armies.APPLIERS,
     **diplomacy.APPLIERS,
+    **events.APPLIERS,
+    **victory.APPLIERS,
 }

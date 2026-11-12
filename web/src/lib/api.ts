@@ -192,6 +192,8 @@ export interface SetupOptions {
 	model_seats: boolean;
 	/** Whether a table may mix models and random bots (`seats` in POST /matches). */
 	mixed_seats?: boolean;
+	/** The values `settings.answer_repair` takes on this arena; missing on an older one. */
+	answer_repair?: string[];
 	/** Whether a model seat in `seats` may name a personality. */
 	seat_personalities?: boolean;
 	models: {
