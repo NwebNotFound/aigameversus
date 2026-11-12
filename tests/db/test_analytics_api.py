@@ -180,3 +180,22 @@ def test_civ_analytics_version_is_opt_in_and_checked(client):
     follow(client, poker["id"])
     other = client.get(f"/matches/{poker['id']}/analytics", params={"analytics_version": "civ/2"})
     assert other.status_code == 422
+
+
+def test_poker_analytics_has_hands_chips_moves_and_totals_and_no_hidden_cards_in_public(client):
+    match = start(client, game="poker", players=3, seed=3)
+    follow(client, match["id"])
+
+    full = client.get(f"/matches/{match['id']}/analytics", params={"spoilers": True}).json()
+    public = client.get(f"/matches/{match['id']}/analytics").json()
+
+    for answer in (full, public):
+        assert {"hands", "chips", "moves", "totals", "report"} <= set(answer["sections"])
+        assert answer["players"] == ["p1", "p2", "p3"]
+    assert full["totals"]["p1"]["bluff_rate"] is not None or full["totals"]["p1"]["hands"] == 0
+    assert (
+        public["totals"]["p1"]["bluff_rate"] is None
+        and public["totals"]["p1"]["worst_decisions"] is None
+    )
+    assert public["totals"]["p1"]["vpip"] == full["totals"]["p1"]["vpip"]
+    assert "hole_dealt" not in json.dumps(public)
