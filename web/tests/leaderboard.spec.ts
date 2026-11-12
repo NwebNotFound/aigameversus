@@ -137,6 +137,8 @@ test('the table shows model, cost per game and tool errors, and bot seats are on
 	const headers = await page.getByTestId('leaderboard').locator('th').allInnerTexts();
 	expect(headers.join(' ')).toMatch(/Cost per game/i);
 	expect(headers.join(' ')).toMatch(/Tool errors/i);
+	expect(headers.join(' ')).toMatch(/Repaired/i);
+	expect(headers.join(' ')).toMatch(/Clean/i);
 	const seatRows = page
 		.getByTestId('leaderboard')
 		.locator('tbody tr')

@@ -393,12 +393,19 @@
           "minimum": 0,
           "title": "Low Reputation Extra Fee",
           "type": "number"
+        },
+        "max_rounds": {
+          "description": "The longest trade one can agree",
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
         }
       },
       "required": [
         "base_fee",
         "low_reputation_below",
-        "low_reputation_extra_fee"
+        "low_reputation_extra_fee",
+        "max_rounds"
       ],
       "title": "TradeBalance",
       "type": "object"

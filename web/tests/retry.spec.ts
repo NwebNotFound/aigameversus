@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, rewrite, test } from './routes.js';
 
 // A model's refused answer is answer quality, not an error on screen: the move that counted
 // carries a small "retry" marker, the refused attempt's thought and the refusal line show only
@@ -15,9 +15,7 @@ test('refused answers fold into a retry marker; only a random move is red', asyn
 			data: { game: 'liars_deck', players: 4, seed: 62, turn_delay: 0.5 }
 		})
 	).json();
-	await page.route(`**/matches/${match.id}/transcript*`, async (route) => {
-		const response = await route.fetch();
-		const body = await response.json();
+	await rewrite(page, `**/matches/${match.id}/transcript*`, (body) => {
 		// Lines of their own (no log position), so the live playout shows them at once.
 		const line = (actor: string, kind: string, type: string, text: string, importance = 2) => ({
 			seq: null,
@@ -40,7 +38,6 @@ test('refused answers fold into a retry marker; only a random move is red', asyn
 			line('p2', 'info', 'action_fallback', 'No usable move from p2: a random move is played'),
 			line('p2', 'action', 'cards_played', 'MARKER-RANDOM p2 plays one card')
 		);
-		await route.fulfill({ response, json: body });
 	});
 
 	await page.goto(`/matches/${match.id}`);

@@ -120,9 +120,10 @@ Three ways:
   `"seats": [{"kind": "model", "model": "glm-flash"}, {"kind": "bot"}, ...]`
   instead of `models` lets models and random bots share a table: the bots play
   free, a mixed match rates its models only, among themselves, and
-  `POST /matches/estimate` takes `null` for a bot seat. A personality per seat is
-  refused (422) until the agent runner puts one in the prompt; `GET /setup` says
-  `mixed_seats: true` on a server that takes `seats`. Model
+  `POST /matches/estimate` takes `null` for a bot seat. A model seat may add
+  `"personality": "<id>"` (see "A personality" below); a bot seat may not.
+  `GET /setup` says `mixed_seats: true` and `seat_personalities: true` on a
+  server that takes them. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
   ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
@@ -506,6 +507,17 @@ npm run test:unit             # vitest
 npx playwright test           # smoke tests on 3100 (WEB_URL overrides); needs demo_seed data
 ```
 
+Read-only web: with `READ_ONLY=1`, or for a request with the header `X-AGV-Read-Only: 1`
+(which the LAN proxy sets, `deploy/lan/nginx.conf`), the web server refuses every write
+(405) and the new-match form (404), and the pages hide the controls and the links to the
+form (`web/src/hooks.server.ts`, `web/src/lib/server/read-only.ts`).
+
+A spec that changes network answers (`page.route`) imports `test` and `expect` from
+`web/tests/routes.ts`, not from `@playwright/test`, and rewrites a real answer with
+`rewrite(page, url, edit)`: a handler that outlives its test is then dropped instead of
+failing a green run ("route.fetch: Test ended"). `npm run lint` refuses a spec that
+routes without it.
+
 Secret scan (same as CI):
 
 ```bash
@@ -616,7 +628,12 @@ Such a model goes by its OpenRouter id (`vendor/model`) and is booked at
 OpenRouter's listed price times 1.25 (`UNVERIFIED_PRICE_MARGIN`: not checked
 by hand), behind the same caps; a price that is not a finite number up to
 10,000 USD per million tokens, and every `:` variant but `:free`, leave a
-model out; `catalog.resolve` adds it to the config where
+model out (and `:free` variants are listed only with `?free=1`, marked
+`rate_limited_likely`); every entry and model page has `reliability` from
+the arena's own logs (`arena/db/reliability.py`: unreliable after a seat that
+gave up in its last 2 matches or more than half of its last 20 moves by the
+bot, unknown below 20 moves, warnings for cut-off answers and rate limits);
+`catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
 `tests/conftest.py` refuses, and `tests/test_catalog.py` hands over a sample.
@@ -694,7 +711,15 @@ it in the prompt inside `<memory>`, marked as data. `"memory": false` in
 One YAML file in `config/personalities/<id>.yaml`, checked against
 `config/personalities/personality.schema.json`: `id`, `name`, `description`,
 `values` (`risk_taking`, `honesty`, `aggression`, integers 0-100) and
-`speech_style`.
+`speech_style`. `arena/personalities.py` loads them.
+
+A model seat that plays one (`"personality"` in `POST /matches` `seats`) gets a
+block at the end of its system message, `# Your personality`: name, description
+and speech style from the file, and "stay in character; the rules and the goal
+come first" (`prompt.personality_text`, `ModelAgent(..., personality=...)`). It
+is server text only, never game data. Without a personality the prompt is byte
+for byte what it was. The id is kept in the seat record and in `match_started`
+(`personalities`, only when a seat has one).
 
 ```bash
 uv run pytest tests/config
@@ -729,6 +754,11 @@ which effects still wait for their system.
 
 ### The Throne of Tokens map
 
+How the parts of the game fit together (round order, the `submit_orders`
+call, combat rules, state fields, events, the observation and the
+`hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
+build against it, and change it in the same pull request as the code.
+
 The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
@@ -761,6 +791,14 @@ next to it says what each does and what the generator guarantees.
   `reachable`, `training_cost`, `army_viewpoints`), orders with a check each
   (`train`, `move`, `split`, `merge`, `disband`, `settle`),
   `deploy_start_units` for the setup and the round step `starve`.
+- `games/civ/diplomacy.py`: messages, treaties (offer, answer, break, expire),
+  wars, reputation, tributes and trade. Questions for combat and the turn flow
+  (`at_war`, `may_attack`, `allies`, `open_borders`, `wars_of`, `trade_fee`),
+  orders with a check each (`message`, `propose_treaty`, `respond_treaty`,
+  `propose_trade`, `respond_trade`, `break_treaty`, `declare_war`) and the round
+  steps `expire` (start) and `settle` (the trade step). Offers and trades are
+  private to the two nations; signed, broken and expired treaties and wars are
+  public.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.

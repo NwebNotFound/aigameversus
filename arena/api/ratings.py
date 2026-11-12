@@ -63,6 +63,15 @@ class LeaderboardRow(StandingOut):
     tool_error_rate: float | None = Field(
         None, description="Share of answers the server refused (a wrong tool or an illegal move)"
     )
+    repaired_rate: float | None = Field(
+        None,
+        description="Share of answers that were a garbled call read anyway (answer_repair); "
+        "refused counts refused attempts, repaired and clean count moves taken; "
+        "refused + repaired + clean = 1",
+    )
+    clean_rate: float | None = Field(
+        None, description="Share of answers taken exactly as sent: no refusal, no repair"
+    )
 
 
 class Leaderboard(BaseModel):
@@ -241,6 +250,8 @@ async def leaderboard(
                     else None
                 ),
                 tool_error_rate=used.rejected / answers if answers else None,
+                repaired_rate=used.repaired / answers if answers else None,
+                clean_rate=(used.accepted - used.repaired) / answers if answers else None,
                 **StandingOut.of(s).model_dump(),
             )
         )
