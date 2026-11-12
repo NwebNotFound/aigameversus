@@ -12,13 +12,14 @@ from functools import partial
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, WebSocket
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.websockets import WebSocketDisconnect
 
 from arena.agents.budget import MICRO
 from arena.agents.estimate import Basis, estimate
 from arena.api.live import ArenaBusy, LiveMatches, NotRunning
+from arena.api.outcome import Outcome, outcome_of
 from arena.catalog import HIGH_OUTPUT_USD_PER_MTOK, resolve
 from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
@@ -365,14 +366,33 @@ async def _estimate(new: EstimateRequest, live: LiveMatches) -> EstimateOut:
     )
 
 
+class MatchRow(MatchRecord):
+    """A match as the list shows it: the record and the one line that says how it ended."""
+
+    outcome: Outcome
+
+
 @router.get("/matches")
 async def list_matches(
     live: Live,
+    response: Response,
     status: Annotated[list[Status] | None, Query(description="Only these statuses")] = None,
     batch: Annotated[str | None, Query(description="Only the matches of this batch id")] = None,
-) -> list[MatchRecord]:
-    """The newest 100 matches, newest first; with `batch`, every match of that batch."""
-    return await live.matches.recent(status, batch)
+    game: Annotated[str | None, Query(description="Only the matches of this game id")] = None,
+    limit: Annotated[
+        int | None,
+        Query(ge=1, le=500, description="Rows to return; default 100 (1000 for a batch)"),
+    ] = None,
+    offset: Annotated[int, Query(ge=0, description="Skip this many newer matches")] = 0,
+) -> list[MatchRow]:
+    """Matches, newest first, filtered by status, game and batch, a page at a time.
+
+    `X-Total-Count` says how many match the filters without paging. Every row has an
+    `outcome`: who won, or that it runs or stopped; a running match shows no result.
+    """
+    records = await live.matches.recent(status, batch, game, limit, offset)
+    response.headers["X-Total-Count"] = str(await live.matches.count(status, batch, game))
+    return [MatchRow(**record.model_dump(), outcome=outcome_of(record)) for record in records]
 
 
 @router.get("/matches/{match_id}")

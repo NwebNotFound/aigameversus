@@ -136,7 +136,10 @@ Three ways:
   `GET /replays` adds `real`. `"batch": {"id", "label", "index", "of"}` in
   `POST /matches` puts a match into a batch (an experiment stage, a league;
   unknown keys are refused), the record keeps it, and `GET /matches?batch=<id>`
-  lists every match of one. `arena batches backfill <started.jsonl> --id ...
+  lists every match of one. `GET /matches` also takes `game`, `status`, `limit` (1 to 500,
+  default 100) and `offset`; `X-Total-Count` is the count without paging, and every row has
+  an `outcome` (`kind`, `winners`, `text` en and de: "gpt-luna won", "In progress"; a running
+  match shows no result). `arena batches backfill <started.jsonl> --id ...
   --label ... --of N --first-order K [--schedule CSV]` tags matches played
   before the field, from a batch runner's log (idempotent, never moves a match
   to another batch, checks seeds against the schedule).

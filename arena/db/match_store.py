@@ -223,18 +223,40 @@ class MatchStore:
         )
 
     async def recent(
-        self, statuses: Sequence[Status] | None = None, batch: str | None = None
+        self,
+        statuses: Sequence[Status] | None = None,
+        batch: str | None = None,
+        game: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[MatchRecord]:
-        """The newest 100 matches, newest first; only those in `statuses` if given.
+        """Matches, newest first; only those in `statuses`, of `game` and of `batch` if given.
 
-        With `batch`, every match of that batch (up to 1000), newest first.
+        `limit` defaults to 100, or 1000 for a batch; `offset` skips that many newer matches.
         """
         rows = await self._pool.fetch(
             f"SELECT {_COLUMNS} FROM matches WHERE ($1::text[] IS NULL OR status = ANY($1)) "
-            "AND ($2::text IS NULL OR batch->>'id' = $2) "
-            "ORDER BY started_at DESC, id LIMIT $3",
+            "AND ($2::text IS NULL OR batch->>'id' = $2) AND ($3::text IS NULL OR game = $3) "
+            "ORDER BY started_at DESC, id LIMIT $4 OFFSET $5",
             None if statuses is None else list(statuses),
             batch,
-            100 if batch is None else 1000,
+            game,
+            limit if limit is not None else (100 if batch is None else 1000),
+            offset,
         )
         return [MatchRecord(**row) for row in rows]
+
+    async def count(
+        self,
+        statuses: Sequence[Status] | None = None,
+        batch: str | None = None,
+        game: str | None = None,
+    ) -> int:
+        """How many matches `recent` would list without its limit."""
+        return await self._pool.fetchval(
+            "SELECT count(*) FROM matches WHERE ($1::text[] IS NULL OR status = ANY($1)) "
+            "AND ($2::text IS NULL OR batch->>'id' = $2) AND ($3::text IS NULL OR game = $3)",
+            None if statuses is None else list(statuses),
+            batch,
+            game,
+        )

@@ -21,6 +21,16 @@ export interface MatchSummary {
 	seats?: Record<string, RecordSeat>;
 	/** The batch it was played in (a league, an experiment stage); null or missing: none. */
 	batch?: MatchBatch | null;
+	/** How it ended, in one server-made line; a running match shows no result. */
+	outcome?: MatchOutcome;
+}
+
+/** The one line of a match row (`GET /matches`). */
+export interface MatchOutcome {
+	kind: 'running' | 'won' | 'finished' | 'stopped';
+	/** Seats with rank 1; empty unless the match finished. */
+	winners: string[];
+	text: { en: string; de: string };
 }
 
 /** A match's batch, as `POST /matches` took it. */
