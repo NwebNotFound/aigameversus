@@ -6,8 +6,8 @@ registered: '2026-11-12'
 owner: Arena Researcher
 game: werewolf
 allocation_approval: 'Lead overnight delegation 1fd8b027: guest stage up to EUR3.50'
-execution_plan_approved: false
-execution_approval_evidence: null
+execution_plan_approved: true
+execution_approval_evidence: 'Lead e460648f-4457-409f-abcc-91d58f14887c: exact eight cells; Reviewer live-state confirmation required before first start'
 dependency_review: 'Lead fcce19c0: reviewed C1 outcome, not a clean smoke; separate W2 execution go still required'
 schedule: schedule.csv
 settings: {template: classic, language: en, prompt_version: werewolf-p2, answer_repair: 'off', match_budget_eur: 0.40}
