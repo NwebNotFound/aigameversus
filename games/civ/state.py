@@ -140,6 +140,7 @@ class CivState(BaseModel):
     conditions: list[Condition] = []  # from random events, oldest first
     rich_rounds: dict[str, int] = {}  # rounds in a row a nation held the economic-victory gold
     round_limit: int | None = None  # the match's last round (setting `rounds`); None: the data's
+    private_plan: bool = False  # setting `private_plan`: `submit_orders` takes a `plan`
     victory: dict[str, Any] | None = None  # {kind, winners, placements} once the match is won
     # Kept for one round after their own, for the next observation and the board:
     refused: list[dict[str, Any]] = []  # dropped orders {nation, round, order, reason}
@@ -156,7 +157,9 @@ class CivState(BaseModel):
         return [troop.kind for army in self.armies if army.owner == player for troop in army.units]
 
 
-def new_game(players: Sequence[str], data: CivData, rounds: int | None = None) -> CivState:
+def new_game(
+    players: Sequence[str], data: CivData, rounds: int | None = None, private_plan: bool = False
+) -> CivState:
     """The state before the map is drawn: every nation with its starting stock.
 
     `rounds` ends the match earlier than the data's round limit (a shorter match).
@@ -167,4 +170,5 @@ def new_game(players: Sequence[str], data: CivData, rounds: int | None = None) -
     return CivState(
         nations={player: Nation(stock=dict(stock), reputation=reputation) for player in players},
         round_limit=rounds,
+        private_plan=private_plan,
     )

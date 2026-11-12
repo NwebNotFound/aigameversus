@@ -18,7 +18,17 @@ from typing import Any
 
 from arena.engine.plugin import GamePlugin, TurnContext
 from arena.engine.types import Action, Event, Placement, PlayerId, ToolSpec, TurnMode
-from games.civ import armies, combat, diplomacy, economy, observation, orders, turn, victory
+from games.civ import (
+    armies,
+    combat,
+    diplomacy,
+    economy,
+    observation,
+    orders,
+    prompt,
+    turn,
+    victory,
+)
 from games.civ.bot import random_orders
 from games.civ.data_loader import CivData, load_civ_data
 from games.civ.state import NEUTRAL, CivState, new_game
@@ -38,9 +48,21 @@ class CivGame(GamePlugin[CivState]):
 
     data: CivData = DATA
 
+    def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
+        """The prompt version of a match, recorded with it (see `prompt.py`)."""
+        return prompt.version_of(settings)
+
+    def situation_summary(
+        self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
+    ) -> str | None:
+        """A short text for the top of the turn's prompt; only version civ-p2 has one."""
+        if prompt.version_of(settings) == "civ-p1":
+            return None
+        return prompt.situation_summary(observation)
+
     def rules(self, settings: Mapping[str, Any] | None = None) -> str:
-        """rules.md, with the round limit of this match where it names the last round."""
-        text = super().rules(settings)
+        """rules.md and what the settings add, with this match's round limit where it is named."""
+        text = prompt.rules_text(settings)
         rounds = (settings or {}).get("rounds")
         if rounds is None:
             return text
@@ -48,9 +70,13 @@ class CivGame(GamePlugin[CivState]):
         return text.replace(default, f"After round {rounds},")
 
     def initial_state(self, players: Sequence[PlayerId], settings: Mapping[str, Any]) -> CivState:
-        unknown = set(settings) - {"rounds"}
+        known = {"rounds", *prompt.SETTINGS}
+        unknown = set(settings) - known
         if unknown:
-            raise ValueError(f"Unknown settings for civ: {sorted(unknown)}; known: rounds")
+            raise ValueError(
+                f"Unknown settings for civ: {sorted(unknown)}; known: {', '.join(sorted(known))}"
+            )
+        prompt.check(settings)  # refuses a value the prompt does not know
         rounds = settings.get("rounds")
         most = self.data.victory.round_limit.rounds
         if rounds is not None and (
@@ -63,7 +89,7 @@ class CivGame(GamePlugin[CivState]):
             )
         if NEUTRAL in players:
             raise ValueError(f"'{NEUTRAL}' is the owner of barbarians, not a seat")
-        return new_game(players, self.data, rounds)
+        return new_game(players, self.data, rounds, prompt.plan_of(settings) == "on")
 
     def setup(self, state: CivState, ctx: TurnContext) -> None:
         world = generate_map(list(state.nations), self.data, ctx.rng("map"))
@@ -99,14 +125,19 @@ class CivGame(GamePlugin[CivState]):
         }
         board = scoreboard(state, data)
         seen = observation.observe(
-            state, data, player, scoreboard=board, extras=extras, plan=nation.plan
+            state,
+            data,
+            player,
+            scoreboard=board,
+            extras=extras,
+            plan=nation.plan if state.private_plan else None,
         )
         seen["legal"]["orders"] = _order_targets(state, data, player, seen)
         seen["scoreboard"] = board
         return seen
 
     def get_tools(self, state: CivState, player: PlayerId) -> list[ToolSpec]:
-        return [orders.SUBMIT_ORDERS]
+        return [orders.submit_orders(state.private_plan)]
 
     def validate(self, state: CivState, player: PlayerId, action: Action) -> str | None:
         # The schema has checked the shape; a single bad order is dropped when it runs.

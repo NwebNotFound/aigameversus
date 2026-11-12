@@ -107,8 +107,7 @@ orders run first, then cities, then armies; within each type the nations go
 in seat order. An illegal order is dropped with a reason you read next round
 (`refused`), and the rest still run. `legal` in your situation lists what you
 can build and train, and `legal.orders` which order types can do something
-now. `plan` (optional, at most 60 words) is a note to yourself: you get it
-back next round as `your_plan_from_last_round`; nobody else reads it.
+now.
 
 Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
 
@@ -119,7 +118,7 @@ Example (your cities are `c1`, `c2`, your armies `a1`, `a2`):
   {"type": "train", "city": "c1", "unit": "spearman", "count": 2},
   {"type": "settle", "army": "a2"},
   {"type": "move", "army": "a1", "to": [4, 3]}
-], "plan": "Grow c1, settle east, keep a1 near the river."}
+]}
 ```
 
 | Order | Arguments |

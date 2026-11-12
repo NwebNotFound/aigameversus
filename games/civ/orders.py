@@ -131,6 +131,20 @@ SUBMIT_ORDERS = ToolSpec(
 )
 
 
+def submit_orders(plan: bool) -> ToolSpec:
+    """The tool of a match: with a `plan` field only when the setting `private_plan` is on."""
+    if plan:
+        return SUBMIT_ORDERS
+    properties = {k: v for k, v in SUBMIT_ORDERS.parameters["properties"].items() if k != "plan"}
+    description = SUBMIT_ORDERS.description.split(" `plan`:")[0]
+    return SUBMIT_ORDERS.model_copy(
+        update={
+            "description": description,
+            "parameters": {**SUBMIT_ORDERS.parameters, "properties": properties},
+        }
+    )
+
+
 def plan_text(plan: Any) -> str | None:
     """The plan as it is kept: its first MAX_WORDS words, or None when there is none."""
     if not isinstance(plan, str) or not plan.split():
