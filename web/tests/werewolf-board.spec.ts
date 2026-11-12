@@ -196,3 +196,59 @@ test("without the arena's lines the transcript's narration stands in", async ({
 	await expect(page.getByTestId('stage-recap')).toBeVisible();
 	await expect(page.getByTestId('stage-recap')).toContainText('Night 1 falls');
 });
+
+test('under the circle: who claims what and who suspects whom, cut at the moment on screen', async ({
+	page,
+	request
+}) => {
+	const id = await start(request, { players: 8, seed: 3, settings: { language: 'en' } });
+	await finished(request, id);
+	const events: { type: string }[] = await log(request, id);
+	const late = events.length - 2;
+	const claim = (seq: number, player: string, role: string, lie: boolean | null) => ({
+		seq,
+		player,
+		role,
+		changed_from: null,
+		counterclaimed_by: [],
+		disproved: false,
+		true_role: null,
+		lie,
+		heuristic: true
+	});
+	await page.route(`**/matches/${id}/analytics*`, (route) =>
+		route.fulfill({
+			json: {
+				game: 'werewolf',
+				claims: [claim(20, 'p1', 'seer', false), claim(late, 'p2', 'hunter', true)],
+				accusations: [
+					{ seq: 21, by: 'p1', target: 'p3', source: 'speech', heuristic: true },
+					{ seq: 22, by: 'p1', target: 'p3', source: 'vote' },
+					{ seq: late, by: 'p4', target: 'p1', source: 'speech', heuristic: true }
+				]
+			}
+		})
+	);
+
+	await page.goto(`/replays/${id}?step=30`);
+	const intel = page.getByTestId('werewolf-intel');
+	await expect(intel).toBeVisible();
+	// Only what was said by the moment on screen.
+	await expect(intel.getByTestId('claim')).toHaveCount(1);
+	await expect(intel.getByTestId('claim')).toHaveAttribute('data-role', 'seer');
+	await expect(intel.getByTestId('claim-fate')).toHaveText('true');
+	const cell = intel.locator('[data-testid="suspicion-cell"][data-by="p1"][data-target="p3"]');
+	await expect(cell).toHaveAttribute('title', /1 accusing sentence, 1 vote/);
+	await expect(intel.getByTestId('suspicion-cell')).toHaveCount(1);
+	await expect(intel.getByTestId('most-suspected')).toBeVisible();
+
+	// At the end: the later claim, a lie, and the later accusation.
+	await page.goto(`/replays/${id}`);
+	await expect(intel.getByTestId('claim')).toHaveCount(2);
+	await expect(intel.getByTestId('claim-fate').last()).toHaveText('a lie');
+	await expect(intel.getByTestId('suspicion-cell')).toHaveCount(2);
+	const overflow = await page.evaluate(
+		() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+	);
+	expect(overflow).toBeLessThanOrEqual(0);
+});
