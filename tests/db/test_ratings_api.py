@@ -52,6 +52,7 @@ def test_empty_leaderboard(client):
         "show_demo": False,
         "demo_hidden": 0,
         "rows": [],
+        "unrated": [],
     }
 
 

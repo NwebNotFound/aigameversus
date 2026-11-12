@@ -8,6 +8,13 @@
           "maximum": 1,
           "title": "City Share",
           "type": "number"
+        },
+        "min_cities_per_nation": {
+          "default": 0,
+          "description": "domination counts once the world has this many cities per nation",
+          "minimum": 0,
+          "title": "Min Cities Per Nation",
+          "type": "integer"
         }
       },
       "required": [

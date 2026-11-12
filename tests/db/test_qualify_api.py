@@ -165,3 +165,26 @@ def test_one_job_at_a_time_and_a_job_cut_off_by_a_restart_is_unknown(arena, monk
 
     assert record["status"] == "unknown"
     assert record["reasons"] == ["interrupted: the arena stopped during the job"]
+
+
+def test_a_quote_says_what_a_click_would_reserve_and_spends_nothing(arena, monkeypatch):
+    answering(monkeypatch, lambda case: legal("poker", case))
+    with TestClient(app) as client:
+        quote = client.get("/qualifications/quote", params={"model": MODEL, "game": "poker"})
+        assert quote.status_code == 200, quote.text
+        body = quote.json()
+        assert [c["case"] for c in body["cases"]] == ["A", "B", "C", "D"]
+        assert body["calls"] == 4 and body["tries_per_call"] == 4
+        assert body["default_cap_micro_eur"] == 10_000 and body["max_cap_micro_eur"] == 500_000
+        assert body["fits_default"] is (body["reserved_micro_eur"] <= 10_000)
+        assert client.get("/qualifications").json() == []  # nothing stored, nothing started
+
+        started = client.post("/qualifications", json=NEW).json()
+        assert started["reserved_micro_eur"] == body["reserved_micro_eur"]  # the same bound
+        assert started["config_hash"] == body["config_hash"]
+        assert (
+            client.get(
+                "/qualifications/quote", params={"model": MODEL, "game": "werewolf"}
+            ).status_code
+            == 422
+        )

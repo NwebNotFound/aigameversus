@@ -92,3 +92,38 @@ and release the first EUR 0.20-bounded match; inspect its reliability and cost
 before releasing the remaining three. Freeze actual start build/config and
 recheck fresh quotes/ledger before execution. These history-based estimates
 remain uncertain until model-driven Civ observations exist.
+
+## Explicit job data and pending post-hook requote
+
+Lead28eae200 supersedes the earlier proposed .1 naming: C1 keeps civ-p1;
+#166 changes the unstarted Civ prompts to120 events while other games stay40.
+There are no civ-p1.1/civ-p2.1 versions. Scope/roster/rotation/budget do not change.
+Until #166 is merged/deployed and Reviewer sends the build GO, start_build and
+the post-hook free_estimate_eur remain null. Earlier p1 quotes apply to the older
+build/window, not to the post-hook prompt. No model match has started.
+
+schedule.csv is four cyclic rotations, with all four models sharing each match.
+Top-level settings/budget/max_matches/checkpoint_after fields form the shared
+client job contract requested by Heavy. Scope budget approval is recorded, but
+execution_plan_approved remains false until outstanding runtime/release conditions
+are met. The one direct smoke is separately authorized by Lead5664932f after
+hook GO and the new quote. When the reviewed client later takes over, it must
+adopt that C1 batch/index1 from server history and account its ledger cost,
+never play the first cell twice. Remaining three rotations need smoke review
+and explicit Lead release; the strategy/private-plan factorial remains unapproved.
+
+
+## Post-hook freeze before the first real response
+
+Reviewer rebuilt from main01e8b50195aca9931afd0271dbc6063755c0d440 after #166.
+The live arena image is sha256:7c6b214992239cbc15b843be2f47d831bef77ee72c8b8522aba87ba9a9e3736c;
+CivGame.history_limit(civ-p1) reads back120 inside that container. The commit
+mapping comes from Reviewer's lock note, not a cryptographic source-image proof.
+Four free baseline rotation quotes now are EUR0.073302 /0.073620 /0.073200
+/0.073161, total EUR0.293283. Each cap reads back0.20 and fits. Payloads and
+timestamps are in quotes-120-events.json. Older-window quotes stay historical.
+
+Only the first direct smoke is approved (Lead5664932f/28c1ca94). The remaining
+three still need cost/reliability/prompt-cut review and explicit Lead release.
+Shared-client execution flags remain false while its money review is pending.
+The stage has no outcomes at this freeze.

@@ -16,7 +16,7 @@ map:
   rare_tiles: {iron_deposit: 2, gold_vein: 2} # per map, placed between the nations
   capital_terrain: plains
   start_regions: # the tiles around a capital, by the resource that nation is short of
-    food: [forest, forest, hills, hills, river, river]
+    food: [plains, forest, hills, hills, river, river] # D-138
     wood: [plains, plains, hills, hills, river, river]
     iron: [plains, plains, forest, forest, river, river]
     gold: [plains, plains, forest, forest, hills, hills]

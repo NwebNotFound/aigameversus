@@ -6,6 +6,18 @@ from games.civ import victory
 from games.civ.tests.realm import DATA, Realm, flat_map
 
 PLAYERS = ("ada", "bo", "cy", "di")
+# The share rules on few cities: the same data without the minimum of cities (D-137).
+SHARE_ONLY = DATA.model_copy(
+    update={
+        "victory": DATA.victory.model_copy(
+            update={
+                "domination": DATA.victory.domination.model_copy(
+                    update={"min_cities_per_nation": 0}
+                )
+            }
+        )
+    }
+)
 
 
 def realm(players=PLAYERS):
@@ -40,12 +52,12 @@ def test_domination_needs_half_the_cities_and_more_than_anyone_else():
     world = realm()
     cities(world, "ada", 2)
     cities(world, "bo", 2)
-    assert victory.dominating(world.state, DATA) is None  # half, but not more than bo
+    assert victory.dominating(world.state, SHARE_ONLY) is None  # half, but not more than bo
 
     cities(world, "ada", 1)
-    assert victory.dominating(world.state, DATA) == "ada"  # 3 of 5
+    assert victory.dominating(world.state, SHARE_ONLY) == "ada"  # 3 of 5
 
-    assert victory.check(world.state, DATA, world.ctx) == "domination"
+    assert victory.check(world.state, SHARE_ONLY, world.ctx) == "domination"
     won = last(world)
     assert (won.type, won.visible_to, won.data["winners"]) == ("victory", None, ["ada"])
     assert world.state.victory["kind"] == "domination"
@@ -66,7 +78,20 @@ def test_domination_at_exactly_the_share(held, winner):
         cities(world, owner, count)
 
     assert DATA.victory.domination.city_share == 0.5
-    assert victory.dominating(world.state, DATA) == winner
+    assert victory.dominating(world.state, SHARE_ONLY) == winner
+
+
+def test_domination_counts_only_once_the_world_has_two_cities_per_nation():
+    world = realm()
+    cities(world, "ada", 4)
+    cities(world, "bo", 1)
+    cities(world, "cy", 1)
+    assert victory.dominating(world.state, DATA) is None  # 4 of 6: too few cities yet
+    assert victory.dominating(world.state, SHARE_ONLY) == "ada"
+
+    cities(world, "di", 2)  # 8 cities: two per nation
+    assert DATA.victory.domination.min_cities_per_nation == 2
+    assert victory.dominating(world.state, DATA) == "ada"  # 4 of 8, more than anyone
 
 
 def test_the_economic_countdown_is_public_and_resets_when_the_gold_drops():
@@ -124,10 +149,10 @@ def test_before_the_limit_and_without_a_condition_nobody_wins():
 def test_a_won_match_stays_won():
     world = realm()
     cities(world, "ada", 3)
-    victory.check(world.state, DATA, world.ctx)
+    victory.check(world.state, SHARE_ONLY, world.ctx)
     count = len(world.events)
 
-    assert victory.check(world.state, DATA, world.ctx) == "domination"
+    assert victory.check(world.state, SHARE_ONLY, world.ctx) == "domination"
     assert len(world.events) == count
 
 
@@ -139,7 +164,7 @@ def test_placements_rank_the_others_by_score_after_the_winner(winner_score_rank)
     world.state.nations["bo"].stock["gold"] = 400  # bo has the best score
     world.state.nations["cy"].stock["gold"] = 100
 
-    victory.check(world.state, DATA, world.ctx)
+    victory.check(world.state, SHARE_ONLY, world.ctx)
 
     placements = {p["player"]: p["rank"] for p in last(world).data["placements"]}
     assert placements["ada"] == winner_score_rank

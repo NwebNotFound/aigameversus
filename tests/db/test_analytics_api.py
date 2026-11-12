@@ -34,6 +34,21 @@ def test_a_finished_match_has_its_analytics_with_and_without_spoilers(client):
     assert "cards_hidden" not in json.dumps(public)
 
 
+def test_a_civ_match_has_its_analytics_and_the_spoiler_free_answer_holds_back_private_parts(client):
+    match = start(client, game="civ", seed=3, settings={"rounds": 8})
+    follow(client, match["id"])
+
+    full = client.get(f"/matches/{match['id']}/analytics", params={"spoilers": True}).json()
+    public = client.get(f"/matches/{match['id']}/analytics").json()
+
+    assert full["analytics_version"] == public["analytics_version"] == "civ/1"
+    assert full["series"]["rounds"] == list(range(1, 9))
+    assert public["series"] is None and public["orders"] is None and public["battles"] is None
+    assert full["meta"]["seats"] == {f"p{n}": None for n in range(1, 5)}
+    assert full["victory"]["kind"] == public["victory"]["kind"] == "round_limit"
+    assert "production" not in json.dumps(public)
+
+
 def test_a_running_match_answers_with_its_turns_so_far(client):
     match = start(client, game="liars_deck", seed=4, turn_delay=30)
     with client.websocket_connect(f"/matches/{match['id']}/events") as stream:

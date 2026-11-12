@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameInfo } from './api.js';
-import { BOT, CUSTOM, parseForm } from './new-match.js';
+import { BOT, CUSTOM, configField, parseForm } from './new-match.js';
+import { configOf } from './seat-config.js';
 
 const GAMES: GameInfo[] = [
 	{ id: 'liars_deck', name: "Liar's Deck", min_players: 2, max_players: 4 },
@@ -300,6 +301,56 @@ describe('parseForm', () => {
 				personality: 'opportunist'
 			});
 			expect(plain.ok && plain.match.models).toEqual(THREE.seat);
+		});
+
+		it('sends the seat options the arena takes, and nothing new to an arena without them', () => {
+			const fast = JSON.stringify({ ...configOf('fast'), memory: 'off' });
+			const body = {
+				...THREE,
+				[configField('p1')]: fast,
+				[configField('p3')]: 'garbled',
+				confirm_spend: 'on'
+			};
+
+			const taken = parseForm(
+				form(body),
+				GAMES,
+				MODELS,
+				true,
+				true,
+				[],
+				['reasoning_effort', 'memory']
+			);
+			const older = parseForm(form(body), GAMES, MODELS, true, true);
+
+			expect(taken.ok && taken.match.seats).toEqual([
+				{
+					kind: 'model',
+					model: THREE.seat[0],
+					options: { reasoning_effort: 'low', memory: false }
+				},
+				{ kind: 'model', model: THREE.seat[1] },
+				{ kind: 'model', model: THREE.seat[2] } // its panel was not readable: the defaults
+			]);
+			expect(older.ok && older.match.models).toEqual(THREE.seat); // the request of before
+		});
+
+		it('refuses a seat option outside its range, at the seat', () => {
+			const parsed = parseForm(
+				form({
+					...THREE,
+					[configField('p2')]: JSON.stringify({ ...configOf(), temperature: 5 }),
+					confirm_spend: 'on'
+				}),
+				GAMES,
+				MODELS,
+				true,
+				true,
+				[],
+				['temperature']
+			);
+
+			expect(parsed).toMatchObject({ ok: false, errors: { seat_config: /^p2: Temperature/ } });
 		});
 
 		it('sends no models and no spend for a bot match', () => {

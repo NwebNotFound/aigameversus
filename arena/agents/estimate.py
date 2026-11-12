@@ -14,7 +14,7 @@ from typing import Any, Literal
 from arena.agents.budget import cost_micro_eur
 from arena.agents.prompt import build_messages, tool_schemas
 from arena.agents.random_bot import random_bots
-from arena.config import Config
+from arena.config import Config, call_options
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
 from arena.engine.types import PlayerId, Reply, TurnRequest
@@ -46,7 +46,13 @@ class _Measured:
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
-        messages = build_messages(self._plugin.name, self._rules, request, summary)
+        messages = build_messages(
+            self._plugin.name,
+            self._rules,
+            request,
+            summary,
+            history_limit=self._plugin.history_limit(self._settings),
+        )
         self.sizes.append(len(json.dumps([messages, tool_schemas(request.tools)])))
         return await self._bot.act(request)
 
@@ -86,7 +92,9 @@ def _priced(
 ) -> SeatEstimate:
     answers, mean = output_history.get(model_id, (0, 0.0))
     known = answers >= HISTORY_MIN
-    output = mean if known else config.limits.max_output_tokens
+    # Without history, the most an answer may cost: the model's own output limit, as the
+    # budget books it (`call_options`), not the global one.
+    output = mean if known else call_options(config, model_id).max_output_tokens
     input_tokens = sum(sizes) / BYTES_PER_TOKEN * RETRY_SHARE
     output_tokens = len(sizes) * output * RETRY_SHARE
     cost = cost_micro_eur(config, config.models[model_id], input_tokens, output_tokens)

@@ -5,7 +5,15 @@
 	import { euros } from '#lib/live.js';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
+
+	const STATUS_TEXT = {
+		qualified: 'Qualified (core)',
+		unqualified: 'Not qualified',
+		unknown: 'Unknown'
+	} as const;
+	const modelSeats = $derived(data.setup.state === 'ok' && data.setup.data.model_seats);
+	const job = $derived(data.job?.state === 'ok' ? data.job.data : null);
 
 	const page = $derived(data.result.state === 'ok' ? data.result.data : null);
 	const name = $derived(page?.model?.id ?? 'Model');
@@ -19,6 +27,7 @@
 
 <svelte:head>
 	<title>{name} · AIGameVersus</title>
+	{#if job?.status === 'running'}<meta http-equiv="refresh" content="5" />{/if}
 </svelte:head>
 
 <a class="back" href="/leaderboard">← Leaderboard</a>
@@ -178,6 +187,109 @@
 		</section>
 	{/if}
 
+	<section aria-labelledby="qualification" data-testid="qualification">
+		<h2 id="qualification">Qualification</h2>
+		<p class="muted">
+			Whether this model plays a game here: a few real turns, its first answer judged by the game's
+			rules, for this exact configuration ({data.repair === 'v1'
+				? 'answer repair v1'
+				: 'answer repair off'},
+			<a href="?repair={data.repair === 'v1' ? 'off' : 'v1'}"
+				>see {data.repair === 'v1' ? 'off' : 'v1'}</a
+			>). A core pass covers its few cases only, not every role or situation.
+		</p>
+
+		{#if job}
+			<div class="job" data-testid="qualification-job" data-status={job.status} role="status">
+				<strong
+					>{gameName(job.game)}: {job.status === 'running'
+						? 'running…'
+						: STATUS_TEXT[job.status]}{job.badge ? ` · ${job.badge}` : ''}</strong
+				>
+				{#if job.reasons.length}<span>{job.reasons.join('; ')}</span>{/if}
+				{#if job.cases.length}
+					<ul class="cases">
+						{#each job.cases as c (c.case)}
+							<li data-outcome={c.outcome}>
+								<span class="case">{c.case}</span>
+								{c.outcome}{c.reason ? `: ${c.reason}` : ''}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		{/if}
+
+		<div class="qualify-games">
+			{#each data.qualification as row (row.game)}
+				<div class="qualify" data-testid="qualify-{row.game}">
+					<h3>{gameName(row.game)}</h3>
+					{#if row.current.state === 'ok'}
+						{@const now = row.current.data}
+						<p class="status" data-status={now.status} data-testid="qualify-status">
+							<strong>{STATUS_TEXT[now.status]}</strong>{now.badge ? ` · ${now.badge}` : ''}
+							{#if now.reason}<span class="muted"> · {now.reason}</span>{/if}
+						</p>
+						{#if now.last?.finished_at}
+							<p class="muted">
+								Tested {when(now.last.finished_at)}{now.last.expires_at
+									? `, current until ${when(now.last.expires_at)}`
+									: ''}
+							</p>
+						{/if}
+					{:else}
+						<p class="muted">The status could not be read.</p>
+					{/if}
+
+					{#if row.quote.state === 'ok'}
+						{@const quote = row.quote.data}
+						<p class="muted" data-testid="qualify-quote">
+							{quote.calls} calls, up to {quote.tries_per_call} tries each: at most
+							<strong>{euros(quote.reserved_micro_eur)}</strong>{quote.fits_default
+								? ''
+								: ` (above the default ${euros(quote.default_cap_micro_eur)} of a click)`}
+						</p>
+						{#if modelSeats && !data.readOnly}
+							<form method="POST" action="?/qualify" data-testid="qualify-form">
+								<input type="hidden" name="game" value={row.game} />
+								<input type="hidden" name="answer_repair" value={data.repair} />
+								<label>
+									<span>Spend limit (euros)</span>
+									<input
+										type="number"
+										name="max_eur"
+										min="0.01"
+										step="0.01"
+										max={quote.max_cap_micro_eur / 1_000_000}
+										value={form?.game === row.game
+											? form.values.max_eur
+											: (quote.default_cap_micro_eur / 1_000_000).toFixed(2)}
+									/>
+								</label>
+								<label class="row">
+									<input type="checkbox" name="confirm_spend" />
+									<span
+										>I understand that this test spends up to {euros(
+											quote.reserved_micro_eur
+										)}</span
+									>
+								</label>
+								{#if form?.game === row.game && form.error}
+									<p class="field-error" role="alert">{form.error}</p>
+								{/if}
+								<button type="submit">Test this model (spends money)</button>
+							</form>
+						{:else if !modelSeats}
+							<p class="muted">Paid tests are off on this server.</p>
+						{/if}
+					{:else}
+						<p class="muted">No quote: this model cannot be tested here.</p>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	</section>
+
 	{#if page.personalities.length > 0}
 		<section aria-labelledby="personalities">
 			<h2 id="personalities">With a personality</h2>
@@ -191,6 +303,62 @@
 {/if}
 
 <style>
+	.qualify-games {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+		gap: 0.75rem;
+		margin-top: 0.75rem;
+	}
+
+	.qualify,
+	.job {
+		display: grid;
+		gap: 0.4rem;
+		padding: 0.9rem 1rem;
+		border-radius: var(--radius);
+		background: var(--surface);
+		border: 1px solid var(--border);
+	}
+
+	.qualify h3 {
+		margin: 0;
+		font-size: 1rem;
+	}
+
+	.qualify p {
+		margin: 0;
+	}
+
+	.qualify form {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.qualify label {
+		display: grid;
+		gap: 0.2rem;
+	}
+
+	.qualify label.row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+	}
+
+	.cases {
+		margin: 0;
+		padding-left: 1.1rem;
+	}
+
+	.case {
+		font-weight: 700;
+		margin-right: 0.3rem;
+	}
+
+	.field-error {
+		color: var(--danger, #c0392b);
+		margin: 0;
+	}
 	.back {
 		display: inline-block;
 		margin-top: 1rem;

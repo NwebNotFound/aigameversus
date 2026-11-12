@@ -86,6 +86,8 @@ def analyze(log: list[tuple[int, Event]], spoilers: bool) -> dict[str, Any]:
                 if preflop_chips and player not in now["vpip"]:
                     now["vpip"].append(player)
                 made = decisions.take(player)
+                if not spoilers:  # the engine events are filtered out: unknown, not "none"
+                    made = {**made, "fallback": None, "rejected": None}
                 moves.append(
                     {
                         "seq": seq,
@@ -119,7 +121,7 @@ def analyze(log: list[tuple[int, Event]], spoilers: bool) -> dict[str, Any]:
                 now = None
 
     hole_stats = _hole_stats(events) if spoilers else {}
-    totals = {p: _totals(p, moves, hands, chips[p], hole_stats.get(p)) for p in players}
+    totals = {p: _totals(p, moves, hands, chips[p], hole_stats.get(p), spoilers) for p in players}
     return {
         "meta": meta,
         "players": players,
@@ -163,7 +165,9 @@ def _totals(
     hands: list[dict[str, Any]],
     series: list[int],
     hole: Any,
+    known: bool,
 ) -> dict[str, Any]:
+    """`known`: the engine events are in the log (spoilers), so refusals and bot moves are known."""
     mine = [m for m in moves if m["player"] == player]
     dealt = [h for h in hands if player in h["players"]]
     count = {kind: sum(1 for m in mine if m["kind"] == kind) for kind in KINDS}
@@ -200,8 +204,9 @@ def _totals(
         "bluff_hands": None if hole is None else hole.bluff_hands,
         "bluff_rate": None if hole is None else rate(hole.bluff_hands, hole.aggressive_hands),
         "worst_decisions": None if hole is None else hole.worst_decisions,
-        "fallbacks": sum(1 for m in mine if m.get("fallback")),
-        "refused": sum(m.get("rejected") or 0 for m in mine),
+        # null without spoilers: the events that tell are spectators only, so unknown, not zero
+        "fallbacks": None if not known else sum(1 for m in mine if m.get("fallback")),
+        "refused": None if not known else sum(m.get("rejected") or 0 for m in mine),
         "response_ms_mean": sum(latencies) / len(latencies) if latencies else None,
         "tokens": sum(tokens) if tokens else None,
         **{

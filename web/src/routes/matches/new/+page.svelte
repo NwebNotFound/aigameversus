@@ -10,16 +10,20 @@
 		unreliable
 	} from '#lib/catalog.js';
 	import ModelPicker from '#lib/components/ModelPicker.svelte';
+	import SeatConfigPanel from '#lib/components/SeatConfig.svelte';
 	import WerewolfRoles from '#lib/components/WerewolfRoles.svelte';
 	import { gameName } from '#lib/games.js';
 	import { SPEEDS } from '#lib/live.js';
+	import type { MatchEstimate } from '#lib/api.js';
 	import {
 		BOT,
 		DEFAULT_TEMPLATE,
 		DEFAULT_TURN_DELAY,
 		GAMES_WITH_LANGUAGE,
-		LANGUAGES
+		LANGUAGES,
+		configField
 	} from '#lib/new-match.js';
+	import { applyToAll, changed, copyFrom, parseConfig, type SeatConfig } from '#lib/seat-config.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -68,6 +72,28 @@
 				}))
 	);
 	const seatIds = $derived(Array.from({ length: seatCount }, (_, i) => choices[i] ?? BOT));
+
+	// The configuration of each seat (its "Configure" panel); restored after a refused submit.
+	let configs = $state<SeatConfig[]>([]);
+	$effect.pre(() => {
+		if (configs.length < seatCount) {
+			const more = Array.from({ length: seatCount - configs.length }, (_, i) =>
+				parseConfig(form?.values?.[configField(`p${configs.length + i + 1}`)])
+			);
+			configs = [...configs, ...more];
+		}
+	});
+	const seatOptions = $derived(setup?.seat_options ?? []);
+	const modelSeatNames = $derived(
+		seatIds.map((id, i) => (id === BOT ? null : `p${i + 1}`)).filter((s): s is string => !!s)
+	);
+	const anyConfigured = $derived(
+		seatIds.some((id, i) => id !== BOT && configs[i] && changed(configs[i]).length > 0)
+	);
+	function applyAll(from: number) {
+		const all = applyToAll(configs.slice(0, seatCount), from);
+		configs = configs.map((c, i) => (i < seatCount && seatIds[i] !== BOT ? all[i] : c));
+	}
 	const expensive = $derived(
 		catalog.filter((m) => m.high_price && seatIds.includes(m.id)).map((m) => m.name)
 	);
@@ -104,6 +130,59 @@
 	const monthEmpty = $derived(usesModels && month !== null && month.remaining_micro_eur <= 0);
 	const blocked = $derived(usesModels && (month === null || month.remaining_micro_eur <= 0));
 	const euro = (micro: number) => `${(micro / 1_000_000).toFixed(2)} €`;
+	const euro4 = (micro: number) => `${(micro / 1_000_000).toFixed(4)} €`;
+
+	// The spend limit as entered; the worst case is the lower of it and the match cap.
+	// svelte-ignore state_referenced_locally
+	let limit = $state(String(form?.values?.match_budget_eur ?? ''));
+	const worstCase = $derived.by(() => {
+		const euros = Number(limit);
+		return limit !== '' && Number.isFinite(euros) && euros > 0
+			? Math.min(Math.round(euros * 1_000_000), matchCap)
+			: matchCap;
+	});
+
+	// The live estimate (POST /matches/new/estimate): bots play the table three times, free.
+	let estimate = $state<MatchEstimate | null>(null);
+	let estimateProblem = $state('');
+	let estimating = $state(false);
+	$effect(() => {
+		if (!usesModels || !game) {
+			estimate = null;
+			return;
+		}
+		const body = JSON.stringify({
+			game: game.id,
+			models: seatIds.map((id) => (id === BOT ? null : id)),
+			settings: {}
+		});
+		estimating = true;
+		const timer = setTimeout(async () => {
+			try {
+				const response = await fetch('/matches/new/estimate', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body
+				});
+				if (response.ok) {
+					estimate = await response.json();
+					estimateProblem = '';
+				} else {
+					estimate = null;
+					estimateProblem = `No estimate (${response.status}).`;
+				}
+			} catch {
+				estimate = null;
+				estimateProblem = 'No estimate: the arena did not answer.';
+			} finally {
+				estimating = false;
+			}
+		}, 600);
+		return () => clearTimeout(timer);
+	});
+	const guessed = $derived(
+		estimate ? Object.values(estimate.seats).some((s) => s.basis === 'output limit') : false
+	);
 
 	const werewolfRoles = $derived(data.werewolfRoles.state === 'ok' ? data.werewolfRoles.data : []);
 	// The role counts entered before a refused submit.
@@ -222,6 +301,22 @@
 								{/each}
 							</select>
 						</label>
+						{#if setup?.model_seats && seatIds[index] !== BOT && configs[index]}
+							<input
+								type="hidden"
+								name={configField(seat)}
+								value={JSON.stringify(configs[index])}
+							/>
+							<SeatConfigPanel
+								{seat}
+								bind:config={configs[index]}
+								game={game.id}
+								supported={seatOptions}
+								others={modelSeatNames.filter((s) => s !== seat)}
+								oncopy={(from) => (configs = copyFrom(configs, index, Number(from.slice(1)) - 1))}
+								onapplyall={() => applyAll(index)}
+							/>
+						{/if}
 					</li>
 				{/each}
 			</ol>
@@ -276,6 +371,7 @@
 				{/if}
 			</p>
 			{#if errors.seats}<p class="field-error">{errors.seats}</p>{/if}
+			{#if errors.seat_config}<p class="field-error" role="alert">{errors.seat_config}</p>{/if}
 		</fieldset>
 
 		{#if game.id === 'werewolf'}
@@ -397,9 +493,39 @@
 							step="0.01"
 							max={setup ? setup.caps.match_eur : undefined}
 							placeholder={setup ? `up to ${setup.caps.match_eur}` : ''}
-							value={form?.values?.match_budget_eur ?? ''}
+							bind:value={limit}
 						/>
 					</label>
+					<div class="estimate" data-testid="estimate" aria-live="polite">
+						{#if estimate}
+							<p>
+								Estimated cost: <strong data-testid="estimate-value"
+									>{euro4(estimate.estimate_micro_eur)}</strong
+								>{estimating ? ' (updating…)' : ''}. Worst case:
+								<strong data-testid="worst-case">{euro(worstCase)}</strong>, the match stops there.
+							</p>
+							{#if estimate.estimate_micro_eur > worstCase}
+								<p class="field-error" data-testid="estimate-over">
+									The estimate is above the limit: the match will likely stop before its end.
+								</p>
+							{/if}
+							{#if guessed}
+								<p class="hint">
+									Some models have little history here: they are counted at their output limit, so
+									the estimate is likely too high.
+								</p>
+							{/if}
+							{#if anyConfigured}
+								<p class="hint" data-testid="estimate-options">
+									The estimate does not count the seat options yet.
+								</p>
+							{/if}
+						{:else if estimating}
+							<p class="hint">Estimating the cost…</p>
+						{:else if estimateProblem}
+							<p class="hint">{estimateProblem} Worst case: {euro(worstCase)}.</p>
+						{/if}
+					</div>
 					{#if errors.match_budget_eur}<p class="field-error">{errors.match_budget_eur}</p>{/if}
 					<label class="row confirm">
 						<input type="checkbox" name="confirm_spend" />
@@ -579,6 +705,10 @@
 	}
 
 	.spend p {
+		margin: 0;
+	}
+
+	.estimate p {
 		margin: 0;
 	}
 

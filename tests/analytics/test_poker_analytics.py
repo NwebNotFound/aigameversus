@@ -13,7 +13,8 @@ from arena.engine.types import Event, EventSource
 from arena.stats import poker as stats
 from games.poker.plugin import Poker
 
-SECRET = ("bluff_hands", "bluff_rate", "worst_decisions")
+# null without spoilers: they read hole cards, or the engine events that are spectators only
+SECRET = ("bluff_hands", "bluff_rate", "worst_decisions", "fallbacks", "refused")
 
 
 def played(players=3, seed=3, settings=None):
@@ -165,3 +166,47 @@ def test_the_decision_telemetry_of_a_model_move_lands_on_its_move_and_in_the_tot
     # the decision events are for spectators only: without spoilers the telemetry is absent
     public = match_analytics("poker", log, False)
     assert public["moves"][0]["latency_ms"] is None and public["totals"]["p1"]["tokens"] is None
+
+
+def test_without_spoilers_a_refusal_or_a_bot_move_is_unknown_not_zero(match):
+    _, events = match
+    public = match_analytics("poker", events, False)
+    full = match_analytics("poker", events, True)
+
+    assert all(m["fallback"] is None and m["rejected"] is None for m in public["moves"])
+    for player, totals in public["totals"].items():
+        assert totals["fallbacks"] is None and totals["refused"] is None
+        assert full["totals"][player]["fallbacks"] == 0  # bots: no fallback, but known
+        assert full["totals"][player]["refused"] == 0
+    assert all(m["fallback"] is False for m in full["moves"])
+
+
+def test_with_spoilers_a_fallback_and_refused_answers_are_counted():
+    def engine(type, data):
+        return Event(source=EventSource.ENGINE, type=type, data=data, visible_to=("p1",))
+
+    def game(type, data):
+        return Event(source=EventSource.GAME, type=type, data=data)
+
+    log = [
+        engine(
+            "match_started", {"game": "poker", "players": ["p1", "p2"], "settings": {}}
+        ).model_copy(update={"visible_to": ()}),
+        game("hand_started", {"hand": 1, "button": "p1", "players": ["p1", "p2"], "big_blind": 20}),
+        game("blind_posted", {"player": "p2", "amount": 20, "kind": "big"}),
+        game("street_started", {"street": "preflop", "order": ["p1", "p2"], "cards": []}),
+        engine("action_rejected", {"player": "p1", "tool": "raise", "error": "too small"}),
+        engine("action_rejected", {"player": "p1", "tool": "raise", "error": "too small"}),
+        engine("action_fallback", {"player": "p1", "reason": "rejected"}),
+        game(
+            "bet_action", {"player": "p1", "kind": "fold", "street": "preflop", "to": 0, "added": 0}
+        ),
+        game("pot_awarded", {"amount": 20, "eligible": ["p2"], "shares": {"p2": 20}}),
+        game("hand_ended", {"hand": 1, "showdown": False}),
+    ]
+    a = match_analytics("poker", log, True)
+
+    assert a["moves"][0]["fallback"] is True and a["moves"][0]["rejected"] == 2
+    assert (a["totals"]["p1"]["fallbacks"], a["totals"]["p1"]["refused"]) == (1, 2)
+    public = match_analytics("poker", log, False)
+    assert public["totals"]["p1"]["fallbacks"] is None and public["moves"][0]["fallback"] is None

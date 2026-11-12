@@ -73,13 +73,25 @@ class GamePlugin[StateT: BaseModel](ABC):
 
     id: ClassVar[str]
     name: ClassVar[str]  # the title players and spectators read; the only place it is written
-    version: ClassVar[str]  # bump when rules or data change the meaning of old logs
+    version: ClassVar[str]  # bump when rules or data change; keep the old in at_version (D-139)
     min_players: ClassVar[int]
     max_players: ClassVar[int]
     turn_mode: ClassVar[TurnMode]
     # No match of the game takes more turns than this; the engine stops one that
     # does. Set it to what the rules allow at most, with room to spare.
     max_turns: ClassVar[int] = 10_000
+
+    def at_version(self, version: str) -> "GamePlugin[StateT]":
+        """This game with the rules of `version`, as a log recorded with it needs them.
+
+        A stored match keeps its rules: replays, boards and analytics of a log ask for
+        the version in its `match_started`. A game that changed its rules keeps the old
+        versions it can still play and overrides this; the default knows only its own.
+        Raises ValueError for a version the game does not have.
+        """
+        if version != self.version:
+            raise ValueError(f"{self.id} has no rules version {version} (it is {self.version})")
+        return self
 
     def rules(self, settings: Mapping[str, Any] | None = None) -> str:
         """The rule summary a model gets in its prompt: `rules.md` next to the plugin.
@@ -92,6 +104,14 @@ class GamePlugin[StateT: BaseModel](ABC):
     def prompt_version(self, settings: Mapping[str, Any] | None = None) -> str:
         """Which prompt the models of a match get; recorded in `match_started`."""
         return "v1"
+
+    def history_limit(self, settings: Mapping[str, Any] | None = None) -> int:
+        """How many of the latest events a prompt shows (the older ones are only counted).
+
+        A game in which one turn can produce more than this for a player (a simultaneous game
+        with talk) raises it for a prompt version, so nothing of the turn is dropped.
+        """
+        return 40
 
     def situation_summary(
         self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
