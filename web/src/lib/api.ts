@@ -184,6 +184,8 @@ export interface GameInfo {
 export interface SetupOptions {
 	/** Whether a seat can be a model yet; until then every seat is a random bot. */
 	model_seats: boolean;
+	/** Whether a table may mix models and random bots (`seats` in POST /matches). */
+	mixed_seats?: boolean;
 	models: {
 		id: string;
 		model: string;
@@ -246,8 +248,38 @@ export interface NewMatch {
 	memory: boolean;
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
-	/** Must be true with `models`: the match spends money. */
+	/** One entry per seat, a model or a bot: a table that mixes them. Instead of `models`. */
+	seats?: ({ kind: 'model'; model: string } | { kind: 'bot' })[];
+	/** Must be true with `models` or a model in `seats`: the match spends money. */
 	confirm_spend?: boolean;
+}
+
+/** One model of `GET /models/catalog`: every model that can take a seat. */
+export interface CatalogModel {
+	/** The id for POST /matches: config/models.yaml's when verified, else OpenRouter's. */
+	id: string;
+	openrouter_id: string;
+	name: string;
+	vendor: string;
+	context_length: number | null;
+	input_usd_per_mtok: number;
+	output_usd_per_mtok: number;
+	reasoning: boolean;
+	moderated: boolean;
+	free: boolean;
+	/** In config/models.yaml: prices and behaviour checked by the team. */
+	verified: boolean;
+	/** Output above 10 USD per million tokens: the form warns. */
+	high_price: boolean;
+	/** "config/models.yaml" (checked by hand) or "openrouter list" (booked at the listed price x 1.25). */
+	price_source: string;
+}
+
+export interface Catalog {
+	models: CatalogModel[];
+	fetched_at: string | null;
+	/** Read within the last hour; false: an older copy or only the verified models. */
+	fresh: boolean;
 }
 
 /** `GET /profiles/{id}/memories`: the player's own summaries of past matches. */
@@ -430,6 +462,7 @@ export interface ArenaClient {
 	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
 	monthSpend(): Promise<ApiResult<MonthSpend>>;
+	catalog(): Promise<ApiResult<Catalog>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 }
 
@@ -663,6 +696,13 @@ export function createArenaClient(
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ roles, player_count: players })
 				}
+			);
+		},
+
+		catalog() {
+			return getJson<Catalog>(
+				'/models/catalog',
+				(body) => isObject(body) && Array.isArray(body.models)
 			);
 		},
 

@@ -116,7 +116,13 @@ Three ways:
   429 to a start beyond that; a match that never ends stops at its turn limit
   and is marked `failed`.
   With `"models": ["glm-flash", ...]` (one per seat) and `"confirm_spend":
-  true` the seats are models behind one `Budget`, as with the command. Model
+  true` the seats are models behind one `Budget`, as with the command.
+  `"seats": [{"kind": "model", "model": "glm-flash"}, {"kind": "bot"}, ...]`
+  instead of `models` lets models and random bots share a table: the bots play
+  free, a mixed match rates its models only, among themselves, and
+  `POST /matches/estimate` takes `null` for a bot seat. A personality per seat is
+  refused (422) until the agent runner puts one in the prompt; `GET /setup` says
+  `mixed_seats: true` on a server that takes `seats`. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
   ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
@@ -724,6 +730,11 @@ which effects still wait for their system.
 
 ### The Throne of Tokens map
 
+How the parts of the game fit together (round order, the `submit_orders`
+call, combat rules, state fields, events, the observation and the
+`hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
+build against it, and change it in the same pull request as the code.
+
 The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
@@ -756,6 +767,14 @@ next to it says what each does and what the generator guarantees.
   `reachable`, `training_cost`, `army_viewpoints`), orders with a check each
   (`train`, `move`, `split`, `merge`, `disband`, `settle`),
   `deploy_start_units` for the setup and the round step `starve`.
+- `games/civ/diplomacy.py`: messages, treaties (offer, answer, break, expire),
+  wars, reputation, tributes and trade. Questions for combat and the turn flow
+  (`at_war`, `may_attack`, `allies`, `open_borders`, `wars_of`, `trade_fee`),
+  orders with a check each (`message`, `propose_treaty`, `respond_treaty`,
+  `propose_trade`, `respond_trade`, `break_treaty`, `declare_war`) and the round
+  steps `expire` (start) and `settle` (the trade step). Offers and trades are
+  private to the two nations; signed, broken and expired treaties and wars are
+  public.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.

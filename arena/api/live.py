@@ -149,14 +149,21 @@ class LiveMatches:
             await self.ledger.check(await self.matches.model_matches())
             config = await resolve(load_config(), models.values())
             budget = Budget(self.ledger, match_id, config)
+            # A table may mix models and random bots: a seat without a model is a bot.
+            bots = random_bots(plugin, [seat for seat in players if seat not in models], seed)
+            bot_seat = bot_seats(list(bots))
             agents = {
                 seat: ModelAgent(budget.model(seat, models[seat]), plugin, settings=settings)
+                if seat in models
+                else bots[seat]
                 for seat in players
             }
             seats = {
                 seat: Seat(
                     name=display_name(config, models[seat]), model_id=models[seat], kind="model"
                 )
+                if seat in models
+                else bot_seat[seat]
                 for seat in players
             }
         # Timed: thinking time is part of what spectators and analyses read.
@@ -279,7 +286,14 @@ class LiveMatches:
                     seats=profiles,
                 )
             else:
-                rated = await self._ratings.rate_model_match(match_id, game_id, models, placements)
+                # A mixed table rates its models only, among themselves; bots are not compared.
+                rated_places = [p for p in placements if p.player in models]
+                if len(rated_places) < 2:
+                    log.info("Match %s: not rated, fewer than two model seats", match_id)
+                    return
+                rated = await self._ratings.rate_model_match(
+                    match_id, game_id, models, rated_places
+                )
                 if isinstance(rated, str):
                     log.info("Match %s: %s", match_id, rated)
                     return
