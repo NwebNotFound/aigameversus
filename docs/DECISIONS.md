@@ -123,6 +123,7 @@ with `python scripts/decisions.py adopt`.
 - [D-118](decisions/D-118-cut-off-answers-and-rate-limits-are-counted-apart-and-a.md) · Cut-off answers and rate limits are counted apart, and a model is qualified per route, game and configuration
 - [D-119](decisions/D-119-werewolf-p4-whole-match-strategy-text-liar-s-deck-p1-stays.md) · Werewolf p4 whole-match strategy text; Liar's Deck p1 stays frozen with a known defect
 - [D-120](decisions/D-120-free-variants-are-left-out-of-the-catalog-and-every-model.md) · Free variants are left out of the catalog, and every model says how reliably it has played here
+- [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
 - [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule
 - [D-127](decisions/D-127-when-a-werewolf-scene-ends-the-game-master-s-line-takes-the.md) · When a Werewolf scene ends, the game master's line takes the stage until someone speaks
 - [D-129](decisions/D-129-a-repaired-move-carries-a-muted-marker-per-tier-spoiler-free.md) · A repaired move carries a muted marker per tier; spoiler-free shows the tier and probability only
