@@ -62,8 +62,8 @@
 	</nav>
 	{#if board.fallback}
 		<p class="muted" role="status" data-testid="kind-fallback">
-			No rated real-model matches yet. Start one in <a href="/matches/new">New match</a>. Random
-			bots are shown meanwhile.
+			No rated real-model matches yet.{#if !data.readOnly}
+				Start one in <a href="/matches/new">New match</a>.{/if} Random bots are shown meanwhile.
 		</p>
 	{/if}
 	<p class="demo" data-testid="demo-switch">
@@ -93,7 +93,7 @@
 				{data.game
 					? `Nobody has a rating in ${gameName(data.game)} yet.`
 					: 'Finished matches show up here.'}
-				Start one in <a href="/matches/new">New match</a>.
+				{#if !data.readOnly}Start one in <a href="/matches/new">New match</a>.{/if}
 			</span>
 		</div>
 	{:else}
