@@ -9,11 +9,13 @@ The steps of a round, in the order they must run:
     #   diplomacy: diplomacy.message, propose_treaty, respond_treaty, propose_trade,
     #              respond_trade, declare_war, break_treaty
     #   cities:    economy.build, demolish, set_focus; armies.train
-    #   armies:    armies.disband, split, merge, settle, move
+    #   armies:    armies.disband, split, merge, settle, move; combat.attack, fortify, pillage
+    combat.resolve(state, data, ctx)  # every attack of the round is fought
     diplomacy.settle(state, data, ctx)  # the trade step: tributes and agreed trades
     economy.produce(state, data, ctx)
     armies.starve(state, data, ctx)
     economy.grow(state, data, ctx)
+    combat.weariness(state, data, ctx)  # rounds at war cost production
 
 The round number is what "once per round" is counted against: an army
 remembers the round of its last move.
@@ -25,7 +27,7 @@ from typing import Any
 
 from arena.engine.plugin import TurnContext
 from arena.engine.types import Event
-from games.civ import armies, diplomacy, economy
+from games.civ import armies, combat, diplomacy, economy
 from games.civ.state import CivState
 
 
@@ -47,4 +49,5 @@ _APPLY = {
     **economy.APPLIERS,
     **armies.APPLIERS,
     **diplomacy.APPLIERS,
+    **combat.APPLIERS,
 }

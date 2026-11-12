@@ -748,7 +748,7 @@ call, combat rules, state fields, events, the observation and the
 `hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
 build against it, and change it in the same pull request as the code.
 
-The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
+The game is built in parts (roadmap steps 7.1 to 7.5 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
 - `games/civ/world.py`: `generate_map(players, data, rng)` returns a
@@ -788,6 +788,12 @@ next to it says what each does and what the generator guarantees.
   steps `expire` (start) and `settle` (the trade step). Offers and trades are
   private to the two nations; signed, broken and expired treaties and wars are
   public.
+- `games/civ/combat.py`: battles. Who may fight (`hostile`: at war, or a
+  `NEUTRAL` side), orders with a check each (`attack_problem` and `attack`,
+  `fortify`, `pillage`), the round steps `resolve` (every attack of the round,
+  in order) and `weariness`, and `capital` (the city on a nation's start
+  tile). `economy.production_modifier` applies war weariness and a lost
+  capital to the yields (D-126).
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.
