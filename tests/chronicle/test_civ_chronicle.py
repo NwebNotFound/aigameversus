@@ -79,12 +79,14 @@ def diplomatic_log() -> list[Event]:
         *founded,
         game("round_started", {"round": 1}),
         game(MESSAGE, {"player": "p1", "text": "p2, join me and we will rule the north together."}),
+        game(MESSAGE, {"player": "p3", "text": "Nobody in the south wants a war with p4 now."}),
         game(
             "treaty_signed",
             {"treaty": "t1", "kind": "alliance", "parties": ["p1", "p2"], "ends_war": False},
         ),
         game("economy_countdown", {"rounds": {"p3": 1}, "needed": 5}),
         game("round_started", {"round": 2}),
+        game("economy_countdown", {"rounds": {"p3": 2}, "needed": 5}),
         game("war_declared", {"by": "p1", "on": "p4", "broken": [], "joined": []}),
         game(
             "battle",
@@ -174,9 +176,10 @@ def test_diplomacy_war_conquest_talk_and_the_gold_race_are_told():
     assert "Ada" in text and "4 units" not in text and "3 units" in text  # the defender's losses
     assert re.search(r"Ada captures the capital of Di|Capital falls: Di loses its capital", text)
     assert "Bo breaks" in text or "Treaty broken: Bo" in text
-    assert "Ada and Di" in text  # the peace
+    assert re.search(r"Ada and Di (sign a peace|end hostilities)|Peace agreed: Ada and Di", text)
     assert "Bo, join me and we will rule the north together." in text  # the seat id named
-    assert "Cy" in text and "5 rounds" in text  # the gold countdown
+    assert "Nobody in the south" not in text  # one quote per age
+    assert len(re.findall(r"Cy starts the gold countdown|Economic race: Cy", text)) == 1
     assert "Ada wins by domination in round 11" in text
     assert "1. Ada (90), 2. Bo (40), 3. Cy (30), 4. Di (10)" in text
     glance = {g.label: g.value for g in chronicle.glance}
@@ -201,6 +204,8 @@ def test_the_key_moments_point_at_their_events_and_name_only_nations():
     for moment in moments:
         assert events[moment["seq"]].type in types | {"random_event"}
         assert set(moment["players"]) <= {"p1", "p2", "p3", "p4"}
+    barbarian = [m for m in story().key_moments if m["kind"] == "battle"]
+    assert barbarian and all(set(m["players"]) <= {"p1", "p2", "p3", "p4"} for m in barbarian)
 
 
 def test_the_same_log_tells_the_same_story_and_another_seed_another_one():
