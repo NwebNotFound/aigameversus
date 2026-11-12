@@ -6,6 +6,7 @@ import {
 	loadFavourites,
 	NO_FILTER,
 	priceLabel,
+	reliabilityNote,
 	saveFavourites,
 	seatChoice
 } from './catalog.js';
@@ -65,43 +66,92 @@ const CATALOG = [
 ];
 
 const ids = (models: CatalogModel[]) => models.map((m) => m.id);
+/** Every model shown: the free and the unreliable ones too. */
+const ALL = { ...NO_FILTER, showFree: true, showUnreliable: true };
+const SHAKY = model('tencent/hy3', {
+	name: 'Hy3',
+	reliability: {
+		status: 'unreliable',
+		reason: 'replaced by the bot in 11 of its last 20 moves',
+		fallback_share: 0.55,
+		agent_failed_recent: 0,
+		n: 20,
+		warnings: ['answers often cut off at the length limit']
+	}
+});
+
+describe('free and unreliable models', () => {
+	it('are hidden until their switch is on', () => {
+		const catalog = [...CATALOG, SHAKY];
+
+		expect(ids(filterCatalog(catalog, NO_FILTER))).not.toContain('meta/llama-free:free');
+		expect(ids(filterCatalog(catalog, NO_FILTER))).not.toContain('tencent/hy3');
+		expect(ids(filterCatalog(catalog, { ...NO_FILTER, showFree: true }))).toContain(
+			'meta/llama-free:free'
+		);
+		expect(ids(filterCatalog(catalog, { ...NO_FILTER, showUnreliable: true }))).toContain(
+			'tencent/hy3'
+		);
+	});
+
+	it('keeps a model whose reliability is ok, unknown or not reported yet', () => {
+		const known = model('ok/one', { reliability: { status: 'ok' } });
+		const early = model('new/one', { reliability: { status: 'unknown', n: 3 } });
+
+		expect(ids(filterCatalog([known, early, model('old/one')], NO_FILTER))).toEqual([
+			'ok/one',
+			'new/one',
+			'old/one'
+		]);
+	});
+
+	it('name the reason, the sample and other warnings in the badge text', () => {
+		expect(reliabilityNote(SHAKY)).toBe(
+			'replaced by the bot in 11 of its last 20 moves; last 20 moves; answers often cut off at the length limit'
+		);
+		expect(reliabilityNote(model('ok/one', { reliability: { status: 'ok' } }))).toBeNull();
+		expect(reliabilityNote(model('old/one'))).toBeNull();
+	});
+
+	it('are never chosen by the cheap fill', () => {
+		const cheapButShaky = { ...SHAKY, verified: true, output_usd_per_mtok: 0.01 };
+
+		expect(cheapSeats([...CATALOG, cheapButShaky], 3)).not.toContain('tencent/hy3');
+	});
+});
 
 describe('filterCatalog', () => {
 	it('keeps everything without a filter, in the catalog order', () => {
-		expect(ids(filterCatalog(CATALOG, NO_FILTER))).toEqual(ids(CATALOG));
+		expect(ids(filterCatalog(CATALOG, ALL))).toEqual(ids(CATALOG));
 	});
 
 	it('searches name, id and vendor, every word', () => {
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, query: 'flash' }))).toEqual([
+		expect(ids(filterCatalog(CATALOG, { ...ALL, query: 'flash' }))).toEqual([
 			'glm-flash',
 			'deepseek-flash'
 		]);
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, query: 'Z-AI flash' }))).toEqual([
-			'glm-flash'
-		]);
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, query: 'anthropic' }))).toEqual([
+		expect(ids(filterCatalog(CATALOG, { ...ALL, query: 'Z-AI flash' }))).toEqual(['glm-flash']);
+		expect(ids(filterCatalog(CATALOG, { ...ALL, query: 'anthropic' }))).toEqual([
 			'anthropic/claude-big'
 		]);
 	});
 
 	it('filters by price, reasoning, verification, context and favourites', () => {
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, maxOutputUsd: 1 }))).toEqual([
+		expect(ids(filterCatalog(CATALOG, { ...ALL, maxOutputUsd: 1 }))).toEqual([
 			'glm-flash',
 			'deepseek-flash',
 			'meta/llama-free:free'
 		]);
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, reasoning: true }))).toEqual([
-			'deepseek-flash'
-		]);
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, verifiedOnly: true }))).toEqual([
+		expect(ids(filterCatalog(CATALOG, { ...ALL, reasoning: true }))).toEqual(['deepseek-flash']);
+		expect(ids(filterCatalog(CATALOG, { ...ALL, verifiedOnly: true }))).toEqual([
 			'glm-flash',
 			'deepseek-flash'
 		]);
-		expect(ids(filterCatalog(CATALOG, { ...NO_FILTER, minContext: 150_000 }))).toEqual([
+		expect(ids(filterCatalog(CATALOG, { ...ALL, minContext: 150_000 }))).toEqual([
 			'anthropic/claude-big'
 		]);
 		expect(
-			ids(filterCatalog(CATALOG, { ...NO_FILTER, only: new Set(['anthropic/claude-big']) }))
+			ids(filterCatalog(CATALOG, { ...ALL, only: new Set(['anthropic/claude-big']) }))
 		).toEqual(['anthropic/claude-big']);
 	});
 });

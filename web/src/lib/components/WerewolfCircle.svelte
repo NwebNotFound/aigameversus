@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import type { MatchEvent, Seat as Player, TranscriptLine } from '#lib/api.js';
 	import {
 		causeWords,
@@ -8,15 +9,18 @@
 		isWolf,
 		onStage,
 		ranking,
+		recapLabel,
+		recapOf,
 		roleName,
 		tally,
-		themeOf
+		themeOf,
+		type Narration
 	} from '#lib/boards/werewolfCircle.js';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import RichText from '#lib/components/RichText.svelte';
 	import SeatTag from '#lib/components/SeatTag.svelte';
 	import { hidden } from '#lib/live.js';
-	import { words } from '#lib/viewer.js';
+	import { langOf, words } from '#lib/viewer.js';
 
 	/**
 	 * The Werewolf circle: every player on a ring with an avatar, dead players greyed out,
@@ -73,6 +77,36 @@
 	const points = $derived(
 		Object.fromEntries(seats.map((s, i) => [s.player, circlePoint(i, seats.length)]))
 	);
+
+	// The game master's lines (#117) come with the match's analytics. They change only when
+	// something is narrated, so they are fetched again only when a narration is newer than
+	// what is known; a failed fetch leaves the transcript's own narration line in charge.
+	let narration = $state<Narration[] | null>(null);
+	const narrated = $derived(events.filter((e) => e.type === 'narration').length);
+	$effect(() => {
+		const id = page.params.id;
+		if (!id || narrated === 0 || (narration && narration.length >= narrated)) return;
+		const query = spoilers ? '' : '?view=spoiler-free';
+		const controller = new AbortController();
+		fetch(`/matches/${encodeURIComponent(id)}/analytics${query}`, { signal: controller.signal })
+			.then((response) => (response.ok ? response.json() : null))
+			.then((body) => {
+				if (Array.isArray(body?.narration)) narration = body.narration;
+			})
+			.catch(() => {});
+		return () => controller.abort();
+	});
+	const lang = $derived(
+		langOf(
+			(
+				events.find((e) => e.type === 'match_started')?.data as {
+					settings?: Record<string, unknown>;
+				}
+			)?.settings ?? {}
+		)
+	);
+	const lastSeq = $derived(events.at(-1)?.seq ?? null);
+	const recap = $derived(recapOf(narration, lines, lastSeq, lang, !!speech));
 	const heading = $derived(
 		spec.phase === 'night'
 			? `Night ${spec.night}`
@@ -117,12 +151,35 @@
 		{/if}
 	</div>
 
-	<div class="phase" class:corner={!!speech || standings.length > 0} data-testid="phase">
+	<div class="phase" class:corner={!!speech || !!recap || standings.length > 0} data-testid="phase">
 		{heading}
 	</div>
 
-	{#if speech || standings.length}
+	{#if speech || recap || standings.length}
 		<div class="centre">
+			{#if recap && !speech}
+				{#key recap.seq}
+					<figure class="recap" data-testid="stage-recap" data-key={recap.key}>
+						<svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+							{#if recap.key === 'night_falls'}
+								<path d="M15 3a9 9 0 1 0 6 15A7.5 7.5 0 0 1 15 3Z" />
+							{:else if recap.key.startsWith('morning')}
+								<path d="M3 17h18M7 17a5 5 0 0 1 10 0M12 4v3M5 9l2 2M19 9l-2 2" />
+							{:else if recap.key === 'execution' || recap.key === 'no_execution'}
+								<path d="M12 3v18M5 7h14M5 7l-3 6h6ZM19 7l-3 6h6Z" />
+							{:else if recap.key === 'game_over'}
+								<path d="M4 18h16L18 8l-4 4-2-6-2 6-4-4Z" />
+							{:else if recap.key.startsWith('captain')}
+								<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7Z" />
+							{:else}
+								<circle cx="12" cy="12" r="4" />
+							{/if}
+						</svg>
+						<span class="label">{recapLabel(recap.key)}</span>
+						<p>{recap.text}</p>
+					</figure>
+				{/key}
+			{/if}
 			{#if speech && speaker}
 				{#key speech}
 					<figure
@@ -360,6 +417,58 @@
 		animation: rise 260ms ease-out both;
 	}
 
+	/* The game master's line: a plate with an engraved look, the scene's mark on top. */
+	.recap {
+		margin: 0;
+		width: 100%;
+		display: grid;
+		justify-items: center;
+		gap: 0.25rem;
+		padding: 0.7rem 0.9rem 0.8rem;
+		border-radius: 14px;
+		text-align: center;
+		background: color-mix(in srgb, #1b1408 82%, transparent);
+		border: 1px solid #c9a24a88;
+		box-shadow:
+			inset 0 0 0 1px #00000055,
+			0 10px 30px #0009;
+		animation: rise 420ms ease-out both;
+	}
+
+	.circle.night .recap {
+		background: color-mix(in srgb, #0d1430 85%, transparent);
+		border-color: #9fb4ff77;
+	}
+
+	.recap .mark {
+		width: 1.6rem;
+		height: 1.6rem;
+		fill: none;
+		stroke: #e9c46a;
+		stroke-width: 1.6;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.circle.night .recap .mark {
+		stroke: #c8d4ff;
+	}
+
+	.recap .label {
+		font-size: 0.7rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.recap p {
+		margin: 0;
+		font-family: var(--font-narrator);
+		font-size: 0.95rem;
+		line-height: 1.4;
+		font-style: italic;
+	}
+
 	.speech.whisper {
 		border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
 		background: color-mix(in srgb, #2a0f14 88%, transparent);
@@ -479,6 +588,9 @@
 		.speech {
 			padding: 0.4rem 0.55rem;
 		}
+		.recap p {
+			font-size: 0.8rem;
+		}
 		.speech blockquote {
 			font-size: 0.75rem;
 			max-height: 5.6em;
@@ -537,6 +649,7 @@
 	@media (prefers-reduced-motion: reduce) {
 		line[data-testid='vote-arrow'],
 		.speech,
+		.recap,
 		.role.fresh {
 			animation: none;
 		}
