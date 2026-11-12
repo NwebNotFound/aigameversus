@@ -1,0 +1,124 @@
+{
+  "match_id": "f12a97d0-458a-4025-8c98-ced72baa6acc",
+  "status": "aborted",
+  "cost_micro_eur": 11856,
+  "month_micro_eur": 3768135,
+  "events": 114,
+  "event_counts": {
+    "match_started": 1,
+    "map_drawn": 1,
+    "city_founded": 6,
+    "army_raised": 6,
+    "round_started": 4,
+    "thought": 16,
+    "action_accepted": 10,
+    "decision": 12,
+    "action_rejected": 6,
+    "action_fallback": 2,
+    "building_started": 6,
+    "city_focus_set": 4,
+    "order_refused": 3,
+    "army_split": 2,
+    "army_moved": 6,
+    "production": 12,
+    "city_grew": 8,
+    "building_completed": 6,
+    "armies_merged": 1,
+    "units_lost": 2
+  },
+  "models": [
+    {
+      "seat": "p1",
+      "model": "glm-flash",
+      "turns": 3,
+      "fallbacks": 0,
+      "rejected": 0,
+      "agent_failed": false,
+      "cutoffs": 0,
+      "answers": 3,
+      "tokens_out": 593,
+      "reasoning_tokens": 326,
+      "cost_micro_eur": 584
+    },
+    {
+      "seat": "p2",
+      "model": "deepseek-flash",
+      "turns": 3,
+      "fallbacks": 2,
+      "rejected": 6,
+      "agent_failed": false,
+      "cutoffs": 6,
+      "answers": 7,
+      "tokens_out": 10257,
+      "reasoning_tokens": 10125,
+      "cost_micro_eur": 7564
+    },
+    {
+      "seat": "p3",
+      "model": "gpt-luna",
+      "turns": 3,
+      "fallbacks": 0,
+      "rejected": 0,
+      "agent_failed": false,
+      "cutoffs": 0,
+      "answers": 3,
+      "tokens_out": 776,
+      "reasoning_tokens": 528,
+      "cost_micro_eur": 1609
+    },
+    {
+      "seat": "p4",
+      "model": "claude-haiku",
+      "turns": 3,
+      "fallbacks": 0,
+      "rejected": 0,
+      "agent_failed": false,
+      "cutoffs": 0,
+      "answers": 3,
+      "tokens_out": 463,
+      "reasoning_tokens": 0,
+      "cost_micro_eur": 2099
+    }
+  ],
+  "order_refusals": [
+    {
+      "order": {
+        "city": "c4",
+        "type": "train",
+        "unit": "spearman",
+        "count": 1
+      },
+      "round": 1,
+      "nation": "p4",
+      "reason": "1 spearman cost 1 food, 2 wood; you have 5 food, 1 wood."
+    },
+    {
+      "order": {
+        "city": "c1",
+        "type": "train",
+        "unit": "spearman",
+        "count": 1
+      },
+      "round": 2,
+      "nation": "p1",
+      "reason": "1 spearman cost 1 food, 2 wood; you have 11 food, 1 wood."
+    },
+    {
+      "order": {
+        "on": "",
+        "kind": "",
+        "type": "build",
+        "count": 1,
+        "units": [],
+        "accept": false,
+        "treaty": "treaty",
+        "building": "sawmill"
+      },
+      "round": 3,
+      "nation": "p1",
+      "reason": "A build order needs city, building; it has no city."
+    }
+  ],
+  "halt": "Researcher safety pause then abort: observed DeepSeek fallback >10%; no tuning/rerun",
+  "remaining_rotations_released": false
+}

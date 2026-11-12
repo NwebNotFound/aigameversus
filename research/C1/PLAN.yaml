@@ -1,7 +1,7 @@
 id: C1
 schema: explicit_stage_v1
 version: 3
-status: approved_direct_smoke_only
+status: smoke_halted_remaining_held
 owner: Arena Researcher
 date: '2026-11-12'
 execution_approved: false
@@ -20,7 +20,13 @@ start_build: 01e8b50195aca9931afd0271dbc6063755c0d440
 start_image_digest: sha256:7c6b214992239cbc15b843be2f47d831bef77ee72c8b8522aba87ba9a9e3736c
 build_evidence: 'Reviewer rebuild lock note; image digest and120-event in-container readback verified'
 direct_smoke_approval_evidence: 'Lead5664932f and28c1ca94; one direct API match only'
-direct_smoke_approved: true
+direct_smoke_approved: false
+smoke_consumed: true
+smoke_match_id: f12a97d0-458a-4025-8c98-ced72baa6acc
+smoke_status: aborted_by_researcher_reliability_gate
+smoke_cost_eur: 0.011856
+smoke_result: 'DeepSeek2/3 bot replacements,6 output cutoffs; remaining3 held, no rerun'
+prestart_plan_commit: a6eac5a
 expected_history_limit_events: 120
 history_limit_approval: 'Lead28c1ca94: Civ120, other games40; direct smoke exception after verified deployment/requote'
 game: civ
