@@ -46,6 +46,31 @@ an explicit amendment to the clean-P1/P2 gate, before inspecting outcomes.
 
 ## Next-stage constraints
 
+Additional speech/vote/privacy audit: all250 accepted text actions (238 speeches,
+12 wolf chats) and114 accepted vote reasons fit their applicable120/40-word limits; all114 day votes
+target a living player or legal null at that event. No night action was rejected
+for an invalid target or role. Stored role assignment, pack, seer/witch and thought
+audiences passed the targeted privacy checks; wolf event audiences were subsets
+of the pack. The model path filters events by player visibility before building
+the request, and Werewolf observations gate pack/seer/potion fields by role.
+
+No literal `I am pN` self-seat mismatch was found (there were no such explicit
+self-seat statements). This is a narrow syntactic scan, not a semantic finding
+that no identity confusion occurred. Exact sent model-request snapshots were not
+logged; no claim of exhaustive absence of leaks is possible from spectator logs.
+No public role claim was treated as a leak merely because it matched ground truth:
+players may reveal their own role, infer another's role or deceive.
+
+Accepted actions also include17 seer checks,44 wolf kill choices,18 witch actions,
+six hunter shots,60 captain election votes and seven captaincy transfers. These
+counts establish exercised action paths, not strategic quality. Machine-readable
+checks: speech_privacy.json; reproducible script: research/W1/speech_privacy.py.
+
+Free local regression checks:64 tests passed in games/werewolf/tests/test_matches.py,
+games/werewolf/tests/test_plugin.py and tests/agents/test_prompt.py, including
+role-private observation/event-audience checks. These exercise the local research
+checkout; they are not captured requests from the historical deployed model run.
+
 Reviewer was asked to use the now-idle gap for a controlled rebuild. The old
 db77cbe container exposes only werewolf-p1/p2, so it cannot run P3 yet. Future
 matches must explicitly keep answer_repair off if the rebuilt version offers it.
