@@ -431,3 +431,14 @@ Codes: `duplicate_model` (the model sat in several seats of one match), `table_r
 among random bots), `not_rated` (none of those; the log does not say why). Read from the match
 records against `rated_matches`; running and failed matches are not counted.
 
+
+## Match export
+
+`GET /matches/{id}/export[?spoilers=true]` (`arena/api/export.py`) is one JSON download for a
+notebook: `format` (`aigameversus-match-export/1`), `spoilers`, `match` (the record), `cost`
+(`total_micro_eur`, `players`; null if the ledger is down), `events` (each with its `seq` in the
+whole log), `analytics` and `talk_checks` (the two endpoints above; null for a game without them).
+Without `spoilers`: public events only (gaps in `seq` show what was left out), `match.seed` null,
+only the public settings, and the spoiler-free analytics. With `spoilers`: the whole match, hidden
+cards, roles, thoughts and the seed, and the file name ends in `-full`. Share the full one only
+once the match is over.
