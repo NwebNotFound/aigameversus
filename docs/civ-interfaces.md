@@ -31,7 +31,7 @@ emits events:
 | 2 | `diplomacy.expire` | diplomacy | Heavy |
 | 3 | `economy.finish_construction` | economy | done |
 | 4 | the round's orders, in this order: diplomacy (messages, treaties, wars), cities, armies | turn | Builder |
-| 5 | `neutrals.act` (barbarians and rebels) | combat | Builder |
+| 5 | `neutrals.act` (barbarians; rebel cities do nothing) | neutrals | Builder |
 | 6 | `combat.resolve` | combat | Builder |
 | 7 | `diplomacy.settle` (tribute, trades) | diplomacy | Heavy |
 | 8 | `economy.produce` | economy | done |
@@ -41,6 +41,11 @@ emits events:
 | 12 | `combat.weariness` | combat | Builder |
 | 13 | `victory.check` (sets `state.victory`; the match is over then) | victory | Heavy (#120) |
 
+`turn.open_round` runs steps 1 to 3 and `turn.close_round` steps 4 to 13. The
+plugin opens round 1 in its setup; each engine turn then closes the round the
+nations answered on and, unless the match is won, opens the next (D-130). A
+nation is therefore always asked on an open round.
+
 Orders of one kind run in the order the nations are listed in the state
 (their seat order), so the log does not depend on who answered first. An
 order that is no longer legal when its turn comes (the stock was spent by an
@@ -49,7 +54,9 @@ earlier order, the army was destroyed) is dropped with `order_refused`.
 ## The call: `submit_orders`
 
 One tool, offered to every nation every round. Its JSON schema is the source
-of truth (`games/civ/orders.py`, built in 7.6); this is its shape:
+of truth (`games/civ/orders.py`): one flat order object with a `type` and
+every field an order may have; what a type needs is checked when the order
+runs (a missing field is an `order_refused`). This is its shape:
 
 ```json
 {
@@ -81,9 +88,10 @@ of truth (`games/civ/orders.py`, built in 7.6); this is its shape:
   together; a `message` text has at most 60 words. The schema caps the
   list; the plugin drops every message and offer beyond those numbers, and
   a longer text, with `order_refused`.
-- `plan` (optional, at most 60 words) is the nation's own short plan. Only
-  that nation reads it again: as `your_plan` in its next observation. It is
-  kept in the state, never shown to another nation, and spectators see it.
+- `plan` (optional) is the nation's own short plan, cut to its first 60
+  words. Only that nation reads it again: as `your_plan_from_last_round` in
+  its next observation (`plan_set`, private). It is kept in the state, never
+  shown to another nation, and spectators see it.
 - `to` and tiles are `[col, row]` (`games/civ/world.py`: odd rows sit half a tile
   to the right).
 - `message` with `"to": null` is public; otherwise private to sender and
@@ -116,7 +124,11 @@ observation. A list of twenty orders is never thrown away for one mistake.
   nation it is **at war with**, or of `NEUTRAL`, the move is an **attack**:
   the army stops on the last free tile of its path and fights for the target
   in `combat.resolve`. Moving onto a tile of a nation it is not at war with
-  is refused (`order_refused`).
+  is refused (`order_refused`). This holds for tiles in the nation's sight
+  (`combat.sight`); a move onto a held tile out of sight stops on the tile
+  before it and is refused, so the fog is found out only by spending the
+  move. An attack needs its target in sight, and every unseen tile gets the
+  same refusal (D-126).
 - Being at war: `diplomacy.at_war(state, a, b)`, or either side is
   `NEUTRAL`. War is entered only through `declare_war`, which is never
   refused for a treaty: it ends every treaty between the two, each counted as
@@ -147,16 +159,18 @@ What exists stays as it is (`round`, `world`, `nations`, `cities`, `armies`,
 | --- | --- | --- |
 | `NEUTRAL = "neutral"` | owner id of barbarians and rebel cities | Builder / Heavy |
 | `Nation.reputation` | `int`, 50 at start, 0–100 | Heavy |
-| `Nation.capital` | city id or `None` | Builder |
+| (capital) | the city on the nation's start tile, whoever holds it (`combat.capital`) | Builder |
 | `Nation.weary_rounds` | rounds in a row at war | Builder |
 | `Nation.capital_lost_until` | round or `None` | Builder |
 | `City.conquered_round` | `int` or `None` | Builder (set), Heavy (read) |
 | (walls) | a city has walls when `"wall"` is in its `buildings` | data |
-| `Army.fortified_since` | round or `None` | Builder |
+| `Army.fortified_from` | round or `None` | Builder |
+| `CivState.attacks` | this round's attacks `{army, target}`, until fought | Builder |
 | `CivState.treaties`, `offers`, `deals`, `wars`, `conditions`, `rich_rounds` | see #105, #120 | Heavy |
 | `CivState.victory` | `{kind, winners, placements}` or `None` (`is_over` reads it) | Heavy (#120) |
 | `Nation.plan` | the last `plan` the nation sent, at most 60 words | Builder |
-| `CivState.refused` | this round's dropped orders per nation | Builder |
+| `CivState.refused` | dropped orders `{nation, round, order, reason}` of this and the last round | Builder |
+| `CivState.battles` | battles `{round, tile, winner, nations}` of this and the last round, for the board | Builder |
 
 Every field must survive a JSON round trip (lists, not tuples).
 
@@ -168,13 +182,15 @@ events of `economy.py` and `armies.py` keep their names and data.
 | Event | Data | Seen by |
 | --- | --- | --- |
 | `round_started` | `round` | all |
-| `order_refused` | `nation, order, reason` | that nation |
+| `map_drawn` | `rows` (terrain ids), `starts` | spectators only |
+| `order_refused` | `nation, round, order, reason` | that nation |
+| `plan_set` | `nation, plan` | that nation |
 | `battle` | `tile, attacker {nation, army, power, lost}, defender {nation, army or city, power, lost}, winner` | both sides |
 | `city_conquered` | `city, from, to, round` | all |
 | `city_pillaged` | `city, army, building, loot` | both sides |
 | `army_fortified` | `army` | owner |
 | `war_weariness` | `nation, modifier` | that nation |
-| `match_won` | `winner, condition` (`domination` / `economy` / `round_limit`), `scores` | all |
+| `victory` | `kind` (`domination` / `economy` / `round_limit`), `winners, round, standings, placements` | all |
 | diplomacy and event types | as in #105 | as in #105 |
 
 A battle is seen by both sides only; what others learn of it comes from their
@@ -199,15 +215,43 @@ returns only what that nation may know, built from its fog view
   `can_settle`),
 - `seen` (foreign cities and armies on visible tiles: owner, strength,
   units), `map` (the fog view, compact),
-- `relations` (treaties, wars, reputations of all), `offers` (to answer this
-  round), `messages` (received last round), `refused` (own dropped orders of
-  last round), `last_round` (what changed for the nation: its private events
-  of last round, in short),
+- `relations` (treaties, wars, and whom it is at war with), `offers` (to
+  answer this round), `refused` (own dropped orders of last round). Messages
+  and the nation's other events of last round reach the model as the
+  prompt's events, where another model's words are marked as player content;
+  they are not copied into the observation (D-130), so `messages` and
+  `last_round` stay empty,
 - `legal`: what is possible now, so a model need not guess: per city what it
   may build (with the cost) and train (with the most it can pay for), the
-  unit costs, and `orders`, the order types that can do something this round
-  with their parameters (e.g. `move` only when an army can move),
-- `your_plan`: the `plan` the nation sent last round, or `null`.
+  unit costs, and `orders`, the order types that can do something this round,
+  each with its fields and, where only some qualify, which cities, armies,
+  offers or nations (e.g. `move` only when an army can move),
+- `your_plan_from_last_round`: the `plan` the nation sent last round, or `null`,
+- `scoreboard` (below), added by the plugin.
+
+**Public by rule (D-128).** Public: the total number of cities in the world,
+the city count per nation, and who holds the gold countdown (and how far it
+is); also reputations, treaties and wars. Private: other nations' scores
+(they hold gold and population), stocks,
+positions, buildings, and armies outside the nation's own sight. The
+observation carries the public part in one field, built by the plugin from
+the state and nothing else, so no number is derived from fogged state by
+accident:
+
+```json
+"scoreboard": {
+  "round": 12,
+  "cities_total": 12,
+  "cities": {"p1": 3, "p2": 5, "p3": 4},
+  "domination_needed": 6,
+  "gold_countdown": {"nation": "p2", "rounds_held": 2, "rounds_needed": 5},
+  "reputation": {"p1": 50, "p2": 30, "p3": 55}
+}
+```
+
+`round` is the round being played. `gold_countdown` is `null` while nobody
+holds enough gold; with several holders it names the one closest to winning. Everything else in
+an observation about another nation comes from its fog view.
 
 **Public by rule (D-128).** Public: the total number of cities in the world,
 the city count per nation, and who holds the gold countdown (and how far it
@@ -268,12 +312,12 @@ cap needs its own explicit budget.
 
 `terrain` is one string per row, one letter per tile (`legend` maps every letter to a terrain id of `terrain.yaml`);
 `fog` is one string per row per nation (`1` = seen this round). `battles` are
-this round's.
+those of the round resolved last: `{round, tile, winner, nations}`.
 
 **This full board is for the Spectator view only.** The spoiler-free view
 shows the board as **one nation** sees it (the viewer picks it; the first in
 seat order by default): the plugin's `render_spec_for(state, nation)`, built
-on the server, keeps only
+on the server (`GET /matches/{id}/board?nation=p1`), keeps only
 
 - `layout`, `round`, `rounds_total`, `cols`, `rows`, `terrain`, `legend`
   (the land itself is no secret),

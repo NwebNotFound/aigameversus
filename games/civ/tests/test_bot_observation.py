@@ -37,6 +37,7 @@ def carry_out(realm: Realm, player: str, order: dict) -> None:
         "split": lambda: armies.split_problem(s, player, order["army"], order["units"]),
         "disband": lambda: armies.disband_problem(s, player, order["army"]),
         "settle": lambda: armies.settle_problem(s, DATA, player, order["army"]),
+        "merge": lambda: armies.merge_problem(s, DATA, player, order["armies"]),
         "respond": lambda: None,
     }[kind]()
     assert problem is None, (player, order, problem)
@@ -54,6 +55,8 @@ def carry_out(realm: Realm, player: str, order: dict) -> None:
         armies.disband(s, ctx, player, order["army"])
     elif kind == "settle":
         armies.settle(s, DATA, ctx, player, order["army"])
+    elif kind == "merge":
+        armies.merge(s, DATA, ctx, player, order["armies"])
 
 
 def play_round(realm: Realm, rng) -> dict[str, list]:
@@ -177,3 +180,28 @@ def test_the_observation_lists_only_what_can_be_done_now_and_how_close_each_win_
     assert observation["rounds_total"] == DATA.victory.round_limit.rounds
     assert observation["refused"] == ["move a9: no such army"]
     assert observation["your_plan_from_last_round"] == "build a farm"
+
+
+def test_armies_on_one_tile_are_merged_as_far_as_they_fit_and_get_no_other_order():
+    def army(army_id, units, tile=(1, 1)):
+        return {"id": army_id, "tile": list(tile), "units": units, "reachable": [[2, 1]],
+                "can_settle": False}  # fmt: skip
+
+    observation = {
+        "stock": {},
+        "legal": {"cities": {}, "unit_cost": {}},
+        "cities": [],
+        "seen": {"cities": [], "armies": []},
+        "offers": [],
+        "armies": [
+            army("a1", {"spearman": 4}),
+            army("a2", {"archer": 5}),
+            army("a3", {"swordsman": 2}),  # would make eleven
+            army("a4", {"scout": 1}, tile=(5, 5)),
+        ],
+    }
+
+    orders = random_orders(observation, derive_rng(1, "bot"))
+
+    assert {"type": "merge", "armies": ["a1", "a2"]} in orders["orders"]
+    assert not [o for o in orders["orders"] if o.get("army") in ("a1", "a2")]
