@@ -367,7 +367,10 @@ A match is a list of `Event`s. Engine events (`match_started`, `thought`,
 
 `decision` (spectators only) closes every move of a model and every move that
 ended in a random one: `{player, answers, latency_ms, tokens_in, tokens_out,
-reasoning_tokens, retries, fallback}`. `answers` counts the replies of the
+reasoning_tokens, retries, rate_limits, cutoffs, fallback}`. `rate_limits`
+are the retries the provider refused as too many requests, `cutoffs` the
+answers that ran into the output limit: neither means a model cannot call
+tools ([docs/model-qualification.md](docs/model-qualification.md)). `answers` counts the replies of the
 move (corrections included), the token counts add up what they reported
 (`null` when none did), `retries` counts failed calls tried again, `fallback`
 is the reason of a random move or `null`. `latency_ms` is the wall time of the
@@ -641,7 +644,9 @@ model out (and `:free` variants are listed only with `?free=1`, marked
 `rate_limited_likely`); every entry and model page has `reliability` from
 the arena's own logs (`arena/db/reliability.py`: unreliable after a seat that
 gave up in its last 2 matches or more than half of its last 20 moves by the
-bot, unknown below 20 moves, warnings for cut-off answers and rate limits);
+bot, unknown below 20 moves, warnings for cut-off answers and rate limits, and `rejected_rate` with its counts, `rejected_cut_off`
+(of the refused answers, those that ran into the output limit; null in logs without the counter,
+with a warning when they are most of them) and `last_seen`);
 `catalog.resolve` adds it to the config where
 a match is started, so the budget, the seats and the ledger treat it like any
 other. Tests never download it: the autouse fixture `offline_catalog` in
@@ -768,7 +773,7 @@ call, combat rules, state fields, events, the observation and the
 `hex_map` board) is pinned in [docs/civ-interfaces.md](docs/civ-interfaces.md):
 build against it, and change it in the same pull request as the code.
 
-The game is built in parts (roadmap steps 7.1 to 7.3 so far; there is no
+The game is built in parts (roadmap steps 7.1 to 7.5 so far; there is no
 plugin yet, so `arena games` does not list it). The map:
 
 - `games/civ/world.py`: `generate_map(players, data, rng)` returns a
@@ -808,6 +813,25 @@ next to it says what each does and what the generator guarantees.
   steps `expire` (start) and `settle` (the trade step). Offers and trades are
   private to the two nations; signed, broken and expired treaties and wars are
   public.
+- `games/civ/combat.py`: battles. Who may fight (`hostile`: at war, or a
+  `NEUTRAL` side), orders with a check each (`attack_problem` and `attack`,
+  `fortify`, `pillage`), the round steps `resolve` (every attack of the round,
+  in order) and `weariness`, and `capital` (the city on a nation's start
+  tile). `economy.production_modifier` applies war weariness and a lost
+  capital to the yields (D-126).
+- `games/civ/events.py`: random events from `data/events/`. `roll` is a round
+  step (one random stream per event and round); `strike` lets one event happen
+  now (also for a spectator's God mode). Plague, gold find and good harvest touch
+  one city or nation, a drought adds a `Condition` that halves the food of the
+  cities in its region for its rounds (`economy.city_yields` reads it), a
+  rebellion makes a recently conquered city (`City.conquered_round`) neutral,
+  barbarians raise a neutral army on a free tile. `NEUTRAL` in `state.py` owns
+  rebel cities and barbarians.
+- `games/civ/victory.py`: `check` is the last round step: the public economic
+  countdown, then domination (at least half the cities and more than anyone),
+  economy (the gold held long enough) or the round limit's score; it emits
+  `victory` with the placements, and `state.victory` is set. `score` and
+  `standings` rank the nations.
 - `games/civ/turn.py`: `begin_round`, and `apply_event`, the one function
   through which every event changes the state. Its docstring has the order
   of the steps of a round.

@@ -96,8 +96,12 @@
 
 	$effect(() => {
 		const at = logPosition;
-		const query = view === 'spoiler-free' ? '&view=spoiler-free' : '';
-		const key = `${view}:${at}`;
+		const nation = page.url.searchParams.get('nation');
+		const query =
+			view === 'spoiler-free'
+				? `&view=spoiler-free${nation ? `&nation=${encodeURIComponent(nation)}` : ''}`
+				: '';
+		const key = `${view}:${nation ?? ''}:${at}`;
 		if (boards.has(key)) {
 			spec = boards.get(key) ?? null;
 			return;

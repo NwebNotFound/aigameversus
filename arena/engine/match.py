@@ -306,6 +306,10 @@ class Match[StateT: BaseModel]:
                 "tokens_out": total("tokens_out"),
                 "reasoning_tokens": total("reasoning_tokens"),
                 "retries": sum(stats.retries for stats in reported),
+                # Kept apart: a throttled provider or a too small output limit is not a
+                # model that cannot call tools.
+                "rate_limits": sum(stats.rate_limits for stats in reported),
+                "cutoffs": sum(1 for stats in reported if stats.cut_off),
                 "fallback": fallback,
                 # A repaired move is a valid move but not a clean one: research counts both.
                 "repairs": sorted({repair for stats in reported for repair in stats.repairs}),

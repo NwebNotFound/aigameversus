@@ -16,6 +16,8 @@
 		themeOf,
 		type Narration
 	} from '#lib/boards/werewolfCircle.js';
+	import type { Accusation, Claim } from '#lib/boards/werewolfIntel.js';
+	import WerewolfIntel from '#lib/components/WerewolfIntel.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import RichText from '#lib/components/RichText.svelte';
 	import SeatTag from '#lib/components/SeatTag.svelte';
@@ -78,24 +80,46 @@
 		Object.fromEntries(seats.map((s, i) => [s.player, circlePoint(i, seats.length)]))
 	);
 
-	// The game master's lines (#117) come with the match's analytics. They change only when
-	// something is narrated, so they are fetched again only when a narration is newer than
-	// what is known; a failed fetch leaves the transcript's own narration line in charge.
-	let narration = $state<Narration[] | null>(null);
-	const narrated = $derived(events.filter((e) => e.type === 'narration').length);
+	// The game master's lines (#117), the claims and the accusations come with the match's
+	// analytics. A finished match is fetched once; a running one again when events arrived
+	// since the last fetch, at most every few seconds. A failed fetch leaves the transcript's
+	// narration line in charge and the panel without readings.
+	let analytics = $state<{
+		narration: Narration[] | null;
+		claims: Claim[];
+		accusations: Accusation[];
+		/** The newest event the answer covers; Infinity once the match is over. */
+		covers: number;
+	} | null>(null);
+	let fetchedAt = 0;
 	$effect(() => {
 		const id = page.params.id;
-		if (!id || narrated === 0 || (narration && narration.length >= narrated)) return;
+		const at = events.at(-1)?.seq ?? -1;
+		if (!id || at < 0 || (analytics && at <= analytics.covers)) return;
+		const over = spec.phase === 'over';
 		const query = spoilers ? '' : '?view=spoiler-free';
 		const controller = new AbortController();
-		fetch(`/matches/${encodeURIComponent(id)}/analytics${query}`, { signal: controller.signal })
-			.then((response) => (response.ok ? response.json() : null))
-			.then((body) => {
-				if (Array.isArray(body?.narration)) narration = body.narration;
-			})
-			.catch(() => {});
-		return () => controller.abort();
+		const wait = Math.max(0, fetchedAt + 2500 - Date.now());
+		const timer = setTimeout(() => {
+			fetchedAt = Date.now();
+			fetch(`/matches/${encodeURIComponent(id)}/analytics${query}`, { signal: controller.signal })
+				.then((response) => (response.ok ? response.json() : null))
+				.then((body) => {
+					analytics = {
+						narration: Array.isArray(body?.narration) ? body.narration : null,
+						claims: Array.isArray(body?.claims) ? body.claims : [],
+						accusations: Array.isArray(body?.accusations) ? body.accusations : [],
+						covers: over ? Infinity : at
+					};
+				})
+				.catch(() => {});
+		}, wait);
+		return () => {
+			clearTimeout(timer);
+			controller.abort();
+		};
 	});
+	const narration = $derived(analytics?.narration ?? null);
 	const lang = $derived(
 		langOf(
 			(
@@ -320,6 +344,19 @@
 		</section>
 	{/each}
 </div>
+
+{#if analytics && (analytics.claims.length || analytics.accusations.length)}
+	<WerewolfIntel
+		seats={seats.map((s) => s.player)}
+		claims={analytics.claims}
+		accusations={analytics.accusations}
+		{lastSeq}
+		{spoilers}
+		label={short}
+		{colours}
+		alive={Object.fromEntries(seats.map((s) => [s.player, s.alive]))}
+	/>
+{/if}
 
 <style>
 	.circle {
