@@ -23,7 +23,7 @@ from arena.catalog import HIGH_OUTPUT_USD_PER_MTOK, resolve
 from arena.config import Config, load_config, load_keys
 from arena.db.ledger import LedgerUnavailable
 from arena.db.match_store import Batch, MatchRecord, Origin, Seat, Status
-from arena.engine.replay import replay
+from arena.engine.replay import plugin_for, replay
 from arena.engine.types import MATCH_BUDGET, Event, match_budget_of
 from arena.jev.client import ALLOW_JEV
 from arena.personalities import load_personalities
@@ -531,6 +531,9 @@ async def get_board(
     plugin = live.games.get(record.game)
     if plugin is None:
         raise HTTPException(404, f"The game {record.game!r} is not installed")
+    log = await live.log(match_id)
+    if log:  # drawn with the rules the match was played with (its match_started)
+        plugin = plugin_for(plugin, log[0])
     render = getattr(plugin, "render_spec", None)
     if nation is not None:
         render = getattr(plugin, "render_spec_for", None)
@@ -539,7 +542,6 @@ async def get_board(
         if nation not in record.players:
             raise HTTPException(422, f"{nation!r} is not a player of this match")
         render = partial(render, nation=nation)
-    log = await live.log(match_id)
     events = log if events is None else log[:events]
     spec = render(replay(plugin, events)) if render and events else None
     return Board(game=record.game, events=len(events), spec=spec)
