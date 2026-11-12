@@ -559,6 +559,11 @@ commit `pyproject.toml` together with `uv.lock`.
   index itself: that is what used to conflict. An old-style `## D-0NN · Title`
   block that a merge brings into the index is moved with `python
   scripts/decisions.py adopt`.
+  After every `git merge origin/main` into a branch, and before the push, run
+  `python scripts/decisions.py index`: GitHub's merge of the index duplicates or drops lines when
+  two pull requests add a line at the same spot, and the command rebuilds the list from the
+  files (`tests/test_decisions.py` checks it). Reviewers do the same when they merge main into
+  someone else's branch.
 - One roadmap step is one branch and one pull request. Update a branch by
   merging `main` into it; do not rebase or force-push. Keep `README.md`, this
   file and the decision files current in the same pull request.
