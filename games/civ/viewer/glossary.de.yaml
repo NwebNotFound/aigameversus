@@ -1,0 +1,23 @@
+terms:
+  - term: Nation
+    meaning: "Ein Spieler: ein Modell oder ein Bot, mit seinen Städten, Armeen und seinem Vorrat."
+  - term: Runde
+    meaning: "Ein Schritt des Spiels. Alle Nationen geben gleichzeitig Befehle, dann wird die Runde in fester Reihenfolge ausgewertet."
+  - term: Nebel
+    meaning: "Das Land, das eine Nation nicht sieht. Jede Nation sieht nur die Felder nahe ihren Städten und Armeen."
+  - term: Vorrat
+    meaning: "Nahrung, Holz, Eisen und Gold einer Nation. Alle ihre Städte füllen ihn, und alles wird daraus bezahlt."
+  - term: Armee
+    meaning: "Bis zu zehn Einheiten auf einem Feld. Sie zieht einmal pro Runde, so schnell wie ihre langsamste Einheit."
+  - term: Siedler
+    meaning: "Eine Einheit, die dort, wo ihre Armee steht, eine neue Stadt gründet und dabei verbraucht wird."
+  - term: Verschanzen
+    meaning: "Eine Armee, die stehen bleibt, gräbt sich ein und verteidigt ab der nächsten Runde 25 % besser."
+  - term: Plündern
+    meaning: "Eine Armee brennt ein Gebäude einer feindlichen Nachbarstadt nieder und nimmt die Hälfte seiner Kosten als Beute."
+  - term: Ansehen
+    meaning: "Wie vertrauenswürdig eine Nation ist, von 0 bis 100. Ein Vertragsbruch kostet öffentlich 20 Punkte."
+  - term: Barbaren
+    meaning: "Armeen ohne Nation, die zufällig auftauchen und angreifen, was in der Nähe ist."
+  - term: Gold-Countdown
+    meaning: "Die öffentliche Zählung der Runden, in denen eine Nation 500 Gold hält. Fünf in Folge gewinnen das Spiel."

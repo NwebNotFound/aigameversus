@@ -1,0 +1,1020 @@
+{
+  "stages": {
+    "P1": {
+      "matches": 8,
+      "cost_micro_eur": 334566,
+      "models": {
+        "glm-flash": {
+          "turns": 69,
+          "rejected_answers": 6,
+          "word_limit_rejections": 6,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.08695652173913043
+        },
+        "deepseek-flash": {
+          "turns": 67,
+          "rejected_answers": 23,
+          "word_limit_rejections": 1,
+          "cutoffs": 21,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "other_rejections": 1,
+          "fallbacks": 2,
+          "fallback_rejected": 2,
+          "failed_agents": 0,
+          "fallback_share": 0.029850746268656716,
+          "word_limit_rejections_per_decision": 0.014925373134328358
+        },
+        "gpt-luna": {
+          "turns": 151,
+          "distinct_matches": 8,
+          "seat_appearances": 16,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.006622516556291391
+        },
+        "mistral-small": {
+          "turns": 62,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "rejected_answers": 1,
+          "cutoffs": 1,
+          "fallbacks": 0,
+          "word_limit_rejections": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "llama-scout": {
+          "turns": 35,
+          "rejected_answers": 27,
+          "word_limit_rejections": 27,
+          "fallbacks": 6,
+          "fallback_rejected": 6,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.17142857142857143,
+          "word_limit_rejections_per_decision": 0.7714285714285715
+        },
+        "claude-haiku": {
+          "turns": 140,
+          "distinct_matches": 8,
+          "seat_appearances": 16,
+          "rejected_answers": 2,
+          "word_limit_rejections": 2,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.014285714285714285
+        }
+      },
+      "team_wins": {
+        "wolves": 5,
+        "village": 3
+      },
+      "role_results": {
+        "glm-flash/hunter": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/villager": {
+          "appearances": 3,
+          "wins": 2
+        },
+        "gpt-luna/werewolf": {
+          "appearances": 4,
+          "wins": 2
+        },
+        "mistral-small/villager": {
+          "appearances": 3,
+          "wins": 0
+        },
+        "llama-scout/villager": {
+          "appearances": 3,
+          "wins": 1
+        },
+        "claude-haiku/werewolf": {
+          "appearances": 4,
+          "wins": 3
+        },
+        "gpt-luna/witch": {
+          "appearances": 2,
+          "wins": 0
+        },
+        "claude-haiku/seer": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "claude-haiku/hunter": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "glm-flash/villager": {
+          "appearances": 3,
+          "wins": 1
+        },
+        "deepseek-flash/werewolf": {
+          "appearances": 2,
+          "wins": 2
+        },
+        "gpt-luna/villager": {
+          "appearances": 6,
+          "wins": 3
+        },
+        "llama-scout/werewolf": {
+          "appearances": 2,
+          "wins": 2
+        },
+        "claude-haiku/witch": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "gpt-luna/seer": {
+          "appearances": 2,
+          "wins": 0
+        },
+        "gpt-luna/hunter": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "claude-haiku/villager": {
+          "appearances": 6,
+          "wins": 2
+        },
+        "glm-flash/witch": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/seer": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/hunter": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "mistral-small/werewolf": {
+          "appearances": 2,
+          "wins": 0
+        },
+        "glm-flash/seer": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "mistral-small/witch": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "llama-scout/seer": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "mistral-small/hunter": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "glm-flash/werewolf": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "deepseek-flash/witch": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "llama-scout/witch": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "llama-scout/hunter": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "mistral-small/seer": {
+          "appearances": 1,
+          "wins": 0
+        }
+      },
+      "votes": {
+        "model_village_votes": 77,
+        "model_votes_on_wolf": 24,
+        "bot_village_votes": 3,
+        "bot_votes_on_wolf": 0,
+        "model_village_abstentions": 4,
+        "bot_village_abstentions": 2
+      },
+      "without_llama_seat_records": {
+        "glm-flash": {
+          "turns": 69,
+          "rejected_answers": 6,
+          "word_limit_rejections": 6,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.08695652173913043
+        },
+        "deepseek-flash": {
+          "turns": 67,
+          "rejected_answers": 23,
+          "word_limit_rejections": 1,
+          "cutoffs": 21,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "other_rejections": 1,
+          "fallbacks": 2,
+          "fallback_rejected": 2,
+          "failed_agents": 0,
+          "fallback_share": 0.029850746268656716,
+          "word_limit_rejections_per_decision": 0.014925373134328358
+        },
+        "gpt-luna": {
+          "turns": 151,
+          "distinct_matches": 8,
+          "seat_appearances": 16,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.006622516556291391
+        },
+        "mistral-small": {
+          "turns": 62,
+          "distinct_matches": 8,
+          "seat_appearances": 8,
+          "rejected_answers": 1,
+          "cutoffs": 1,
+          "fallbacks": 0,
+          "word_limit_rejections": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "claude-haiku": {
+          "turns": 140,
+          "distinct_matches": 8,
+          "seat_appearances": 16,
+          "rejected_answers": 2,
+          "word_limit_rejections": 2,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.014285714285714285
+        }
+      },
+      "whole_match_llama_exclusion_remaining": 0
+    },
+    "P2": {
+      "matches": 1,
+      "cost_micro_eur": 67841,
+      "models": {
+        "gpt-luna": {
+          "turns": 20,
+          "distinct_matches": 1,
+          "seat_appearances": 2,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "qwen-flash": {
+          "turns": 15,
+          "fallbacks": 4,
+          "fallback_timeout": 4,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.26666666666666666,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "glm-flash": {
+          "turns": 10,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.1
+        },
+        "deepseek-flash": {
+          "turns": 10,
+          "rejected_answers": 3,
+          "cutoffs": 2,
+          "word_limit_rejections": 1,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.1
+        },
+        "gemini-flash-lite": {
+          "turns": 7,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.14285714285714285
+        },
+        "mistral-small": {
+          "turns": 6,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "claude-haiku": {
+          "turns": 6,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        }
+      },
+      "team_wins": {
+        "village": 1
+      },
+      "role_results": {
+        "gpt-luna/villager": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "qwen-flash/werewolf": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "glm-flash/hunter": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "deepseek-flash/villager": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "gemini-flash-lite/villager": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "mistral-small/werewolf": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "gpt-luna/witch": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "claude-haiku/seer": {
+          "appearances": 1,
+          "wins": 1
+        }
+      },
+      "votes": {
+        "model_village_votes": 14,
+        "model_votes_on_wolf": 10
+      },
+      "without_llama_seat_records": {
+        "gpt-luna": {
+          "turns": 20,
+          "distinct_matches": 1,
+          "seat_appearances": 2,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "qwen-flash": {
+          "turns": 15,
+          "fallbacks": 4,
+          "fallback_timeout": 4,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.26666666666666666,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "glm-flash": {
+          "turns": 10,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.1
+        },
+        "deepseek-flash": {
+          "turns": 10,
+          "rejected_answers": 3,
+          "cutoffs": 2,
+          "word_limit_rejections": 1,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.1
+        },
+        "gemini-flash-lite": {
+          "turns": 7,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.14285714285714285
+        },
+        "mistral-small": {
+          "turns": 6,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "claude-haiku": {
+          "turns": 6,
+          "distinct_matches": 1,
+          "seat_appearances": 1,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        }
+      },
+      "whole_match_llama_exclusion_remaining": 1
+    },
+    "P3": {
+      "matches": 6,
+      "cost_micro_eur": 309660,
+      "models": {
+        "glm-flash": {
+          "turns": 47,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.02127659574468085
+        },
+        "deepseek-flash": {
+          "turns": 62,
+          "rejected_answers": 23,
+          "cutoffs": 18,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "other_rejections": 5,
+          "fallbacks": 1,
+          "fallback_rejected": 1,
+          "word_limit_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.016129032258064516,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "gpt-luna": {
+          "turns": 101,
+          "distinct_matches": 6,
+          "seat_appearances": 12,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "mistral-small": {
+          "turns": 37,
+          "rejected_answers": 2,
+          "other_rejections": 1,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "cutoffs": 1,
+          "fallbacks": 0,
+          "word_limit_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "llama-scout": {
+          "turns": 53,
+          "rejected_answers": 53,
+          "word_limit_rejections": 53,
+          "fallbacks": 11,
+          "fallback_rejected": 11,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.20754716981132076,
+          "word_limit_rejections_per_decision": 1.0
+        },
+        "claude-haiku": {
+          "turns": 106,
+          "distinct_matches": 6,
+          "seat_appearances": 12,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.009433962264150943
+        }
+      },
+      "team_wins": {
+        "wolves": 4,
+        "village": 2
+      },
+      "role_results": {
+        "glm-flash/hunter": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/villager": {
+          "appearances": 2,
+          "wins": 0
+        },
+        "gpt-luna/werewolf": {
+          "appearances": 3,
+          "wins": 3
+        },
+        "mistral-small/villager": {
+          "appearances": 3,
+          "wins": 1
+        },
+        "llama-scout/villager": {
+          "appearances": 3,
+          "wins": 1
+        },
+        "claude-haiku/werewolf": {
+          "appearances": 4,
+          "wins": 3
+        },
+        "gpt-luna/witch": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "claude-haiku/seer": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "claude-haiku/hunter": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "glm-flash/villager": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "deepseek-flash/werewolf": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "gpt-luna/villager": {
+          "appearances": 5,
+          "wins": 2
+        },
+        "llama-scout/werewolf": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "claude-haiku/witch": {
+          "appearances": 2,
+          "wins": 1
+        },
+        "gpt-luna/seer": {
+          "appearances": 2,
+          "wins": 2
+        },
+        "gpt-luna/hunter": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "claude-haiku/villager": {
+          "appearances": 3,
+          "wins": 1
+        },
+        "glm-flash/witch": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/seer": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/hunter": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "mistral-small/werewolf": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "glm-flash/seer": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "mistral-small/witch": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "llama-scout/seer": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "mistral-small/hunter": {
+          "appearances": 1,
+          "wins": 1
+        },
+        "glm-flash/werewolf": {
+          "appearances": 1,
+          "wins": 0
+        },
+        "deepseek-flash/witch": {
+          "appearances": 1,
+          "wins": 1
+        }
+      },
+      "votes": {
+        "model_village_abstentions": 3,
+        "model_village_votes": 62,
+        "model_votes_on_wolf": 22,
+        "bot_village_votes": 5,
+        "bot_votes_on_wolf": 2,
+        "bot_village_abstentions": 1
+      },
+      "without_llama_seat_records": {
+        "glm-flash": {
+          "turns": 47,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.02127659574468085
+        },
+        "deepseek-flash": {
+          "turns": 62,
+          "rejected_answers": 23,
+          "cutoffs": 18,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "other_rejections": 5,
+          "fallbacks": 1,
+          "fallback_rejected": 1,
+          "word_limit_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.016129032258064516,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "gpt-luna": {
+          "turns": 101,
+          "distinct_matches": 6,
+          "seat_appearances": 12,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "mistral-small": {
+          "turns": 37,
+          "rejected_answers": 2,
+          "other_rejections": 1,
+          "distinct_matches": 6,
+          "seat_appearances": 6,
+          "cutoffs": 1,
+          "fallbacks": 0,
+          "word_limit_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.0
+        },
+        "claude-haiku": {
+          "turns": 106,
+          "distinct_matches": 6,
+          "seat_appearances": 12,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.009433962264150943
+        }
+      },
+      "whole_match_llama_exclusion_remaining": 0
+    }
+  },
+  "limitations": [
+    "One scenario seed per stage; descriptive cells, not independent seed replications.",
+    "P1/P3 builds and cost caps differ; no isolated causal prompt effect claimed.",
+    "P3 lacks two budget-stopped cells; single-match P2 supports no general inference."
+  ],
+  "paired_reliability": {
+    "pairs": [
+      {
+        "seed": 2101001,
+        "seating": 7,
+        "p1_match": "b16eb7ad-30be-4803-9547-6d78cbd25dd6",
+        "p3_match": "ef268e46-fc51-4758-92db-320e1f52c906",
+        "P1_llama": {
+          "turns": 4,
+          "rejected_answers": 3,
+          "word_limit_rejections": 3,
+          "fallbacks": 1,
+          "fallback_rejected": 1,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.25,
+          "word_limit_rejections_per_decision": 0.75
+        },
+        "P3_llama": {
+          "turns": 10,
+          "rejected_answers": 11,
+          "word_limit_rejections": 11,
+          "fallbacks": 2,
+          "fallback_rejected": 2,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.2,
+          "word_limit_rejections_per_decision": 1.1
+        }
+      },
+      {
+        "seed": 2101001,
+        "seating": 8,
+        "p1_match": "315d5562-4902-4b00-b9d8-cf6ed33ea520",
+        "p3_match": "70fa1451-42d2-4dd2-bd91-b5cea13369de",
+        "P1_llama": {
+          "turns": 6,
+          "rejected_answers": 4,
+          "word_limit_rejections": 4,
+          "fallbacks": 1,
+          "fallback_rejected": 1,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.16666666666666666,
+          "word_limit_rejections_per_decision": 0.6666666666666666
+        },
+        "P3_llama": {
+          "turns": 6,
+          "rejected_answers": 3,
+          "word_limit_rejections": 3,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.5
+        }
+      },
+      {
+        "seed": 2101001,
+        "seating": 5,
+        "p1_match": "93ab19c5-11e4-4576-8da5-1d01475184de",
+        "p3_match": "54092a28-61c0-48c2-9210-4b4fa8af3496",
+        "P1_llama": {
+          "turns": 5,
+          "rejected_answers": 1,
+          "word_limit_rejections": 1,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.2
+        },
+        "P3_llama": {
+          "turns": 10,
+          "rejected_answers": 4,
+          "word_limit_rejections": 4,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.4
+        }
+      },
+      {
+        "seed": 2101001,
+        "seating": 6,
+        "p1_match": "8fb29891-fe29-4a58-9b78-592dc7aa82a2",
+        "p3_match": "0cb46484-2be3-4750-b200-162067aea9a8",
+        "P1_llama": {
+          "turns": 0,
+          "fallbacks": 0,
+          "rejected_answers": 0,
+          "word_limit_rejections": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": null,
+          "word_limit_rejections_per_decision": null
+        },
+        "P3_llama": {
+          "turns": 10,
+          "rejected_answers": 13,
+          "word_limit_rejections": 13,
+          "fallbacks": 3,
+          "fallback_rejected": 3,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.3,
+          "word_limit_rejections_per_decision": 1.3
+        }
+      },
+      {
+        "seed": 2101001,
+        "seating": 2,
+        "p1_match": "738ac5b4-78c6-4d86-b218-6dfede311bfc",
+        "p3_match": "a5e02c74-d3e5-471d-b93f-7a7fe57762a5",
+        "P1_llama": {
+          "turns": 5,
+          "rejected_answers": 8,
+          "word_limit_rejections": 8,
+          "fallbacks": 2,
+          "fallback_rejected": 2,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.4,
+          "word_limit_rejections_per_decision": 1.6
+        },
+        "P3_llama": {
+          "turns": 9,
+          "rejected_answers": 18,
+          "word_limit_rejections": 18,
+          "fallbacks": 6,
+          "fallback_rejected": 6,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.6666666666666666,
+          "word_limit_rejections_per_decision": 2.0
+        }
+      },
+      {
+        "seed": 2101001,
+        "seating": 4,
+        "p1_match": "cdb071af-b518-40c8-83d2-c3deaad54cfd",
+        "p3_match": "719146dd-44e3-4646-a7e1-f651f494ade1",
+        "P1_llama": {
+          "turns": 4,
+          "rejected_answers": 3,
+          "word_limit_rejections": 3,
+          "fallbacks": 1,
+          "fallback_rejected": 1,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.25,
+          "word_limit_rejections_per_decision": 0.75
+        },
+        "P3_llama": {
+          "turns": 8,
+          "rejected_answers": 4,
+          "word_limit_rejections": 4,
+          "fallbacks": 0,
+          "cutoffs": 0,
+          "other_rejections": 0,
+          "failed_agents": 0,
+          "fallback_share": 0.0,
+          "word_limit_rejections_per_decision": 0.5
+        }
+      }
+    ],
+    "missing_baseline_cells": 2,
+    "pooled_paired_llama": {
+      "P1": {
+        "turns": 24,
+        "rejected_answers": 19,
+        "word_limit_rejections": 19,
+        "fallbacks": 5,
+        "fallback_rejected": 5,
+        "cutoffs": 0,
+        "other_rejections": 0,
+        "failed_agents": 0,
+        "fallback_share": 0.20833333333333334,
+        "word_limit_rejections_per_decision": 0.7916666666666666
+      },
+      "P3": {
+        "turns": 53,
+        "rejected_answers": 53,
+        "word_limit_rejections": 53,
+        "fallbacks": 11,
+        "fallback_rejected": 11,
+        "cutoffs": 0,
+        "other_rejections": 0,
+        "failed_agents": 0,
+        "fallback_share": 0.20754716981132076,
+        "word_limit_rejections_per_decision": 1.0
+      }
+    }
+  },
+  "paired_team_results": {
+    "wolves_to_wolves": 2,
+    "wolves_to_village": 2,
+    "village_to_wolves": 2
+  }
+}

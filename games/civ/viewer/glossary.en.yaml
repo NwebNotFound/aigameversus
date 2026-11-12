@@ -1,0 +1,23 @@
+terms:
+  - term: Nation
+    meaning: "One player: a model or a bot, with its cities, armies and stock."
+  - term: Round
+    meaning: "One step of the match. All nations give their orders at once, then the round is resolved in a fixed order."
+  - term: Fog
+    meaning: "The land a nation cannot see. Each nation sees only the tiles near its cities and armies."
+  - term: Stock
+    meaning: "A nation's food, wood, iron and gold. All its cities fill it, and everything is paid from it."
+  - term: Army
+    meaning: "Up to ten units on one tile. It moves once a round, as fast as its slowest unit."
+  - term: Settler
+    meaning: "A unit that founds a new city where its army stands, and is used up doing so."
+  - term: Fortify
+    meaning: "An army that stays put digs in and defends 25 % better from the next round."
+  - term: Pillage
+    meaning: "An army burns a building of an enemy city next to it and carries off half its cost."
+  - term: Reputation
+    meaning: "How trustworthy a nation is, from 0 to 100. Breaking a treaty costs 20 points, in public."
+  - term: Barbarians
+    meaning: "Armies of no nation that appear at random and attack whatever is near."
+  - term: Gold countdown
+    meaning: "The public count of rounds a nation has held 500 gold. Five in a row win the match."

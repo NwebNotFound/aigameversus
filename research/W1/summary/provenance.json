@@ -1,0 +1,157 @@
+{
+  "raw_exports": [
+    {
+      "source": "W1-P1/001.json",
+      "match_id": "b16eb7ad-30be-4803-9547-6d78cbd25dd6",
+      "sha256": "6c3607192d7e6a4aed2a0ef0525b1ccb79ab2ba67804b40db5822292ece704a2",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:13:20.026942Z",
+      "finished_at": "2026-11-12T01:17:17.394132Z"
+    },
+    {
+      "source": "W1-P1/002.json",
+      "match_id": "315d5562-4902-4b00-b9d8-cf6ed33ea520",
+      "sha256": "cfe7e4ec126c1d2b78138910757cab18e47b3769b5308f393b0ee462f02023d9",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:17:20.572716Z",
+      "finished_at": "2026-11-12T01:19:10.001198Z"
+    },
+    {
+      "source": "W1-P1/003.json",
+      "match_id": "93ab19c5-11e4-4576-8da5-1d01475184de",
+      "sha256": "6a94148b289a0c1476ba938f44ee5db0fa3758c3294bb586f1bd77110f87300e",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:19:10.902334Z",
+      "finished_at": "2026-11-12T01:22:46.958805Z"
+    },
+    {
+      "source": "W1-P1/004.json",
+      "match_id": "8fb29891-fe29-4a58-9b78-592dc7aa82a2",
+      "sha256": "58904a77b7925714347891f0c645a04899bf7135d038ad8b57a9cbc2410aea82",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:22:51.421104Z",
+      "finished_at": "2026-11-12T01:26:58.556896Z"
+    },
+    {
+      "source": "W1-P1/005.json",
+      "match_id": "738ac5b4-78c6-4d86-b218-6dfede311bfc",
+      "sha256": "1bfb1757315a90feb583bfca148a29077ac1c742c132746c5f37a7ca8e1029b9",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:27:01.843730Z",
+      "finished_at": "2026-11-12T01:31:55.322012Z"
+    },
+    {
+      "source": "W1-P1/006.json",
+      "match_id": "cdb071af-b518-40c8-83d2-c3deaad54cfd",
+      "sha256": "9d38ba0d397f16cbf85761cfc718b49304cfee4e94d07a73b7a59cd3b81bcabe",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:31:57.442891Z",
+      "finished_at": "2026-11-12T01:35:39.235434Z"
+    },
+    {
+      "source": "W1-P1/007.json",
+      "match_id": "22531ce6-4691-4950-a962-311ea100464f",
+      "sha256": "ce2c8d1c9d028219c60aa5f69934f843872279229daa535f1023220a35551540",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:35:42.866558Z",
+      "finished_at": "2026-11-12T01:42:40.061220Z"
+    },
+    {
+      "source": "W1-P1/008.json",
+      "match_id": "3ec312a8-5ea9-4d92-ba54-72d8a7c6f94f",
+      "sha256": "17a5f0bc49f1592bc581b6dd11c5d47dde753f614c68b6bc08a9ee740b0b51b6",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T01:42:43.742652Z",
+      "finished_at": "2026-11-12T01:45:51.081931Z"
+    },
+    {
+      "source": "W1-P2/017.json",
+      "match_id": "f5fe84d6-f582-4e14-b9e3-778fbb39cb19",
+      "sha256": "4896c8f7330fa5137193064bb898651ebc1833171d9a3026713897acb14d48e6",
+      "seed": 2102001,
+      "prompt_version": "werewolf-p2",
+      "started_at": "2026-11-12T02:21:41.373831Z",
+      "finished_at": "2026-11-12T02:34:04.296767Z"
+    },
+    {
+      "source": "W1-P3/009.json",
+      "match_id": "ef268e46-fc51-4758-92db-320e1f52c906",
+      "sha256": "a28663485b622362b880584a815335e37c5bc8b6d3fec4dd55b7f2fc11c0d87f",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p3",
+      "started_at": "2026-11-12T02:49:38.167990Z",
+      "finished_at": "2026-11-12T02:54:01.872372Z"
+    },
+    {
+      "source": "W1-P3/010.json",
+      "match_id": "70fa1451-42d2-4dd2-bd91-b5cea13369de",
+      "sha256": "7d8a2da47e39ede7ff9212f4d6865d62de45811d96d469ea6ab8ded6ce9286e7",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p3",
+      "started_at": "2026-11-12T02:54:04.853418Z",
+      "finished_at": "2026-11-12T02:59:48.233256Z"
+    },
+    {
+      "source": "W1-P3/011.json",
+      "match_id": "54092a28-61c0-48c2-9210-4b4fa8af3496",
+      "sha256": "92e8796cb03ebf9b62788e59786e82f1f1226619cf4a2ece8a032a72d36843cc",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p3",
+      "started_at": "2026-11-12T02:59:51.982241Z",
+      "finished_at": "2026-11-12T03:03:33.597305Z"
+    },
+    {
+      "source": "W1-P3/012.json",
+      "match_id": "0cb46484-2be3-4750-b200-162067aea9a8",
+      "sha256": "ce91b21e47ec57962e737de4bbcd689ce5d9ca278e7088091919336159266fc3",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p3",
+      "started_at": "2026-11-12T03:03:38.228859Z",
+      "finished_at": "2026-11-12T03:08:28.968947Z"
+    },
+    {
+      "source": "W1-P3/013.json",
+      "match_id": "a5e02c74-d3e5-471d-b93f-7a7fe57762a5",
+      "sha256": "f9a31d57010e96b5773f66dd5f7d6d36f15d15232cea46c9bfb3e6f0e00ea9f3",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p3",
+      "started_at": "2026-11-12T03:08:30.025457Z",
+      "finished_at": "2026-11-12T03:13:04.652555Z"
+    },
+    {
+      "source": "W1-P3/014.json",
+      "match_id": "719146dd-44e3-4646-a7e1-f651f494ade1",
+      "sha256": "2f64ae2d6c1c579c36e52391fc3c383ba2fadac345486fd4fd2c85ccb09b66e2",
+      "seed": 2101001,
+      "prompt_version": "werewolf-p3",
+      "started_at": "2026-11-12T03:13:06.803654Z",
+      "finished_at": "2026-11-12T03:16:46.114583Z"
+    }
+  ],
+  "analysis_sha256": "4597e55c8a8bfb498f5d09a3e7251aff352e9fb0ab12bb4ff596a62298f7e18e",
+  "initial_outcome_code_commit": "6c9c9a3",
+  "stage_configs": {
+    "P1": {
+      "source_commit": "db77cbe",
+      "match_cap_eur": 0.5
+    },
+    "P2": {
+      "source_commit": "da0721f",
+      "match_cap_eur": 0.5,
+      "limitation": "Documentary mapping, captured old image no longer inspectable"
+    },
+    "P3": {
+      "source_commit": "46c5d6c",
+      "match_cap_eur": 0.2,
+      "local_override": true
+    }
+  }
+}

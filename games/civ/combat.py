@@ -63,6 +63,11 @@ def _defenders(
     )
 
 
+def holder(state: CivState, tile: Hex, nation: str) -> str | None:
+    """Who other than `nation` holds the tile with an army or a city, or None."""
+    return _defenders(state, tile, nation)[0]
+
+
 def sight(state: CivState, data: CivData, nation: str) -> set[Hex]:
     """The tiles the nation sees this round, around its cities and armies."""
     viewpoints = city_viewpoints(state, data, nation) + army_viewpoints(state, data, nation)
@@ -80,7 +85,7 @@ def attack_problem(
     army = state.army(army_id)
     if army.moved_in_round == state.round:
         return f"{army_id} already moved this round. An army moves or attacks once per round."
-    if not _strength(data, army.units):
+    if not strength(data, army.units):
         return f"{army_id} has no fighting units."
     col, row = target
     if player != NEUTRAL and tuple(target) not in sight(state, data, player):
@@ -341,7 +346,7 @@ def _power(
     return total
 
 
-def _strength(data: CivData, units: Sequence[Troop]) -> int:
+def strength(data: CivData, units: Sequence[Troop]) -> int:
     return sum(data.units[t.kind].strength + t.bonus for t in units)
 
 
@@ -400,6 +405,14 @@ def _attack_done(state: CivState, data: dict[str, Any]) -> None:
     state.attacks = [a for a in state.attacks if a["army"] != army_id]
 
 
+def _battle_fought(state: CivState, data: dict[str, Any]) -> None:
+    _attack_done(state, data)
+    nations = [data["attacker"]["nation"], data["defender"]["nation"]]
+    state.battles.append(
+        {"round": data["round"], "tile": data["tile"], "winner": data["winner"], "nations": nations}
+    )
+
+
 def _army_fortified(state: CivState, data: dict[str, Any]) -> None:
     state.army(data["army"]).fortified_from = data["from_round"]
 
@@ -435,7 +448,7 @@ def _war_weariness(state: CivState, data: dict[str, Any]) -> None:
 APPLIERS: dict[str, Callable[[CivState, dict[str, Any]], None]] = {
     "attack_ordered": _attack_ordered,
     "attack_called_off": _attack_done,
-    "battle": _attack_done,
+    "battle": _battle_fought,
     "army_fortified": _army_fortified,
     "city_conquered": _city_conquered,
     "city_pillaged": _city_pillaged,
