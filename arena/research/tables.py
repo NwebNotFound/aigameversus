@@ -75,7 +75,7 @@ def load_job(path):
         "execution_plan_approved",
         "execution_approval_evidence",
     }
-    if set(job) != allowed or job["stage"] not in {"C1", "W2"}:
+    if set(job) - {"reviewed_c1_outcome"} != allowed or job["stage"] not in {"C1", "W2"}:
         raise RunStopped("Unknown or missing job fields")
     expected = (
         (1_000_000, 200_000, 200_000) if job["stage"] == "C1" else (3_500_000, 400_000, 400_000)
@@ -330,6 +330,29 @@ class Tables:
             raise RunStopped("; ".join(reasons))
         return report
 
+    def reviewed_c1_outcome(self):
+        """W2 may follow an explicitly reviewed failed C1 diagnostic, never C1 itself."""
+        review = self.job.get("reviewed_c1_outcome")
+        if review is None:
+            return self.smoke_release()
+        if (
+            not isinstance(review, dict)
+            or set(review) != {"match_id", "evidence"}
+            or not review["match_id"]
+            or not isinstance(review["evidence"], str)
+            or not review["evidence"].strip()
+        ):
+            raise RunStopped("Missing C1 outcome review evidence")
+        matches = self.get("/matches?batch=C1")
+        found = [m for m in matches if m["id"] == review["match_id"]]
+        if (
+            len(found) != 1
+            or found[0].get("game") != "civ"
+            or found[0].get("seed") != 2104001
+            or found[0].get("status") not in {"finished", "aborted", "failed", "interrupted"}
+        ):
+            raise RunStopped("Reviewed C1 outcome is absent or not terminal")
+
     def smoke_release(self):
         path = self.root / "C1" / "smoke-release.json"
         report_path = self.root / "C1" / "001.json"
@@ -400,7 +423,9 @@ class Tables:
                 order = next(i for i in range(1, len(self.rows) + 1) if i not in history)
                 if any(i not in history for i in range(1, order)):
                     raise RunStopped("Gap in schedule")
-                if self.job["requires_c1_smoke"] or (self.job["smoke"] and order > 1):
+                if self.job["requires_c1_smoke"]:
+                    self.reviewed_c1_outcome()
+                if self.job["smoke"] and order > 1:
                     self.smoke_release()
                 if (self.root / "DRAIN").exists():
                     return "drained"

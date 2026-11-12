@@ -9,6 +9,10 @@
   "reservation_micro_eur": 400000,
   "smoke": false,
   "requires_c1_smoke": true,
+  "reviewed_c1_outcome": {
+    "match_id": "f12a97d0-458a-4025-8c98-ced72baa6acc",
+    "evidence": "Lead fcce19c0-4a3e-439e-8e48-ca0c4aa4f756: reviewed C1 outcome, not clean smoke; separate W2 go e460648f"
+  },
   "guest_price_ceilings": {
     "openai/gpt-6.1-terra": {
       "input_usd_per_mtok": 1,
@@ -28,6 +32,6 @@
     }
   },
   "expected_history_limit_events": 40,
-  "execution_plan_approved": false,
-  "execution_approval_evidence": null
+  "execution_plan_approved": true,
+  "execution_approval_evidence": "Lead e460648f-4457-409f-abcc-91d58f14887c, applied to tables.py by af6fef31-1a0c-48ad-bd78-6f3021d74b38; requires Reviewer live-state confirmation"
 }

@@ -123,6 +123,7 @@ def approved_job(tmp_path, stage="C1"):
     folder = tmp_path / "fake-approved-jobs"
     folder.mkdir(parents=True, exist_ok=True)
     job = read_json(JOBS / f"{stage}.json")
+    job.pop("reviewed_c1_outcome", None)
     job.update(execution_plan_approved=True, execution_approval_evidence="fake-test approval only")
     shutil.copy(JOBS / job["csv"], folder / job["csv"])
     path = folder / f"{stage}.json"
@@ -366,7 +367,11 @@ def test_never_ending_match_has_a_persisted_bounded_wait(tmp_path):
 def test_published_jobs_are_dry_only_until_fresh_execution_approval(tmp_path):
     for stage in ("C1", "W2"):
         api = FakeArena()
-        runner = Tables(JOBS / f"{stage}.json", tmp_path / stage, api)
+        job_path = approved_job(tmp_path / stage, stage)
+        job = read_json(job_path)
+        job.update(execution_plan_approved=False, execution_approval_evidence=None)
+        save(job_path, job)
+        runner = Tables(job_path, tmp_path / stage, api)
         assert runner.run() == "dry-run"
         with pytest.raises(RunStopped, match="post-review execution approval"):
             runner.run(**EVIDENCE)
@@ -389,3 +394,41 @@ def test_server_history_cannot_introduce_unlisted_or_repeated_tables(tmp_path, c
     with pytest.raises(RunStopped):
         client(tmp_path, api).run(**EVIDENCE)
     assert len(api.bodies) == 1
+
+
+@pytest.mark.parametrize("status", ["aborted", "finished", "failed", "interrupted"])
+def test_w2_accepts_explicit_review_of_terminal_c1_outcome(tmp_path, status):
+    api = FakeArena()
+    api.records.append(
+        {"id": "reviewed", "game": "civ", "seed": 2104001, "status": status, "batch": {"id": "C1"}}
+    )
+    runner = client(tmp_path, api, "W2")
+    runner.job["reviewed_c1_outcome"] = {
+        "match_id": "reviewed",
+        "evidence": "Lead reviewed outcome",
+    }
+    assert runner.run(**EVIDENCE) == "finished"
+    assert len(api.bodies) == 8
+
+
+@pytest.mark.parametrize("case", ["missing", "running", "no_evidence"])
+def test_reviewed_c1_outcome_requires_terminal_match_and_evidence(tmp_path, case):
+    api = FakeArena()
+    if case != "missing":
+        api.records.append(
+            {
+                "id": "reviewed",
+                "game": "civ",
+                "seed": 2104001,
+                "status": "running" if case == "running" else "aborted",
+                "batch": {"id": "C1"},
+            }
+        )
+    runner = client(tmp_path, api, "W2")
+    runner.job["reviewed_c1_outcome"] = {
+        "match_id": "reviewed",
+        "evidence": "" if case == "no_evidence" else "Lead review",
+    }
+    with pytest.raises(RunStopped, match="C1 outcome"):
+        runner.run(**EVIDENCE)
+    assert not api.bodies
