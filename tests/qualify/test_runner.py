@@ -98,6 +98,7 @@ def test_a_missing_thought_fails_where_required_and_warns_elsewhere():
 
     assert (required.outcome, required.reason) == ("failed", "missing required thought")
     assert (optional.outcome, optional.warning) == ("clean", "no thought")
+    assert (required.thought_profile, optional.thought_profile) == ("required", "optional")
 
 
 def test_an_answer_that_needs_repair_fails_with_off_and_passes_labelled_with_v1():
@@ -157,13 +158,23 @@ def test_a_move_the_schema_allows_but_the_rules_do_not_fails_with_the_games_reas
     [
         ("RateLimitError", "unknown", "rate limited"),
         ("ServiceUnavailableError", "unknown", "provider unavailable (ServiceUnavailableError)"),
-        ("BadRequestError", "failed", "the provider refused the request (BadRequestError)"),
+        (  # a generic 400 is no evidence of missing tool support (Researcher, #156)
+            "BadRequestError",
+            "unknown",
+            "the provider refused the request (BadRequestError): no evidence of unsupported "
+            "tools or parameters",
+        ),
+        (
+            "UnsupportedParamsError",
+            "failed",
+            "the provider refused the request (UnsupportedParamsError)",
+        ),
     ],
 )
 def test_provider_failures_are_unknown_unless_the_provider_refused_the_request(
     error, outcome, reason
 ):
-    retryable = error != "BadRequestError"
+    retryable = error not in ("BadRequestError", "UnsupportedParamsError")
     result = case("poker", "B", MockLLM(ModelError(error, retryable=retryable)))
 
     assert (result.outcome, result.reason) == (outcome, reason)
@@ -295,3 +306,20 @@ def test_the_current_status_is_the_newest_fresh_result_of_the_same_configuration
     assert current([outage], "h", now).status == "unknown"
     old = current([_row("qualified", age_days=8)], "h", now)
     assert (old.status, old.reason) == ("unknown", "expired: last tested qualified")
+    # The newest attempt shows apart from the result the status comes from.
+    both = current([outage, passed], "h", now)
+    assert (both.last.id, both.latest.id) == (passed.id, outage.id)
+
+
+def test_a_later_unknown_never_refreshes_an_expired_pass():
+    from arena.api.qualify import current
+
+    now = datetime.now(UTC)
+    expired_pass = _row("qualified", age_days=8)
+    later_outage = _row("unknown", age_days=1, reasons=["A: rate limited"])
+
+    result = current([later_outage, expired_pass], "h", now)
+
+    assert (result.status, result.reason) == ("unknown", "expired: last tested qualified")
+    assert (result.last.id, result.latest.id) == (expired_pass.id, later_outage.id)
+    assert result.last.expires_at < now  # its own expiry, unchanged by the later attempt

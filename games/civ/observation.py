@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from games.civ import armies, economy, fog
+from games.civ import armies, economy, fog, victory
 from games.civ.data_loader import CivData
 from games.civ.state import Army, City, CivState
 from games.civ.world import Hex, distance
@@ -73,7 +73,7 @@ def observe(
     return {
         "you": player,
         "round": state.round,
-        "rounds_total": data.victory.round_limit.rounds,
+        "rounds_total": victory.round_limit(state, data),
         "victory": _victory(state, data, player, extras, scoreboard),
         "stock": dict(nation.stock),
         "income_per_round": dict(income),
@@ -166,7 +166,8 @@ def _victory(
         + gold // score_rules.gold_divisor
         + reputation // score_rules.reputation_divisor
     )
-    left = rules.round_limit.rounds - state.round
+    last = victory.round_limit(state, data)
+    left = last - state.round
     gaps = {
         "domination": max(0, need - held_cities) * 3,
         "economy": max(0, rules.economy.hold_rounds - held)
@@ -176,8 +177,7 @@ def _victory(
         "domination": f"{held_cities} of {need} cities needed ({total} exist)",
         "economy": f"{gold} of {rules.economy.gold} gold, held {held} of "
         f"{rules.economy.hold_rounds} rounds",
-        "score": f"{score} now; the highest score wins after round "
-        f"{rules.round_limit.rounds} ({left} rounds left)",
+        "score": f"{score} now; the highest score wins after round {last} ({left} rounds left)",
         "closest_win": min(gaps, key=lambda kind: gaps[kind]),
     }
 
