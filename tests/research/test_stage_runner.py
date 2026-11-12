@@ -107,6 +107,7 @@ def approved(tmp_path):
     plan["execution_plan_approved"] = True
     plan["execution_approval_evidence"] = "Lead message 23b25e1b (test)"
     plan["budget"]["cost_jump_factor"] = 2.0  # a paid run needs one
+    plan["budget"]["max_cost_per_match_eur"] = 0.4  # and this, the table's limit
     (folder / "PLAN.yaml").write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
     shutil.copy(PLAN.parent / plan["schedule"], folder / plan["schedule"])
     return folder / "PLAN.yaml"
@@ -781,6 +782,21 @@ def test_a_paid_run_needs_a_cost_jump_factor_of_at_least_one_a_dry_run_does_not(
     arena = arena_for(approved)
 
     with pytest.raises(PlanRefused, match="cost_jump_factor"):
+        client(approved, tmp_path / "out", arena).run()
+    assert arena.posts() == []
+    assert len(client(approved, tmp_path / "dry", arena, dry_run=True).run()) == 8
+
+
+@pytest.mark.parametrize("stop", [None, 0, 0.41])
+def test_a_paid_run_needs_a_cost_stop_within_the_tables_limit(approved, tmp_path, stop):
+    plan = yaml.safe_load(approved.read_text(encoding="utf-8"))
+    plan["budget"].pop("max_cost_per_match_eur")
+    if stop is not None:
+        plan["budget"]["max_cost_per_match_eur"] = stop
+    approved.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    arena = arena_for(approved)
+
+    with pytest.raises(PlanRefused, match="max_cost_per_match_eur"):
         client(approved, tmp_path / "out", arena).run()
     assert arena.posts() == []
     assert len(client(approved, tmp_path / "dry", arena, dry_run=True).run()) == 8
