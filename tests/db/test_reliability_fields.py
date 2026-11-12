@@ -12,24 +12,26 @@ RULES = ReliabilityRules()
 WHEN = datetime(2026, 11, 12, 9, 30, tzinfo=UTC)
 
 
-async def play(pool, model, moves, started=WHEN):
-    """A finished match in which `model` sat in p1 and made these decision events."""
+async def play(pool, model, moves, started=WHEN, seats_of_model=("p1",)):
+    """A finished match in which `model` sat in these seats, each making these decision events."""
     match_id = uuid4()
-    seats = {"p1": {"model_id": model, "kind": "model", "name": model}}
+    seats = {p: {"model_id": model, "kind": "model", "name": model} for p in seats_of_model}
     await pool.execute(
         "INSERT INTO matches (id, game, status, players, seed, settings, started_at, seats) "
-        "VALUES ($1, 'toy', 'finished', ARRAY['p1'], 1, '{}', $2, $3)",
+        "VALUES ($1, 'toy', 'finished', $2, 1, '{}', $3, $4)",
         match_id,
+        list(seats_of_model),
         started,
         seats,
     )
-    for seq, data in enumerate(moves):
+    moves_of_all = [(p, data) for p in seats_of_model for data in moves]
+    for seq, (player, data) in enumerate(moves_of_all):
         await pool.execute(
             "INSERT INTO match_events (match_id, seq, source, type, data, visible_to, recorded_at) "
             "VALUES ($1, $2, 'engine', 'decision', $3, '{}', $4)",
             match_id,
             seq,
-            {"player": "p1", "fallback": None, **data},
+            {"player": player, "fallback": None, **data},
             started,
         )
 
@@ -88,3 +90,15 @@ def test_last_seen_is_the_newest_match_of_the_model(database_url):
         await play(pool, "acme/x", [dict(answers=1)] * 3, started=later)
 
     assert run(database_url, plan)["acme/x"].last_seen == later
+
+
+def test_a_model_in_two_seats_counts_the_answers_of_both_and_the_match_once(database_url):
+    told = {"cutoffs": 0, "rate_limits": 0}
+
+    async def plan(pool):
+        await play(pool, "acme/x", [dict(answers=2, **told)] * 10, seats_of_model=("p1", "p2"))
+
+    found = run(database_url, plan)["acme/x"]
+
+    assert (found.matches, found.answers, found.rejected) == (1, 40, 20)
+    assert found.rejected_rate == 0.5 and found.last_seen == WHEN
