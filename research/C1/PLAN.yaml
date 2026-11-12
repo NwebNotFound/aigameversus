@@ -1,5 +1,5 @@
 id: C1
-schema: civ_design_only_v1
+schema: explicit_stage_v1
 version: 3
 status: approved_scope_waiting_history_hook_and_requote
 owner: Arena Researcher

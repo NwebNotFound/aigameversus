@@ -9,7 +9,7 @@ import yaml
 def test_c1_design_is_unapproved_and_keeps_factors_separate():
     root = Path(__file__).resolve().parents[2]
     plan = yaml.safe_load((root / "research/C1/PLAN.yaml").read_text())
-    assert plan["schema"] == "civ_design_only_v1"
+    assert plan["schema"] == "explicit_stage_v1"
     assert not plan["execution_approved"]
     assert plan["approved_budget_eur"] == 1.00
     assert plan["execution_plan_approved"] is False
