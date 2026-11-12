@@ -215,27 +215,26 @@ def test_the_shared_stage_budget_counts_every_attempt_and_both_reserves(approved
     assert again.posts() == []
 
 
-def test_the_full_ledger_cap_is_held_for_the_next_match_and_a_lost_start_counts_at_it(
+def test_the_tables_limit_is_held_for_the_next_match_and_a_lost_start_counts_at_it(
     approved, tmp_path
 ):
     runner = client(approved, tmp_path / "out", arena_for(approved))
     for order in range(1, 7):
         runner._write(
-            {"attempt_id": f"a{order}", "order": order, "state": "ended", "cost_micro_eur": 350_000}
+            {"attempt_id": f"a{order}", "order": order, "state": "ended", "cost_micro_eur": 400_000}
         )
     runner._write({"attempt_id": "x", "order": 99, "state": "started", "match_id": "lost"})
-    # 6 x 0.35 + the lost start at the ledger cap 0.50 = 2.60 EUR, then 3.10 with a held
-    # 0.50 for the next match: within 3.50. Add one ended match at 0.45: 3.05 + 0.50 = 3.55
-    # does not fit, though 3.05 + the 0.40 limit would, and 3 x a tiny quote fits 90 %.
-    runner._write({"attempt_id": "a7", "order": 7, "state": "ended", "cost_micro_eur": 450_000})
+    # 6 x 0.40 + the lost start at the table's limit 0.40 = 2.80 EUR; 3 x a tiny quote fits
+    # 90 % (2.803 <= 3.15). One more ended match at 0.32 makes 3.12: 3 x the quote still fits
+    # 90 % (3.123), but + the table's limit 0.40 = 3.52 > 3.50.
+    runner._write({"attempt_id": "a7", "order": 7, "state": "ended", "cost_micro_eur": 320_000})
     arena = arena_for(approved, estimate=1_000)
 
-    with pytest.raises(RunStopped, match="full ledger cap 0.50"):
+    with pytest.raises(RunStopped, match="the table's limit 0.40"):
         client(approved, tmp_path / "out", arena).gates(runner.matches[7])
     assert arena.posts() == []
-    # The 0.50 is what holds: with a ledger cap of 0.40 the same row would pass the gates.
-    looser = client(approved, tmp_path / "out", arena_for(approved, estimate=1_000, ledger_cap=0.4))
-    assert looser.gates(runner.matches[7])["reserve_micro_eur"] == 400_000
+    # The lost start is what tips it: counted at 0 the same row would pass.
+    assert client(approved, tmp_path / "out", arena).spent() == 3_120_000
 
 
 @pytest.mark.parametrize(
@@ -394,7 +393,7 @@ def test_a_c1_job_plays_one_match_then_holds_at_the_checkpoint_even_after_a_rest
     summary = json.loads((out / "run.json").read_text())
     assert summary["stage_spent_micro_eur"] == summary["booked_micro_eur"] == 400_000
     assert summary["cap_read_back_micro_eur"] == 200_000 and summary["match_budget_eur"] == 0.2
-    assert summary["reserve_micro_eur"] == 500_000  # the arena's full ledger cap
+    assert summary["reserve_micro_eur"] == 200_000  # the table's own limit
     assert summary["released_after"] == 1 and len(summary["attempts"]) == 4
 
 

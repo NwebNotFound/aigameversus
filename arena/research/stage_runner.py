@@ -19,8 +19,8 @@ Before every start, all of these must hold, or it holds and reports (exit 3):
 - a fresh free estimate (POST /matches/estimate) is strictly below the match cap, and the
   arena reads the cap back as `match_budget_eur`;
 - the stage's spend over every attempt so far, plus 3x that estimate, stays within
-  `stop_start_share` of `stage_eur`; plus the arena's full per-match ledger cap (GET
-  /setup, EUR 0.50, stricter than the 0.40 limit: Lead 5c29a3f0) stays within the stage;
+  `stop_start_share` of `stage_eur`; plus the table's own limit (`match_budget_eur`,
+  which the arena enforces since #144: Lead 42080496) stays within the stage;
 - no listed price of a guest has risen above the plan's (plans with `guests`);
 - no other match is running on the arena (one research match at a time, across stages);
 - the stage is not at its review checkpoint (`checkpoint_after`: after that many matches
@@ -115,8 +115,8 @@ class StageRunner:
         budget = self.plan["budget"]
         self.stage = _micro(budget["stage_eur"])
         self.cap = _micro(budget["match_cap_eur"])
-        # The hard reserve of a new match (Lead 5c29a3f0): the arena's full per-match ledger
-        # cap, not the lower match_budget_eur; read from GET /setup before every start.
+        # The reserve of a new match, and of a start whose cost is not known: the table's own
+        # enforced limit, settings.match_budget_eur (Lead 42080496, superseding 5c29a3f0).
         self.reserve = self.cap
         self.stop_share = Decimal(str(budget["stop_start_share"]))
         self.month_hold = _micro(budget["notify_and_hold_at_month_eur"])
@@ -230,8 +230,6 @@ class StageRunner:
 
     def gates(self, row: Mapping[str, str]) -> dict[str, Any]:
         """Every check before a start; RunStopped names the first that fails."""
-        setup = self._get("/setup")
-        self.reserve = max(self.cap, _micro(setup["caps"]["match_eur"]))
         month = self._get("/ledger/month")
         if month["spent_micro_eur"] >= self.month_hold:
             raise RunStopped(
@@ -269,7 +267,7 @@ class StageRunner:
             )
         if spent + self.reserve > self.stage:
             raise RunStopped(
-                f"spent {spent / MICRO:.6f} + the full ledger cap {self.reserve / MICRO:.2f} "
+                f"spent {spent / MICRO:.6f} + the table's limit {self.reserve / MICRO:.2f} "
                 f"EUR would pass the stage's {self.stage / MICRO:.2f} EUR"
             )
         if self.plan.get("guests") and row.get("guest"):

@@ -962,7 +962,7 @@ and estimates only.
   - the month hold, and no other match running (one research match at a time);
   - a fresh free estimate below the match limit, and the limit read back;
   - the stage's spend over every attempt plus 3× that estimate within 90 %;
-  - the same spend plus the arena's full ledger cap (EUR 0.50) within the stage;
+  - the same spend plus the table's own limit (`match_budget_eur`) within the stage;
   - no guest whose listed price has risen;
   - not at the review checkpoint (`checkpoint_after`). Going on after it needs
     `--release-checkpoint EVIDENCE`.
