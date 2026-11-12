@@ -449,3 +449,16 @@ Without `spoilers`: public events only (gaps in `seq` show what was left out), `
 only the public settings, and the spoiler-free analytics. With `spoilers`: the whole match, hidden
 cards, roles, thoughts and the seed, and the file name ends in `-full`. Share the full one only
 once the match is over.
+
+## Model export
+
+`GET /models/{id}/export` (`arena/api/model_export.py`) is a CSV, one row per seat the model
+played, oldest first, in every match that is not running (finished, failed, interrupted, aborted).
+Columns: `match_id, game, status, origin, started_at, finished_at, seat, personality, players,
+opponents` (other seats' model ids, `bot` for a random bot, joined with `;`), `rank, won` (empty
+without a result), `rated, unrated_reason` (codes as in "Played but not rated"),
+`rating_before, rating_after` (empty if unrated), `answers_accepted, answers_rejected,
+fallback_moves, repaired_answers` (counts from the engine log), `cost_micro_eur` (empty while the
+ledger is down: unknown, not 0), `prompt_version, memory, batch_id`. Public facts and counts only:
+no seed, no log, no hidden cards. A configured model without matches gives the header only;
+an unknown id is 404.
