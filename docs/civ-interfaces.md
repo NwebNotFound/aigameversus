@@ -208,12 +208,27 @@ returns only what that nation may know, built from its fog view
   with their parameters (e.g. `move` only when an army can move),
 - `your_plan`: the `plan` the nation sent last round, or `null`.
 
-**Public by rule.** How many cities exist in the world, and how many each
-nation holds, is public: the domination condition is counted against the
-world's total, and the board shows every nation's count. Where those cities
-stand stays hidden by the fog. Likewise public: reputations, treaties, wars,
-the economy countdown, and the scores of the round-limit formula. Nothing else
-of another nation enters an observation unless its fog view shows it.
+**Public by rule (D-128).** Public: the total number of cities in the world,
+the city count per nation, and who holds the gold countdown (and how far it
+is); also reputations, treaties, wars and the round-limit scores. Private:
+positions, buildings, and armies outside the nation's own sight. The
+observation carries the public part in one field, built by the plugin from
+the state and nothing else, so no number is derived from fogged state by
+accident:
+
+```json
+"scoreboard": {
+  "cities_total": 12,
+  "cities": {"p1": 3, "p2": 5, "p3": 4},
+  "domination_needed": 6,
+  "gold_countdown": {"nation": "p2", "gold": 512, "rounds_held": 2, "rounds_needed": 5},
+  "scores": {"p1": 41, "p2": 57, "p3": 48},
+  "reputation": {"p1": 50, "p2": 30, "p3": 55}
+}
+```
+
+`gold_countdown` is `null` while nobody holds enough gold. Everything else in
+an observation about another nation comes from its fog view.
 
 **Size budget.** An observation and its prompt are what every call pays
 for: 360 calls in a 60-round match of six nations. An observation stays under

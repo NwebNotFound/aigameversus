@@ -127,3 +127,5 @@ with `python scripts/decisions.py adopt`.
 - [D-121](decisions/D-121-p1-1-says-where-the-thought-goes-as-the-system-message-does.md) · p1.1 says where the thought goes as the system message does; p1 stays the baseline
 - [D-122](decisions/D-122-table-talk-is-checked-against-the-engine-s-cards-and-roles.md) · Table talk is checked against the engine's cards and roles, by rule
 - [D-129](decisions/D-129-a-repaired-move-carries-a-muted-marker-per-tier-spoiler-free.md) · A repaired move carries a muted marker per tier; spoiler-free shows the tier and probability only
+- [D-126](decisions/D-126-throne-of-tokens-combat-what-a-battle-costs-the-ranged-round.md) · Throne of Tokens combat: what a battle costs, the ranged round, and which city is a capital
+- [D-128](decisions/D-128-the-throne-of-tokens-scoreboard-is-public-by-rule-positions.md) · The Throne of Tokens scoreboard is public by rule; positions and contents stay fogged
