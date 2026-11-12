@@ -89,12 +89,20 @@ ANSWER_REPAIR = "answer_repair"
 # "v2": v1, and a broken call that is still refused after the corrections goes to a
 # Repairer (Jev, arena/jev/repair.py) that may map it to the legal move the model meant.
 ANSWER_REPAIR_VERSIONS = ("off", "v1", "v2")
-ENGINE_SETTINGS = (ANSWER_REPAIR,)
+# Whether every tool call also asks for a `headline`: the thought in a line, for viewers.
+# Not a prompt version: it is the same prompt for every game, turned on or off.
+THOUGHT_HEADLINE = "thought_headline"
+ENGINE_SETTINGS = (ANSWER_REPAIR, THOUGHT_HEADLINE)
 
 
 def repair_of(settings: Mapping[str, Any]) -> str:
     """The answer_repair of a match: its setting, else "off" (the call as sent)."""
     return settings.get(ANSWER_REPAIR, "off")
+
+
+def headline_of(settings: Mapping[str, Any]) -> bool:
+    """Whether a match asks its models for a headline with every thought (default no)."""
+    return settings.get(THOUGHT_HEADLINE, False) is True
 
 
 def game_settings(settings: Mapping[str, Any]) -> dict[str, Any]:
@@ -126,6 +134,7 @@ class Reply(_Frozen):
     action: Action | None = None
     problem: str | None = None  # set instead of `action`: what was wrong with the answer
     thought: str | None = None
+    headline: str | None = None  # the thought in a line, for viewers (thought_headline)
     stats: AnswerStats | None = None
 
     @model_validator(mode="after")

@@ -6,7 +6,8 @@
  * and a layout that is not listed gives no board at all. A new secret field in a plugin
  * therefore stays hidden until someone lists it here as public.
  */
-import type { LiveState, MatchEvent, Transcript } from '../api.js';
+import type { LiveState, MatchEvent, Transcript, TranscriptLine } from '../api.js';
+import { attempts } from '../viewer.js';
 
 /** keep: public as it is. cards: hidden, sent as as many placeholders. drop-value: sent as null. */
 type Rule = 'keep' | 'cards' | 'null' | Shape | [Shape];
@@ -116,6 +117,26 @@ export function publicTranscript(transcript: Transcript): Transcript {
 			const safe = publicSettings(settings as Record<string, unknown>);
 			return { ...line, raw: { ...line.raw, data: { ...data, settings: safe } } };
 		})
+	};
+}
+
+/**
+ * A repaired move is marked in the spoiler-free view too, but only that it was repaired, by
+ * which tier and with what probability: read from the spectator lines (`decision`,
+ * `action_accepted`, never sent on) and put on the public line of the same move. The
+ * refused call, its arguments and the error text stay here, as they can name hidden cards.
+ */
+export function withRepairMarks(open: Transcript, spectator: TranscriptLine[]): Transcript {
+	const bySeq = new Map<number, { tier: 1 | 2; p: number | null }>();
+	for (const [line, mark] of attempts(spectator).marks)
+		if (mark.repair && line.seq !== null)
+			bySeq.set(line.seq, { tier: mark.repair.tier, p: mark.repair.p });
+	if (bySeq.size === 0) return open;
+	return {
+		...open,
+		lines: open.lines.map((line) =>
+			line.seq !== null && bySeq.has(line.seq) ? { ...line, repair: bySeq.get(line.seq) } : line
+		)
 	};
 }
 
