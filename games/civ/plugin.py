@@ -53,13 +53,13 @@ class CivGame(GamePlugin[CivState]):
         return prompt.version_of(settings)
 
     def history_limit(self, settings: Mapping[str, Any] | None = None) -> int:
-        """The `.1` versions show 120 events: six talking nations send one nation 45 a turn."""
+        """Civ shows 120 events: six talking nations send one nation up to 45 in a turn."""
         return prompt.history_limit(settings)
 
     def situation_summary(
         self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
     ) -> str | None:
-        """A short text for the top of the turn's prompt; civ-p2 and civ-p2.1 have one."""
+        """A short text for the top of the turn's prompt; only civ-p2 has one."""
         if not prompt.summary_version(settings):
             return None
         return prompt.situation_summary(observation)

@@ -347,7 +347,7 @@ agent = ModelAgent(budget.meter("p1", "deepseek-flash", mock), plugin)  # a mock
 The system message is what the server says: who the player is, the game's
 rules (`rules.md`), how to answer. The user message is game data: the game's
 summary of the turn in `<summary>` if it has one, the observation in
-`<situation>`, the last 40 visible events (`GamePlugin.history_limit`, 120 for civ-p1.1 and civ-p2.1) in `<events>`, then the ask (with
+`<situation>`, the last 40 visible events (`GamePlugin.history_limit`: 120 for Civ, D-136) in `<events>`, then the ask (with
 the server's error on a correction).
 
 - A game can have prompt versions, chosen per match by its settings
@@ -905,10 +905,9 @@ next to it says what each does and what the generator guarantees.
   that round (`state.round_limit`, `victory.round_limit`), and the rules,
   the observation's `rounds_total` and the board say so (D-133).
   The prompt settings (`games/civ/prompt.py`, D-135): `prompt_version`
-  `civ-p1` (default) or `civ-p2` (a summary above the situation; `civ-p1.1` and
-  `civ-p2.1` read the same but show 120 events a prompt, not 40, D-136), `strategy_text`
+  `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
   `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
-  and `your_plan_from_last_round` exist only when it is on).
+  and `your_plan_from_last_round` exist only when it is on). A Civ prompt shows 120 events, not 40 (D-136).
 
 How these follow the engine's rules, and what the next systems should copy:
 

@@ -244,36 +244,28 @@ def test_six_talking_nations_send_one_nation_more_than_forty_events_in_a_turn():
     agents = talking_match()
 
     most = max(max(a.new_events) for a in agents.values())
-    assert most > 40  # the cut is real: civ-p1 and civ-p2 show only the latest 40
-    assert PLUGIN.history_limit({"prompt_version": "civ-p1"}) == 40
-    assert PLUGIN.history_limit({"prompt_version": "civ-p2"}) == 40
+    assert most > 40  # the cut was real with the default window of 40
+    assert most <= PLUGIN.history_limit({})  # and nothing of a turn is dropped with Civ's 120
 
 
-def test_the_dot_one_versions_show_every_event_of_the_turn_with_six_talking_nations():
-    agents = talking_match()
-    limit = PLUGIN.history_limit({"prompt_version": "civ-p2.1"})
-
-    assert limit == 120 == PLUGIN.history_limit({"prompt_version": "civ-p1.1"})
-    assert max(max(a.new_events) for a in agents.values()) <= limit  # nothing of a turn is dropped
+def test_every_civ_prompt_version_shows_120_events():
+    for version in prompt.VERSIONS:
+        assert PLUGIN.history_limit({"prompt_version": version}) == 120
+    assert PLUGIN.history_limit(None) == prompt.HISTORY_LIMIT == 120
 
 
-def test_the_dot_one_versions_read_the_same_text_as_their_base():
-    for base, wide in (("civ-p1", "civ-p1.1"), ("civ-p2", "civ-p2.1")):
-        a, b = {"prompt_version": base}, {"prompt_version": wide}
-        assert PLUGIN.rules(a) == PLUGIN.rules(b)
-        observation = requests_of()[3].observation
-        assert PLUGIN.situation_summary(observation, a) == PLUGIN.situation_summary(observation, b)
-        assert PLUGIN.prompt_version(b) == wide
-
-
-def test_the_default_history_limit_is_the_one_the_prompt_builder_uses():
+def test_other_games_keep_the_default_window_of_forty():
     from arena.agents.prompt import HISTORY_LIMIT
+    from games.liars_deck.plugin import LiarsDeck
+    from games.poker.plugin import Poker
+    from games.werewolf.plugin import Werewolf
 
-    assert CivGame().history_limit({}) == HISTORY_LIMIT == 40
-    assert PLUGIN.history_limit(None) == HISTORY_LIMIT
+    assert HISTORY_LIMIT == 40
+    for plugin in (LiarsDeck(), Poker(), Werewolf()):
+        assert plugin.history_limit({}) == HISTORY_LIMIT
 
 
-def test_a_prompt_built_with_the_wide_limit_holds_all_events_of_a_talking_turn():
+def test_a_prompt_built_with_civs_limit_holds_all_events_of_a_talking_turn():
     nations = SIX
     seen: list = []
 
