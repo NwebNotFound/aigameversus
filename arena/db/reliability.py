@@ -30,11 +30,17 @@ class Reliability:
     telemetry_moves: int  # of the n moves, those that report cutoffs and rate limits
     cutoff_share: float | None  # of those, the share with an answer cut off; None without any
     rate_limits_per_move: float | None  # of those, rate-limited calls per move
+    rejected_rate: float | None  # refused answers over all answers of the n moves
+    rejected_cut_off: int  # of the refused answers, those cut off at the output limit
+    last_seen: str | None  # when its newest move was logged (ISO), None if never
     warnings: list[str] = field(default_factory=list)  # what costs time without being a failure
 
 
 def verdict(
-    moves: Sequence[tuple[str, dict]], failed_recently: int, rules: ReliabilityRules
+    moves: Sequence[tuple[str, dict]],
+    failed_recently: int,
+    rules: ReliabilityRules,
+    last_seen: str | None = None,
 ) -> Reliability:
     """The verdict from a model's newest moves, newest first, each with its match id."""
     moves = list(moves)[: rules.moves]
@@ -45,9 +51,22 @@ def verdict(
     told = [move for _, move in moves if "cutoffs" in move and "rate_limits" in move]
     cut = sum(1 for m in told if m["cutoffs"]) / len(told) if told else None
     limited = sum(m["rate_limits"] for m in told) / len(told) if told else None
+    answers = sum(move.get("answers") or 0 for _, move in moves)
+    # Every answer of a move but the accepted one was refused (all of them, on a fallback).
+    refused = [
+        max((move.get("answers") or 0) - (0 if move.get("fallback") else 1), 0) for _, move in moves
+    ]
+    rejected_rate = sum(refused) / answers if answers else None
+    rejected_cut = sum(
+        min(move.get("cutoffs") or 0, count)
+        for (_, move), count in zip(moves, refused, strict=True)
+    )
     warnings = []
     if cut is not None and cut > rules.cut_off_above:
-        warnings.append("answers often cut off at the output limit (a setting, not tools)")
+        warnings.append(
+            f"cut off often: {rejected_cut} of {sum(refused)} refused answers ran into the output"
+            " limit (raise the limit; not missing tools)"
+        )
     if limited is not None and limited > rules.throttled_above:
         warnings.append("often rate-limited by the provider route")
     if n and len(told) < n:
@@ -55,7 +74,19 @@ def verdict(
 
     def said(status: Status, reason: str | None, failed: int = 0) -> Reliability:
         return Reliability(
-            status, reason, n, matches, share, failed, len(told), cut, limited, warnings
+            status,
+            reason,
+            n,
+            matches,
+            share,
+            failed,
+            len(told),
+            cut,
+            limited,
+            rejected_rate,
+            rejected_cut,
+            last_seen,
+            warnings,
         )
 
     if failed_recently:
@@ -89,7 +120,7 @@ async def reliabilities(
         "      m.id DESC) AS recent"
         "  FROM matches m, jsonb_each(m.seats) s"
         "  WHERE s.value->>'kind' = 'model' AND s.value->>'model_id' = ANY($1::text[])) "
-        "SELECT sd.model, sd.match_id, sd.recent, e.type, e.data FROM seated sd "
+        "SELECT sd.model, sd.match_id, sd.recent, e.type, e.data, e.recorded_at FROM seated sd "
         "JOIN match_events e ON e.match_id = sd.match_id AND e.data->>'player' = sd.seat "
         "  AND e.type IN ('decision', 'agent_failed') "
         "WHERE sd.recent <= $2 "
@@ -99,12 +130,15 @@ async def reliabilities(
     )
     moves: dict[str, list[tuple[str, dict]]] = {}
     failed: dict[str, set[int]] = {}
+    seen: dict[str, str] = {}
     for row in rows:
+        stamp = row["recorded_at"].isoformat()
+        seen[row["model"]] = max(seen.get(row["model"], stamp), stamp)
         if row["type"] == "decision":
             moves.setdefault(row["model"], []).append((str(row["match_id"]), row["data"]))
         elif row["recent"] <= rules.matches:
             failed.setdefault(row["model"], set()).add(row["recent"])
     return {
-        model: verdict(moves.get(model, []), len(failed.get(model, ())), rules)
+        model: verdict(moves.get(model, []), len(failed.get(model, ())), rules, seen.get(model))
         for model in model_ids
     }
