@@ -1,5 +1,6 @@
 """Value types shared by the engine, game plugins and agents."""
 
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any, Protocol, Self
 
@@ -82,16 +83,48 @@ class TurnRequest(_Frozen):
     error: str | None = None  # why the previous attempt of this turn was rejected
 
 
+# A match setting of the engine, not of the game: how kindly a model's garbled tool call
+# is read ("off": as sent; "v1": arena/agents/arguments.py). Games never see it.
+ANSWER_REPAIR = "answer_repair"
+ANSWER_REPAIR_VERSIONS = ("off", "v1")
+ENGINE_SETTINGS = (ANSWER_REPAIR,)
+
+
+def repair_of(settings: Mapping[str, Any]) -> str:
+    """The answer_repair of a match: its setting, else "off" (the call as sent)."""
+    return settings.get(ANSWER_REPAIR, "off")
+
+
+def game_settings(settings: Mapping[str, Any]) -> dict[str, Any]:
+    """The settings of a match without the engine's own: what the game is given."""
+    return {key: value for key, value in settings.items() if key not in ENGINE_SETTINGS}
+
+
+class AnswerStats(_Frozen):
+    """What one answer of a model took, as far as its provider said."""
+
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    reasoning_tokens: int | None = None
+    retries: int = 0  # failed calls tried again before this answer
+    repairs: tuple[str, ...] = ()  # how a garbled call was read (arena/agents/arguments.py)
+    raw_arguments: str | None = None  # the call as sent, when it was repaired or unreadable
+    simple_schema: bool = False  # the model was offered its tools without `thought`
+
+
 class Reply(_Frozen):
     """What an agent answers: one action, or the reason why there is none.
 
     `thought` is the agent's private reasoning. The engine logs it for
-    spectators only; no player ever gets it, not even its author.
+    spectators only; no player ever gets it, not even its author. `stats` is
+    what the answer took (a model agent's; None for a bot), logged for
+    spectators in the move's `decision` event.
     """
 
     action: Action | None = None
     problem: str | None = None  # set instead of `action`: what was wrong with the answer
     thought: str | None = None
+    stats: AnswerStats | None = None
 
     @model_validator(mode="after")
     def _action_or_problem(self) -> Self:

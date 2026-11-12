@@ -7,6 +7,7 @@
 	import Commentary from '#lib/components/Commentary.svelte';
 	import ResultCard from '#lib/components/ResultCard.svelte';
 	import { euros } from '#lib/live.js';
+	import { waited } from '#lib/pacing.js';
 	import {
 		colourKey,
 		resultOf,
@@ -33,6 +34,8 @@
 		active = null,
 		placements = null,
 		ended = false,
+		thinking = null,
+		responses = {},
 		controls
 	}: {
 		spec: Record<string, unknown> | null;
@@ -48,6 +51,10 @@
 		placements?: Placement[] | null;
 		/** The match is over and its end is on screen: show the result card. */
 		ended?: boolean;
+		/** The seat a model is answering for right now, and for how long (live only). */
+		thinking?: { seat: string; ms: number } | null;
+		/** Each seat's last response time in ms, from the decision events. */
+		responses?: Record<string, number>;
 		controls: Snippet;
 	} = $props();
 
@@ -99,6 +106,7 @@
 			{@const model = seatModel(seat, players)}
 			{@const isModel = info?.kind === 'model' || !!model}
 			<li
+				class:asked={thinking?.seat === seat}
 				class:active={active === seat}
 				class:out={out.has(seat)}
 				data-seat={seat}
@@ -120,6 +128,15 @@
 					{#if subs[seat]}<small data-testid="chip-model">{subs[seat]}</small>{/if}
 					{#if info?.personality}<small class="persona">{info.personality}</small>{/if}
 				</span>
+				{#if thinking?.seat === seat}
+					<span class="thinking" data-testid="thinking" title="Waiting for this player's answer"
+						>thinking… {waited(thinking.ms)}</span
+					>
+				{:else if responses[seat] !== undefined}
+					<span class="response" title="Response time of the last move"
+						>{(responses[seat] / 1000).toFixed(1)} s</span
+					>
+				{/if}
 				{#if costs && isModel}
 					<span class="cost">{euros(costs[seat] ?? 0)}</span>
 				{/if}
@@ -130,7 +147,16 @@
 	<div class="stage-column">
 		<section class="stage" class:shake={beat === 'bang'} aria-label="Board" data-testid="stage">
 			<div class="fit">
-				<Board {spec} spoilers={view === 'spectator'} {events} {names} {colours} {subs} />
+				<Board
+					{spec}
+					spoilers={view === 'spectator'}
+					{events}
+					{names}
+					{colours}
+					{subs}
+					{lines}
+					{players}
+				/>
 			</div>
 			<Beats {lines} bind:current={beat} />
 			{#if result && !dismissed}
@@ -218,6 +244,36 @@
 
 	.persona {
 		font-style: italic;
+	}
+
+	.thinking {
+		font-size: 0.75rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--accent-2);
+	}
+
+	.response {
+		font-size: 0.75rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--muted);
+	}
+
+	/* A model is answering: its chip breathes, gently. */
+	.cast li.asked {
+		border-color: var(--accent-2);
+		animation: asked 1.8s ease-in-out infinite;
+	}
+
+	@keyframes asked {
+		50% {
+			box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 30%, transparent);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cast li.asked {
+			animation: none;
+		}
 	}
 
 	.cost {

@@ -1,0 +1,25 @@
+terms:
+  - term: Hole cards
+    meaning: "The 2 private cards each player gets. Only the player sees them, until a showdown."
+  - term: Flop
+    meaning: "The first 3 shared cards, turned up together after the first round of betting."
+  - term: Turn
+    meaning: "The fourth shared card."
+  - term: River
+    meaning: "The fifth and last shared card."
+  - term: Blinds
+    meaning: "Forced bets that two players post before the cards are dealt, so there is always something to win."
+  - term: Pot
+    meaning: "All the chips bet in the current hand. The winner of the hand takes it."
+  - term: Side pot
+    meaning: "A separate pot made when a player is all-in for less. That player can only win what they could match."
+  - term: All-in
+    meaning: "Betting every chip you have."
+  - term: Fold
+    meaning: "Giving up the hand and losing the chips you already put in."
+  - term: Showdown
+    meaning: "When the hands are shown at the end and the best one wins."
+  - term: Win chance
+    meaning: "How often a hand would win if the rest of the cards were dealt many times. It changes with every new shared card."
+  - term: VPIP
+    meaning: "The share of hands in which a player voluntarily put chips in. A high number means they play many hands."

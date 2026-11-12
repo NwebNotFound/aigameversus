@@ -105,8 +105,17 @@ with `python scripts/decisions.py adopt`.
 - [D-099](decisions/D-099-key-moments-are-staged-by-the-watch-screen-from-the.md) · Key moments are staged by the watch screen, from the transcript's highlights
 - [D-100](decisions/D-100-a-finished-match-ends-on-a-result-card-showdowns-and-the.md) · A finished match ends on a result card; showdowns and the final ranking are structured
 - [D-101](decisions/D-101-an-estimate-before-a-match-bots-play-it-the-prompts-are.md) · An estimate before a match: bots play it, the prompts are measured
+- [D-102](decisions/D-102-any-openrouter-model-that-can-call-tools-may-take-a-seat.md) · Any OpenRouter model that can call tools may take a seat
 - [D-103](decisions/D-103-a-seat-s-identity-comes-from-the-match-record-first-a-model.md) · A seat's identity comes from the match record first; a model seat never reads as a bot
 - [D-104](decisions/D-104-one-display-name-per-seat-computed-by-the-server-never-the.md) · One display name per seat, computed by the server, never the seat id
+- [D-105](decisions/D-105-the-launch-form-picks-a-model-per-seat-from-the-whole.md) · The launch form picks a model per seat from the whole catalog
 - [D-106](decisions/D-106-match-analytics-a-pure-function-of-the-log-public-events.md) · Match analytics: a pure function of the log, public events only without spoilers
+- [D-107](decisions/D-107-the-analytics-tab-draws-the-arena-s-numbers-with-its-own.md) · The Analytics tab draws the arena's numbers with its own small SVG charts
+- [D-108](decisions/D-108-every-model-move-says-what-it-took-in-a-spectators-only.md) · Every model move says what it took, in a spectators-only event
 - [D-109](decisions/D-109-seat-ids-in-the-players-own-words-are-shown-as-name-chips.md) · Seat ids in the players' own words are shown as name chips
 - [D-116](decisions/D-116-throne-of-tokens-is-played-with-one-call-per-nation-and.md) · Throne of Tokens is played with one call per nation and round, and a broken order is dropped, not the call
+- [D-110](decisions/D-110-matches-play-out-at-reading-pace-live-and-in-replays.md) · Matches play out at reading pace, live and in replays, whatever the models' speed
+- [D-114](decisions/D-114-a-garbled-tool-call-that-clearly-means-one-move-is-repaired.md) · A garbled tool call that clearly means one move is repaired, and the move says so
+- [D-111](decisions/D-111-a-model-may-set-its-own-call-options-rate-limits-are-waited.md) · A model may set its own call options; rate limits are waited out longer, within a budget
+- [D-115](decisions/D-115-the-werewolf-circle-is-a-stage-the-newest-speech-in-the.md) · The Werewolf circle is a stage: the newest speech in the middle, deaths turn the role over
+- [D-113](decisions/D-113-refused-answers-are-answer-quality-a-retry-marker-on-the.md) · Refused answers are answer quality: a retry marker on the move, red only for a random move
