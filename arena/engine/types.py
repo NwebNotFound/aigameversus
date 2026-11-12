@@ -117,6 +117,8 @@ class AnswerStats(_Frozen):
     tokens_out: int | None = None
     reasoning_tokens: int | None = None
     retries: int = 0  # failed calls tried again before this answer
+    rate_limits: int = 0  # of those, the ones the provider refused as too many requests
+    cut_off: bool = False  # the answer ran into the output limit
     repairs: tuple[str, ...] = ()  # how a garbled call was read (arena/agents/arguments.py)
     raw_arguments: str | None = None  # the call as sent, when it was repaired or unreadable
     simple_schema: bool = False  # the model was offered its tools without `thought`

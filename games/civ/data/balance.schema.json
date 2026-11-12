@@ -161,12 +161,26 @@
           "minimum": 0,
           "title": "Winner Loss Factor",
           "type": "number"
+        },
+        "loser_loss_factor": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Loser Loss Factor",
+          "type": "number"
+        },
+        "ranged_loss_factor": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Ranged Loss Factor",
+          "type": "number"
         }
       },
       "required": [
         "random_factor",
         "ranged_rounds",
-        "winner_loss_factor"
+        "winner_loss_factor",
+        "loser_loss_factor",
+        "ranged_loss_factor"
       ],
       "title": "CombatBalance",
       "type": "object"

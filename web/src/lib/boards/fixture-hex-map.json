@@ -1,0 +1,209 @@
+{
+	"layout": "hex_map",
+	"round": 12,
+	"rounds_total": 60,
+	"cols": 10,
+	"rows": 6,
+	"terrain": ["ghfrhpwfrr", "wwpppphfph", "wpihrgpifh", "fpmmhrrffm", "hppwrfpffw", "hfhwmppfpw"],
+	"legend": {
+		"p": "plains",
+		"f": "forest",
+		"h": "hills",
+		"i": "iron_deposit",
+		"g": "gold_vein",
+		"r": "river",
+		"m": "mountains",
+		"w": "water"
+	},
+	"cities": [
+		{
+			"id": "c1",
+			"owner": "p1",
+			"tile": [3, 1],
+			"population": 3,
+			"capital": true,
+			"walls": true
+		},
+		{
+			"id": "c2",
+			"owner": "p2",
+			"tile": [8, 1],
+			"population": 4,
+			"capital": true,
+			"walls": false
+		},
+		{
+			"id": "c3",
+			"owner": "p3",
+			"tile": [1, 4],
+			"population": 5,
+			"capital": true,
+			"walls": true
+		},
+		{
+			"id": "c4",
+			"owner": "p4",
+			"tile": [6, 4],
+			"population": 6,
+			"capital": true,
+			"walls": false
+		},
+		{
+			"id": "c5",
+			"owner": "p1",
+			"tile": [3, 3],
+			"population": 2,
+			"capital": false,
+			"walls": false
+		},
+		{
+			"id": "c6",
+			"owner": "neutral",
+			"tile": [5, 2],
+			"population": 1,
+			"capital": false,
+			"walls": true
+		}
+	],
+	"armies": [
+		{
+			"id": "a1",
+			"owner": "p1",
+			"tile": [4, 1],
+			"strength": 6,
+			"units": {
+				"spearman": 2,
+				"archer": 1
+			},
+			"fortified": false
+		},
+		{
+			"id": "a2",
+			"owner": "p2",
+			"tile": [9, 1],
+			"strength": 9,
+			"units": {
+				"spearman": 3,
+				"archer": 1
+			},
+			"fortified": true
+		},
+		{
+			"id": "a3",
+			"owner": "p3",
+			"tile": [2, 4],
+			"strength": 12,
+			"units": {
+				"spearman": 4,
+				"archer": 1
+			},
+			"fortified": false
+		},
+		{
+			"id": "a4",
+			"owner": "p4",
+			"tile": [7, 4],
+			"strength": 15,
+			"units": {
+				"spearman": 5,
+				"archer": 1
+			},
+			"fortified": false
+		},
+		{
+			"id": "a5",
+			"owner": "p2",
+			"tile": [5, 1],
+			"strength": 14,
+			"units": {
+				"spearman": 3,
+				"archer": 2,
+				"horseman": 1
+			},
+			"fortified": false
+		},
+		{
+			"id": "a6",
+			"owner": "neutral",
+			"tile": [3, 2],
+			"strength": 4,
+			"units": {
+				"spearman": 2
+			},
+			"fortified": false
+		}
+	],
+	"nations": [
+		{
+			"id": "p1",
+			"stock": {
+				"food": 12,
+				"wood": 5,
+				"iron": 0,
+				"gold": 30
+			},
+			"reputation": 50,
+			"cities": 2,
+			"at_war": ["p2"]
+		},
+		{
+			"id": "p2",
+			"stock": {
+				"food": 13,
+				"wood": 6,
+				"iron": 2,
+				"gold": 25
+			},
+			"reputation": 30,
+			"cities": 1,
+			"at_war": ["p1"]
+		},
+		{
+			"id": "p3",
+			"stock": {
+				"food": 14,
+				"wood": 7,
+				"iron": 4,
+				"gold": 20
+			},
+			"reputation": 65,
+			"cities": 1,
+			"at_war": []
+		},
+		{
+			"id": "p4",
+			"stock": {
+				"food": 15,
+				"wood": 8,
+				"iron": 6,
+				"gold": 15
+			},
+			"reputation": 50,
+			"cities": 1,
+			"at_war": []
+		}
+	],
+	"treaties": [
+		{
+			"kind": "alliance",
+			"parties": ["p1", "p3"]
+		},
+		{
+			"kind": "trade",
+			"parties": ["p2", "p4"]
+		}
+	],
+	"wars": [["p1", "p2"]],
+	"fog": {
+		"p1": ["0011111000", "0111111000", "0011111000", "0111110000", "0011110000", "0011100000"],
+		"p2": ["0000111111", "0001111111", "0000111111", "0000111111", "0000000000", "0000000000"],
+		"p3": ["0000000000", "0000000000", "1111000000", "1111000000", "1111100000", "1111000000"],
+		"p4": ["0000000000", "0000000000", "0000011110", "0000111110", "0000111111", "0000111110"]
+	},
+	"battles": [
+		{
+			"tile": [5, 1],
+			"winner": "p2"
+		}
+	]
+}
