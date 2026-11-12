@@ -20,7 +20,7 @@ from arena.agents.arguments import (
     read_arguments,
 )
 from arena.agents.mock_llm import MockLLM, tool_call
-from arena.agents.model import ModelReply, ToolCall
+from arena.agents.model import ModelError, ModelReply, ToolCall
 from arena.agents.runner import ModelAgent
 from arena.engine.match import Match
 from arena.engine.replay import replay
@@ -212,3 +212,11 @@ def test_a_misspelt_required_key_is_dropped_so_the_engine_still_refuses_the_call
     arguments, repairs = read('{"amout": 40}')
 
     assert (arguments, repairs) == ({}, [IGNORED_EXTRA_KEYS])  # "amount" is missing: refused
+
+
+def test_one_decision_counts_a_rate_limit_and_names_the_repair_of_the_same_move():
+    match, _ = play({"p1": [ModelError("RateLimitError"), garbled(None)] + [LOWEST] * HAND_SIZE})
+
+    first = of_type(match, "decision", "p1")[0].data
+    assert (first["rate_limits"], first["retries"], first["cutoffs"]) == (1, 1, 0)
+    assert first["repairs"] == [EXTRACTED_JSON] and first["simple_schema"] is False

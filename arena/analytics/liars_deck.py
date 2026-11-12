@@ -14,7 +14,16 @@ from games.liars_deck.plugin import JOKER, card_rank
 from games.liars_deck.variants import load_variants
 
 # Fields the runner may put on the decision event of a move.
-DECISION_FIELDS = ("latency_ms", "tokens_in", "tokens_out", "reasoning_tokens", "retries")
+# Read from the engine's `decision` event of a model's move (spectators only).
+DECISION_FIELDS = (
+    "latency_ms",
+    "tokens_in",
+    "tokens_out",
+    "reasoning_tokens",
+    "retries",
+    "rate_limits",
+    "cutoffs",
+)
 
 
 def rate(part: int, whole: int) -> dict[str, Any]:
@@ -40,9 +49,10 @@ class _Decisions:
         if event.type in ("action_accepted", "action_fallback"):
             made["calls"] += 1
             made["fallback"] = event.type == "action_fallback"
+        elif event.type == "decision":
             for field in DECISION_FIELDS:
                 value = event.data.get(field)
-                if value is not None:  # a move of several calls adds them up
+                if value is not None:
                     made[field] = made.get(field, 0) + value
         elif event.type == "action_rejected":
             made["rejected"] += 1
@@ -275,6 +285,9 @@ def _totals(
         "tokens_in": _sum(mine, "tokens_in"),
         "tokens_out": _sum(mine, "tokens_out"),
         "reasoning_tokens": _sum(mine, "reasoning_tokens"),
+        "cutoffs": _sum(mine, "cutoffs") or 0,
+        "rate_limits": _sum(mine, "rate_limits") or 0,
+        "moves": len(mine),
     }
 
 
