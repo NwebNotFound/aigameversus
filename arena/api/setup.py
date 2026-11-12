@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from arena.agents.budget import MICRO
 from arena.api.matches import ALLOW_MODEL_SEATS
 from arena.config import display_name, load_config, load_keys
+from arena.engine.types import ANSWER_REPAIR_VERSIONS
 from arena.personalities import Personality, load_personalities
 
 router = APIRouter(tags=["setup"])
@@ -32,6 +33,10 @@ class SetupOptions(BaseModel):
         description="Whether POST /matches seats models on this server: it was started with "
         "ARENA_ALLOW_MODEL_SEATS=1 and has the providers' API keys. Otherwise every seat is "
         "a random bot."
+    )
+    answer_repair: list[str] = Field(
+        default_factory=lambda: list(ANSWER_REPAIR_VERSIONS),
+        description="The values the match setting `answer_repair` takes; the first is the default",
     )
     seat_personalities: bool = Field(
         True, description="Whether a model seat in `seats` may name a personality"

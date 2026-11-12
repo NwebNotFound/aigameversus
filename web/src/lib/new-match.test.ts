@@ -192,6 +192,25 @@ describe('parseForm', () => {
 			expect(parsed.ok && 'seats' in parsed.match).toBe(false);
 		});
 
+		it('asks for answer repair when the switch was offered and ticked, off when cleared', () => {
+			const offered = { ...THREE, confirm_spend: 'on', answer_repair_offered: '1' };
+
+			const on = parseForm(form({ ...offered, answer_repair: 'on' }), GAMES, MODELS);
+			const off = parseForm(form(offered), GAMES, MODELS);
+			const old = parseForm(form({ ...THREE, confirm_spend: 'on' }), GAMES, MODELS);
+			const bots = parseForm(
+				form({ ...LIARS, answer_repair_offered: '1', answer_repair: 'on' }),
+				GAMES,
+				MODELS
+			);
+
+			expect(on.ok && on.match.settings.answer_repair).toBe('v1');
+			expect(off.ok && off.match.settings.answer_repair).toBe('off');
+			// An arena that does not offer it, or a table of bots: the setting is not sent.
+			expect(old.ok && 'answer_repair' in old.match.settings).toBe(false);
+			expect(bots.ok && 'answer_repair' in bots.match.settings).toBe(false);
+		});
+
 		it('asks for a second tick when an unreliable model takes a seat', () => {
 			const ticked = { ...THREE, confirm_spend: 'on' };
 
