@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { isCiv, type CivAnalytics } from '#lib/analytics/civ.js';
 	import { hasNumbers, slowMoves, upTo, type LiarsAnalytics } from '#lib/analytics/liars.js';
+	import CivReport from './CivReport.svelte';
 	import { pct, seconds } from '#lib/analytics/chart.js';
 	import type { View } from '#lib/viewer.js';
 	import CardsLeft from './CardsLeft.svelte';
@@ -10,8 +12,9 @@
 	import ResponseBars from './ResponseBars.svelte';
 
 	/**
-	 * The Analytics tab: the arena's numbers about the match (GET /matches/{id}/analytics,
-	 * docs/METRICS.md) as charts. In a replay they stop at the step on screen; live they are
+	 * The Report tab: the arena's numbers about the match (GET /matches/{id}/analytics,
+	 * docs/METRICS.md), one report per game: Throne of Tokens (CivReport) and Liar's Deck
+	 * (below); a game whose answer has no report yet says so. In a replay they stop at the step on screen; live they are
 	 * fetched again as turns come in (`version` changes). Clicking a move jumps to it.
 	 */
 	let {
@@ -21,7 +24,8 @@
 		version = 0,
 		names,
 		colours,
-		onjump
+		onjump,
+		costs = null
 	}: {
 		id: string;
 		view: View;
@@ -32,11 +36,14 @@
 		names: Record<string, string>;
 		colours: Record<string, string>;
 		onjump?: (seq: number) => void;
+		/** Micro-euros per seat, for the reports that weigh cost against result. */
+		costs?: Record<string, number> | null;
 	} = $props();
 
 	let load = $state<
 		| { state: 'loading' }
 		| { state: 'ok'; data: LiarsAnalytics }
+		| { state: 'civ'; data: CivAnalytics }
 		| { state: 'none' }
 		| { state: 'error' }
 	>({ state: 'loading' });
@@ -53,7 +60,11 @@
 					else {
 						// A situation-only answer (no moves, no totals) has no charts to draw yet.
 						const body: unknown = await response.json();
-						load = hasNumbers(body) ? { state: 'ok', data: body } : { state: 'none' };
+						load = isCiv(body)
+							? { state: 'civ', data: body }
+							: hasNumbers(body)
+								? { state: 'ok', data: body }
+								: { state: 'none' };
 					}
 				})
 				.catch((error) => {
@@ -83,12 +94,19 @@
 	);
 </script>
 
-<section class="analytics" aria-label="Analytics" data-testid="analytics">
+<section
+	class="analytics"
+	class:plain={load.state === 'civ'}
+	aria-label="Report"
+	data-testid="analytics"
+>
 	{#if load.state === 'loading'}
 		<p class="status">Loading the numbers…</p>
+	{:else if load.state === 'civ'}
+		<CivReport data={load.data} {names} {costs} />
 	{:else if load.state === 'none'}
 		<p class="status" data-testid="analytics-none">
-			Analytics for this game are coming; Liar's Deck has them first.
+			The report for this game is coming; Throne of Tokens and Liar's Deck have theirs.
 		</p>
 	{:else if load.state === 'error'}
 		<p class="status problem" role="status">The analytics did not load.</p>
@@ -136,6 +154,13 @@
 		border-radius: var(--radius);
 		background: var(--surface);
 		border: 1px solid var(--border);
+	}
+
+	/* A report built of cards needs no frame around it. */
+	.analytics.plain {
+		padding: 0;
+		background: none;
+		border: 0;
 	}
 
 	.status {

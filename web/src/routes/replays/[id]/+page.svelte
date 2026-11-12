@@ -247,7 +247,7 @@
 						playing = false;
 						tab = 'analytics';
 					}}
-					data-testid="tab-analytics">Analytics</button
+					data-testid="tab-analytics">Report</button
 				>
 				<button
 					role="tab"
@@ -353,6 +353,7 @@
 				lastSeq={step === 0 ? -1 : (log[step - 1]?.seq ?? null)}
 				names={Object.fromEntries(match.match.players.map((s) => [s, seatName(s, players)]))}
 				colours={Object.fromEntries(match.match.players.map((s) => [s, colourKey(s, players)]))}
+				costs={match.cost.players}
 				onjump={jumpToSeq}
 			/>
 		</div>

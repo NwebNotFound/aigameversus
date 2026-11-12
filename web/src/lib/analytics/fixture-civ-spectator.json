@@ -1,0 +1,832 @@
+{
+	"game": "civ",
+	"spoilers": true,
+	"events": 1206,
+	"situation": null,
+	"meta": {
+		"version": "2",
+		"prompt_version": "civ-p1",
+		"seed": 2104001,
+		"settings": {
+			"rounds": 20,
+			"private_plan": "off",
+			"answer_repair": "off",
+			"strategy_text": "off",
+			"prompt_version": "civ-p1",
+			"match_budget_eur": 0.2
+		},
+		"rounds_total": 20,
+		"seats": {
+			"p1": "glm-flash",
+			"p2": "deepseek-flash-civ",
+			"p3": "gpt-luna",
+			"p4": "claude-haiku"
+		}
+	},
+	"analytics_version": "civ/1",
+	"nations": ["p1", "p2", "p3", "p4"],
+	"series": {
+		"rounds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+		"nations": {
+			"p1": {
+				"stock": [
+					{ "food": 9, "gold": 5, "iron": 2, "wood": 5 },
+					{ "food": 14, "gold": 6, "iron": 4, "wood": 8 },
+					{ "food": 24, "gold": 8, "iron": 4, "wood": 13 },
+					{ "food": 27, "gold": 10, "iron": 6, "wood": 17 },
+					{ "food": 34, "gold": 12, "iron": 8, "wood": 20 },
+					{ "food": 43, "gold": 16, "iron": 5, "wood": 29 },
+					{ "food": 50, "gold": 21, "iron": 7, "wood": 34 },
+					{ "food": 53, "gold": 26, "iron": 6, "wood": 35 },
+					{ "food": 53, "gold": 31, "iron": 5, "wood": 40 },
+					{ "food": 49, "gold": 33, "iron": 9, "wood": 42 },
+					{ "food": 41, "gold": 35, "iron": 4, "wood": 48 },
+					{ "food": 35, "gold": 46, "iron": 5, "wood": 57 },
+					{ "food": 20, "gold": 57, "iron": 6, "wood": 66 },
+					{ "food": 6, "gold": 80, "iron": 12, "wood": 61 },
+					{ "food": 0, "gold": 91, "iron": 8, "wood": 70 },
+					{ "food": 0, "gold": 98, "iron": 13, "wood": 83 },
+					{ "food": 0, "gold": 106, "iron": 15, "wood": 91 },
+					{ "food": 0, "gold": 114, "iron": 20, "wood": 101 },
+					{ "food": 0, "gold": 121, "iron": 19, "wood": 96 },
+					{ "food": 0, "gold": 129, "iron": 24, "wood": 111 }
+				],
+				"income": [
+					{ "food": 9, "wood": 5, "iron": 2, "gold": 1 },
+					{ "food": 9, "wood": 7, "iron": 2, "gold": 1 },
+					{ "food": 17, "wood": 12, "iron": 2, "gold": 2 },
+					{ "food": 18, "wood": 12, "iron": 2, "gold": 2 },
+					{ "food": 21, "wood": 12, "iron": 2, "gold": 2 },
+					{ "food": 27, "wood": 12, "iron": 2, "gold": 5 },
+					{ "food": 29, "wood": 14, "iron": 2, "gold": 5 },
+					{ "food": 30, "wood": 14, "iron": 4, "gold": 5 },
+					{ "food": 32, "wood": 14, "iron": 4, "gold": 5 },
+					{ "food": 33, "wood": 14, "iron": 4, "gold": 5 },
+					{ "food": 35, "wood": 14, "iron": 4, "gold": 8 },
+					{ "food": 37, "wood": 14, "iron": 4, "gold": 11 },
+					{ "food": 38, "wood": 14, "iron": 6, "gold": 11 },
+					{ "food": 40, "wood": 14, "iron": 6, "gold": 11 },
+					{ "food": 41, "wood": 14, "iron": 6, "gold": 11 },
+					{ "food": 40, "wood": 13, "iron": 5, "gold": 7 },
+					{ "food": 46, "wood": 14, "iron": 5, "gold": 8 },
+					{ "food": 46, "wood": 14, "iron": 5, "gold": 8 },
+					{ "food": 49, "wood": 13, "iron": 5, "gold": 8 },
+					{ "food": 49, "wood": 15, "iron": 5, "gold": 8 }
+				],
+				"cities": [1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3],
+				"population": [1, 2, 4, 5, 7, 9, 10, 12, 13, 15, 17, 18, 20, 21, 23, 25, 27, 30, 31, 34],
+				"armies": [2, 2, 3, 5, 7, 8, 6, 7, 8, 10, 12, 9, 11, 8, 9, 8, 8, 9, 10, 9],
+				"units": [3, 3, 3, 5, 7, 9, 11, 12, 16, 20, 24, 25, 30, 32, 36, 30, 29, 28, 33, 30],
+				"strength": [
+					6, 6, 9, 12, 18, 26, 32, 32, 46, 58, 72, 77, 96, 104, 120, 102, 99, 94, 107, 104
+				],
+				"score": [21, 22, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 55, 59, 58, 60, 73, 77, 79, 82],
+				"reputation": [
+					50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 30, 30, 30, 30, 30, 30
+				],
+				"at_war": [
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					["p3"],
+					["p3"],
+					["p3"],
+					["p3"],
+					["p3"],
+					[]
+				]
+			},
+			"p2": {
+				"stock": [
+					{ "food": 13, "gold": 8, "iron": 2, "wood": 2 },
+					{ "food": 23, "gold": 11, "iron": 4, "wood": 3 },
+					{ "food": 30, "gold": 13, "iron": 6, "wood": 4 },
+					{ "food": 42, "gold": 15, "iron": 8, "wood": 8 },
+					{ "food": 47, "gold": 23, "iron": 10, "wood": 10 },
+					{ "food": 60, "gold": 31, "iron": 10, "wood": 11 },
+					{ "food": 68, "gold": 37, "iron": 9, "wood": 12 },
+					{ "food": 75, "gold": 46, "iron": 18, "wood": 12 },
+					{ "food": 85, "gold": 55, "iron": 26, "wood": 15 },
+					{ "food": 86, "gold": 58, "iron": 33, "wood": 12 },
+					{ "food": 82, "gold": 65, "iron": 34, "wood": 14 },
+					{ "food": 82, "gold": 70, "iron": 28, "wood": 12 },
+					{ "food": 82, "gold": 75, "iron": 24, "wood": 14 },
+					{ "food": 86, "gold": 75, "iron": 23, "wood": 39 },
+					{ "food": 89, "gold": 84, "iron": 27, "wood": 30 },
+					{ "food": 88, "gold": 99, "iron": 21, "wood": 34 },
+					{ "food": 84, "gold": 114, "iron": 14, "wood": 37 },
+					{ "food": 83, "gold": 129, "iron": 18, "wood": 46 },
+					{ "food": 82, "gold": 144, "iron": 22, "wood": 55 },
+					{ "food": 83, "gold": 159, "iron": 26, "wood": 64 }
+				],
+				"income": [
+					{ "food": 11, "wood": 1, "iron": 2, "gold": 3 },
+					{ "food": 14, "wood": 1, "iron": 2, "gold": 3 },
+					{ "food": 12, "wood": 4, "iron": 2, "gold": 3 },
+					{ "food": 18, "wood": 8, "iron": 2, "gold": 5 },
+					{ "food": 18, "wood": 8, "iron": 2, "gold": 8 },
+					{ "food": 22, "wood": 9, "iron": 2, "gold": 9 },
+					{ "food": 22, "wood": 6, "iron": 8, "gold": 9 },
+					{ "food": 27, "wood": 7, "iron": 11, "gold": 9 },
+					{ "food": 28, "wood": 7, "iron": 11, "gold": 9 },
+					{ "food": 19, "wood": 4, "iron": 12, "gold": 7 },
+					{ "food": 18, "wood": 8, "iron": 12, "gold": 7 },
+					{ "food": 30, "wood": 6, "iron": 4, "gold": 8 },
+					{ "food": 32, "wood": 6, "iron": 4, "gold": 8 },
+					{ "food": 40, "wood": 10, "iron": 4, "gold": 12 },
+					{ "food": 43, "wood": 9, "iron": 4, "gold": 12 },
+					{ "food": 45, "wood": 9, "iron": 4, "gold": 15 },
+					{ "food": 48, "wood": 9, "iron": 4, "gold": 15 },
+					{ "food": 51, "wood": 9, "iron": 4, "gold": 15 },
+					{ "food": 52, "wood": 9, "iron": 4, "gold": 15 },
+					{ "food": 57, "wood": 9, "iron": 4, "gold": 15 }
+				],
+				"cities": [1, 1, 1, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+				"population": [2, 3, 4, 5, 7, 8, 10, 12, 13, 10, 11, 13, 15, 18, 20, 23, 26, 27, 30, 33],
+				"armies": [1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10],
+				"units": [2, 2, 2, 1, 2, 2, 4, 4, 5, 7, 9, 13, 16, 18, 20, 23, 26, 26, 26, 26],
+				"strength": [3, 3, 3, 3, 3, 3, 11, 11, 16, 26, 36, 56, 71, 81, 87, 102, 117, 117, 117, 117],
+				"score": [22, 24, 25, 36, 39, 41, 43, 56, 58, 45, 47, 50, 52, 65, 68, 72, 77, 79, 84, 88],
+				"reputation": [
+					50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50
+				],
+				"at_war": [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+			},
+			"p3": {
+				"stock": [
+					{ "food": 10, "gold": 7, "iron": 2, "wood": 6 },
+					{ "food": 15, "gold": 10, "iron": 4, "wood": 7 },
+					{ "food": 19, "gold": 10, "iron": 8, "wood": 10 },
+					{ "food": 22, "gold": 16, "iron": 10, "wood": 13 },
+					{ "food": 28, "gold": 23, "iron": 11, "wood": 24 },
+					{ "food": 26, "gold": 26, "iron": 11, "wood": 32 },
+					{ "food": 29, "gold": 33, "iron": 13, "wood": 41 },
+					{ "food": 29, "gold": 40, "iron": 17, "wood": 45 },
+					{ "food": 37, "gold": 47, "iron": 21, "wood": 55 },
+					{ "food": 38, "gold": 51, "iron": 25, "wood": 61 },
+					{ "food": 39, "gold": 61, "iron": 24, "wood": 60 },
+					{ "food": 32, "gold": 71, "iron": 27, "wood": 59 },
+					{ "food": 28, "gold": 81, "iron": 31, "wood": 62 },
+					{ "food": 19, "gold": 91, "iron": 35, "wood": 64 },
+					{ "food": 5, "gold": 101, "iron": 39, "wood": 68 },
+					{ "food": 0, "gold": 111, "iron": 53, "wood": 56 },
+					{ "food": 0, "gold": 120, "iron": 53, "wood": 55 },
+					{ "food": 0, "gold": 129, "iron": 56, "wood": 60 },
+					{ "food": 0, "gold": 138, "iron": 58, "wood": 66 },
+					{ "food": 0, "gold": 147, "iron": 61, "wood": 75 }
+				],
+				"income": [
+					{ "food": 8, "wood": 4, "iron": 2, "gold": 3 },
+					{ "food": 8, "wood": 6, "iron": 2, "gold": 3 },
+					{ "food": 8, "wood": 7, "iron": 4, "gold": 3 },
+					{ "food": 8, "wood": 8, "iron": 4, "gold": 6 },
+					{ "food": 13, "wood": 11, "iron": 4, "gold": 7 },
+					{ "food": 12, "wood": 13, "iron": 4, "gold": 7 },
+					{ "food": 13, "wood": 14, "iron": 4, "gold": 7 },
+					{ "food": 18, "wood": 10, "iron": 4, "gold": 7 },
+					{ "food": 21, "wood": 10, "iron": 4, "gold": 7 },
+					{ "food": 16, "wood": 10, "iron": 4, "gold": 7 },
+					{ "food": 16, "wood": 10, "iron": 4, "gold": 10 },
+					{ "food": 17, "wood": 10, "iron": 4, "gold": 10 },
+					{ "food": 24, "wood": 10, "iron": 4, "gold": 10 },
+					{ "food": 26, "wood": 10, "iron": 4, "gold": 10 },
+					{ "food": 28, "wood": 10, "iron": 4, "gold": 10 },
+					{ "food": 18, "wood": 10, "iron": 18, "gold": 10 },
+					{ "food": 27, "wood": 9, "iron": 3, "gold": 9 },
+					{ "food": 28, "wood": 9, "iron": 3, "gold": 9 },
+					{ "food": 30, "wood": 9, "iron": 3, "gold": 9 },
+					{ "food": 31, "wood": 9, "iron": 3, "gold": 9 }
+				],
+				"cities": [1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2],
+				"population": [1, 2, 3, 3, 5, 5, 6, 7, 9, 9, 10, 10, 12, 14, 15, 16, 16, 17, 19, 21],
+				"armies": [1, 1, 1, 1, 2, 3, 4, 5, 5, 5, 5, 7, 8, 9, 10, 10, 9, 9, 9, 9],
+				"units": [2, 2, 2, 2, 2, 3, 5, 6, 6, 6, 6, 10, 14, 19, 21, 26, 25, 24, 23, 22],
+				"strength": [3, 3, 3, 3, 7, 7, 13, 13, 13, 13, 13, 27, 43, 63, 68, 88, 84, 81, 77, 73],
+				"score": [21, 23, 24, 24, 37, 37, 39, 41, 43, 44, 46, 47, 50, 53, 55, 67, 58, 59, 62, 65],
+				"reputation": [
+					50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50
+				],
+				"at_war": [
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					["p1"],
+					["p1"],
+					["p1"],
+					["p1"],
+					["p1"],
+					[]
+				]
+			},
+			"p4": {
+				"stock": [
+					{ "food": 11, "gold": 8, "iron": 0, "wood": 6 },
+					{ "food": 12, "gold": 10, "iron": 0, "wood": 6 },
+					{ "food": 12, "gold": 13, "iron": 0, "wood": 11 },
+					{ "food": 18, "gold": 16, "iron": 0, "wood": 13 },
+					{ "food": 24, "gold": 17, "iron": 1, "wood": 15 },
+					{ "food": 33, "gold": 26, "iron": 4, "wood": 19 },
+					{ "food": 43, "gold": 35, "iron": 6, "wood": 21 },
+					{ "food": 55, "gold": 43, "iron": 10, "wood": 24 },
+					{ "food": 72, "gold": 51, "iron": 9, "wood": 25 },
+					{ "food": 56, "gold": 60, "iron": 10, "wood": 29 },
+					{ "food": 47, "gold": 69, "iron": 14, "wood": 44 },
+					{ "food": 34, "gold": 75, "iron": 14, "wood": 62 },
+					{ "food": 37, "gold": 84, "iron": 18, "wood": 78 },
+					{ "food": 38, "gold": 93, "iron": 22, "wood": 94 },
+					{ "food": 36, "gold": 100, "iron": 26, "wood": 109 },
+					{ "food": 35, "gold": 112, "iron": 30, "wood": 119 },
+					{ "food": 32, "gold": 125, "iron": 34, "wood": 135 },
+					{ "food": 21, "gold": 138, "iron": 38, "wood": 152 },
+					{ "food": 18, "gold": 151, "iron": 42, "wood": 171 },
+					{ "food": 15, "gold": 164, "iron": 48, "wood": 195 }
+				],
+				"income": [
+					{ "food": 9, "wood": 5, "iron": 0, "gold": 3 },
+					{ "food": 11, "wood": 5, "iron": 0, "gold": 3 },
+					{ "food": 12, "wood": 7, "iron": 0, "gold": 3 },
+					{ "food": 13, "wood": 7, "iron": 0, "gold": 3 },
+					{ "food": 18, "wood": 10, "iron": 1, "gold": 4 },
+					{ "food": 27, "wood": 13, "iron": 4, "gold": 9 },
+					{ "food": 30, "wood": 13, "iron": 4, "gold": 9 },
+					{ "food": 34, "wood": 13, "iron": 4, "gold": 9 },
+					{ "food": 35, "wood": 15, "iron": 4, "gold": 9 },
+					{ "food": 21, "wood": 20, "iron": 4, "gold": 9 },
+					{ "food": 22, "wood": 20, "iron": 4, "gold": 9 },
+					{ "food": 23, "wood": 20, "iron": 4, "gold": 9 },
+					{ "food": 39, "wood": 20, "iron": 4, "gold": 9 },
+					{ "food": 40, "wood": 20, "iron": 4, "gold": 9 },
+					{ "food": 43, "wood": 21, "iron": 4, "gold": 10 },
+					{ "food": 44, "wood": 21, "iron": 4, "gold": 13 },
+					{ "food": 48, "wood": 23, "iron": 4, "gold": 13 },
+					{ "food": 49, "wood": 24, "iron": 4, "gold": 13 },
+					{ "food": 51, "wood": 24, "iron": 4, "gold": 13 },
+					{ "food": 53, "wood": 24, "iron": 6, "gold": 13 }
+				],
+				"cities": [1, 1, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4],
+				"population": [1, 2, 3, 4, 6, 8, 10, 11, 14, 15, 17, 18, 19, 21, 23, 25, 27, 29, 31, 33],
+				"armies": [1, 2, 3, 3, 4, 4, 5, 6, 6, 8, 8, 9, 10, 11, 12, 13, 14, 16, 16, 16],
+				"units": [2, 3, 4, 4, 5, 5, 6, 7, 7, 11, 13, 14, 16, 18, 18, 20, 21, 25, 25, 25],
+				"strength": [3, 3, 3, 3, 9, 9, 9, 9, 9, 15, 24, 24, 30, 36, 36, 42, 42, 54, 54, 54],
+				"score": [21, 23, 24, 25, 37, 50, 53, 55, 59, 61, 63, 65, 67, 70, 83, 86, 89, 92, 96, 99],
+				"reputation": [
+					50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50
+				],
+				"at_war": [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+			}
+		},
+		"progress": {
+			"cities_total": [4, 4, 5, 6, 8, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 12, 12, 12, 12, 12],
+			"domination_needed": [2, 2, 3, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6],
+			"leader": [
+				"p1",
+				"p1",
+				"p1",
+				"p1",
+				"p1",
+				"p4",
+				"p4",
+				"p2",
+				"p2",
+				"p4",
+				"p4",
+				"p4",
+				"p4",
+				"p2",
+				"p4",
+				"p4",
+				"p4",
+				"p4",
+				"p4",
+				"p4"
+			],
+			"leader_cities": [1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4],
+			"gold_countdown": [
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null
+			]
+		}
+	},
+	"victory": {
+		"kind": "round_limit",
+		"winners": ["p4"],
+		"round": 20,
+		"standings": [
+			{ "rank": 1, "score": 99, "player": "p4" },
+			{ "rank": 2, "score": 88, "player": "p2" },
+			{ "rank": 3, "score": 82, "player": "p1" },
+			{ "rank": 4, "score": 65, "player": "p3" }
+		],
+		"countdown": []
+	},
+	"battles": [
+		{
+			"seq": 553,
+			"tile": [2, 4],
+			"round": 11,
+			"winner": "p2",
+			"attacker": {
+				"army": "a30",
+				"lost": ["spearman", "spearman", "swordsman"],
+				"power": 11.9,
+				"nation": "neutral"
+			},
+			"defender": {
+				"city": null,
+				"lost": ["swordsman"],
+				"power": 38.78,
+				"armies": ["a2", "a20"],
+				"nation": "p2"
+			}
+		},
+		{
+			"seq": 556,
+			"tile": [1, 2],
+			"round": 11,
+			"winner": "neutral",
+			"attacker": { "army": "a36", "lost": [], "power": 11.62, "nation": "neutral" },
+			"defender": {
+				"city": null,
+				"lost": ["settler"],
+				"power": 0.0,
+				"armies": ["a18"],
+				"nation": "p4"
+			}
+		},
+		{
+			"seq": 623,
+			"tile": [0, 2],
+			"round": 12,
+			"winner": "neutral",
+			"attacker": { "army": "a36", "lost": ["swordsman"], "power": 10.28, "nation": "neutral" },
+			"defender": {
+				"city": "c10",
+				"lost": ["spearman", "spearman"],
+				"power": 5.93,
+				"armies": ["a43"],
+				"nation": "p2"
+			}
+		},
+		{
+			"seq": 686,
+			"tile": [0, 3],
+			"round": 13,
+			"winner": "p2",
+			"attacker": {
+				"army": "a36",
+				"lost": ["spearman", "spearman"],
+				"power": 5.24,
+				"nation": "neutral"
+			},
+			"defender": { "city": null, "lost": [], "power": 42.18, "armies": ["a42"], "nation": "p2" }
+		},
+		{
+			"seq": 818,
+			"tile": [8, 4],
+			"round": 15,
+			"winner": "p1",
+			"attacker": { "army": "a28", "lost": ["spearman"], "power": 23.61, "nation": "p1" },
+			"defender": {
+				"city": null,
+				"lost": ["spearman"],
+				"power": 3.83,
+				"armies": ["a3"],
+				"nation": "p3"
+			}
+		},
+		{
+			"seq": 898,
+			"tile": [8, 5],
+			"round": 16,
+			"winner": "p3",
+			"attacker": {
+				"army": "a28",
+				"lost": ["spearman", "spearman", "spearman", "spearman", "spearman"],
+				"power": 15.21,
+				"nation": "p1"
+			},
+			"defender": {
+				"city": "c7",
+				"lost": ["archer", "archer"],
+				"power": 17.33,
+				"armies": ["a45", "a64"],
+				"nation": "p3"
+			}
+		},
+		{
+			"seq": 901,
+			"tile": [8, 4],
+			"round": 16,
+			"winner": "p1",
+			"attacker": {
+				"army": "a45",
+				"lost": ["spearman", "spearman"],
+				"power": 6.13,
+				"nation": "p3"
+			},
+			"defender": {
+				"city": null,
+				"lost": ["spearman"],
+				"power": 11.06,
+				"armies": ["a28"],
+				"nation": "p1"
+			}
+		}
+	],
+	"conquests": [
+		{ "seq": 483, "round": 10, "city": "c6", "from": "p2", "to": "neutral" },
+		{ "seq": 622, "round": 12, "city": "c6", "from": "neutral", "to": "p2" },
+		{ "seq": 627, "round": 12, "city": "c10", "from": "p2", "to": "neutral" },
+		{ "seq": 753, "round": 14, "city": "c10", "from": "neutral", "to": "p2" },
+		{ "seq": 977, "round": 17, "city": "c12", "from": "p3", "to": "p1" }
+	],
+	"diplomacy": {
+		"timeline": [
+			{
+				"seq": 279,
+				"round": 7,
+				"event": "treaty_signed",
+				"treaty": "t1",
+				"parties": ["p1", "p2"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 280,
+				"round": 7,
+				"event": "treaty_signed",
+				"treaty": "t2",
+				"parties": ["p2", "p3"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 391,
+				"round": 9,
+				"event": "treaty_signed",
+				"treaty": "t3",
+				"parties": ["p1", "p3"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 392,
+				"round": 9,
+				"event": "treaty_signed",
+				"treaty": "t4",
+				"parties": ["p2", "p4"],
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 783,
+				"round": 15,
+				"event": "war_declared",
+				"by": "p1",
+				"on": "p3",
+				"joined": [],
+				"broken": ["t3"]
+			},
+			{
+				"seq": 919,
+				"round": 17,
+				"event": "treaty_expired",
+				"treaty": "t2",
+				"treaty_kind": "non_aggression"
+			},
+			{
+				"seq": 1158,
+				"round": 20,
+				"event": "treaty_signed",
+				"treaty": "t5",
+				"parties": ["p1", "p3"],
+				"treaty_kind": "peace"
+			}
+		],
+		"by_nation": {
+			"p1": {
+				"wars_declared": 1,
+				"treaties_signed": 3,
+				"treaties_broken": 0,
+				"messages_public": 3,
+				"messages_private": 2,
+				"offers_sent": 4,
+				"offers_received": 1,
+				"offers_accepted": 1,
+				"offers_declined": 0,
+				"offers_lapsed": 0
+			},
+			"p2": {
+				"wars_declared": 0,
+				"treaties_signed": 3,
+				"treaties_broken": 0,
+				"messages_public": 11,
+				"messages_private": 0,
+				"offers_sent": 2,
+				"offers_received": 2,
+				"offers_accepted": 2,
+				"offers_declined": 0,
+				"offers_lapsed": 0
+			},
+			"p3": {
+				"wars_declared": 0,
+				"treaties_signed": 3,
+				"treaties_broken": 0,
+				"messages_public": 0,
+				"messages_private": 0,
+				"offers_sent": 1,
+				"offers_received": 3,
+				"offers_accepted": 3,
+				"offers_declined": 0,
+				"offers_lapsed": 0
+			},
+			"p4": {
+				"wars_declared": 0,
+				"treaties_signed": 1,
+				"treaties_broken": 0,
+				"messages_public": 0,
+				"messages_private": 0,
+				"offers_sent": 0,
+				"offers_received": 1,
+				"offers_accepted": 1,
+				"offers_declined": 0,
+				"offers_lapsed": 0
+			}
+		}
+	},
+	"orders": {
+		"p1": {
+			"submitted": 139,
+			"by_fallback": 0,
+			"dropped": 22,
+			"by_type": {
+				"train": { "sent": 26, "dropped": 3 },
+				"build": { "sent": 18, "dropped": 1 },
+				"move": { "sent": 30, "dropped": 4 },
+				"fortify": { "sent": 19, "dropped": 0 },
+				"settle": { "sent": 3, "dropped": 2 },
+				"message": { "sent": 5, "dropped": 0 },
+				"focus": { "sent": 7, "dropped": 0 },
+				"respond": { "sent": 1, "dropped": 0 },
+				"merge": { "sent": 21, "dropped": 10 },
+				"propose_treaty": { "sent": 4, "dropped": 2 },
+				"propose_trade": { "sent": 2, "dropped": 0 },
+				"declare_war": { "sent": 1, "dropped": 0 },
+				"split": { "sent": 1, "dropped": 0 },
+				"disband": { "sent": 1, "dropped": 0 }
+			},
+			"reasons": [
+				{ "reason": "merge: Armies merge on one tile: # at #, # at #", "count": 7 },
+				{ "reason": "move: # has no fighting units.", "count": 3 },
+				{
+					"reason": "settle: A new city must be at least # steps from every other city, and # at # is closer to one",
+					"count": 2
+				},
+				{ "reason": "train: # spearman cost # food, # wood; you have # food, # wood.", "count": 1 },
+				{ "reason": "merge: A merge order needs armies; it has no armies.", "count": 1 }
+			],
+			"dropped_share": { "value": 0.15827338129496402, "n": 22, "of": 139 }
+		},
+		"p2": {
+			"submitted": 158,
+			"by_fallback": 0,
+			"dropped": 4,
+			"by_type": {
+				"build": { "sent": 21, "dropped": 1 },
+				"focus": { "sent": 31, "dropped": 0 },
+				"move": { "sent": 19, "dropped": 0 },
+				"settle": { "sent": 5, "dropped": 3 },
+				"message": { "sent": 11, "dropped": 0 },
+				"train": { "sent": 13, "dropped": 0 },
+				"fortify": { "sent": 53, "dropped": 0 },
+				"propose_treaty": { "sent": 2, "dropped": 0 },
+				"respond": { "sent": 2, "dropped": 0 },
+				"merge": { "sent": 1, "dropped": 0 }
+			},
+			"reasons": [
+				{
+					"reason": "settle: A new city must be at least # steps from every other city, and # at # is closer to one",
+					"count": 3
+				},
+				{
+					"reason": "build: # already has a farm, built or under construction (at most # per city).",
+					"count": 1
+				}
+			],
+			"dropped_share": { "value": 0.02531645569620253, "n": 4, "of": 158 }
+		},
+		"p3": {
+			"submitted": 144,
+			"by_fallback": 0,
+			"dropped": 13,
+			"by_type": {
+				"move": { "sent": 30, "dropped": 2 },
+				"focus": { "sent": 29, "dropped": 0 },
+				"build": { "sent": 15, "dropped": 0 },
+				"settle": { "sent": 9, "dropped": 7 },
+				"train": { "sent": 14, "dropped": 2 },
+				"propose_treaty": { "sent": 3, "dropped": 2 },
+				"fortify": { "sent": 40, "dropped": 0 },
+				"respond": { "sent": 3, "dropped": 0 },
+				"merge": { "sent": 1, "dropped": 0 }
+			},
+			"reasons": [
+				{
+					"reason": "settle: A new city must be at least # steps from every other city, and # at # is closer to one",
+					"count": 7
+				},
+				{ "reason": "train: # spearman cost # food, # wood; you have # food, # wood.", "count": 2 },
+				{ "reason": "move: # has no fighting units.", "count": 1 },
+				{ "reason": "propose_treaty: You already have a Non-Aggression Pact with #.", "count": 1 },
+				{ "reason": "move: You have no army '#'", "count": 1 }
+			],
+			"dropped_share": { "value": 0.09027777777777778, "n": 13, "of": 144 }
+		},
+		"p4": {
+			"submitted": 136,
+			"by_fallback": 0,
+			"dropped": 28,
+			"by_type": {
+				"focus": { "sent": 4, "dropped": 0 },
+				"build": { "sent": 26, "dropped": 5 },
+				"train": { "sent": 18, "dropped": 1 },
+				"move": { "sent": 72, "dropped": 14 },
+				"settle": { "sent": 11, "dropped": 8 },
+				"respond": { "sent": 1, "dropped": 0 },
+				"fortify": { "sent": 4, "dropped": 0 }
+			},
+			"reasons": [
+				{ "reason": "move: # cannot reach # this round", "count": 10 },
+				{
+					"reason": "settle: A new city must be at least # steps from every other city, and # at # is closer to one",
+					"count": 8
+				},
+				{
+					"reason": "build: # has no free building slot: # of # are taken at population #",
+					"count": 4
+				},
+				{ "reason": "move: # has no fighting units.", "count": 3 },
+				{ "reason": "train: # spearman cost # food, # wood; you have # food, # wood.", "count": 1 }
+			],
+			"dropped_share": { "value": 0.20588235294117646, "n": 28, "of": 136 }
+		}
+	},
+	"decisions": {
+		"p1": {
+			"moves": 20,
+			"model_moves": 20,
+			"fallbacks": 0,
+			"fallback_share": { "value": 0.0, "n": 0, "of": 20 },
+			"rejected": 4,
+			"response_ms_total": 231224,
+			"response_ms_mean": 11561.2,
+			"tokens_in": 242538,
+			"tokens_out": 22179,
+			"reasoning_tokens": 17926,
+			"retries": 0,
+			"rate_limits": 0,
+			"cutoffs": 4
+		},
+		"p2": {
+			"moves": 20,
+			"model_moves": 20,
+			"fallbacks": 0,
+			"fallback_share": { "value": 0.0, "n": 0, "of": 20 },
+			"rejected": 8,
+			"response_ms_total": 388263,
+			"response_ms_mean": 19413.15,
+			"tokens_in": 263858,
+			"tokens_out": 73745,
+			"reasoning_tokens": 68791,
+			"retries": 0,
+			"rate_limits": 0,
+			"cutoffs": 7
+		},
+		"p3": {
+			"moves": 20,
+			"model_moves": 20,
+			"fallbacks": 0,
+			"fallback_share": { "value": 0.0, "n": 0, "of": 20 },
+			"rejected": 0,
+			"response_ms_total": 70088,
+			"response_ms_mean": 3504.4,
+			"tokens_in": 173503,
+			"tokens_out": 3887,
+			"reasoning_tokens": 605,
+			"retries": 0,
+			"rate_limits": 0,
+			"cutoffs": 0
+		},
+		"p4": {
+			"moves": 20,
+			"model_moves": 20,
+			"fallbacks": 0,
+			"fallback_share": { "value": 0.0, "n": 0, "of": 20 },
+			"rejected": 0,
+			"response_ms_total": 53266,
+			"response_ms_mean": 2663.3,
+			"tokens_in": 259627,
+			"tokens_out": 4790,
+			"reasoning_tokens": 0,
+			"retries": 0,
+			"rate_limits": 0,
+			"cutoffs": 0
+		}
+	},
+	"behaviour": {
+		"p1": {
+			"tags": ["aggressor", "betrayer", "trader"],
+			"counts": {
+				"wars_declared": 1,
+				"attacks": 5,
+				"treaties_broken": 1,
+				"trades": 2,
+				"fortifies": 19,
+				"walls": 2
+			}
+		},
+		"p2": {
+			"tags": ["turtle"],
+			"counts": {
+				"wars_declared": 0,
+				"attacks": 0,
+				"treaties_broken": 0,
+				"trades": 1,
+				"fortifies": 53,
+				"walls": 2
+			}
+		},
+		"p3": {
+			"tags": [],
+			"counts": {
+				"wars_declared": 0,
+				"attacks": 1,
+				"treaties_broken": 0,
+				"trades": 1,
+				"fortifies": 40,
+				"walls": 2
+			}
+		},
+		"p4": {
+			"tags": [],
+			"counts": {
+				"wars_declared": 0,
+				"attacks": 0,
+				"treaties_broken": 0,
+				"trades": 0,
+				"fortifies": 4,
+				"walls": 1
+			}
+		}
+	},
+	"sections": [
+		"situation",
+		"analytics_version",
+		"nations",
+		"series",
+		"victory",
+		"battles",
+		"conquests",
+		"diplomacy",
+		"orders",
+		"decisions",
+		"behaviour"
+	],
+	"numbers": true
+}
