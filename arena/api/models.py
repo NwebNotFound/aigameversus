@@ -83,6 +83,9 @@ class ReliabilityOut(BaseModel):
     fallback_share: float | None
     agent_failed_recent: int
     telemetry_moves: int = Field(description="Moves that report cut-offs and rate limits")
+    telemetry: Literal["none", "partial", "full"] = Field(
+        description="none: older logs say nothing about cut-offs (unknown, not zero)"
+    )
     cutoff_share: float | None
     rate_limits_per_move: float | None
     rejected_rate: float | None = Field(description="Refused answers over all answers")

@@ -58,11 +58,13 @@ def test_moves_from_before_the_counters_are_not_counted_as_clean():
     old = [("m1", {"fallback": None}) for _ in range(15)]  # logs before cutoffs/rate_limits
     found = verdict(moves(5, cutoffs=1) + old, 0, RULES)
 
-    assert found.telemetry_moves == 5
+    assert (found.telemetry_moves, found.telemetry) == (5, "partial")
     assert found.cutoff_share == 1.0  # of the moves that tell, not of all 20
     assert any("known for 5 of 20 moves only" in w for w in found.warnings)
     none_told = verdict(old + old, 0, RULES)
     assert (none_told.cutoff_share, none_told.rate_limits_per_move) == (None, None)
+    assert none_told.telemetry == "none"
+    assert verdict(moves(20), 0, RULES).telemetry == "full"
 
 
 def test_the_thresholds_follow_the_rules():

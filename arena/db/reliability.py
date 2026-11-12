@@ -28,6 +28,7 @@ class Reliability:
     fallback_share: float | None
     agent_failed_recent: int  # of the newest `matches` rule's matches, those a seat gave up in
     telemetry_moves: int  # of the n moves, those that report cutoffs and rate limits
+    telemetry: Literal["none", "partial", "full"]  # how many of the n moves report them
     cutoff_share: float | None  # of those, the share with an answer cut off; None without any
     rate_limits_per_move: float | None  # of those, rate-limited calls per move
     rejected_rate: float | None  # refused answers over all answers of the n moves
@@ -82,6 +83,7 @@ def verdict(
             share,
             failed,
             len(told),
+            "none" if not told else ("full" if len(told) == n else "partial"),
             cut,
             limited,
             rejected_rate,
