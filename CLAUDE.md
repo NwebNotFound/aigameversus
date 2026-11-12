@@ -954,6 +954,38 @@ uv run python -m arena.research.experiment experiments/<name>.yaml > experiments
 uv run pytest tests/research
 ```
 
+An explicit research stage (`PLAN.yaml` + `schedule.csv`: W2, C1) is played by
+`arena/research/stage_runner.py`, not by the generic runner. `--dry-run` gives the checks
+and estimates only.
+- **Before anything starts:** it refuses without the plan's recorded execution approval.
+  It also refuses a CSV with unknown columns, gaps in `order` or the wrong length, and a
+  guest plan whose CSV is not the schedule it generates.
+- **What it sends:** only whitelisted fields, never `expected_roles`.
+- **Before each start:**
+  - the month hold, and no other match running (one research match at a time);
+  - a fresh free estimate below the match limit, and the limit read back;
+  - the stage's spend over every attempt plus 3× that estimate within 90 %;
+  - the same spend plus the table's own limit (`match_budget_eur`) within the stage;
+  - no guest whose listed price has risen;
+  - not at the review checkpoint (`checkpoint_after`). Going on after it needs
+    `--release-checkpoint EVIDENCE`.
+- **After each match:** it holds on a failed match, a failed agent, a fallback share above
+  10 % (the guest's, else every model's), a wrong role, or a cost above
+  `max_cost_per_match_eur`. It never retries.
+- **Logs:** `<out>/attempts.jsonl` is written and fsynced before every POST. A restart
+  adopts a lost start by its batch label. If the arena shows none, it holds until
+  `--mark-unstarted ATTEMPT_ID EVIDENCE`; it never posts again on its own.
+- **Spend:** the stage's spend is read from the arena's batch history, so a new out folder
+  resets nothing.
+- **Paid runs:** they need `--pre-start-report` and `--arena-build`. One client runs at a
+  time across stages (the lock `<out>/../.stage-runner.lock`). A resume with a changed plan
+  or schedule is refused. While a match runs, a pause or a failed agent holds at once; the
+  match is not aborted. A row played outside the client (a directly approved smoke) is
+  named in `adopted_matches: {order: {match_id, evidence}}` and adopted, never replayed.
+- **`<out>/run.json`:** the hashes (client included), the evidence, the effective limit,
+  the reserve, every attempt with its body, quote, month and seat counts, and the stop
+  reasons.
+
 ### A system
 
 *Not built yet: phase 7.* Target: a module that registers its tools and hooks
