@@ -103,5 +103,21 @@
       "Your text has 122 words; say it in at most 120.": 1
     }
   },
-  "gate_pass": false
+  "gate_pass": false,
+  "seat_exclusion_sensitivity": {
+    "all_seats": {
+      "turns": 524,
+      "fallbacks": 8,
+      "rejected_answers": 60,
+      "fallback_share": 0.015267175572519083,
+      "rejected_per_decision": 0.11450381679389313
+    },
+    "without_llama_seats": {
+      "turns": 489,
+      "fallbacks": 2,
+      "rejected_answers": 33,
+      "fallback_share": 0.00408997955010225,
+      "rejected_per_decision": 0.06748466257668712
+    }
+  }
 }

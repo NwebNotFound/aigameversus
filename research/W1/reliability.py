@@ -55,6 +55,17 @@ for m, s in summary.items():
 out["gate_pass"] = all(
     s["fallback_share"] <= 0.10 and s["failed_matches"] < 2 for s in summary.values()
 )
+out["seat_exclusion_sensitivity"] = {}
+for label, included in (
+    ("all_seats", list(summary.values())),
+    ("without_llama_seats", [s for m, s in summary.items() if m != "llama-scout"]),
+):
+    totals = {
+        key: sum(s[key] for s in included) for key in ("turns", "fallbacks", "rejected_answers")
+    }
+    totals["fallback_share"] = totals["fallbacks"] / totals["turns"]
+    totals["rejected_per_decision"] = totals["rejected_answers"] / totals["turns"]
+    out["seat_exclusion_sensitivity"][label] = totals
 print(json.dumps(out, indent=2))
 dest = repo / "research/W1/P1"
 dest.mkdir(parents=True, exist_ok=True)

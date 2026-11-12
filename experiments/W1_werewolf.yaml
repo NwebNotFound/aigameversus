@@ -7,11 +7,34 @@
 
 id: W1
 title: "Werewolf pilot: eight seats of cheap models, every seat in every role"
-version: 3
+version: 4
 status: approved          # P1/P2 owner; P3 overnight delegation via Lead (2026-11-12)
 registered: "2026-11-12"
 author: Arena Researcher
 amendments:
+  - version: 4
+    date: "2026-11-12"
+    what: >
+      P1 remains unchanged. Omit llama-scout from P2 and future guest tables
+      until re-qualified; replace its P2 entry with gpt-luna, keeping eight
+      seats. P3 keeps every original P1 seat, including Llama, as an explicit
+      reliability-remediation exception to the clean-P1/P2 prerequisite.
+      Primary P3 reliability metrics are Llama fallback share and word-limit
+      rejections per decision, paired by original seed and seating. Add a
+      descriptive sensitivity report with and without Llama seat records;
+      full-match team outcomes remain unchanged, not counterfactual games.
+    why: >
+      Lead decision 01bebc80-3524-4cff-b5dd-138fd6f57944 after P1 ended:
+      Llama had 6 bot replacements in 35 decisions and 27 word-limit
+      rejections. These changes are informed by P1 reliability, before any
+      P2/P3 call or outcome inspection; remediation is exploratory, not a
+      confirmatory prompt-effect test. P3's word budgets target the observed
+      failure. Three times the free estimate is a start-planning reserve,
+      not an enforced cap; retain an additional worst-case allowance check
+      until a smaller ledger-enforced limit is available. Never exceed stage
+      0.50 EUR or match 0.50 EUR; stop starts at 90 percent. A match exceeding
+      0.20 EUR stops the stage and is reported to Lead. Read monthly ledger
+      before every start and hold at 20 EUR spent.
   - version: 3
     date: "2026-11-12"
     what: >
@@ -42,7 +65,8 @@ approvals:
     by: "Arena Lead under owner's explicit overnight delegation"
     scope: >
       P3 at most 0.50 EUR, one match at a time, stop starting at 90 percent;
-      only after P1 and P2 are clean and werewolf-p3 is deployed. Part of
+      after P1 reliability review and werewolf-p3 deployment; v4 grants
+      a remediation exception to the clean-P1/P2 gate. Part of
       the shared new overnight ceiling of 6 EUR; all call reservations count.
       Approval evidence: 1fd8b027-07da-49ba-80f3-b32ff019cdf5.
   - stages: [P1, P2]
@@ -75,7 +99,7 @@ conditions:
   how_matches_run: "through POST /matches on the shared stack, one match at a time (two at most), with the batch field W1-P1 or W1-P2"
   needs_before_start:
     P1: "the arena rebuild after league E1-A2"
-    P3: "#118 (werewolf-p3) on the running stack, clean P1/P2, overnight approval recorded"
+    P3: "#118 deployed, P1 review complete, original seats kept under v4 remediation exception"
     P2: "#106 on the running stack (qwen-flash: 4 000 output tokens, no reasoning effort, tool_choice auto; longer waits after a rate limit)"
 
 # Ids and prices as listed by openrouter.ai/api/v1/models on 2026-11-11 (USD per million tokens).
@@ -136,7 +160,7 @@ stages:
   - id: P2
     kind: cyclic
     title: "The two pilot failures of E1 get a second chance in Werewolf"
-    seats: [gpt-luna, qwen-flash, glm-flash, deepseek-flash, gemini-flash-lite, mistral-small, llama-scout, claude-haiku]
+    seats: [gpt-luna, qwen-flash, glm-flash, deepseek-flash, gemini-flash-lite, mistral-small, gpt-luna, claude-haiku]
     effort: low
     seeds: 1
     seed_base: 2102000
@@ -164,6 +188,13 @@ hypotheses:
     kind: descriptive, paired, no confirmatory test
     claim: Does p3 change how the village plays and how reliably the models answer?
     test: >
+      Primary reliability remediation: Llama fallback share (fallback
+      decisions / all its decisions), word-limit rejected answers per
+      decision, and paired differences on the P1/P3 seating subset that
+      budget permits. Every retry is retained; no repeated qualification
+      until pass. Report exposure and missing pairs. Other comparisons
+      below remain exploratory, with no claim of a controlled causal
+      effect if arena configuration changed between stages.
       Paired by twin (P1 match, P3 match with the same seed and seating), 8
       pairs: village win (McNemar's exact test, reported, too few pairs to
       decide), village vote accuracy, the day the seer first states a result,

@@ -34,9 +34,18 @@ recorded validator messages; old logs have no new per-decision cutoff counters.
 
 **P1 fails its pre-registered reliability gate:** Llama exceeds10% bot moves;
 all other models remain below10% and no model has failed in two matches.
-P2, P3 and strong guests have not started. Lead must choose the remediation or
-roster amendment before further spending; no silent substitution, weakened
+P2, P3 and strong guests have not started. Lead decision01bebc80 subsequently
+omits Llama from P2/guest rosters and grants P3 an explicit remediation exception
+with original seats retained (plan v4). No silent substitution, weakened
 threshold or repeat-until-pass. Original P1 remains intact and all failures count.
+
+Descriptive reliability sensitivity: including all seats gives8/524 bot decisions
+(1.53%) and60/524 rejected answers per decision (0.115); excluding Llama's seat
+records gives2/489 bot decisions (0.41%) and33/489 rejected answers per decision
+(0.067). Opponents still faced Llama in these games; this exclusion cannot tell us
+what would happen in games played without Llama. It does not change the original
+gate failure, team outcomes or recorded costs. Outcome sensitivity remains to be
+computed with the outcome report, without inventing counterfactual wins.
 
 Recommended options for Lead: fix/requalify Llama under an approved configuration,
 or omit it from a newly amended P2/guest roster. P3 was paired to the original
