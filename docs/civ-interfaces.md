@@ -218,6 +218,7 @@ accident:
 
 ```json
 "scoreboard": {
+  "round": 12,
   "cities_total": 12,
   "cities": {"p1": 3, "p2": 5, "p3": 4},
   "domination_needed": 6,
@@ -227,7 +228,8 @@ accident:
 }
 ```
 
-`gold_countdown` is `null` while nobody holds enough gold. Everything else in
+`round` is the round being played. `gold_countdown` is `null` while nobody
+holds enough gold; with several holders it names the one closest to winning. Everything else in
 an observation about another nation comes from its fog view.
 
 **Size budget.** An observation and its prompt are what every call pays
