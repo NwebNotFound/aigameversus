@@ -5,6 +5,11 @@ Unknown game 'civ'; the exact response is in estimate-availability.json. There
 is no valid numeric estimate yet. The inspected draft #147 initial_state rejects
 nonempty game settings and uses the data round limit, so the requested 20-round
 preset needs a supported contract before a meaningful quote can be obtained.
+Update: Civ now appears in the live game list. Draft #157 (still open when
+checked) proposes `settings: {rounds: 20}`, with a normal score ending after
+round 20 unless an earlier victory occurs. Wait for merge and verified deployment
+before quoting that preset; the saved 404 is historical availability evidence,
+not the current live game list. No 20-round price has yet been measured here.
 Do not relabel a default 60-round estimate as a 20-round quote or abort a long
 game at round 20 and count that as a normal terminal outcome.
 

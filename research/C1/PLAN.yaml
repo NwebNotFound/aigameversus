@@ -12,6 +12,7 @@ requested_preset:
   rounds: 20
   map: smallest_supported_for_four_nations
   round_limit_api_setting: null
+  proposed_round_limit_contract: {pr: 157, key: rounds, value: 20, status: awaiting_merge_and_verified_deployment}
   note: 'Requirements, not accepted API settings; do not forward this object.'
 models: [glm-flash, deepseek-flash, gpt-luna, claude-haiku]
 seed: 2104001
