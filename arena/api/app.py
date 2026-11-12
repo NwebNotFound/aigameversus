@@ -14,6 +14,7 @@ from arena.api import (
     batches,
     chronicle,
     export,
+    insights,
     matches,
     memory,
     models,
@@ -79,6 +80,7 @@ app = FastAPI(title="AIGameVersus Arena", lifespan=lifespan)
 app.include_router(werewolf.router)
 app.include_router(setup.router)
 app.include_router(ratings.router)
+app.include_router(insights.router)
 app.include_router(memory.router)
 app.include_router(matches.router)
 app.include_router(chronicle.router)

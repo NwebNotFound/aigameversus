@@ -144,3 +144,4 @@ with `python scripts/decisions.py adopt`.
 - [D-139](decisions/D-139-a-game-keeps-its-old-rules-versions-and-a-stored-match-is.md) · A game keeps its old rules versions, and a stored match is read with its own
 - [D-140](decisions/D-140-ai-written-chronicle-one-capped-call-fact-checked-per.md) · AI-written chronicle: one capped call, fact-checked per chapter, cached
 - [D-145](decisions/D-145-seat-configuration-panel-per-seat-options-sent-only-where.md) · Seat configuration panel: per-seat options sent only where the arena lists them
+- [D-146](decisions/D-146-insights-across-matches-whole-match-resampling-one-head-to.md) · Insights across matches: whole-match resampling, one head-to-head result per match
