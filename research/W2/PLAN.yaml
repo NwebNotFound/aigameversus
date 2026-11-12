@@ -1,0 +1,99 @@
+id: W2
+schema: explicit_guest_pilot_v1
+version: 2
+status: proposed
+registered: '2026-11-12'
+owner: Arena Researcher
+game: werewolf
+allocation_approval: 'Lead overnight delegation 1fd8b027: guest stage up to EUR3.50'
+execution_plan_approved: false
+execution_approval_evidence: null
+schedule: schedule.csv
+settings: {template: classic, language: en, prompt_version: werewolf-p2, answer_repair: 'off'}
+memory: false
+reasoning_effort_per_model: low
+max_output_tokens_per_model: 1500
+turn_timeout_s: 60
+tool_choice: production_required_default_verify_before_start
+provider_route: automatic_record_actual_route_if_available
+private_plan: unavailable_off
+thought_headline: false
+seed: 2103001
+repetitions: 1
+max_matches: 8
+purpose: descriptive_reliability_and_behavior_not_ranking
+power: 'Two role cells per guest cannot establish model strength or rare-error reliability.'
+guests:
+  - {id: openai/gpt-6.1-terra, input_usd_per_mtok: 1.0, output_usd_per_mtok: 5.0}
+  - {id: anthropic/claude-sonnet-5.5, input_usd_per_mtok: 2.0, output_usd_per_mtok: 10.0}
+  - {id: moonshotai/kimi-k3.1-pro, input_usd_per_mtok: 2.0, output_usd_per_mtok: 10.0}
+  - {id: google/gemini-4-carbon, input_usd_per_mtok: 2.0, output_usd_per_mtok: 10.0}
+hosts_in_fixed_relative_order: [glm-flash, deepseek-flash, gpt-luna, mistral-small, claude-haiku, gpt-luna, claude-haiku]
+excluded_hosts: [llama-scout, qwen-flash]
+host_ids:
+  glm-flash: z-ai/glm-5.3-flash
+  deepseek-flash: deepseek/deepseek-v4.1-flash
+  gpt-luna: openai/gpt-6-luna
+  mistral-small: mistralai/mistral-small-2603
+  claude-haiku: anthropic/claude-haiku-5.5
+role_cells:
+  - {guest_seat: p4, role: werewolf}
+  - {guest_seat: p3, role: seer}
+expected_roles:
+  p1: hunter
+  p2: witch
+  p3: seer
+  p4: werewolf
+  p5: villager
+  p6: werewolf
+  p7: villager
+  p8: villager
+ordering: 'All four guests get the wolf cell first, then the seer cell; seeded guest order within each block.'
+ordering_seed: 2026111205
+budget:
+  allocation_group: overnight_strong_guests_2026_11_12
+  stage_eur: 3.50
+  match_cap_eur: 0.50
+  stop_start_share: 0.90
+  planning_reserve: three_times_fresh_free_estimate
+  hard_reserve: full_effective_ledger_match_cap
+  month_cap_eur: 25
+  notify_and_hold_at_month_eur: 20
+  ledger_before_plan_micro_eur: 3756279
+  estimated_eight_matches_eur: 1.724974
+  automatic_retries: 0
+  accounting: 'Cumulative over every guest-stage attempt/run; a restart or plan revision does not reset the EUR3.50 allowance.'
+free_quotes_micro_eur:
+  openai/gpt-6.1-terra: 136646
+  anthropic/claude-sonnet-5.5: 241947
+  moonshotai/kimi-k3.1-pro: 241947
+  google/gemini-4-carbon: 241947
+catalog_fetched_at: '2026-11-12T05:16:43.615661Z'
+prerequisites:
+  - 'Lead accepts this exact reduced 8-cell plan before any start; allocation alone is not plan acceptance.'
+  - '#144 merged on main and deployed in a verified rebuild; no cap-only workaround authorizes a start.'
+  - 'Every fresh table estimate strictly below EUR0.40; verify settings.match_budget_eur enforcement and record its effective value.'
+  - 'Send Lead a one-line pre-start report; no start from this proposal.'
+  - '#144 merged on main and deployed in a verified rebuild; no cap-only workaround authorizes a start.'
+  - 'Every fresh table estimate strictly below EUR0.40; verify settings.match_budget_eur enforcement and record its effective value.'
+  - 'Send Lead a one-line pre-start report; no start from this proposal.'
+  - 'Freeze plan/schedule/config hashes and verify backend role fixture, options and price quote.'
+  - 'No other paid research match running; read real month ledger before each start.'
+  - 'Explicit CSV client enforces shared budget and both reservation rules; generic E1 runner does not implement this schema.'
+stops:
+  - 'spent + next three-times-estimate reserve > 90% of EUR3.50 => no new match'
+  - 'spent + full effective EUR0.50 cap > EUR3.50 => no new match'
+  - 'any agent_failed, failed/interrupted match or guest fallback share >10% => hold and report, no tuning/substitution/retry'
+  - 'month spent >= EUR20 or any remaining allowance insufficient => hold and report'
+metrics:
+  primary: [guest_decisions, fallback_share, rejected_answers_per_decision, cutoffs, timeouts, failed_agents, latency, total_cost]
+  descriptive: [role_outcome, village_vote_accuracy, original_error_and_repair_flags, speech_length]
+  uncertainty: 'Counts only; no model ranking, Elo or qualification claim from n=2.'
+limitations:
+  - 'Declared tool support is not empirical qualification; all four guests currently have unknown arena reliability.'
+  - 'One wolf and one seer cell per guest do not cover every role or game; wider coverage remains later work.'
+  - 'Budget may leave incomplete role blocks; retain all planned cells and report missingness.'
+  - 'Five unique hosts, repeated GPT/Haiku seats; outcomes within a match are shared.'
+  - 'Uniform production limits may not be optimal per guest; no within-stage tuning.'
+  - 'No comparison with W1 is a causal guest-strength estimate because roster/build exposures differ.'
+  - 'No Jev calls, no real qualification-button calls, no borrowing from narrator/qualification budgets.'

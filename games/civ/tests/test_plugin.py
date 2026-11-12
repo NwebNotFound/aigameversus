@@ -29,9 +29,9 @@ EAST = (4, 2)  # next to CENTER
 OBSERVATION_BYTES = 17_500  # 5,000 tokens at 3.5 bytes each (docs/civ-interfaces.md)
 
 
-def bot_match(players=FOUR, seed=1, agents=None) -> Match:
+def bot_match(players=FOUR, seed=1, agents=None, settings=None) -> Match:
     seats = random_bots(PLUGIN, players, seed) | (agents or {})
-    match = Match(PLUGIN, seats, seed=seed)
+    match = Match(PLUGIN, seats, seed=seed, settings=settings or {})
     asyncio.run(match.run())
     return match
 
@@ -105,7 +105,11 @@ def test_setup_draws_a_map_for_spectators_founds_every_capital_and_opens_round_o
     ("players", "settings", "words"),
     [
         (FOUR[:3], {}, "4 to 6"),
-        (FOUR, {"rounds": 5}, "Unknown settings"),
+        (FOUR, {"speed": 5}, "Unknown settings"),
+        (FOUR, {"rounds": 0}, "from 1 to 60"),
+        (FOUR, {"rounds": 61}, "from 1 to 60"),
+        (FOUR, {"rounds": "20"}, "whole number"),
+        (FOUR, {"rounds": True}, "whole number"),
         (["neutral", *FOUR[:3]], {}, "barbarians"),
     ],
 )
@@ -394,6 +398,34 @@ def test_a_match_of_mock_models_plays_to_the_end_with_failed_calls_and_garbled_a
     prompt = json.dumps(mock.calls[-1][0])
     assert "submit_orders" in json.dumps(mock.calls[-1][1]) and '\\"scoreboard\\"' in prompt
     assert replay(PLUGIN, match.events) == match.state
+
+
+def test_a_shorter_match_ends_by_its_own_round_limit_and_says_so_to_the_nations():
+    watcher = Watcher(random_bots(PLUGIN, FOUR, 7)["p1"])
+    match = bot_match(seed=7, agents={"p1": watcher}, settings={"rounds": 20})
+
+    assert match.state.round <= 20 and match.state.victory is not None
+    if match.state.victory["kind"] == "round_limit":
+        assert match.state.round == 20
+    assert {seen["rounds_total"] for seen in watcher.seen} == {20}
+    assert "after round 20" in watcher.seen[0]["victory"]["score"]
+    assert PLUGIN.render_spec(match.state)["rounds_total"] == 20
+    assert replay(PLUGIN, match.events) == match.state  # the setting is in match_started
+    assert "After round 20," in PLUGIN.rules({"rounds": 20})
+    assert "After round 60," in PLUGIN.rules({}) and "After round 60," not in PLUGIN.rules(
+        {"rounds": 20}
+    )
+
+
+def test_a_cost_estimate_for_a_shorter_match_counts_its_rounds_only():
+    config = load_config()
+    seats = {"p1": next(iter(config.models)), "p2": None, "p3": None, "p4": None}
+
+    short = asyncio.run(estimating.estimate(PLUGIN, seats, {"rounds": 20}, config, {}))
+    full = asyncio.run(estimating.estimate(PLUGIN, seats, {}, config, {}))
+
+    assert short["p1"].calls <= 20
+    assert short["p1"].estimate_micro_eur < full["p1"].estimate_micro_eur
 
 
 def test_a_cost_estimate_counts_one_call_per_nation_and_round():

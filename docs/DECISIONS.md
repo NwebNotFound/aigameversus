@@ -136,3 +136,4 @@ with `python scripts/decisions.py adopt`.
 - [D-131](decisions/D-131-under-the-werewolf-circle-who-claims-what-and-who-suspects.md) · Under the Werewolf circle: who claims what and who suspects whom, cut at the moment on screen
 - [D-132](decisions/D-132-a-model-is-qualified-per-configuration-by-its-first-answers.md) · A model is qualified per configuration by its first answers to real turns of seeded bot matches
 - [D-134](decisions/D-134-the-post-match-referee-judges-five-moments-chosen-by-rule.md) · The post-match referee judges five moments chosen by rule with one Jev call, as unvalidated research tags
+- [D-133](decisions/D-133-throne-of-tokens-has-one-setting-rounds-for-a-shorter-match.md) · Throne of Tokens has one setting, rounds, for a shorter match

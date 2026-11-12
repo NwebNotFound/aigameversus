@@ -1,0 +1,875 @@
+{
+  "checked_at": "2026-11-12T05:31:00.080128+00:00",
+  "catalog_fetched_at": "2026-11-12T05:16:43.615661Z",
+  "models": [
+    {
+      "id": "openai/gpt-6.1-terra",
+      "openrouter_id": "openai/gpt-6.1-terra",
+      "name": "OpenAI: GPT-6.1 Terra",
+      "vendor": "openai",
+      "context_length": 1050000,
+      "input_usd_per_mtok": 1.0,
+      "output_usd_per_mtok": 5.0,
+      "reasoning": true,
+      "moderated": true,
+      "free": false,
+      "verified": false,
+      "price_source": "openrouter list",
+      "high_price": false,
+      "rate_limited_likely": false,
+      "reliability": {
+        "status": "unknown",
+        "reason": "only 0 moves played here, fewer than 20",
+        "n": 0,
+        "matches": 0,
+        "fallback_share": null,
+        "agent_failed_recent": 0,
+        "telemetry_moves": 0,
+        "cutoff_share": null,
+        "rate_limits_per_move": null,
+        "warnings": []
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-5.5",
+      "openrouter_id": "anthropic/claude-sonnet-5.5",
+      "name": "Anthropic: Claude Sonnet 5.5",
+      "vendor": "anthropic",
+      "context_length": 1000000,
+      "input_usd_per_mtok": 2.0,
+      "output_usd_per_mtok": 10.0,
+      "reasoning": true,
+      "moderated": true,
+      "free": false,
+      "verified": false,
+      "price_source": "openrouter list",
+      "high_price": false,
+      "rate_limited_likely": false,
+      "reliability": {
+        "status": "unknown",
+        "reason": "only 0 moves played here, fewer than 20",
+        "n": 0,
+        "matches": 0,
+        "fallback_share": null,
+        "agent_failed_recent": 0,
+        "telemetry_moves": 0,
+        "cutoff_share": null,
+        "rate_limits_per_move": null,
+        "warnings": []
+      }
+    },
+    {
+      "id": "moonshotai/kimi-k3.1-pro",
+      "openrouter_id": "moonshotai/kimi-k3.1-pro",
+      "name": "MoonshotAI: Kimi K3.1 Pro",
+      "vendor": "moonshotai",
+      "context_length": 1048576,
+      "input_usd_per_mtok": 2.0,
+      "output_usd_per_mtok": 10.0,
+      "reasoning": true,
+      "moderated": false,
+      "free": false,
+      "verified": false,
+      "price_source": "openrouter list",
+      "high_price": false,
+      "rate_limited_likely": false,
+      "reliability": {
+        "status": "unknown",
+        "reason": "only 0 moves played here, fewer than 20",
+        "n": 0,
+        "matches": 0,
+        "fallback_share": null,
+        "agent_failed_recent": 0,
+        "telemetry_moves": 0,
+        "cutoff_share": null,
+        "rate_limits_per_move": null,
+        "warnings": []
+      }
+    },
+    {
+      "id": "google/gemini-4-carbon",
+      "openrouter_id": "google/gemini-4-carbon",
+      "name": "Google: Gemini 4 Carbon",
+      "vendor": "google",
+      "context_length": 1048576,
+      "input_usd_per_mtok": 2.0,
+      "output_usd_per_mtok": 10.0,
+      "reasoning": true,
+      "moderated": false,
+      "free": false,
+      "verified": false,
+      "price_source": "openrouter list",
+      "high_price": false,
+      "rate_limited_likely": false,
+      "reliability": {
+        "status": "unknown",
+        "reason": "only 0 moves played here, fewer than 20",
+        "n": 0,
+        "matches": 0,
+        "fallback_share": null,
+        "agent_failed_recent": 0,
+        "telemetry_moves": 0,
+        "cutoff_share": null,
+        "rate_limits_per_move": null,
+        "warnings": []
+      }
+    }
+  ],
+  "settings": {
+    "template": "classic",
+    "language": "en",
+    "prompt_version": "werewolf-p2",
+    "answer_repair": "off"
+  },
+  "quotes": {
+    "openai/gpt-6.1-terra": {
+      "estimate_micro_eur": 136646,
+      "cap_micro_eur": 500000,
+      "month_spent_micro_eur": 3756279,
+      "month_cap_micro_eur": 25000000,
+      "seats": {
+        "p1": {
+          "model_id": "glm-flash",
+          "calls": 9,
+          "estimate_micro_eur": 1833,
+          "basis": "ledger history"
+        },
+        "p2": {
+          "model_id": "deepseek-flash",
+          "calls": 7,
+          "estimate_micro_eur": 6330,
+          "basis": "ledger history"
+        },
+        "p3": {
+          "model_id": "gpt-luna",
+          "calls": 9,
+          "estimate_micro_eur": 4791,
+          "basis": "ledger history"
+        },
+        "p4": {
+          "model_id": "openai/gpt-6.1-terra",
+          "calls": 6,
+          "estimate_micro_eur": 105301,
+          "basis": "output limit"
+        },
+        "p5": {
+          "model_id": "mistral-small",
+          "calls": 7,
+          "estimate_micro_eur": 8595,
+          "basis": "ledger history"
+        },
+        "p6": {
+          "model_id": "claude-haiku",
+          "calls": 9,
+          "estimate_micro_eur": 5103,
+          "basis": "ledger history"
+        },
+        "p7": {
+          "model_id": "gpt-luna",
+          "calls": 5,
+          "estimate_micro_eur": 2555,
+          "basis": "ledger history"
+        },
+        "p8": {
+          "model_id": "claude-haiku",
+          "calls": 4,
+          "estimate_micro_eur": 2138,
+          "basis": "ledger history"
+        }
+      },
+      "fits": true,
+      "high_price": []
+    },
+    "anthropic/claude-sonnet-5.5": {
+      "estimate_micro_eur": 241947,
+      "cap_micro_eur": 500000,
+      "month_spent_micro_eur": 3756279,
+      "month_cap_micro_eur": 25000000,
+      "seats": {
+        "p1": {
+          "model_id": "glm-flash",
+          "calls": 9,
+          "estimate_micro_eur": 1833,
+          "basis": "ledger history"
+        },
+        "p2": {
+          "model_id": "deepseek-flash",
+          "calls": 7,
+          "estimate_micro_eur": 6330,
+          "basis": "ledger history"
+        },
+        "p3": {
+          "model_id": "gpt-luna",
+          "calls": 9,
+          "estimate_micro_eur": 4791,
+          "basis": "ledger history"
+        },
+        "p4": {
+          "model_id": "anthropic/claude-sonnet-5.5",
+          "calls": 6,
+          "estimate_micro_eur": 210602,
+          "basis": "output limit"
+        },
+        "p5": {
+          "model_id": "mistral-small",
+          "calls": 7,
+          "estimate_micro_eur": 8595,
+          "basis": "ledger history"
+        },
+        "p6": {
+          "model_id": "claude-haiku",
+          "calls": 9,
+          "estimate_micro_eur": 5103,
+          "basis": "ledger history"
+        },
+        "p7": {
+          "model_id": "gpt-luna",
+          "calls": 5,
+          "estimate_micro_eur": 2555,
+          "basis": "ledger history"
+        },
+        "p8": {
+          "model_id": "claude-haiku",
+          "calls": 4,
+          "estimate_micro_eur": 2138,
+          "basis": "ledger history"
+        }
+      },
+      "fits": true,
+      "high_price": [
+        "anthropic/claude-sonnet-5.5"
+      ]
+    },
+    "moonshotai/kimi-k3.1-pro": {
+      "estimate_micro_eur": 241947,
+      "cap_micro_eur": 500000,
+      "month_spent_micro_eur": 3756279,
+      "month_cap_micro_eur": 25000000,
+      "seats": {
+        "p1": {
+          "model_id": "glm-flash",
+          "calls": 9,
+          "estimate_micro_eur": 1833,
+          "basis": "ledger history"
+        },
+        "p2": {
+          "model_id": "deepseek-flash",
+          "calls": 7,
+          "estimate_micro_eur": 6330,
+          "basis": "ledger history"
+        },
+        "p3": {
+          "model_id": "gpt-luna",
+          "calls": 9,
+          "estimate_micro_eur": 4791,
+          "basis": "ledger history"
+        },
+        "p4": {
+          "model_id": "moonshotai/kimi-k3.1-pro",
+          "calls": 6,
+          "estimate_micro_eur": 210602,
+          "basis": "output limit"
+        },
+        "p5": {
+          "model_id": "mistral-small",
+          "calls": 7,
+          "estimate_micro_eur": 8595,
+          "basis": "ledger history"
+        },
+        "p6": {
+          "model_id": "claude-haiku",
+          "calls": 9,
+          "estimate_micro_eur": 5103,
+          "basis": "ledger history"
+        },
+        "p7": {
+          "model_id": "gpt-luna",
+          "calls": 5,
+          "estimate_micro_eur": 2555,
+          "basis": "ledger history"
+        },
+        "p8": {
+          "model_id": "claude-haiku",
+          "calls": 4,
+          "estimate_micro_eur": 2138,
+          "basis": "ledger history"
+        }
+      },
+      "fits": true,
+      "high_price": [
+        "moonshotai/kimi-k3.1-pro"
+      ]
+    },
+    "google/gemini-4-carbon": {
+      "estimate_micro_eur": 241947,
+      "cap_micro_eur": 500000,
+      "month_spent_micro_eur": 3756279,
+      "month_cap_micro_eur": 25000000,
+      "seats": {
+        "p1": {
+          "model_id": "glm-flash",
+          "calls": 9,
+          "estimate_micro_eur": 1833,
+          "basis": "ledger history"
+        },
+        "p2": {
+          "model_id": "deepseek-flash",
+          "calls": 7,
+          "estimate_micro_eur": 6330,
+          "basis": "ledger history"
+        },
+        "p3": {
+          "model_id": "gpt-luna",
+          "calls": 9,
+          "estimate_micro_eur": 4791,
+          "basis": "ledger history"
+        },
+        "p4": {
+          "model_id": "google/gemini-4-carbon",
+          "calls": 6,
+          "estimate_micro_eur": 210602,
+          "basis": "output limit"
+        },
+        "p5": {
+          "model_id": "mistral-small",
+          "calls": 7,
+          "estimate_micro_eur": 8595,
+          "basis": "ledger history"
+        },
+        "p6": {
+          "model_id": "claude-haiku",
+          "calls": 9,
+          "estimate_micro_eur": 5103,
+          "basis": "ledger history"
+        },
+        "p7": {
+          "model_id": "gpt-luna",
+          "calls": 5,
+          "estimate_micro_eur": 2555,
+          "basis": "ledger history"
+        },
+        "p8": {
+          "model_id": "claude-haiku",
+          "calls": 4,
+          "estimate_micro_eur": 2138,
+          "basis": "ledger history"
+        }
+      },
+      "fits": true,
+      "high_price": [
+        "google/gemini-4-carbon"
+      ]
+    }
+  },
+  "cell_quotes": [
+    {
+      "guest": "openai/gpt-6.1-terra",
+      "seat": "p3",
+      "quote": {
+        "estimate_micro_eur": 187560,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "openai/gpt-6.1-terra",
+            "calls": 9,
+            "estimate_micro_eur": 157804,
+            "basis": "output limit"
+          },
+          "p4": {
+            "model_id": "gpt-luna",
+            "calls": 6,
+            "estimate_micro_eur": 3202,
+            "basis": "ledger history"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": []
+      }
+    },
+    {
+      "guest": "openai/gpt-6.1-terra",
+      "seat": "p4",
+      "quote": {
+        "estimate_micro_eur": 136646,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "gpt-luna",
+            "calls": 9,
+            "estimate_micro_eur": 4791,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "openai/gpt-6.1-terra",
+            "calls": 6,
+            "estimate_micro_eur": 105301,
+            "basis": "output limit"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": []
+      }
+    },
+    {
+      "guest": "anthropic/claude-sonnet-5.5",
+      "seat": "p3",
+      "quote": {
+        "estimate_micro_eur": 345364,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "anthropic/claude-sonnet-5.5",
+            "calls": 9,
+            "estimate_micro_eur": 315608,
+            "basis": "output limit"
+          },
+          "p4": {
+            "model_id": "gpt-luna",
+            "calls": 6,
+            "estimate_micro_eur": 3202,
+            "basis": "ledger history"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": [
+          "anthropic/claude-sonnet-5.5"
+        ]
+      }
+    },
+    {
+      "guest": "anthropic/claude-sonnet-5.5",
+      "seat": "p4",
+      "quote": {
+        "estimate_micro_eur": 241947,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "gpt-luna",
+            "calls": 9,
+            "estimate_micro_eur": 4791,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "anthropic/claude-sonnet-5.5",
+            "calls": 6,
+            "estimate_micro_eur": 210602,
+            "basis": "output limit"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": [
+          "anthropic/claude-sonnet-5.5"
+        ]
+      }
+    },
+    {
+      "guest": "moonshotai/kimi-k3.1-pro",
+      "seat": "p3",
+      "quote": {
+        "estimate_micro_eur": 345364,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "moonshotai/kimi-k3.1-pro",
+            "calls": 9,
+            "estimate_micro_eur": 315608,
+            "basis": "output limit"
+          },
+          "p4": {
+            "model_id": "gpt-luna",
+            "calls": 6,
+            "estimate_micro_eur": 3202,
+            "basis": "ledger history"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": [
+          "moonshotai/kimi-k3.1-pro"
+        ]
+      }
+    },
+    {
+      "guest": "moonshotai/kimi-k3.1-pro",
+      "seat": "p4",
+      "quote": {
+        "estimate_micro_eur": 241947,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "gpt-luna",
+            "calls": 9,
+            "estimate_micro_eur": 4791,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "moonshotai/kimi-k3.1-pro",
+            "calls": 6,
+            "estimate_micro_eur": 210602,
+            "basis": "output limit"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": [
+          "moonshotai/kimi-k3.1-pro"
+        ]
+      }
+    },
+    {
+      "guest": "google/gemini-4-carbon",
+      "seat": "p3",
+      "quote": {
+        "estimate_micro_eur": 345364,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "google/gemini-4-carbon",
+            "calls": 9,
+            "estimate_micro_eur": 315608,
+            "basis": "output limit"
+          },
+          "p4": {
+            "model_id": "gpt-luna",
+            "calls": 6,
+            "estimate_micro_eur": 3202,
+            "basis": "ledger history"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": [
+          "google/gemini-4-carbon"
+        ]
+      }
+    },
+    {
+      "guest": "google/gemini-4-carbon",
+      "seat": "p4",
+      "quote": {
+        "estimate_micro_eur": 241947,
+        "cap_micro_eur": 500000,
+        "month_spent_micro_eur": 3756279,
+        "month_cap_micro_eur": 25000000,
+        "seats": {
+          "p1": {
+            "model_id": "glm-flash",
+            "calls": 9,
+            "estimate_micro_eur": 1833,
+            "basis": "ledger history"
+          },
+          "p2": {
+            "model_id": "deepseek-flash",
+            "calls": 7,
+            "estimate_micro_eur": 6330,
+            "basis": "ledger history"
+          },
+          "p3": {
+            "model_id": "gpt-luna",
+            "calls": 9,
+            "estimate_micro_eur": 4791,
+            "basis": "ledger history"
+          },
+          "p4": {
+            "model_id": "google/gemini-4-carbon",
+            "calls": 6,
+            "estimate_micro_eur": 210602,
+            "basis": "output limit"
+          },
+          "p5": {
+            "model_id": "mistral-small",
+            "calls": 7,
+            "estimate_micro_eur": 8595,
+            "basis": "ledger history"
+          },
+          "p6": {
+            "model_id": "claude-haiku",
+            "calls": 9,
+            "estimate_micro_eur": 5103,
+            "basis": "ledger history"
+          },
+          "p7": {
+            "model_id": "gpt-luna",
+            "calls": 5,
+            "estimate_micro_eur": 2555,
+            "basis": "ledger history"
+          },
+          "p8": {
+            "model_id": "claude-haiku",
+            "calls": 4,
+            "estimate_micro_eur": 2138,
+            "basis": "ledger history"
+          }
+        },
+        "fits": true,
+        "high_price": [
+          "google/gemini-4-carbon"
+        ]
+      }
+    }
+  ],
+  "paid_calls": 0
+}
