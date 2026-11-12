@@ -206,6 +206,9 @@ def test_the_key_moments_point_at_their_events_and_name_only_nations():
         assert set(moment["players"]) <= {"p1", "p2", "p3", "p4"}
     barbarian = [m for m in story().key_moments if m["kind"] == "battle"]
     assert barbarian and all(set(m["players"]) <= {"p1", "p2", "p3", "p4"} for m in barbarian)
+    assert all(
+        len(m["players"]) == len(set(m["players"])) for m in story(events=events).key_moments
+    )
 
 
 def test_the_same_log_tells_the_same_story_and_another_seed_another_one():

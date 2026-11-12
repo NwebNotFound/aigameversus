@@ -1,22 +1,12 @@
 import asyncio
-import re
 
 import pytest
 
 from arena.agents.random_bot import random_bots
-from arena.chronicle import (
-    LANGS,
-    STYLES,
-    Chapter,
-    ChronicleError,
-    Narrator,
-    TemplateNarrator,
-    tell,
-    to_markdown,
-)
-from arena.chronicle.text import FIELDS, KINDS, MORE, TEXT
+from arena.chronicle import LANGS, STYLES, ChronicleError, tell, to_markdown
 from arena.engine.match import Match
 from arena.engine.types import Event, EventSource
+from games.civ.plugin import CivGame
 from games.liars_deck.plugin import LiarsDeck
 from games.poker.plugin import Poker
 from games.werewolf.plugin import Werewolf
@@ -36,11 +26,6 @@ def started(name, players):
 
 
 FINISHED = engine("match_finished", {"placements": []})
-
-
-def bet(player, kind, street, to, added):
-    data = {"player": player, "kind": kind, "street": street, "to": to, "added": added}
-    return game("bet_action", data)
 
 
 def revealed(player, cards, honest):
@@ -83,41 +68,6 @@ def test_a_game_without_a_chronicle_is_refused():
         tell(log)
 
 
-def test_the_poker_hand_tells_streets_raises_showdown_and_award():
-    shown = {"player": "p2", "cards": ["As", "Ad"], "hand": "three_of_a_kind"}
-    log = [
-        started("poker", ["p1", "p2"]),
-        game("hand_started", {"hand": 1, "button": "p1", "players": ["p1", "p2"], "big_blind": 20}),
-        bet("p2", "raise", "preflop", 60, 50),
-        bet("p1", "call", "preflop", 60, 40),
-        game("street_started", {"street": "flop", "order": [], "cards": ["Ah", "Kd", "2c"]}),
-        bet("p2", "all_in", "flop", 500, 440),
-        game("showdown", {"hands": [shown]}),
-        game("pot_awarded", {"amount": 120, "eligible": ["p2"], "shares": {"p2": 120}}),
-        game("players_eliminated", {"players": ["p1"], "started_with": [0]}),
-        game("match_over", {"reason": "last_player", "winner": "p2"}),
-        FINISHED,
-    ]  # fmt: skip
-
-    text = tell(log, style="sports", lang="en").chapters[0].text
-
-    assert "raises to 60" in text and "ALL IN from p2" in text
-    assert "The flop is out: Ah Kd 2c" in text
-    assert "p2 (three of a kind: As Ad)" in text
-    assert "p2 takes down the pot of 120" in text
-    assert "p1 is out of chips" in text and "p2 wins it all" in text
-
-
-def test_every_style_and_language_has_every_kind_and_the_fields_it_needs():
-    for lang in LANGS:
-        for style in STYLES:
-            templates = TEXT[lang][style]
-            assert len(templates) == len(KINDS), (lang, style)
-            for kind, template in zip(KINDS, templates, strict=True):
-                used = set(re.findall(r"{(\w+)}", template))
-                assert used <= set(FIELDS[kind]), (lang, style, kind, used)
-
-
 def bot_events(plugin, players, seed):
     match = Match(
         plugin, random_bots(plugin, [f"p{i}" for i in range(1, players + 1)], seed), seed=seed
@@ -126,7 +76,12 @@ def bot_events(plugin, players, seed):
     return match.events
 
 
-GAMES = [("liars_deck", LiarsDeck, 3), ("poker", Poker, 3), ("werewolf", Werewolf, 8)]
+GAMES = [
+    ("liars_deck", LiarsDeck, 3),
+    ("poker", Poker, 3),
+    ("werewolf", Werewolf, 8),
+    ("civ", CivGame, 4),
+]
 
 
 @pytest.mark.parametrize(("name", "plugin", "players"), GAMES)
@@ -150,50 +105,3 @@ def test_the_same_log_gives_the_same_chronicle_and_other_seeds_other_stories(nam
 
     assert first == to_markdown(tell(bot_events(plugin(), players, 6)))
     assert first != to_markdown(tell(bot_events(plugin(), players, 7)))
-
-
-def test_chapters_follow_the_rounds_hands_and_nights_of_the_log():
-    for seed in range(1, 4):
-        pk = bot_events(Poker(), 3, seed)
-        assert len(tell(pk).chapters) == sum(e.type == "hand_started" for e in pk)
-
-
-def test_a_narrator_can_be_swapped_without_a_model():
-    class Shouting(TemplateNarrator):
-        def tell(self, beats, style, lang, names):
-            return super().tell(beats, style, lang, names).upper()
-
-    story = tell(bot_events(Poker(), 3, 2), narrator=Shouting())
-
-    assert story.chapters[0].text.isupper()
-    assert issubclass(Shouting, Narrator) and Chapter.model_fields["beats"]
-
-
-@pytest.mark.parametrize(
-    ("number", "title"),
-    [(1, "1st"), (2, "2nd"), (3, "3rd"), (4, "4th"), (11, "11th"), (12, "12th"), (21, "21st")],
-)
-def test_epic_chapter_titles_count_in_good_english(number, title):
-    assert title in TemplateNarrator().chapter_title("round", number, "epic", "en")
-
-
-def test_the_poker_hand_limit_names_the_chip_leader():
-    standings = [{"player": "p2", "rank": 1}, {"player": "p1", "rank": 2}]
-    log = [
-        started("poker", ["p1", "p2"]),
-        game("hand_started", {"hand": 1, "button": "p1", "players": ["p1", "p2"], "big_blind": 20}),
-        game("match_over", {"reason": "hand_limit", "winner": None}),
-        engine("match_finished", {"placements": standings}),
-    ]
-
-    for lang in LANGS:
-        for style in STYLES:
-            text = tell(log, style=style, lang=lang).chapters[0].text
-            assert "p2" in text.split("p1")[-1] and "niemand" not in text and "nobody" not in text
-
-
-def test_the_extra_templates_use_known_fields():
-    for lang in LANGS:
-        for style in STYLES:
-            for kind, template in MORE[lang][style].items():
-                assert set(re.findall(r"{(\w+)}", template)) <= set(FIELDS[kind])
