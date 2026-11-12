@@ -200,9 +200,14 @@
 						<label>
 							<span class="sr-only">Personality of {seat}</span>
 							<select
+								name="personality_{seat}"
 								aria-label="Personality of {seat}"
-								disabled
-								title="Not possible yet: the live arena does not take a personality per seat"
+								disabled={!setup?.seat_personalities ||
+									!setup.model_seats ||
+									seatIds[index] === BOT}
+								title={setup?.seat_personalities
+									? 'A personality for this model; a random bot plays none'
+									: 'Not possible yet: the live arena does not take a personality per seat'}
 							>
 								<option value="">No personality</option>
 								{#each setup?.personalities ?? [] as personality (personality.id)}
@@ -239,8 +244,8 @@
 			{/if}
 			<p class="hint">
 				{#if setup?.model_seats && setup.mixed_seats}
-					Each seat is a model (paid) or a random bot (free); a table may mix them. Not possible
-					yet: a personality per seat.
+					Each seat is a model (paid) or a random bot (free); a table may mix them, and a model may
+					play a personality.
 				{:else if setup?.model_seats}
 					A table is all models (paid) or all random bots (free). Not possible yet: bots and models
 					at one table, and a personality per seat; both need an arena update that is not live.

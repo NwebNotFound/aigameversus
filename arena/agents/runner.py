@@ -42,12 +42,17 @@ class ModelAgent:
         *,
         settings: Mapping[str, Any] | None = None,
         memory: str | None = None,
+        personality: str | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         jitter: Callable[[], float] = random.random,
     ):
-        """`memory`: what this player remembers of the opponents (`arena/memory/block.py`)."""
+        """`memory`: what this player remembers of the opponents (`arena/memory/block.py`).
+
+        `personality`: the character this player plays (`prompt.personality_text`).
+        """
         self._call = call
         self._memory = memory
+        self._personality = personality
         self._plugin = plugin
         self._settings = settings
         self._rules = plugin.rules(settings)
@@ -57,7 +62,9 @@ class ModelAgent:
 
     async def act(self, request: TurnRequest) -> Reply:
         summary = self._plugin.situation_summary(request.observation, self._settings)
-        messages = build_messages(self._plugin.name, self._rules, request, summary, self._memory)
+        messages = build_messages(
+            self._plugin.name, self._rules, request, summary, self._memory, self._personality
+        )
         answer, tries = await self._call_model(messages, tool_schemas(request.tools))
         usage = answer.usage
         stats = AnswerStats(
