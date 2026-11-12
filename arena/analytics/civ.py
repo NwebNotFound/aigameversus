@@ -94,10 +94,11 @@ def _civ2(result: dict[str, Any], log: Log, players: list[str]) -> dict[str, Any
         if e.type == "treaty_signed":
             ends[e.data["treaty"]] = e.data.get("ends_round")
     for item in result["diplomacy"]["timeline"]:
-        if "treaty" in item and item["treaty"] in ends:
-            item["until"] = ends[item["treaty"]]
-            if item["event"] == "treaty_broken" and item["until"] is not None:
-                item["rounds_early"] = max(item["until"] - item["round"] + 1, 0)
+        if "treaty" in item:
+            until = ends.get(item["treaty"])  # None: open-ended, or its signing is not in view
+            item["until"] = until
+            if item["event"] == "treaty_broken":
+                item["rounds_early"] = None if until is None else max(until - item["round"] + 1, 0)
     return result
 
 

@@ -204,3 +204,82 @@ def test_other_games_take_no_version_and_civ_refuses_an_unknown_one(events):
         match_analytics("civ", events, True, {}, "civ/9")
     with pytest.raises(UnknownVersion, match="one analytics version"):
         match_analytics("poker", events, True, {}, "poker/2")
+
+
+def test_an_open_ended_treaty_that_is_broken_has_both_keys_set_to_null(events):
+    def game(type, data):
+        return Event(source=EventSource.GAME, type=type, data=data)
+
+    log = list(events)
+    cut = next(i for i, e in enumerate(log) if e.type == "round_started" and e.data["round"] == 3)
+    signed = game(
+        "treaty_signed",
+        {
+            "treaty": "t8",
+            "offer": "o8",
+            "kind": "peace",
+            "parties": ["p3", "p4"],
+            "ends_round": None,
+            "payer": None,
+            "payment": {},
+            "ends_war": False,
+        },
+    )
+    broken = game("treaty_broken", {"treaty": "t8", "by": "p3", "on": "p4", "reputation": 30})
+    unseen = game("treaty_broken", {"treaty": "t7", "by": "p1", "on": "p2", "reputation": 30})
+    log[cut:cut] = [signed, broken, unseen]
+
+    items = {
+        (i["event"], i["treaty"]): i
+        for i in match_analytics("civ", log, True, {}, "civ/2")["diplomacy"]["timeline"]
+        if "treaty" in i
+    }
+    assert items[("treaty_broken", "t8")]["until"] is None
+    assert items[("treaty_broken", "t8")]["rounds_early"] is None
+    # a break whose signing is not in the log: the keys are there, unknown
+    assert items[("treaty_broken", "t7")]["until"] is None
+    assert items[("treaty_broken", "t7")]["rounds_early"] is None
+
+
+def test_private_events_never_reach_the_spoiler_free_civ_2_answer(events):
+    def private(type, data):
+        return Event(source=EventSource.GAME, type=type, data=data, visible_to=["p1"])
+
+    marker = "SECRETMARK77"
+    log = list(events)
+    cut = next(i for i, e in enumerate(log) if e.type == "round_started" and e.data["round"] == 3)
+    injected = [
+        private(
+            "war_declared",
+            {"by": "p1", "on": "p2", "reputation": 20, "joined": [], "broken": [], "note": marker},
+        ),
+        private(
+            "treaty_signed",
+            {
+                "treaty": marker,
+                "offer": "o77",
+                "kind": "peace",
+                "parties": ["p1", "p2"],
+                "ends_round": 9,
+                "payer": None,
+                "payment": {},
+                "ends_war": False,
+            },
+        ),
+        private("treaty_broken", {"treaty": marker, "by": "p1", "on": "p2", "reputation": 10}),
+    ]
+    log[cut:cut] = injected
+
+    public = match_analytics("civ", log, False, NAMES, "civ/2")
+    base = match_analytics("civ", events, False, NAMES, "civ/2")
+    full = match_analytics("civ", log, True, NAMES, "civ/2")
+
+    assert marker not in json.dumps(public)
+    assert (
+        public["diplomacy"]["by_nation"]["p1"]["wars_declared"]
+        == (base["diplomacy"]["by_nation"]["p1"]["wars_declared"])
+    )
+    assert [m["text"] for m in public["report"]["key_moments"]] == [
+        m["text"] for m in base["report"]["key_moments"]
+    ]
+    assert marker in json.dumps(full)  # the same log with spoilers does hold it

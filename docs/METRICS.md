@@ -447,10 +447,11 @@ records against `rated_matches`; running and failed matches are not counted.
   `tokens_out`, `reasoning_tokens` (null for a bot), `cutoffs`, `rejected` (refused answers),
   `fallback` (the bot played). Round r is everything between the starts of round r and r + 1.
 - `series.nations.<n>.orders[]` (spoilers), per round: `sent`, `dropped`. Summed over the rounds they
-  equal `orders.<n>`.
+  equal `orders.<n>`. `sent` includes the orders of the fallback bot (`submitted` + `by_fallback`).
 - `diplomacy.timeline[]`: a `treaty_signed` item has `until` (the last round it holds, null when
   open-ended); a `treaty_broken` item has the same `until` and `rounds_early` (rounds it still had
-  to run, null when open-ended).
+  to run, null when open-ended). Both keys are always present on a treaty item, null when the end
+  is unknown (open-ended, or the signing is not in view).
 - `report`, as the other games have: `at_a_glance` (winners, length in rounds, engine totals,
   `turning_point`), `columns`, `ranking` and `key_moments[]` (`seq`, `kind` betrayal / war /
   conquest / battle / victory / lead, `players`, `importance`, `text` en and de, `round`). Public
