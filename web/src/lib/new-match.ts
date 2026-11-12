@@ -1,6 +1,7 @@
 /** The new-match form: what it sends to `POST /matches`, and what it refuses before. */
 import type { GameInfo, NewMatch } from './api.js';
 import { SPEEDS } from './live.js';
+import { overrides, parseConfig, problem } from './seat-config.js';
 
 export const LANGUAGES = [
 	{ id: 'de', label: 'Deutsch' },
@@ -24,7 +25,11 @@ export type Field =
 	| 'roles'
 	| 'confirm_spend'
 	| 'confirm_unreliable'
+	| 'seat_config'
 	| 'match_budget_eur';
+
+/** Form field of a seat's configuration (JSON of a `SeatConfig`, src/lib/seat-config.ts). */
+export const configField = (seat: string) => `seat_config_${seat}`;
 
 /** The Werewolf role selection: a template id, or CUSTOM for the counts of the checklist. */
 export const CUSTOM = 'custom';
@@ -46,7 +51,9 @@ export type Parsed =
  */
 /**
  * The form as a match to start, or what to fix. `unreliable` are the ids the arena marks
- * unreliable: choosing one needs its own tick, on purpose possible.
+ * unreliable: choosing one needs its own tick, on purpose possible. `seatOptions` are the
+ * per-seat options the arena takes (`GET /setup`): a seat's changed options among them go
+ * along as its `options`, the rest are not sent.
  */
 export function parseForm(
 	form: FormData,
@@ -54,7 +61,8 @@ export function parseForm(
 	models: string[] = [],
 	mixed = false,
 	personalities = false,
-	unreliable: string[] = []
+	unreliable: string[] = [],
+	seatOptions: string[] = []
 ): Parsed {
 	const errors: Partial<Record<Field, string>> = {};
 	const text = (name: string) => String(form.get(name) ?? '').trim();
@@ -88,7 +96,18 @@ export function parseForm(
 			const played = seats.map((seat, i) =>
 				personalities && seat !== BOT ? text(`personality_p${i + 1}`) : ''
 			);
-			if (modelSeats.length === seats.length && !played.some(Boolean)) seatModels = modelSeats;
+			// The options of each model seat that the arena takes, read from its panel.
+			const configs = seats.map((seat, i) =>
+				seat === BOT ? null : parseConfig(text(configField(`p${i + 1}`)))
+			);
+			const wrong = configs.findIndex((c) => c !== null && problem(c) !== null);
+			if (wrong >= 0) errors.seat_config = `p${wrong + 1}: ${problem(configs[wrong]!)}`;
+			const options = configs.map((c) =>
+				c === null ? {} : overrides(c, seatOptions, game?.id ?? '')
+			);
+			const configured = options.some((o) => Object.keys(o).length > 0);
+			if (modelSeats.length === seats.length && !played.some(Boolean) && !configured)
+				seatModels = modelSeats;
 			else
 				seatSpecs = seats.map((seat, i) =>
 					seat === BOT
@@ -96,7 +115,8 @@ export function parseForm(
 						: {
 								kind: 'model' as const,
 								model: seat,
-								...(played[i] ? { personality: played[i] } : {})
+								...(played[i] ? { personality: played[i] } : {}),
+								...(Object.keys(options[i]).length ? { options: options[i] } : {})
 							}
 				);
 			if (form.get('confirm_spend') === null) {

@@ -121,6 +121,14 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
     claims: list[dict[str, Any]] = []
     accusations: list[dict[str, Any]] = []
     stance: dict[int, dict[str, Any]] = {}
+    # Per day: how often each player was voted for and accused in speech (that day only).
+    suspicion: dict[int, dict[str, Counter]] = {}
+
+    def suspected(target: str, source: str) -> None:
+        if phase["kind"] == "day":
+            day = suspicion.setdefault(phase["number"], {"vote": Counter(), "speech": Counter()})
+            day[source][target] += 1
+
     last_vote: dict[str, tuple[int, str]] = {}  # a vote's reason follows it as a message
 
     def enter(kind: str, number: int, seq: int) -> None:
@@ -176,6 +184,7 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
                 "heuristic": False,
             }
             if target is not None:
+                suspected(target, "vote")
                 accusations.append(
                     {
                         "seq": seq,
@@ -212,6 +221,7 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
                     }
                 )
             for target in said["suspects"]:
+                suspected(target, "speech")
                 accusations.append(
                     {
                         "seq": seq,
@@ -232,6 +242,7 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
         "votes": _votes(days, known),
         "claims": _contradictions(claims, revealed, known),
         "accusations": accusations,
+        "suspicion": _suspicion(suspicion),
         "stance": stance,
         "phases": [_phase_out(p) for p in phases],
         "meta": {"roles": known or None, "revealed": revealed},
@@ -240,7 +251,11 @@ def analyze(log: Log, spoilers: bool, names: Mapping[str, str] | None = None) ->
 
 def _votes(days: dict[int, dict], roles: dict[str, str]) -> dict[str, Any]:
     """Every day's votes; with spoilers how often the village side voted for a wolf."""
-    out: dict[str, Any] = {"days": [days[d] for d in sorted(days)], "accuracy": None}
+    out: dict[str, Any] = {
+        "days": [days[d] for d in sorted(days)],
+        "accuracy": None,
+        "bussing": None,
+    }
     if roles:
         teams = {p: load_roles()[r].team for p, r in roles.items()}
         right: Counter[str] = Counter()
@@ -251,6 +266,40 @@ def _votes(days: dict[int, dict], roles: dict[str, str]) -> dict[str, Any]:
                     cast[voter] += 1
                     right[voter] += teams.get(target) == "wolves"
         out["accuracy"] = {voter: rate(right[voter], cast[voter]) for voter in sorted(cast)}
+        # Bussing: a wolf's votes on a fellow wolf, of the votes it cast.
+        fellow: Counter[str] = Counter()
+        wolf_cast: Counter[str] = Counter()
+        for day in days.values():
+            for voter, target in day["votes"].items():
+                if teams.get(voter) == "wolves" and target is not None:
+                    wolf_cast[voter] += 1
+                    fellow[voter] += teams.get(target) == "wolves"
+        out["bussing"] = {wolf: rate(fellow[wolf], wolf_cast[wolf]) for wolf in sorted(wolf_cast)}
+    return out
+
+
+def _suspicion(days: dict[int, dict[str, Counter]]) -> list[dict[str, Any]]:
+    """Suspicion over time: per day, the votes and the speech accusations each player got.
+
+    `most_suspected` are the players with the most of both together that day (ties: all).
+    Votes are facts; speech is the heuristic reading of `accusations`.
+    """
+    out = []
+    for number in sorted(days):
+        votes, speech = days[number]["vote"], days[number]["speech"]
+        targets = sorted(set(votes) | set(speech))
+        received = {
+            t: {"votes": votes[t], "speech": speech[t], "total": votes[t] + speech[t]}
+            for t in targets
+        }
+        top = max((r["total"] for r in received.values()), default=0)
+        out.append(
+            {
+                "day": number,
+                "received": received,
+                "most_suspected": [t for t in targets if top and received[t]["total"] == top],
+            }
+        )
     return out
 
 

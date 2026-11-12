@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from arena.api.ratings import RecentMatch, StandingOut, vendor_of
+from arena.api.ratings import RecentMatch, StandingOut, UnratedOut, vendor_of
 from arena.catalog import load
 from arena.config import load_config
 from arena.db.reliability import Reliability, reliabilities
@@ -129,6 +129,10 @@ class ModelPage(BaseModel):
     personalities: list[Personality] = Field(
         description="Profiles of this model with a personality"
     )
+    unrated: list[UnratedOut] = Field(
+        default_factory=list,
+        description="Per game: finished matches no rating counted, and why (never an Elo)",
+    )
 
 
 class CatalogModel(BaseModel):
@@ -220,7 +224,8 @@ async def model_page(model_id: str, store: Store, request: Request) -> ModelPage
     profile_id = store.model_profile_id(model_id)
     found = await store.profile(profile_id)
     personalities = await store.other_personalities(model_id)
-    if configured is None and found is None and not personalities:
+    unrated = [UnratedOut.of(u) for u in await store.unrated_activity(None, model_id)]
+    if configured is None and found is None and not personalities and not unrated:
         raise HTTPException(404, f"No model {model_id}")
     games: list[GameOut] = []
     usage_total = Usage()
@@ -267,4 +272,5 @@ async def model_page(model_id: str, store: Store, request: Request) -> ModelPage
             for m in (found.recent_matches if found else [])
         ],
         personalities=[Personality(profile_id=p, personality_id=n) for p, n in personalities],
+        unrated=unrated,
     )

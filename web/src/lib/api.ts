@@ -21,6 +21,16 @@ export interface MatchSummary {
 	seats?: Record<string, RecordSeat>;
 	/** The batch it was played in (a league, an experiment stage); null or missing: none. */
 	batch?: MatchBatch | null;
+	/** How it ended, in one server-made line; a running match shows no result. */
+	outcome?: MatchOutcome;
+}
+
+/** The one line of a match row (`GET /matches`). */
+export interface MatchOutcome {
+	kind: 'running' | 'won' | 'finished' | 'stopped';
+	/** Seats with rank 1; empty unless the match finished. */
+	winners: string[];
+	text: { en: string; de: string };
 }
 
 /** A match's batch, as `POST /matches` took it. */
@@ -196,6 +206,8 @@ export interface SetupOptions {
 	answer_repair?: string[];
 	/** Whether a model seat in `seats` may name a personality. */
 	seat_personalities?: boolean;
+	/** The options a model seat in `seats` may set (`options`); missing on an older arena. */
+	seat_options?: string[];
 	models: {
 		id: string;
 		model: string;
@@ -259,7 +271,16 @@ export interface NewMatch {
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
 	/** One entry per seat, a model or a bot: a table that mixes them. Instead of `models`. */
-	seats?: ({ kind: 'model'; model: string; personality?: string } | { kind: 'bot' })[];
+	seats?: (
+		| {
+				kind: 'model';
+				model: string;
+				personality?: string;
+				/** Per-seat options the arena lists in `seat_options` (src/lib/seat-config.ts). */
+				options?: Record<string, unknown>;
+		  }
+		| { kind: 'bot' }
+	)[];
 	/** Must be true with `models` or a model in `seats`: the match spends money. */
 	confirm_spend?: boolean;
 }
@@ -318,6 +339,32 @@ export interface MatchMemory {
 }
 
 /** `GET /ledger/month`: what model calls cost this month and what the cap still allows. */
+/** `POST /matches/estimate`: what a match would cost, measured with bots, no model called. */
+export interface MatchEstimate {
+	estimate_micro_eur: number;
+	cap_micro_eur: number;
+	month_spent_micro_eur: number;
+	month_cap_micro_eur: number;
+	seats: Record<
+		string,
+		{
+			model_id: string;
+			calls: number;
+			estimate_micro_eur: number;
+			basis: 'ledger history' | 'output limit';
+		}
+	>;
+	fits: boolean;
+	high_price: string[];
+}
+
+/** The request of an estimate: one model id per seat, null for a bot. */
+export interface EstimateRequest {
+	game: string;
+	models: (string | null)[];
+	settings: Record<string, unknown>;
+}
+
 export interface MonthSpend {
 	month: string;
 	spent_micro_eur: number;
@@ -558,6 +605,8 @@ export interface ArenaClient {
 	): Promise<ApiResult<SelectionReport>>;
 	setup(): Promise<ApiResult<SetupOptions>>;
 	monthSpend(): Promise<ApiResult<MonthSpend>>;
+	/** Free: what a match of these seats would cost (random bots play it three times). */
+	estimate(request: EstimateRequest): Promise<ApiResult<MatchEstimate> | Refused>;
 	catalog(): Promise<ApiResult<Catalog>>;
 	startMatch(match: NewMatch): Promise<{ state: 'ok'; data: MatchRecord } | Refused | Unreachable>;
 	/** Free: what a qualification click would reserve; `not_found` for a game without cases. */
@@ -819,6 +868,27 @@ export function createArenaClient(
 				'/models/catalog?free=1',
 				(body) => isObject(body) && Array.isArray(body.models)
 			);
+		},
+
+		async estimate(request) {
+			let response: Response;
+			try {
+				response = await get('/matches/estimate', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify(request)
+				});
+			} catch (error) {
+				return { state: 'unreachable', reason: describe(error) };
+			}
+			const body: unknown = await response.json().catch(() => undefined);
+			if (response.status === 422 || response.status === 404) {
+				return { state: 'refused', status: response.status, detail: detailOf(body) };
+			}
+			if (!response.ok || !isObject(body) || typeof body.estimate_micro_eur !== 'number') {
+				return { state: 'unreachable', reason: `the arena answered ${response.status}` };
+			}
+			return { state: 'ok', data: body as unknown as MatchEstimate };
 		},
 
 		monthSpend() {

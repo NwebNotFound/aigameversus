@@ -46,8 +46,8 @@ same numbers for the same log. The definitions follow the Researcher's review
 ## Sections (`sections`, `numbers`)
 
 Every answer lists the parts it has besides `game`, `spoilers`, `events` and
-`meta`, in order: `["situation"]` for a game with a situation only (Poker
-today), `["situation", "players", "moves", ...]` for Liar's Deck. A client
+`meta`, in order: `["situation"]` for a game with a situation only (Throne of
+Tokens today), `["situation", "players", "moves", ...]` for Liar's Deck and Poker. A client
 checks this list instead of probing for keys. `numbers` is `false` when the
 answer has the situation only, `true` otherwise.
 
@@ -239,15 +239,35 @@ truth), `calls` and `fallbacks`.
 plus jokers held, cards played, truth, called or not, risk, response time and
 tokens. The research export will write it as one row per move.
 
-## Poker (planned)
+## Poker
 
-- VPIP and PFR the standard way (blinds and a free check excluded). Aggression
-  factor = (bets + raises) / calls, `null` with no call.
-- A **bluff** is a bet or raise when the hand's equity against random hands at
-  that street is below 0.33; a **value bet** above 0.6. Equity from a seeded
-  Monte Carlo with a fixed, documented number of samples, stored per decision;
-  the win-probability curve uses the same function. Showdowns alone do not
-  define bluffs: most bluffs never reach one.
+`numbers` (`arena/analytics/poker.py`): `hands` (one per hand: button, board, streets reached,
+pot, winners, net chips per player, whether it went to a showdown and the hands shown, who
+bet or raised, who put chips in before the flop), `chips` (each player's stack before the first
+hand and after every hand), `moves` (every bet action with its street, kind, amount and the
+decision telemetry of the move) and `totals` per player. All of it is read from public events,
+so a spoiler-free viewer gets it, except the decision telemetry (the `decision` events are for
+spectators only) and the two numbers that read hole cards.
+
+- `hands`, `hands_won` (won part of a pot), `net_chips`, `final_chips`.
+- `folds`, `checks`, `calls`, `raises`, `all_ins` and `fold_rate`, `call_rate`, `raise_rate`,
+  `all_in_rate` (each a rate with its n, over the player's moves).
+- `vpip`: hands in which the player put chips in before the flop voluntarily (a call, a raise
+  or an all-in; blinds and a free check do not count), over hands dealt in.
+- `aggression_factor`: aggressive actions / calls over all streets (a raise is aggressive; an
+  all-in is aggressive if it goes above the highest bet of the street so far, else it is a
+  call); `null` with no call. The same numbers as `arena/stats/poker.py`; a test keeps them equal.
+- `showdowns`, `showdowns_won`; `showdown_bluffs`: hands in which the player bet or raised and
+  lost the showdown; `showdown_value_bets`: bet or raised and won it. Public once the hands
+  are shown.
+- `bluff_hands`, `bluff_rate`, `worst_decisions`: spoilers only (`null` without), because they
+  need hole cards nobody showed (a bluff that took the pot without a showdown; a fold that
+  would have won). Defined as in `arena/stats/poker.py`.
+- `fallbacks`, `refused`, `response_ms_mean`, `tokens`, `retries_total`, ...: from the
+  decision telemetry, spoilers only.
+
+Later: bluffs and value bets by equity against random hands (below 0.33 / above 0.6, a seeded
+Monte Carlo stored per decision), which also finds the bluffs that never reach a showdown.
 
 ## Werewolf
 
@@ -258,8 +278,15 @@ speech by simple rules, each marked `heuristic: true`.
   abstention), `abstained`, `tally` (the game's own count, in which a captain's
   vote may weigh double; abstentions are not in it) and `executed`.
 - **`votes.accuracy`** (spoilers only): per village-side voter, votes for a wolf
-  / votes cast, as `{value, n, of}`; abstentions are not votes. Planned: for
-  wolves, the share of votes on fellow wolves (bussing).
+  / votes cast, as `{value, n, of}`; abstentions are not votes.
+- **`votes.bussing`** (spoilers only): per wolf, its votes on a fellow wolf / the
+  votes it cast, as `{value, n, of}`; null without spoilers.
+- **`suspicion`** (suspicion over time): per day in order, `received` per player
+  `{votes, speech, total}`. `votes` are the ballots cast for them that day (a
+  fact; a captain's ballot counts once here, unlike `tally`), and `speech` is the
+  day's accusations of them (`accusations`, heuristic). `most_suspected` lists the
+  players with the highest total (all of them on a tie). Night speech (the wolves'
+  chat) is not counted, and a vote's reason is not counted again.
 - **`claims`** (heuristic): a sentence in the first person that names a role
   ("I'm p3, a villager", "I am the seer", "Ich bin die Seherin"), not negated.
   Each claim once per player and role, with `changed_from` (the same player
@@ -401,3 +428,24 @@ checked and false statements per player. Read it as a rate with its n, never as 
 a missed sentence is not counted, and a false statement may be a slip. Needs spoilers except for
 Werewolf claims a death has disproved.
 
+## Played but not rated (`unrated`)
+
+`GET /leaderboard` (not for `kind=bots`) and `GET /models/{id}` list, per model and game,
+finished matches that no rating counted: `matches_played`, `matches_rated`, `matches_unrated`,
+the most common `reason` code with `text` (en, de), and `reasons` (code -> matches). Never an Elo.
+Codes: `duplicate_model` (the model sat in several seats of one match), `table_repeats_a_model`
+(another model did, so the whole table is unrated, as in W2), `fewer_than_two_models` (one model
+among random bots), `not_rated` (none of those; the log does not say why). Read from the match
+records against `rated_matches`; running and failed matches are not counted.
+
+
+## Match export
+
+`GET /matches/{id}/export[?spoilers=true]` (`arena/api/export.py`) is one JSON download for a
+notebook: `format` (`aigameversus-match-export/1`), `spoilers`, `match` (the record), `cost`
+(`total_micro_eur`, `players`; null if the ledger is down), `events` (each with its `seq` in the
+whole log), `analytics` and `talk_checks` (the two endpoints above; null for a game without them).
+Without `spoilers`: public events only (gaps in `seq` show what was left out), `match.seed` null,
+only the public settings, and the spoiler-free analytics. With `spoilers`: the whole match, hidden
+cards, roles, thoughts and the seed, and the file name ends in `-full`. Share the full one only
+once the match is over.

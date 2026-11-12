@@ -1,5 +1,6 @@
 """Player profiles and ratings in Postgres."""
 
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
@@ -25,6 +26,36 @@ class Usage:
     rejected: int = 0  # answers the server refused (a wrong tool, bad arguments, an illegal move)
     # moves taken as answers whose garbled call was read anyway (answer_repair); at most `accepted`
     repaired: int = 0
+
+
+@dataclass(frozen=True)
+class Unrated:
+    """What one model played in one game without a rating: finished matches the rating skipped."""
+
+    model_id: str
+    game: str
+    matches_played: int  # finished matches with the model in a seat
+    matches_rated: int  # of those, the ones a rating counted
+    reasons: dict[str, int]  # why the others were not rated: reason code -> matches
+
+
+# Why a finished model match has no rating (codes of `Unrated.reasons`).
+DUPLICATE_MODEL = "duplicate_model"  # this model sat in several seats of the match
+TABLE_REPEATS_A_MODEL = "table_repeats_a_model"  # another model did: the whole table is unrated
+FEWER_THAN_TWO_MODELS = "fewer_than_two_models"  # one model among random bots: no one to rank
+NOT_RATED = "not_rated"  # none of the above: the match was not rated and the log does not say why
+
+
+def unrated_reason(seat_models: Mapping[str, str], model_id: str) -> str:
+    """Why a finished, unrated match did not count for `model_id` (D-081 rules)."""
+    counts = Counter(seat_models.values())
+    if counts[model_id] > 1:
+        return DUPLICATE_MODEL
+    if any(n > 1 for n in counts.values()):
+        return TABLE_REPEATS_A_MODEL
+    if len(counts) < 2:
+        return FEWER_THAN_TWO_MODELS
+    return NOT_RATED
 
 
 @dataclass(frozen=True)
@@ -319,6 +350,45 @@ class RatingStore:
                 repaired=int(row["repaired"]),
             )
         return usage
+
+    async def unrated_activity(
+        self, game_id: str | None = None, model_id: str | None = None
+    ) -> list[Unrated]:
+        """Models with finished matches that no rating counted, per game: what and why.
+
+        Read from the match records (the seats of finished matches) against `rated_matches`;
+        no rating is invented. Only (model, game) pairs with at least one unrated match.
+        """
+        rows = await self._pool.fetch(
+            "SELECT m.id, m.game, m.seats, r.match_id IS NOT NULL AS rated "
+            "FROM matches m LEFT JOIN rated_matches r ON r.match_id = m.id "
+            "WHERE m.status = 'finished' AND m.seats IS NOT NULL "
+            "  AND ($1::text IS NULL OR m.game = $1)",
+            game_id,
+        )
+        played: dict[tuple[str, str], int] = {}
+        rated: dict[tuple[str, str], int] = {}
+        reasons: dict[tuple[str, str], Counter[str]] = {}
+        for row in rows:
+            seats = row["seats"] or {}
+            seat_models = {
+                seat: info["model_id"]
+                for seat, info in seats.items()
+                if info.get("kind") == "model" and info.get("model_id")
+            }
+            for model in set(seat_models.values()):
+                if model_id is not None and model != model_id:
+                    continue
+                key = (model, row["game"])
+                played[key] = played.get(key, 0) + 1
+                if row["rated"]:
+                    rated[key] = rated.get(key, 0) + 1
+                else:
+                    reasons.setdefault(key, Counter())[unrated_reason(seat_models, model)] += 1
+        return [
+            Unrated(model, game, played[(model, game)], rated.get((model, game), 0), dict(why))
+            for (model, game), why in sorted(reasons.items())
+        ]
 
     async def demo_profiles(self) -> int:
         """How many rated demo profiles the leaderboard hides by default."""

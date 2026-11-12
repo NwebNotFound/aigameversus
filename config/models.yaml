@@ -38,6 +38,19 @@ models:
     model: deepseek/deepseek-v4.1-flash
     input_usd_per_mtok: 0.051
     output_usd_per_mtok: 0.567
+  # A separate treatment of deepseek-flash for the Civ pilot (C1): the same provider model and
+  # prices, but room for its reasoning plus the tool call. Its own id means its own rating,
+  # ledger history and reliability; reports label it as a different treatment. deepseek-flash
+  # above stays as it is.
+  deepseek-flash-civ:
+    provider: openrouter
+    model: deepseek/deepseek-v4.1-flash
+    name: DeepSeek Flash (Civ, 4000 output)
+    input_usd_per_mtok: 0.051
+    output_usd_per_mtok: 0.567
+    max_output_tokens: 4000
+    reasoning_effort: low
+    tool_choice: required
   qwen-flash:
     provider: openrouter
     model: qwen/qwen3.8-flash

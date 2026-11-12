@@ -144,3 +144,4 @@ with `python scripts/decisions.py adopt`.
 - [D-139](decisions/D-139-a-game-keeps-its-old-rules-versions-and-a-stored-match-is.md) · A game keeps its old rules versions, and a stored match is read with its own
 - [D-140](decisions/D-140-ai-written-chronicle-one-capped-call-fact-checked-per.md) · AI-written chronicle: one capped call, fact-checked per chapter, cached
 - [D-147](decisions/D-147-the-analytics-tab-becomes-report-one-report-per-game-throne.md) · The Analytics tab becomes Report, one report per game; Throne of Tokens gets its own from civ/1
+- [D-145](decisions/D-145-seat-configuration-panel-per-seat-options-sent-only-where.md) · Seat configuration panel: per-seat options sent only where the arena lists them
