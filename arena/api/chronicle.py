@@ -8,6 +8,7 @@ from fastapi.responses import PlainTextResponse
 
 from arena.api.live import LiveMatches
 from arena.chronicle import Chronicle, ChronicleError, chronicle_games, tell, to_markdown
+from arena.db.ledger import LedgerUnavailable
 
 router = APIRouter(tags=["chronicle"])
 
@@ -38,8 +39,19 @@ async def chronicle(
         raise HTTPException(
             409, f"The match is {record.status}; its chronicle exists once it has finished"
         )
+    names = await live.matches.display_names(record)  # the names every page shows
     try:
-        story = tell(await live.log(match_id), style=style, lang=lang)
+        cost = sum((await live.ledger.match_costs(match_id)).values())
+    except LedgerUnavailable:  # the cost is unknown, not 0: the glance box leaves it out
+        cost = None
+    try:
+        story = tell(
+            await live.log(match_id),
+            style=style,
+            lang=lang,
+            names=names,
+            cost_micro_eur=cost or None,
+        )
     except ChronicleError as error:
         raise HTTPException(409, str(error)) from error
     if format == "markdown":

@@ -74,6 +74,40 @@ reads public events only (`arena/analytics/situation.py`).
   alive** (village, wolves, on their own) only with spoilers: roles are private
   until a player dies.
 
+## Report (`report`), every game with one
+
+The stats screen in one object, so the web does no maths (`arena/analytics/report.py`;
+Liar's Deck, Poker, Werewolf):
+
+- **`at_a_glance`:** `over`, `winners` (seats of rank 1 in `match_finished`),
+  `players`, `length` (`{unit: rounds|hands|days, count}`), `moves`, `refused`
+  (= `tool_errors`), `fallbacks` (engine events private to a player: spoilers
+  only, else null), `response_ms_mean` and `tokens` (from the per-move
+  `decision` events, null until a log has them), `turning_point`
+  (`{seq, kind, players, text}` or null). The API adds `duration_s` (start to
+  end, or to now while running), `cost_micro_eur` and `cost_by_seat` (null while
+  the ledger cannot be read).
+- **`columns`:** the table header, one entry per field: `{key, label{en,de},
+  kind, better}`. kind is `number`, `rate` (0..1), `bool`, `text`, `role`,
+  `roles` or `micro_eur`. better is `higher`, `lower` or null (a style, not a
+  score). `spoilers: true` marks a field that is null without spoilers,
+  `heuristic: true` one read from speech.
+- **`ranking`:** one row per player in rank order: `{seat, rank, values}`, where
+  `values` lists the cells in column order, each the column's fields plus
+  `value` (a rate also has `n` and `of`). Liar's Deck: plays, lies, lie rate,
+  liar calls, calls right, trigger pulls, highest risk taken. Poker: chips, pots
+  won, biggest pot, the hand a player went out in. Werewolf: role (spoilers, or
+  once revealed at death), survived, died (phase), accused by others,
+  accusations made, roles claimed, votes on wolves. Then moves, refused answers,
+  bot moves, response time, tokens and cost for every game.
+- **`key_moments`:** `{seq, kind, players, importance 1-3, text{en,de}}` in log
+  order. Liar's Deck: a wrong call, a player caught lying, each elimination, the
+  win. Poker: each elimination, the three biggest pots. Werewolf: each death and
+  execution, a claim a death disproved, a counterclaim of a unique role.
+- **Turning point:** Liar's Deck: the elimination that decided the match.
+  Poker: the biggest pot. Werewolf: the first execution of a village player
+  in a match the wolves won (null otherwise, for now).
+
 ## Behaviour (`behaviour`), Liar's Deck so far
 
 Per player: `tags` (descriptive style tags with their evidence), `too_early`,
@@ -211,10 +245,36 @@ tokens. The research export will write it as one row per move.
   the win-probability curve uses the same function. Showdowns alone do not
   define bluffs: most bluffs never reach one.
 
-## Werewolf (planned)
+## Werewolf
 
-- **Vote accuracy** = votes for wolves / votes cast, village side only;
-  abstentions counted apart. For wolves: the share of votes on fellow wolves
-  (bussing).
-- A suspicion or trust matrix from messages is **heuristic** (names or keywords
-  mentioned) and is labelled so, apart from the facts.
+`arena/analytics/werewolf.py`. Facts from the game's events, and readings of
+speech by simple rules, each marked `heuristic: true`.
+
+- **`votes.days`** (facts): per day `votes` (voter to target; `null` for an
+  abstention), `abstained`, `tally` (the game's own count, in which a captain's
+  vote may weigh double; abstentions are not in it) and `executed`.
+- **`votes.accuracy`** (spoilers only): per village-side voter, votes for a wolf
+  / votes cast, as `{value, n, of}`; abstentions are not votes. Planned: for
+  wolves, the share of votes on fellow wolves (bussing).
+- **`claims`** (heuristic): a sentence in the first person that names a role
+  ("I'm p3, a villager", "I am the seer", "Ich bin die Seherin"), not negated.
+  Each claim once per player and role, with `changed_from` (the same player
+  claimed another role before), `counterclaimed_by` (others who claimed the
+  same unique role), and `disproved` / `true_role` when the player's death
+  revealed another role.
+- **`accusations`**: a vote is an accusation of its target (`source: vote`,
+  a fact). A sentence that names a seat (its id or display name, as a whole
+  word) next to accusing words (suspect, wolf, lying, …; verdächtig, lügt, …)
+  accuses it (`source: speech`, heuristic). A negation in the sentence
+  ("not", "nicht") makes it neither; the speaker never accuses themselves.
+- **`stance`**, per event seq: `{player, votes_for, suspects, defends, claims,
+  heuristic}`; a vote's stance gets the `reason_seq` of the reason that follows
+  it, and that reason is not counted again as speech.
+- **`phases`** and **`recap`**: each night and day, with its deaths (the
+  morning's deaths belong to the night), the most accused player of the phase
+  (speech), the tally and the execution; `recap[].text.en/de` is one sentence
+  per phase from a template (`TemplateNarrator`). A `Narrator` with the same
+  method can replace it, such as a cheap model later; none is called by default.
+- Without spoilers only public events are read: no wolf chat, no lover chat,
+  no roles but those revealed at death (`meta.revealed`); `meta.roles` is
+  null.

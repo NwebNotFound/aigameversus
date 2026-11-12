@@ -1,0 +1,497 @@
+# The words of the Werewolf chronicle in English: four styles that differ in structure
+# (how chapters are titled and laid out) and in wording. Every kind has several variants; the
+# composer picks one by the match seed and never uses the same finished sentence twice.
+# Fields: see `FIELDS` in arena/chronicle/compose.py; the tests format every variant.
+epic:
+  title: "The Chronicle of the Werewolf Village"
+  layout: {joiner: " ", prefix: "", paragraph: 0}
+  chapters:
+    prologue: "Prologue: The Gathering"
+    night: "The {Nth} Night"
+    day: "The {Nth} Day"
+    epilogue: "Epilogue: What Remained"
+  glance_title: "At a glance"
+  glance_labels:
+    winner: "Victor"
+    length: "Duration"
+    turning_point: "The turning point"
+    accurate_voter: "Keenest eye"
+    deceptive: "Master of masks"
+    cost: "Cost of the tale"
+  glance_values:
+    length: "{days} days"
+    accurate_voter: "{who}, right in {right} of {of} votes"
+    deceptive: "{who}, {deceptive_note}"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Day {n}: the village sent {player} ({role}) to the gallows, and the wrong one fell"
+    wolf_executed: "Day {n}: the village found a wolf in {player}"
+    seer_killed: "Night {n}: the wolves silenced {player}, the Seer"
+    lover_grief: "Night {n}: {player} died of grief for a lost love"
+    hunter_shot: "{hunter} fired a last shot and took {target} along"
+    false_claim: "{who} claimed a role that was not theirs"
+    save: "Night {n}: a life was saved in the dark ({target})"
+  deceptive_notes:
+    survived: "unmasked by nobody, alive at the end after {days} days"
+    fell: "kept the mask until day {days}"
+    lies: " and lying about their role {lies} time(s)"
+  kinds:
+    cast:
+      - "The village gathered, {count} souls beneath one roof: {cast}."
+      - "{count} players took their seats, and fate dealt each a secret: {cast}."
+    lovers:
+      - "Cupid's arrow found {a} and {b}, and from that hour their lives were bound as one."
+    night_falls:
+      - "Night {n} settled over the rooftops, and {alive} souls closed their eyes."
+      - "The {nth} night came down cold and silent upon {alive} sleepers."
+      - "Darkness returned for the {nth} time; {alive} still lived to fear it."
+    wolf_plan:
+      - "In the dark, {who} whispered to the pack: \"{quote}\""
+      - "Teeth gleamed as {who} murmured, \"{quote}\""
+    wolf_target:
+      - "The pack chose {target}."
+    wolf_missed_witch:
+      - "The wolves came for {target}, but the Witch's potion pulled them back from the brink."
+    wolf_missed_protector:
+      - "The wolves came for {target}, but a hidden guardian stood in the way."
+    wolf_missed_unknown:
+      - "The wolves came for {target}, and somehow {target} lived to see morning."
+    seer_found_wolf:
+      - "{seer} turned the Seer's gaze on {target} and saw a wolf behind the face."
+    seer_found_village:
+      - "{seer} peered into {target} and found only a {role}, honest as bread."
+      - "The Seer {seer} looked at {target}: a {role}, nothing more."
+    witch_heal:
+      - "{witch} tipped the healing draught to {target}'s lips."
+    witch_poison:
+      - "{witch} measured out the poison, and {target} was marked for death."
+    night_quiet:
+      - "And yet the night passed, and no one fell."
+      - "Dawn found every bed occupied."
+      - "The dark gave back every sleeper: nobody was missing."
+    death_wolves:
+      - "At first light {player} the {role} was found torn apart by the wolves."
+      - "The village woke to a cry: {player}, the {role}, lay dead, {cause}."
+      - "{player} ({role}) did not wake; the wolves had been there."
+    death_poison:
+      - "{player}, the {role}, lay dead of poison."
+    death_grief:
+      - "{player} ({role}) could not bear the loss and followed their love into death."
+    death_other:
+      - "{player}, the {role}, was dead: {cause}."
+    hunter_shot:
+      - "With a last breath {hunter} the Hunter raised the gun and took {target} down too."
+    day_breaks:
+      - "The {nth} day dawned on {alive} survivors, and the arguing began."
+      - "Day {n}: {alive} of them gathered in the square, eyes searching faces."
+      - "Day {n}: the square filled with {alive} wary faces."
+    captain:
+      - "The village chose {player} as captain with {votes} votes, a voice that would count double."
+    vote_reason:
+      - "{who} named {target}: \"{quote}\""
+      - "\"{quote_bare},\" said {who}, and cast the vote against {target}."
+      - "Against {target}, {who} offered this reason: \"{quote}\""
+    speech_own:
+      - "{who} spoke up: \"{quote}\""
+    speech_accuser:
+      - "{who} turned on {focus}: \"{quote}\""
+    tally_decided:
+      - "The count was read: {tally}. {executed} stood condemned."
+    tally_none:
+      - "The count was read: {tally}, and no one carried the day."
+    execution_wrong:
+      - "{player}, an honest {role}, was dragged to the gallows with {votes} voices against, and the wolves smiled."
+      - "{votes} hands rose against {player}, who was no wolf at all but a {role}."
+    execution_wolf:
+      - "{votes} voices sent {player} to the gallows, and a wolf fell at last."
+    execution_other:
+      - "{player}, the {role}, was condemned by {votes} votes."
+    no_execution:
+      - "The village could not agree, and the gallows stayed empty."
+      - "The vote split like dry wood, and nobody was led away."
+      - "Voices clashed and cancelled out; the gallows waited in vain."
+    claim_lie:
+      - "{who} swore to be {claimed_a}, but was in truth {actual_a}."
+    claim_true:
+      - "{who} declared the role of {role}, and it was no lie."
+    counterclaim:
+      - "{claimants} all claimed to be the {role}, and not all of them could be telling the truth."
+    result_wolves:
+      - "The wolves ({winners}) now outnumbered the village, and the night was theirs for good after {days} days."
+    result_village:
+      - "The last wolf fell, and the village ({winners}) had won after {days} days."
+    result_lovers:
+      - "Only the lovers ({winners}) were left, and love had outlasted everyone."
+    result_white_wolf:
+      - "The White Werewolf ({winners}) stood alone among the dead."
+    result_nobody:
+      - "The days ran out and neither side had won."
+    reveal:
+      - "Behind the masks: {reveal}."
+news:
+  title: "WEREWOLF VILLAGE: THE FULL REPORT"
+  layout: {joiner: "\n", prefix: "- ", paragraph: 0}
+  chapters:
+    prologue: "Background"
+    night: "Night {n}: overnight report"
+    day: "Day {n}: the village meeting"
+    epilogue: "Final result"
+  glance_title: "Key facts"
+  glance_labels:
+    winner: "Winner"
+    length: "Length"
+    turning_point: "Key moment"
+    accurate_voter: "Best voter"
+    deceptive: "Biggest bluffer"
+    cost: "Cost"
+  glance_values:
+    length: "{days} days"
+    accurate_voter: "{who} ({right} of {of} votes correct)"
+    deceptive: "{who} ({deceptive_note})"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Day {n}: {player} ({role}) executed in error"
+    wolf_executed: "Day {n}: a wolf ({player}) executed"
+    seer_killed: "Night {n}: Seer {player} killed by the wolves"
+    lover_grief: "Night {n}: {player} dies of grief"
+    hunter_shot: "{hunter} shoots {target} on the way out"
+    false_claim: "{who} makes a false role claim"
+    save: "Night {n}: a victim ({target}) is saved"
+  deceptive_notes:
+    survived: "never caught, alive after {days} days"
+    fell: "kept the cover until day {days}"
+    lies: ", {lies} false role claim(s)"
+  kinds:
+    cast:
+      - "{count} players, secret roles: {cast}."
+    lovers:
+      - "Lovers: {a} and {b}. If one dies, so does the other."
+    night_falls:
+      - "Night {n} begins with {alive} players alive."
+      - "{alive} players go to sleep for night {n}."
+      - "Night {n}: {alive} players left."
+    wolf_plan:
+      - "Pack chat, {who}: \"{quote}\""
+    wolf_target:
+      - "The pack picks {target} as its target."
+    wolf_missed_witch:
+      - "Attack on {target} foiled: the Witch heals the victim."
+    wolf_missed_protector:
+      - "Attack on {target} foiled: the Protector's guard holds."
+    wolf_missed_unknown:
+      - "Attack on {target} fails; the victim survives."
+    seer_found_wolf:
+      - "Seer {seer} checks {target}: a wolf."
+    seer_found_village:
+      - "Seer {seer} checks {target}: {role}, no threat."
+    witch_heal:
+      - "{witch} uses the healing potion on {target}."
+    witch_poison:
+      - "{witch} uses the poison on {target}."
+    night_quiet:
+      - "Morning report: no deaths."
+      - "Nothing to report from the night: all players alive."
+      - "No deaths overnight."
+    death_wolves:
+      - "DEAD: {player} ({role}), killed by the wolves."
+      - "Found dead at dawn: {player}, the {role}."
+      - "Wolf attack victim: {player} ({role})."
+    death_poison:
+      - "DEAD: {player} ({role}), poisoned."
+    death_grief:
+      - "DEAD: {player} ({role}), of grief."
+    death_other:
+      - "DEAD: {player} ({role}), {cause}."
+    hunter_shot:
+      - "Hunter {hunter} fires a last shot and kills {target}."
+    day_breaks:
+      - "Day {n} opens: {alive} players alive."
+      - "Day {n}: {alive} players take part in the meeting."
+      - "Discussion on day {n} begins ({alive} alive)."
+    captain:
+      - "{player} elected captain with {votes} votes (double vote)."
+    vote_reason:
+      - "{who} votes {target}: \"{quote}\""
+      - "{who} on {target}: \"{quote}\""
+      - "Reason given by {who} against {target}: \"{quote}\""
+    speech_own:
+      - "{who} in the debate: \"{quote}\""
+    speech_accuser:
+      - "{who} on {focus}: \"{quote}\""
+    tally_decided:
+      - "Vote count: {tally}. {executed} is executed."
+    tally_none:
+      - "Vote count: {tally}. No majority."
+    execution_wrong:
+      - "EXECUTED IN ERROR: {player} was a {role}, not a wolf ({votes} votes)."
+    execution_wolf:
+      - "EXECUTED: {player}, a wolf ({votes} votes)."
+    execution_other:
+      - "EXECUTED: {player} ({role}), {votes} votes."
+    no_execution:
+      - "No execution today."
+      - "The vote ends without a majority; nobody is executed."
+      - "Vote inconclusive: no execution."
+    claim_lie:
+      - "False claim: {who} says {claimed_a}, is {actual_a}."
+    claim_true:
+      - "Role claim: {who} says {role}, and it is true."
+    counterclaim:
+      - "Clash: {claimants} all claim to be the {role}."
+    result_wolves:
+      - "WOLVES WIN after {days} days: {winners}."
+    result_village:
+      - "VILLAGE WINS after {days} days: {winners}."
+    result_lovers:
+      - "LOVERS WIN: {winners}."
+    result_white_wolf:
+      - "WHITE WEREWOLF WINS: {winners}."
+    result_nobody:
+      - "NO WINNER: the day limit was reached."
+    reveal:
+      - "Roles: {reveal}."
+sports:
+  title: "Live from the Village: The Match Commentary"
+  layout: {joiner: "\n", prefix: "", paragraph: 0}
+  chapters:
+    prologue: "Kick-off: the line-ups"
+    night: "Night {n}: the pack hunts"
+    day: "Day {n}: the village fights back"
+    epilogue: "Full time"
+  glance_title: "The scoreboard"
+  glance_labels:
+    winner: "Winner"
+    length: "Match length"
+    turning_point: "Moment of the match"
+    accurate_voter: "Sharpest voter"
+    deceptive: "Best actor"
+    cost: "Price of the ticket"
+  glance_values:
+    length: "{days} days"
+    accurate_voter: "{who}, {right} of {of} votes on target"
+    deceptive: "{who}, {deceptive_note}"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Day {n}: a disastrous vote, {player} ({role}) executed"
+    wolf_executed: "Day {n}: a wolf down, {player} caught"
+    seer_killed: "Night {n}: the Seer {player} is taken out"
+    lover_grief: "Night {n}: {player} follows a lover out of the game"
+    hunter_shot: "{hunter} takes {target} with a last shot"
+    false_claim: "{who} bluffs a role"
+    save: "Night {n}: {target} saved on the line"
+  deceptive_notes:
+    survived: "never caught, still standing after {days} days"
+    fell: "kept up the act until day {days}"
+    lies: ", {lies} bluff(s) about a role"
+  kinds:
+    cast:
+      - "Welcome, everyone! {count} players take the field: {cast}."
+    lovers:
+      - "A twist before the whistle: {a} and {b} are a pair. One falls, both fall."
+    night_falls:
+      - "Night {n}, {alive} players on the pitch, and the pack is on the prowl!"
+      - "And we go again into the {nth} night with {alive} left!"
+      - "Night {n} kicks off, {alive} players left to survive it!"
+    wolf_plan:
+      - "Listen to the pack huddle! {who}: \"{quote}\""
+    wolf_target:
+      - "The wolves go for {target}!"
+    wolf_missed_witch:
+      - "What a save! The Witch heals {target} right on the line!"
+    wolf_missed_protector:
+      - "Blocked! A guardian stops the attack on {target}!"
+    wolf_missed_unknown:
+      - "The wolves lunge at {target} and miss!"
+    seer_found_wolf:
+      - "{seer} checks {target}, and it is a wolf! Big, big information!"
+    seer_found_village:
+      - "{seer} looks at {target}: just a {role}. Nothing to see."
+    witch_heal:
+      - "{witch} reaches for the healing potion, aimed at {target}!"
+    witch_poison:
+      - "{witch} goes for the poison, and {target} is in the firing line!"
+    night_quiet:
+      - "A quiet night: nobody goes down!"
+      - "Not a single player down tonight, what a night for the village!"
+      - "The wolves came up empty: no casualties."
+    death_wolves:
+      - "{player}, the {role}, is down! The wolves strike!"
+      - "Ouch! {player} ({role}) is out of the game, taken by the pack."
+      - "And that is the end for {player}, the {role}."
+    death_poison:
+      - "{player} ({role}) is out, poisoned!"
+    death_grief:
+      - "{player} ({role}) goes out of grief, a heartbreaking exit."
+    death_other:
+      - "{player} ({role}) is out: {cause}."
+    hunter_shot:
+      - "WHAT A SHOT! {hunter} the Hunter drags {target} down with them!"
+    day_breaks:
+      - "Day {n}, and {alive} players are left to settle the score."
+      - "It is Day {n}, and {alive} players are still on the pitch!"
+      - "The village huddles on day {n}: {alive} players left."
+    captain:
+      - "{player} wins the captaincy with {votes} votes. A double vote, folks."
+    vote_reason:
+      - "{who} backs the vote on {target}: \"{quote}\""
+      - "Here is {who}'s case against {target}: \"{quote}\""
+      - "{who} has a go at {target}: \"{quote}\""
+    speech_own:
+      - "{who} from the floor: \"{quote}\""
+    speech_accuser:
+      - "{who} takes a swing at {focus}: \"{quote}\""
+    tally_decided:
+      - "The votes are in: {tally}. {executed} is gone!"
+    tally_none:
+      - "The votes are in: {tally}. No decision!"
+    execution_wrong:
+      - "A DISASTER! {player} was a {role}, and the village has just hit its own side ({votes} votes)."
+    execution_wolf:
+      - "GOT HIM! {player} was a wolf, and the village scores with {votes} votes."
+    execution_other:
+      - "{player} ({role}) is sent off with {votes} votes."
+    no_execution:
+      - "Nobody goes today: stalemate."
+      - "No majority, no sending-off: play on!"
+      - "The vote ends level: nobody leaves the pitch."
+    claim_lie:
+      - "A bluff! {who} says {claimed_a}, but they are {actual_a}."
+    claim_true:
+      - "{who} calls their role, {role}, and it is the truth."
+    counterclaim:
+      - "Trouble! {claimants} all call themselves the {role}."
+    result_wolves:
+      - "FULL TIME: the wolves ({winners}) win after {days} days!"
+    result_village:
+      - "FULL TIME: the village ({winners}) wins after {days} days!"
+    result_lovers:
+      - "FULL TIME: the lovers ({winners}) take it!"
+    result_white_wolf:
+      - "FULL TIME: the White Werewolf ({winners}) wins it alone!"
+    result_nobody:
+      - "FULL TIME: no winner, the clock ran out."
+    reveal:
+      - "For the record, the line-ups: {reveal}."
+novel:
+  title: "A Quiet Village, A Hungry Dark"
+  layout: {joiner: " ", prefix: "", paragraph: 3}
+  chapters:
+    prologue: "One. The Faces"
+    night: "{Nth}: The Dark"
+    day: "{Nth}: The Square"
+    epilogue: "Last. The Morning After"
+  glance_title: "At a glance"
+  glance_labels:
+    winner: "Who won"
+    length: "How long it lasted"
+    turning_point: "Where it turned"
+    accurate_voter: "Who saw clearly"
+    deceptive: "Who hid best"
+    cost: "What it cost"
+  glance_values:
+    length: "{days} days"
+    accurate_voter: "{who}, who voted right {right} times in {of}"
+    deceptive: "{who}, {deceptive_note}"
+    cost: "{cost}"
+  turning_points:
+    wrong_execution: "Day {n}: the village chose {player} ({role}), and chose wrong"
+    wolf_executed: "Day {n}: the village finally caught a wolf, {player}"
+    seer_killed: "Night {n}: {player}, the Seer, did not wake up"
+    lover_grief: "Night {n}: {player} could not live without the other"
+    hunter_shot: "{hunter}'s last shot, and {target} with it"
+    false_claim: "{who} lied about who they were"
+    save: "Night {n}: {target} lived when they should not have"
+  deceptive_notes:
+    survived: "never found out, still there after {days} days"
+    fell: "wore the mask until day {days}"
+    lies: ", having lied about a role {lies} time(s)"
+  kinds:
+    cast:
+      - "They were {count}, and each carried a secret: {cast}."
+    lovers:
+      - "Somewhere in the first dark, {a} and {b} found they were bound, and neither said so aloud."
+    night_falls:
+      - "Night {n} came, and {alive} lamps went out one by one."
+      - "The {nth} night was no kinder than the one before; {alive} slept, or pretended to."
+      - "Night {n}: {alive} doors were bolted, though bolts had never helped."
+    wolf_plan:
+      - "In the dark, {who} leaned toward the others and whispered: \"{quote}\""
+    wolf_target:
+      - "They settled on {target}."
+    wolf_missed_witch:
+      - "But a hand with a small green bottle was quicker, and {target} breathed on."
+    wolf_missed_protector:
+      - "But someone had stood watch at {target}'s door, and the wolves went away hungry."
+    wolf_missed_unknown:
+      - "But {target} was not where they were looked for, or was luckier than they knew."
+    seer_found_wolf:
+      - "{seer} looked at {target} for a long time, and what looked back had teeth."
+    seer_found_village:
+      - "{seer} looked at {target} and saw a {role}, and felt the strange shame of having doubted."
+    witch_heal:
+      - "{witch} pressed the little bottle into {target}'s mouth before the cold could take them."
+    witch_poison:
+      - "{witch} held the poison for a moment, then used it on {target}."
+    night_quiet:
+      - "Morning came, and for once it brought no bad news."
+      - "Nobody was missing at dawn, and nobody quite believed it."
+      - "The roosters crowed over a village that was, for once, whole."
+    death_wolves:
+      - "{player} was found by the well, torn and quiet, a {role} no more."
+      - "They found {player} first; the {role} had not made it to dawn."
+      - "{player}'s door stood open. The {role} was gone from the world."
+    death_poison:
+      - "{player} lay pale and still: poison, said the old women, and they were right."
+    death_grief:
+      - "{player} did not eat, did not speak, and by evening was gone, for love of the one who had died."
+    death_other:
+      - "{player}, the {role}, was gone: {cause}."
+    hunter_shot:
+      - "As {hunter} fell the old gun spoke once, and {target} fell too."
+    day_breaks:
+      - "Day {n}. {alive} of them stood in the square and would not meet one another's eyes."
+      - "Day {n}, and {alive} of them gathered, each watching the others."
+      - "On the {nth} day {alive} stood in the square, saying little."
+    captain:
+      - "They chose {player} as their captain, {votes} votes to none, and a voice that counted twice."
+    vote_reason:
+      - "\"{quote_bare},\" said {who}, and pointed at {target}."
+      - "{who} gave {target}'s name and a reason: \"{quote}\""
+      - "{who} did not look away from {target}. \"{quote}\""
+    speech_own:
+      - "{who} answered: \"{quote}\""
+    speech_accuser:
+      - "{who} rounded on {focus}. \"{quote}\""
+    tally_decided:
+      - "The hands went up: {tally}. {executed} had been chosen."
+    tally_none:
+      - "The hands went up, {tally}, and fell again with nothing decided."
+    execution_wrong:
+      - "{player} was an honest {role}. {votes} hands had been raised against them, and it was too late to take them back."
+      - "They led {player} out, and only afterwards learned that a {role} had died."
+    execution_wolf:
+      - "{player} did not struggle when {votes} hands decided against them; the wolf knew they had been found."
+    execution_other:
+      - "{player}, the {role}, was led away by {votes} voices."
+    no_execution:
+      - "Nobody was chosen, and the day ended with everyone suspected."
+      - "The hands stayed in laps; no one had the nerve to decide."
+      - "They argued until dusk and chose nobody."
+    claim_lie:
+      - "{who} said they were {claimed_a}. It was a lie; they were {actual_a}."
+    claim_true:
+      - "{who} said, plainly, that they were the {role}. For once the truth sounded like a lie, and was true."
+    counterclaim:
+      - "{claimants} all said they were the {role}, and the square went very quiet."
+    result_wolves:
+      - "By the end the wolves ({winners}) were as many as the rest, and the village belonged to them after {days} days."
+    result_village:
+      - "The last wolf was gone, and the village ({winners}) could finally sleep, {days} days after the first fear."
+    result_lovers:
+      - "Only the lovers ({winners}) walked out of the village, together."
+    result_white_wolf:
+      - "{winners}, the White Werewolf, was the only one who walked out of it."
+    result_nobody:
+      - "In the end nobody had won, and the village stood in the grey of its last day."
+    reveal:
+      - "And these were the faces behind the faces: {reveal}."

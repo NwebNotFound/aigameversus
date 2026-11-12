@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MatchEvent } from '#lib/api.js';
+	import type { MatchEvent, Seat as Player, TranscriptLine } from '#lib/api.js';
 	import { hidden } from '#lib/live.js';
 	import LiarsDeckTable from './LiarsDeckTable.svelte';
 	import PokerTable from './PokerTable.svelte';
@@ -15,7 +15,9 @@
 		events = [],
 		names = {},
 		colours = {},
-		subs = {}
+		subs = {},
+		lines = [],
+		players
 	}: {
 		spec: Record<string, unknown> | null;
 		spoilers: boolean;
@@ -26,6 +28,9 @@
 		colours?: Record<string, string>;
 		/** Seat id to the small line under its name on the board (model, vendor). */
 		subs?: Record<string, string | null>;
+		/** The transcript so far, for a board that stages what is said (Werewolf). */
+		lines?: TranscriptLine[];
+		players?: Record<string, Player>;
 	} = $props();
 
 	type Seat = Record<string, unknown> & { player: string };
@@ -98,7 +103,7 @@
 {:else if spec.layout === 'poker_table' && isPokerTable(spec)}
 	<PokerTable {spec} {spoilers} {events} {names} {colours} {subs} />
 {:else if spec.layout === 'player_circle' && isPlayerCircle(spec)}
-	<WerewolfCircle {spec} {spoilers} {events} {names} {colours} {subs} />
+	<WerewolfCircle {spec} {spoilers} {events} {names} {colours} {subs} {lines} {players} />
 {:else}
 	<div class="board" data-testid="board" data-layout={spec.layout}>
 		{#if header.length}

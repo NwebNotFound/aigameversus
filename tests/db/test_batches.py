@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from arena import cli
 from arena.api.app import app
+from tests.db.test_matches_api import follow
 
 LEAGUE = {
     "id": "E1-A2",
@@ -80,7 +81,7 @@ def started_file(tmp_path, lines):
 def test_a_batch_summary_counts_its_matches_by_status_and_adds_up_their_cost(client):
     done = start(client, seed=1, batch={**LEAGUE, "index": 1})
     start(client, seed=2, batch={**LEAGUE, "index": 2}, turn_delay=5)
-    client.get(f"/matches/{done['id']}/events")
+    follow(client, done["id"])  # the stream closes when the match has stopped
 
     summary = client.get("/batches/E1-A2").json()
 
@@ -91,8 +92,7 @@ def test_a_batch_summary_counts_its_matches_by_status_and_adds_up_their_cost(cli
         "budget_eur": 3.0,
         "matches": 2,
     }
-    assert sum(summary["statuses"].values()) == 2
-    assert summary["statuses"].get("running") == 1
+    assert summary["statuses"] == {"finished": 1, "running": 1}
     assert summary["cost_micro_eur"] == 0  # bots cost nothing
     assert client.get("/batches/nope").status_code == 404
 
