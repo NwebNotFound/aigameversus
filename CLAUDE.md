@@ -919,6 +919,10 @@ next to it says what each does and what the generator guarantees.
   A balance sweep with random bots (no cost) is `uv run python -m
   arena.research.civ_balance --seeds 20 --markdown`; research/civ-balance.md has
   its findings and the proposals D-137 and D-138.
+  `GET /matches/{id}/analytics` answers for Civ too (`arena/analytics/civ.py`,
+  `analytics_version: "civ/1"`). It gives per-round series per nation, battles,
+  conquests, diplomacy, orders, decision metrics and behaviour tags.
+  docs/METRICS.md defines them, and which need `spoilers=true`.
 
 How these follow the engine's rules, and what the next systems should copy:
 
