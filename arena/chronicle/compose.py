@@ -18,7 +18,7 @@ from typing import Any
 
 import yaml
 
-from arena.chronicle import tell_liars_deck
+from arena.chronicle import tell_civ, tell_liars_deck
 from arena.chronicle.digest import Digest, Fact
 from arena.chronicle.text import CAUSES
 from games.werewolf.selection import load_roles
@@ -105,6 +105,8 @@ FIELDS: dict[str, tuple[str, ...]] = {
     "result_nobody": ("winners", "days"),
     "reveal": ("reveal",),
 }
+# The games whose words live in a module of their own; Werewolf's are in `Teller` itself.
+GAME_TELLERS = {"liars_deck": tell_liars_deck, "civ": tell_civ}
 PLAIN_VILLAGERS = {
     "en": "plus the plain villagers {names}",
     "de": "dazu die einfachen Dorfbewohner {names}",
@@ -226,8 +228,8 @@ class Teller:
     # --- one fact -> (template kind, fields) -------------------------------------------
 
     def fields_of(self, fact: Fact) -> tuple[str, dict[str, Any]] | None:
-        if self.digest.game == "liars_deck":
-            return tell_liars_deck.fields_of(self, fact)
+        if teller := GAME_TELLERS.get(self.digest.game):
+            return teller.fields_of(self, fact)
         d, who, lang = fact.data, self.who, self.lang
         match fact.kind:
             case "cast":
@@ -373,7 +375,9 @@ def chapters(teller: Teller) -> list[dict[str, Any]]:
         for fact in section.facts:
             resolved = teller.fields_of(fact)
             if resolved:
-                sentences.append(teller.pick(*resolved))
+                text = teller.pick(*resolved)
+                finish = getattr(GAME_TELLERS.get(teller.digest.game), "finish", None)
+                sentences.append(finish(text, teller.lang) if finish else text)
         if not sentences:
             continue
         seq = min((f.data["seq"] for f in section.facts if "seq" in f.data), default=None)
@@ -399,8 +403,8 @@ def glance(teller: Teller, cost_micro_eur: int | None) -> list[dict[str, str]]:
     items = []
     for fact in teller.digest.glance:
         d = fact.data
-        if teller.digest.game == "liars_deck":
-            if (value := tell_liars_deck.glance_value(teller, fact)) is not None:
+        if game_teller := GAME_TELLERS.get(teller.digest.game):
+            if (value := game_teller.glance_value(teller, fact)) is not None:
                 items.append({"label": tpl["glance_labels"][fact.kind], "value": value})
             continue
         match fact.kind:
@@ -448,8 +452,13 @@ def glance(teller: Teller, cost_micro_eur: int | None) -> list[dict[str, str]]:
 KEY_KINDS = {
     "werewolf": ("death", "execution", "hunter_shot", "claim_lie", "captain", "wolf_missed"),
     "liars_deck": ("reveal", "trigger", "eliminated", "duel", "devil_shots", "lie_big"),
+    "civ": ("conquest", "battle", "war", "treaty", "broken", "event"),
 }
-FIELDS_BY_GAME = {"werewolf": FIELDS, "liars_deck": tell_liars_deck.FIELDS}
+FIELDS_BY_GAME = {
+    "werewolf": FIELDS,
+    "liars_deck": tell_liars_deck.FIELDS,
+    "civ": tell_civ.FIELDS,
+}
 
 
 def key_moments(digest: Digest) -> list[dict[str, Any]]:
@@ -460,7 +469,10 @@ def key_moments(digest: Digest) -> list[dict[str, Any]]:
             if fact.kind in KEY_KINDS[digest.game]:
                 d = fact.data
                 keys = ("player", "who", "hunter", "target", "caller", "a", "b")
-                players = [d[k] for k in keys if d.get(k)] + list(d.get("players", []))
+                keys += ("taker", "loser", "attacker", "defender", "by", "on", "other")
+                named = [d[k] for k in keys if d.get(k)] + list(d.get("players", []))
+                named += list(d.get("nations", []))
+                players = [p for p in named if p in digest.seats]  # not the barbarians
                 out.append(
                     {
                         "seq": d["seq"],

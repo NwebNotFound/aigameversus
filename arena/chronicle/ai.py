@@ -78,6 +78,20 @@ def role_words() -> frozenset[str]:
     return frozenset(words)
 
 
+@cache
+def civ_words() -> frozenset[str]:
+    """Units, buildings, treaties and resources of Throne of Tokens, in English and German."""
+    from games.civ.data_loader import load_civ_data
+
+    data = load_civ_data()
+    words = {"food", "wood", "iron", "gold", "nahrung", "holz", "eisen"}
+    for table in (data.units, data.buildings, data.treaties):
+        for item in table.values():
+            for name in (item.id.replace("_", " "), item.name, item.name_de):
+                words |= {name.lower(), f"{name.lower()}s"}  # and the plain English plural
+    return frozenset(words)
+
+
 def _numbers(text: str) -> set[str]:
     return set(re.findall(r"\d+(?:[.,]\d+)?", text))
 
@@ -99,7 +113,7 @@ def check_chapter(rewritten: str, template: str, names: list[str]) -> str | None
         return f"numbers not in the chapter: {', '.join(sorted(extra))}"
     if extra := _words(rewritten, NUMBER_WORDS) - _words(template, NUMBER_WORDS):
         return f"numbers not in the chapter: {', '.join(sorted(extra))}"
-    vocabulary = CARD_WORDS | role_words()
+    vocabulary = CARD_WORDS | role_words() | civ_words()
     if extra := _words(rewritten, vocabulary) - _words(template, vocabulary):
         return f"cards or roles not in the chapter: {', '.join(sorted(extra))}"
     return None

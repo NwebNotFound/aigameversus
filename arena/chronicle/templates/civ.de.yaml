@@ -1,0 +1,441 @@
+# Die Worte der Chronik von Throne of Tokens auf Deutsch: vier Stile, die sich in Aufbau und
+# Wortwahl unterscheiden. Felder: siehe `FIELDS` in arena/chronicle/tell_civ.py (die Tests
+# formatieren jede Variante). Eine Nation steht nur im Nominativ oder Akkusativ (nach "gegen",
+# "an", "für"), denn die neutrale Seite heißt "die Barbarenhorde" und ändert sonst ihren Artikel.
+# `again` steht vor einem Satz, den jede Variante seiner Art in dieser Chronik schon erzählt hat.
+epic:
+  title: "Die Sage vom Thron der Token"
+  layout: {joiner: " ", prefix: "", paragraph: 0}
+  again: ["Und abermals:", "Wieder:", "Und noch einmal:", "Erneut:", "Wie zuvor:", "Ein weiteres Mal:"]
+  chapters:
+    prologue: "Prolog: Die Völker erwachen"
+    age: "Das {Nth} Zeitalter"
+    epilogue: "Epilog: Wer den Thron hielt"
+  glance_title: "Auf einen Blick"
+  glance_labels:
+    winner: "Wer den Thron hielt"
+    length: "Dauer"
+    turning_point: "Die Wende"
+    conqueror: "Größter Eroberer"
+    diplomat: "Eifrigster Diplomat"
+    cost: "Kosten der Sage"
+  glance_values:
+    winner:
+      domination: "{winners}, durch Eroberung"
+      economy: "{winners}, durch einen Schatz, der nicht versiegte"
+      round_limit: "{winners}, am stärksten, als die Zeit ablief"
+    length: "{rounds} Runden"
+    conqueror: "{who}, eroberte {cities}"
+    diplomat: "{who}, schloss {treaties}"
+    cost: "{cost}"
+  turning_points:
+    capital: "Zeitalter {n}: {taker} nahm die Hauptstadt, die {loser} gehörte"
+    battle: "Zeitalter {n}: {attacker} griff {defender} an, und {lost} Einheiten fielen"
+    war: "Zeitalter {n}: {by} erklärte den Krieg gegen {on}"
+  kinds:
+    cast:
+      - "{count} Völker erhoben sich aus dem Nebel, jedes aus einer einzigen Hauptstadt, und {rounds} Runden blieben, um den Thron zu erringen: {cast}."
+      - "{count} Reiche erwachten in einer Welt von {rounds} Runden und einem Thron: {cast}."
+    age_starts:
+      - "Das {nth} Zeitalter brach an, die Runden {first} bis {last}."
+      - "So begann das {nth} Zeitalter, von Runde {first} bis Runde {last}."
+      - "Runden {first} bis {last}: das {nth} Zeitalter der Welt."
+      - "Ein neues Zeitalter kam, das {nth}, und es umspannte die Runden {first} bis {last}."
+    founded_one:
+      - "{who} gründete eine neue Stadt in der Wildnis."
+      - "Die Siedler, die {who} aussandte, schlugen ihre Pflöcke ein, und eine Stadt entstand."
+      - "{who} gründete eine Stadt, und ein Banner wehte über frischen Feldern."
+    founded_many:
+      - "{who} breitete sich über das Land aus und gründete {count} Städte."
+      - "{count} neue Städte trugen nun das Banner, das {who} gehörte."
+      - "{who} zog weit hinaus, und {count} Städte entstanden."
+    conquest:
+      - "{taker} erstürmte eine Stadt und entriss sie {loser}."
+      - "{loser} verlor eine Stadt an {taker}."
+      - "{taker} brach die Mauern einer Stadt, die {loser} gehörte, und nahm sie ein."
+    conquest_capital:
+      - "Die Hauptstadt, die {loser} gehörte, fiel an {taker}, und das Reich erbebte."
+      - "{taker} zog in die Hauptstadt ein, die {loser} gehörte."
+    battle_attacker_won:
+      - "{attacker} fiel über {defender} her und behielt das Feld; {attacker} verlor {lost_attacker}, {defender} {lost_defender}."
+      - "In einer großen Schlacht schlug {attacker} {defender}, um den Preis von {lost_attacker} gegen {lost_defender}."
+      - "{attacker} griff {defender} an und siegte; {attacker} verlor {lost_attacker}, {defender} {lost_defender}."
+    battle_defender_won:
+      - "{attacker} griff {defender} an und wurde zurückgeschlagen; {attacker} verlor {lost_attacker}, {defender} {lost_defender}."
+      - "{defender} hielt stand, als {attacker} angriff; die Angreifer verloren {lost_attacker}, {defender} {lost_defender}."
+      - "Der Sturm, den {attacker} führte, brach sich an {defender}; {lost_attacker} verloren gegen {lost_defender}."
+    battle_city_held:
+      - "{attacker} belagerte eine Stadt, die {defender} gehörte, doch ihre Mauern hielten; {attacker} verlor {lost_attacker}, {defender} {lost_defender}."
+      - "Eine Stadt, die {defender} gehörte, trotzte dem Sturm; {attacker} verlor {lost_attacker}, die Verteidiger {lost_defender}."
+    war:
+      - "{by} erklärte den Krieg gegen {on}, und die Kriegstrommeln begannen zu schlagen."
+      - "{by} warf jeden Frieden fort und zog gegen {on}."
+      - "Krieg! {by} richtete die Speere gegen {on}."
+    war_joined:
+      - "{by} erklärte den Krieg gegen {on}, und {joined} griffen zu den Waffen gegen {by}."
+      - "{by} zog gegen {on}, und die Verbündeten {joined} folgten dem Ruf."
+    peace:
+      - "{a} und {b} legten die Waffen nieder und schlossen Frieden."
+      - "Frieden wurde geschworen: {a} und {b} kämpften nicht länger."
+      - "{a} und {b} beendeten ihren Streit mit einem Frieden."
+    treaty:
+      - "{a} und {b} besiegelten einen Pakt: {treaty}."
+      - "{a} und {b} setzten ihre Siegel unter einen Vertrag: {treaty}."
+      - "Gesandte ritten hin und her, und {a} und {b} unterzeichneten einen Vertrag: {treaty}."
+    broken:
+      - "{by} brach das Wort, das es {other} gegeben hatte, und der Vertrag zerriss."
+      - "{by} warf den Vertrag fort und ließ {other} allein."
+    event_plague:
+      - "Die Pest kroch in eine Stadt, die {who} gehörte, und die Gassen verstummten."
+      - "Eine Seuche fegte durch eine Stadt, die {who} gehörte."
+    event_drought:
+      - "Dürre verbrannte die Felder, und {who} sah die Kornspeicher leer werden."
+      - "Der Regen blieb aus, und {who} litt Hunger."
+    event_rebellion:
+      - "Eine Stadt, die {who} gehörte, erhob sich und warf ihre Herren ab."
+      - "Rebellen ergriffen eine Stadt und sagten sich los; {who} hatte sie verloren."
+    event_barbarians:
+      - "Aus der Wildnis kam eine Barbarenhorde."
+      - "In der Wildnis sammelten sich Barbaren, gierig nach Beute."
+    gold_rush:
+      - "{who} begann Gold zu horten, und der Wettlauf um den Schatz begann: {needed} Runden lang musste es halten."
+      - "Die Kammern füllten sich, und hielt {who} sie {needed} Runden lang, wäre der Thron gewonnen."
+    talk:
+      - "{who} sprach vor allen Völkern: \"{quote}\""
+      - "\"{quote}\", verkündete {who}."
+      - "{who} sandte Kunde an jeden Hof: \"{quote}\""
+    result_domination:
+      - "In Runde {round} hielt {winners} die halbe Welt, und der Thron war durch Eroberung gewonnen."
+    result_economy:
+      - "In Runde {round} überdauerte das Gold jeden Rivalen: {winners} hatte den Thron gekauft, nicht erkämpft."
+    result_round_limit:
+      - "Runde {round} kam, die letzte der Welt, und {winners} stand am stärksten da."
+    ranking:
+      - "Die letzte Abrechnung, nach Punkten: {ranking}."
+news:
+  title: "THRONE OF TOKENS: DER BERICHT"
+  layout: {joiner: "\n", prefix: "- ", paragraph: 0}
+  again: ["Erneut:", "Wieder:", "Dasselbe:", "Noch einmal:", "Weiterhin:", "Ein weiteres Mal:"]
+  chapters:
+    prologue: "Hintergrund"
+    age: "Abschnitt {n}"
+    epilogue: "Endergebnis"
+  glance_title: "Die Fakten"
+  glance_labels:
+    winner: "Sieger"
+    length: "Länge"
+    turning_point: "Schlüsselmoment"
+    conqueror: "Meiste Eroberungen"
+    diplomat: "Meiste Verträge"
+    cost: "Kosten"
+  glance_values:
+    winner:
+      domination: "{winners} (Vorherrschaft)"
+      economy: "{winners} (Wirtschaft)"
+      round_limit: "{winners} (nach Punkten am Rundenlimit)"
+    length: "{rounds} Runden"
+    conqueror: "{who} ({cities} erobert)"
+    diplomat: "{who} ({treaties})"
+    cost: "{cost}"
+  turning_points:
+    capital: "Abschnitt {n}: {taker} erobert die Hauptstadt, die {loser} gehört"
+    battle: "Abschnitt {n}: {attacker} gegen {defender}, {lost} Einheiten verloren"
+    war: "Abschnitt {n}: {by} erklärt den Krieg gegen {on}"
+  kinds:
+    cast:
+      - "{count} Nationen, {rounds} Runden: {cast}."
+      - "Nationen im Spiel ({count}): {cast}. Rundenlimit: {rounds}."
+    age_starts:
+      - "Runden {first} bis {last}."
+      - "Zeitraum: Runden {first}-{last}."
+      - "Dieser Abschnitt: Runden {first} bis {last}."
+      - "Zeitfenster: Runde {first} bis Runde {last}."
+    founded_one:
+      - "{who} gründet eine neue Stadt."
+      - "Neue Stadt für {who}."
+      - "{who} wächst um eine neue Stadt."
+    founded_many:
+      - "{who} gründet {count} neue Städte."
+      - "{count} neue Städte für {who}."
+      - "{who} wächst um {count} Städte."
+    conquest:
+      - "{taker} erobert eine Stadt; {loser} verliert sie."
+      - "Stadt verloren: {loser} verliert eine Stadt an {taker}."
+      - "{taker} nimmt {loser} eine Stadt ab."
+    conquest_capital:
+      - "{taker} erobert die Hauptstadt, die {loser} gehört."
+      - "Hauptstadt gefallen: {loser} verliert die Hauptstadt an {taker}."
+    battle_attacker_won:
+      - "Schlacht: {attacker} schlägt {defender}. Verluste {lost_attacker} gegen {lost_defender}."
+      - "{attacker} gewinnt einen Angriff gegen {defender} ({lost_attacker} verloren gegen {lost_defender})."
+      - "Angriff erfolgreich: {attacker} besiegt {defender}, Verluste {lost_attacker} und {lost_defender}."
+    battle_defender_won:
+      - "Schlacht: {defender} wehrt {attacker} ab. Verluste {lost_attacker} gegen {lost_defender}."
+      - "{attacker} greift {defender} an und verliert ({lost_attacker} gegen {lost_defender})."
+      - "Angriff gescheitert: {defender} hält gegen {attacker}, Verluste {lost_attacker} und {lost_defender}."
+    battle_city_held:
+      - "Belagerung gescheitert: Eine Stadt, die {defender} gehört, hält gegen {attacker}. Verluste {lost_attacker} gegen {lost_defender}."
+      - "{attacker} greift eine Stadt an, die {defender} gehört, und wird abgewehrt ({lost_attacker} gegen {lost_defender})."
+    war:
+      - "{by} erklärt den Krieg gegen {on}."
+      - "Krieg: {by} gegen {on}."
+      - "{by} eröffnet die Feindseligkeiten gegen {on}."
+    war_joined:
+      - "{by} erklärt den Krieg gegen {on}; {joined} treten gegen {by} in den Krieg ein."
+      - "Krieg: {by} gegen {on}, und {joined} kämpfen für {on}."
+    peace:
+      - "{a} und {b} schließen Frieden."
+      - "Frieden vereinbart: {a} und {b}."
+      - "{a} und {b} beenden die Feindseligkeiten."
+    treaty:
+      - "{a} und {b} unterzeichnen einen Vertrag: {treaty}."
+      - "Vertrag unterzeichnet, {a} und {b}: {treaty}."
+      - "Neues Abkommen, {a} und {b}: {treaty}."
+    broken:
+      - "{by} bricht den Vertrag; {other} ist betroffen."
+      - "Vertragsbruch: {by} gegen {other}."
+    event_plague:
+      - "Pest in einer Stadt, die {who} gehört."
+      - "Seuche: Eine Stadt, die {who} gehört, ist betroffen."
+    event_drought:
+      - "Dürre: {who} ist betroffen."
+      - "Ernteausfall durch Dürre, betroffen ist {who}."
+    event_rebellion:
+      - "Aufstand: {who} verliert eine Stadt an Rebellen."
+      - "{who} verliert eine Stadt durch einen Aufstand."
+    event_barbarians:
+      - "Eine Barbarenarmee taucht auf."
+      - "Barbaren auf der Karte gesichtet."
+    gold_rush:
+      - "{who} startet den Gold-Countdown ({needed} Runden nötig)."
+      - "Wirtschaftsrennen: {who} muss das Gold {needed} Runden lang halten."
+    talk:
+      - "{who} sagt öffentlich: \"{quote}\""
+      - "Erklärung, abgegeben durch {who}: \"{quote}\""
+      - "\"{quote}\" ({who})"
+    result_domination:
+      - "{winners} gewinnt durch Vorherrschaft in Runde {round}."
+    result_economy:
+      - "{winners} gewinnt wirtschaftlich in Runde {round}."
+    result_round_limit:
+      - "Rundenlimit erreicht in Runde {round}; {winners} gewinnt nach Punkten."
+    ranking:
+      - "Endstand, nach Punkten: {ranking}."
+sports:
+  title: "Throne of Tokens: Der Kommentar"
+  layout: {joiner: "\n", prefix: "", paragraph: 0}
+  again: ["Und noch einmal,", "Da ist es wieder,", "Dasselbe nochmal,", "Ein weiteres Mal,", "Und wieder,", "Schon wieder,"]
+  chapters:
+    prologue: "Anpfiff: die Aufstellung"
+    age: "Spielabschnitt {n}"
+    epilogue: "Abpfiff"
+  glance_title: "Die Anzeigetafel"
+  glance_labels:
+    winner: "Sieger"
+    length: "Spieldauer"
+    turning_point: "Szene des Spiels"
+    conqueror: "Torschützenkönig (Städte)"
+    diplomat: "Bester Vorbereiter (Verträge)"
+    cost: "Preis der Eintrittskarte"
+  glance_values:
+    winner:
+      domination: "{winners}, K.-o.-Sieg durch Vorherrschaft"
+      economy: "{winners}, Sieg über die Schatzkammer"
+      round_limit: "{winners}, nach Punkten vorn beim Schlusspfiff"
+    length: "{rounds} Runden"
+    conqueror: "{who}, {cities} erobert"
+    diplomat: "{who}, {treaties}"
+    cost: "{cost}"
+  turning_points:
+    capital: "Spielabschnitt {n}: {taker} stürmt die Hauptstadt, die {loser} gehört"
+    battle: "Spielabschnitt {n}: {attacker} gegen {defender}, {lost} Einheiten am Boden"
+    war: "Spielabschnitt {n}: {by} geht gegen {on} in die Offensive"
+  kinds:
+    cast:
+      - "Herzlich willkommen! {count} Nationen laufen auf, {rounds} Runden lang: {cast}."
+      - "Was für eine Aufstellung! {count} Nationen, {rounds} Runden, ein Thron: {cast}."
+    age_starts:
+      - "Runden {first} bis {last}, und weiter geht's!"
+      - "Los geht's, Runden {first} bis {last}!"
+      - "Der nächste Abschnitt, Runden {first} bis {last}, läuft!"
+      - "Runden {first} bis {last}: Mal sehen, was sie draufhaben!"
+    founded_one:
+      - "{who} setzt eine neue Stadt, schöne Expansion!"
+      - "Neue Stadt für {who}, da wird gebaut!"
+      - "{who} schnappt sich neues Land mit einer Stadt!"
+    founded_many:
+      - "{who} auf dem Vormarsch, {count} neue Städte!"
+      - "{count} neue Städte für {who}, was für ein Lauf!"
+      - "{who} wächst und wächst, {count} Städte!"
+    conquest:
+      - "{taker} nimmt {loser} eine Stadt ab, was für ein Zug!"
+      - "Autsch, {loser} verliert eine Stadt an {taker}!"
+      - "{taker} stürmt rein, und {loser} ist eine Stadt los!"
+    conquest_capital:
+      - "Unglaublich! {taker} erobert die Hauptstadt, die {loser} gehört!"
+      - "{loser} verliert die Hauptstadt an {taker}, das Publikum steht!"
+    battle_attacker_won:
+      - "{attacker} geht hart gegen {defender} rein und gewinnt! {lost_attacker} verloren, {lost_defender} für {defender}!"
+      - "Großer Schlagabtausch, {attacker} setzt sich gegen {defender} durch, {lost_attacker} gegen {lost_defender}!"
+      - "{attacker} bricht durch, {defender} ist geschlagen! Verluste {lost_attacker} gegen {lost_defender}!"
+    battle_defender_won:
+      - "{defender} hält die Linie gegen {attacker}! {lost_attacker} verloren für die Angreifer, {lost_defender} für {defender}!"
+      - "Geblockt! {attacker} rennt gegen {defender} an und verliert {lost_attacker} gegen {lost_defender}!"
+      - "{defender} schickt {attacker} weg, {lost_attacker} gegen {lost_defender} an Verlusten!"
+    battle_city_held:
+      - "Die Mauern halten! {defender} behält die Stadt gegen {attacker}, {lost_attacker} gegen {lost_defender} an Verlusten!"
+      - "{attacker} hämmert gegen eine Stadt, die {defender} gehört, und bekommt nichts, {lost_attacker} gegen {lost_defender}!"
+    war:
+      - "{by} erklärt den Krieg gegen {on}, jetzt wird's ernst!"
+      - "Krieg! {by} geht auf {on} los!"
+      - "{by} dreht sich gegen {on}, auf geht's!"
+    war_joined:
+      - "{by} erklärt den Krieg gegen {on}, und {joined} steigen gegen {by} ein!"
+      - "{by} geht auf {on} los, aber {joined} kämpfen für {on}!"
+    peace:
+      - "{a} und {b} geben sich die Hand, Frieden!"
+      - "Waffenstillstand! {a} und {b} schließen Frieden!"
+      - "{a} und {b} pfeifen es ab, Frieden auf dem Platz!"
+    treaty:
+      - "{a} und {b} tun sich zusammen: {treaty}!"
+      - "Ein Deal, {a} und {b}: {treaty}!"
+      - "{a} und {b} unterschreiben, {treaty}!"
+    broken:
+      - "{by} bricht den Deal, {other} schaut in die Röhre, Foulspiel!"
+      - "Vertrag zerrissen! {by} wendet sich gegen {other}!"
+    event_plague:
+      - "Pech für {who}, die Pest wütet in einer Stadt!"
+      - "Die Pest trifft {who}, ein Rückschlag, den keiner brauchte!"
+    event_drought:
+      - "Dürre für {who}, die Felder sind trocken!"
+      - "Die Dürre trifft {who}, die Ernte ist weg!"
+    event_rebellion:
+      - "Aufstand! {who} verliert eine Stadt an Rebellen!"
+      - "{who} verliert eine Stadt an Rebellen, Chaos!"
+    event_barbarians:
+      - "Barbaren auf dem Platz! Eine wilde Armee taucht auf!"
+      - "Da kommen die Barbaren, und keiner hat sie eingeladen!"
+    gold_rush:
+      - "{who} sitzt auf dem Gold, {needed} Runden halten für den Sieg!"
+      - "Die Gold-Uhr tickt für {who}, {needed} Runden nötig!"
+    talk:
+      - "{who} an alle: \"{quote}\""
+      - "Und {who} sagt es laut: \"{quote}\""
+      - "\"{quote}\", sagt {who}, große Worte!"
+    result_domination:
+      - "Aus in Runde {round}! {winners} gewinnt durch Vorherrschaft!"
+    result_economy:
+      - "Runde {round}, und {winners} gewinnt über die Schatzkammer!"
+    result_round_limit:
+      - "Schlusspfiff in Runde {round}, und {winners} gewinnt nach Punkten!"
+    ranking:
+      - "Die Abschlusstabelle, mit Punkten: {ranking}."
+novel:
+  title: "Throne of Tokens: Eine Geschichte"
+  layout: {joiner: " ", prefix: "", paragraph: 3}
+  again: ["Wieder einmal,", "Wie zuvor,", "Und noch immer,", "Abermals,", "Wie immer,", "Ein weiteres Mal,"]
+  chapters:
+    prologue: "Eins. Kleine Königreiche"
+    age: "Die {Nth} Jahreszeit"
+    epilogue: "Zuletzt. Wer oben blieb"
+  glance_title: "Auf einen Blick"
+  glance_labels:
+    winner: "Wer oben blieb"
+    length: "Wie lange es dauerte"
+    turning_point: "Wo es kippte"
+    conqueror: "Wer am meisten nahm"
+    diplomat: "Wer am meisten unterschrieb"
+    cost: "Was es kostete"
+  glance_values:
+    winner:
+      domination: "{winners}: nahm sich einfach die Welt"
+      economy: "{winners}: hörte nie auf, Münzen zu zählen"
+      round_limit: "{winners}: lag vorn, als die Uhr stehen blieb"
+    length: "{rounds} Runden"
+    conqueror: "{who}: {cities} erobert"
+    diplomat: "{who}: {treaties} unterschrieben"
+    cost: "{cost}"
+  turning_points:
+    capital: "Jahreszeit {n}: {taker} zog in die Hauptstadt ein, die {loser} gehörte"
+    battle: "Jahreszeit {n}: {attacker} griff {defender} an, und {lost} Einheiten kamen nicht heim"
+    war: "Jahreszeit {n}: {by} wählte den Krieg gegen {on}"
+  kinds:
+    cast:
+      - "Es waren {count}, jedes mit einer Stadt und einem langen Weg von {rounds} Runden vor sich: {cast}."
+      - "Es begann leise: {count} kleine Königreiche, {rounds} Runden, und noch wusste niemand, wie es enden würde. {cast}."
+    age_starts:
+      - "Die Jahreszeiten wechselten wieder, Runden {first} bis {last}."
+      - "Die Runden {first} bis {last} vergingen, und die Karte verschob sich."
+      - "Die Zeit lief weiter, von Runde {first} bis Runde {last}."
+      - "Zwischen Runde {first} und Runde {last} veränderte sich die Welt ein wenig mehr."
+    founded_one:
+      - "{who} schickte Siedler hinaus, und wo Gras gewesen war, wuchs eine neue Stadt."
+      - "Irgendwo am Rand der Karte gründete {who} eine Stadt."
+      - "Eine neue Stadt entstand, klein und hoffnungsvoll; gegründet hatte sie {who}."
+    founded_many:
+      - "{who} breitete sich weiter aus, {count} neue Städte insgesamt."
+      - "Am Ende hatte {who} {count} Städte gegründet."
+      - "{who} füllte das leere Land mit {count} neuen Städten."
+    conquest:
+      - "{taker} nahm {loser} eine Stadt ab, und die Menschen dort erwachten unter einer neuen Flagge."
+      - "Eine Stadt wechselte die Hand: {loser} verlor sie an {taker}."
+      - "{loser} sah zu, wie eine Stadt an {taker} fiel."
+    conquest_capital:
+      - "{taker} zog in die Hauptstadt ein, die {loser} gehörte, und danach war nichts mehr wie zuvor."
+      - "Die Hauptstadt fiel; {loser} verlor das Herz des Reiches an {taker}."
+    battle_attacker_won:
+      - "{attacker} griff {defender} an und gewann, aber nicht billig: {lost_attacker} verloren, {lost_defender} für {defender}."
+      - "Als {attacker} kam, konnte {defender} nicht halten; {defender} verlor {lost_defender}, die Angreifer {lost_attacker}."
+      - "{attacker} gewann den Kampf gegen {defender}, um den Preis von {lost_attacker} gegen {lost_defender}."
+    battle_defender_won:
+      - "{attacker} versuchte es gegen {defender} und scheiterte, {lost_attacker} verloren; {defender} verlor {lost_defender}."
+      - "{defender} hielt stand, als {attacker} kam; die Angreifer verloren {lost_attacker}, {defender} {lost_defender}."
+      - "Der Angriff gegen {defender} lief ins Leere: {attacker} verlor {lost_attacker}, {defender} {lost_defender}."
+    battle_city_held:
+      - "{attacker} warf sich gegen eine Stadt, die {defender} gehörte, und die Mauern rührten sich nicht; {lost_attacker} verloren, {lost_defender} drinnen."
+      - "Eine Stadt, die {defender} gehörte, hielt gegen {attacker}; die Angreifer verloren {lost_attacker}, die Stadt {lost_defender}."
+    war:
+      - "{by} entschied, dass es Zeit war, und erklärte den Krieg gegen {on}."
+      - "Am Ende wählte {by} den Krieg, und das Ziel hieß {on}."
+      - "{by} wandte sich gegen {on}, und die Ruhe war vorbei."
+    war_joined:
+      - "{by} erklärte den Krieg gegen {on}, und {joined} hielten sich nicht heraus: Sie kämpften für {on}."
+      - "Als {by} gegen {on} in den Krieg zog, stellten sich {joined} gegen {by}."
+    peace:
+      - "{a} und {b} waren es leid und schlossen Frieden."
+      - "Endlich kamen {a} und {b} überein aufzuhören."
+      - "{a} und {b} legten die Waffen nieder, fürs Erste."
+    treaty:
+      - "{a} und {b} fanden etwas, worauf sie sich einigen konnten: {treaty}."
+      - "{a} und {b} unterschrieben einen Vertrag, {treaty}, und beide hofften, er würde halten."
+      - "Nun gab es einen Vertrag, {a} und {b} hatten ihn unterschrieben: {treaty}."
+    broken:
+      - "{by} brach das Wort, das {other} gegolten hatte, und niemand vergaß es."
+      - "Der Vertrag hielt nicht; {by} zerriss ihn, und {other} blieb allein zurück."
+    event_plague:
+      - "Dann kam die Pest in eine Stadt, die {who} gehörte, und die Menschen blieben hinter ihren Türen."
+      - "Eine Krankheit breitete sich in einer Stadt aus, die {who} gehörte."
+    event_drought:
+      - "Der Regen blieb aus, und {who} sah die Felder braun werden."
+      - "Dürre legte sich über das Land; {who} litt darunter."
+    event_rebellion:
+      - "Eine Stadt, die {who} gehörte, hatte genug und erhob sich."
+      - "Rebellen nahmen eine Stadt, und {who} hatte sie verloren; nun gehorchte sie niemandem."
+    event_barbarians:
+      - "Draußen in der Wildnis sammelte sich eine Barbarenbande."
+      - "Barbaren kamen aus dem Nichts, wie sie es immer tun."
+    gold_rush:
+      - "{who} begann Gold zu sparen, und alle wussten, was {needed} Runden davon bedeuten würden."
+      - "Die Schatzkammer füllte sich; noch {needed} Runden, und {who} hätte genug."
+    talk:
+      - "{who} sagte, für alle, die zuhörten: \"{quote}\""
+      - "\"{quote}\", sagte {who}."
+      - "{who} sagte es geradeheraus: \"{quote}\""
+    result_domination:
+      - "In Runde {round} war es vorbei: {winners} hielt so viel von der Welt, dass niemand widersprechen konnte."
+    result_economy:
+      - "In Runde {round} entschied das Gold, leise; es gehörte {winners}."
+    result_round_limit:
+      - "Runde {round} war die letzte, und als sie endete, lag {winners} vorn."
+    ranking:
+      - "Am Ende sah es so aus, nach Punkten: {ranking}."
