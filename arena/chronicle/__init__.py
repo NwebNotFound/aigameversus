@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from arena.chronicle import compose, liars_deck, werewolf
+from arena.chronicle import civ, compose, liars_deck, werewolf
 from arena.chronicle.beats import BEATS, Beat, Chapter
 from arena.chronicle.text import LANGS, STYLES, Narrator, TemplateNarrator
 from arena.engine.types import Event, EventSource
@@ -65,7 +65,7 @@ class Chronicle(BaseModel):
 
 def chronicle_games() -> list[str]:
     """The ids of the games that have a chronicle."""
-    return sorted(BEATS)
+    return sorted({*BEATS, *NEW_GAMES})
 
 
 def tell(
@@ -94,8 +94,9 @@ def tell(
     if start is None:
         raise ChronicleError("the log does not start with match_started")
     game = start.data["game"]
-    if game not in BEATS:
-        raise ChronicleError(f"there is no chronicle for '{game}' (known: {', '.join(BEATS)})")
+    if game not in chronicle_games():
+        known = ", ".join(chronicle_games())
+        raise ChronicleError(f"there is no chronicle for '{game}' (known: {known})")
     if not any(e.source is EventSource.ENGINE and e.type == "match_finished" for e in events):
         raise ChronicleError(
             "the match is not over: the chronicle uses hidden information, "
@@ -123,7 +124,7 @@ def tell(
     )
 
 
-NEW_GAMES = {"werewolf": werewolf.build, "liars_deck": liars_deck.build}
+NEW_GAMES = {"werewolf": werewolf.build, "liars_deck": liars_deck.build, "civ": civ.build}
 
 
 def _compose(events, game, style, lang, names, cost_micro_eur) -> Chronicle:
