@@ -30,8 +30,13 @@ def test_inventory_humans_and_registration_are_blocking(plan):
     assert gates["eligible_independent_blocks"] is None
     assert gates["minimum_independent_blocks_before_any_run"] == 100
     assert gates["below_minimum_action"] == "do_not_run_spend_zero"
-    assert plan["registration"]["state"] == "pending_merge_freeze"
-    assert plan["registration"]["merge_commit"] is None
+    registration = plan["registration"]
+    assert registration["state"] == "design_frozen_manifest_pending"
+    assert registration["merge_commit"] == "4dc0baf5abebf7ec61ac0993ef9b8680f7ea6797"
+    assert all(
+        registration[field] is None
+        for field in ("corpus_manifest_hash", "split_hash", "configuration_hash")
+    )
 
 
 def test_case_and_call_budgets_do_not_silently_grow(plan):

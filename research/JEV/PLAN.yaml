@@ -14,8 +14,12 @@ blocking_preconditions:
   minimum_independent_blocks_before_any_run: 100
   below_minimum_action: do_not_run_spend_zero
 registration:
-  state: pending_merge_freeze
-  merge_commit: null
+  state: design_frozen_manifest_pending
+  merge_commit: 4dc0baf5abebf7ec61ac0993ef9b8680f7ea6797
+  recorded_date: '2026-11-12'
+  corpus_manifest_hash: null
+  split_hash: null
+  configuration_hash: null
   freeze_record: docs/decisions/D-123-jev.md
   later_changes: dated_amendment_before_labels_or_predictions
 model: typesafe/jev-1.14
