@@ -977,7 +977,8 @@ and estimates only.
 - **Paid runs:** they need `--pre-start-report` and `--arena-build`. One client runs at a
   time across stages (the lock `<out>/../.stage-runner.lock`). A resume with a changed plan
   or schedule is refused. While a match runs, a pause or a failed agent holds at once; the
-  match is not aborted.
+  match is not aborted. A row played outside the client (a directly approved smoke) is
+  named in `adopted_matches: {order: {match_id, evidence}}` and adopted, never replayed.
 - **`<out>/run.json`:** the hashes (client included), the evidence, the effective limit,
   the reserve, every attempt with its body, quote, month and seat counts, and the stop
   reasons.

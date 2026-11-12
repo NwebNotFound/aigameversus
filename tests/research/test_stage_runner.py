@@ -731,3 +731,37 @@ def test_a_running_match_that_pauses_or_loses_an_agent_holds_at_once(
 
     assert len(arena.posts()) == 1  # nothing more started, the match is not aborted
     assert not any(path.endswith("/abort") for _, path, _ in arena.calls)
+
+
+def test_a_smoke_match_played_outside_the_client_is_adopted_not_replayed(c1, tmp_path):
+    arena = c1_arena(c1)
+    probe = client(c1, tmp_path / "probe", arena)
+    status, smoke = arena("POST", "/matches", probe.body(probe.matches[0], "direct"))
+    arena.calls.clear()
+    plan = yaml.safe_load(c1.read_text(encoding="utf-8"))
+    plan["adopted_matches"] = {1: {"match_id": smoke["id"], "evidence": "Lead 5664932f (test)"}}
+    c1.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+    out = tmp_path / "out"
+
+    with pytest.raises(RunStopped, match="review checkpoint after 1"):
+        client(c1, out, arena).run()  # the smoke counts as the first match: then hold
+
+    assert arena.posts() == []  # row 1 was not played again
+    runner = client(c1, out, arena)
+    (attempt,) = runner.attempts().values()
+    assert (attempt["match_id"], attempt["state"]) == (smoke["id"], "ended")
+    assert attempt["adopted"] == "Lead 5664932f (test)"
+    runner.release_checkpoint("Researcher review (test)")
+    assert len(client(c1, out, arena).run()) == 4 and len(arena.posts()) == 3
+
+
+def test_an_adopted_match_must_be_its_rows_match_in_this_batch(c1, tmp_path):
+    arena = c1_arena(c1)
+    probe = client(c1, tmp_path / "probe", arena)
+    status, other = arena("POST", "/matches", probe.body(probe.matches[1], "direct"))  # row 2
+    plan = yaml.safe_load(c1.read_text(encoding="utf-8"))
+    plan["adopted_matches"] = {1: {"match_id": other["id"], "evidence": "x"}}
+    c1.write_text(yaml.safe_dump(plan, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(PlanRefused, match="is not row 1"):
+        client(c1, tmp_path / "out", arena).run()

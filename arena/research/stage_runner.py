@@ -430,6 +430,39 @@ class StageRunner:
                 self._write({"attempt_id": attempt_id, "match_id": found["id"], "state": "started"})
                 self.say(f"attempt {attempt_id} started match {found['id']}: adopted")
 
+    def adopt(self) -> None:
+        """Matches the plan says were played for its rows outside the client (`adopted_matches:
+        {order: {match_id, evidence}}`, e.g. a directly approved smoke): recorded as those
+        rows' attempts, so they are counted and never replayed. Each must carry this batch
+        and its row's index."""
+        adopted = self.plan.get("adopted_matches") or {}
+        have = {a.get("match_id") for a in self.attempts().values()}
+        for order, entry in sorted(adopted.items(), key=lambda kv: int(kv[0])):
+            if entry["match_id"] in have:
+                continue
+            if not str(entry.get("evidence") or "").strip():
+                raise PlanRefused(f"adopted match of row {order} needs its approval evidence")
+            record = self._get(f"/matches/{entry['match_id']}")
+            batch = record.get("batch") or {}
+            if batch.get("id") != self.batch_id or batch.get("index") != int(order):
+                raise PlanRefused(
+                    f"match {entry['match_id']} is not row {order} of batch {self.batch_id}"
+                )
+            attempt_id = f"adopted-{int(order)}"
+            self._write(
+                {
+                    "attempt_id": attempt_id,
+                    "order": int(order),
+                    "state": "started",
+                    "match_id": entry["match_id"],
+                    "adopted": entry["evidence"],
+                    "at": self._at(),
+                    "plan_sha256": _sha256(self.plan_path),
+                    "schedule_sha256": _sha256(self.schedule_path),
+                }
+            )
+            self.say(f"row {order}: match {entry['match_id']} adopted ({entry['evidence']})")
+
     def undecided(self) -> list[dict[str, Any]]:
         return [
             a
@@ -601,6 +634,7 @@ class StageRunner:
                 f"held after row {held[-1]['order']}: {held[-1]['hold']} (go on only with "
                 "--resume-after-hold, after a person decided)"
             )
+        self.adopt()
         self.reconcile()
         if undecided := self.undecided():
             raise RunStopped(
