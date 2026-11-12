@@ -1,0 +1,27 @@
+# Jev, TypeSafe's decision model on OpenRouter (docs/jev.md). It only ever repairs a broken
+# tool call into the legal move the model itself meant (answer_repair "v2"); it never picks
+# a move of its own, never seats a player and never chooses a model.
+# No real call is made unless the server runs with ARENA_ALLOW_JEV=1.
+model: typesafe/jev-1.14
+endpoint: https://openrouter.ai/api/alpha/decisions
+timeout_seconds: 10
+
+# Booking before a call: the request's size in bytes as input tokens at this price, an upper
+# bound of what Jev bills (it bills input tokens only; ~0.04 USD per million at the time of
+# writing). The booking is settled with the `usage.cost` Jev reports, in USD.
+input_usd_per_mtok: 0.20
+
+# What goes into the state: the tail of the model's own reasoning and of the game summary.
+reasoning_chars: 600
+situation_chars: 1500
+# The legal moves Jev chooses from: sampled from the game's random legal moves.
+max_options: 16
+samples: 64
+
+# Jev's pick is played only when its top probability reaches the threshold of the bucket
+# for that many options (not Jev's `confidence`, which depends on the option count).
+# Placeholders until the calibration study (research/jev-calibration) sets them.
+thresholds:
+  - {max_options: 2, min_top_probability: 0.90}
+  - {max_options: 4, min_top_probability: 0.90}
+  - {max_options: 16, min_top_probability: 0.90}

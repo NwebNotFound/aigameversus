@@ -22,7 +22,10 @@ from arena.db.ledger import Ledger
 from arena.db.match_store import Batch, MatchRecord, MatchStore, Seat, bot_seats
 from arena.engine.match import Match
 from arena.engine.plugin import GamePlugin
-from arena.engine.types import Event, MatchPaused, Placement
+from arena.engine.types import Event, MatchPaused, Placement, repair_of
+from arena.jev.client import HttpJev
+from arena.jev.config import load_jev_config
+from arena.jev.repair import JevRepairer
 from arena.memory.store import MemoryStore
 from arena.ratings.store import RatingStore
 
@@ -166,8 +169,22 @@ class LiveMatches:
                 else bot_seat[seat]
                 for seat in players
             }
+        repairer = None
+        if models is not None and repair_of(settings) == "v2":
+            # Tier 2 of the move repair: Jev, metered like any call of this match.
+            jev = load_jev_config()
+            http = HttpJev(jev.model, jev.endpoint, jev.timeout_seconds)
+            repairer = JevRepairer(lambda seat: budget.jev(http, jev, seat), jev)
         # Timed: thinking time is part of what spectators and analyses read.
-        match = Match(plugin, agents, seed=seed, settings=settings, sink=sink, clock=time.monotonic)
+        match = Match(
+            plugin,
+            agents,
+            seed=seed,
+            settings=settings,
+            sink=sink,
+            clock=time.monotonic,
+            repairer=repairer,
+        )
         if len(self._running) >= MAX_RUNNING:
             raise ArenaBusy(
                 f"{MAX_RUNNING} matches are running, the most this server plays at a time. "

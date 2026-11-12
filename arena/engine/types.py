@@ -86,7 +86,9 @@ class TurnRequest(_Frozen):
 # A match setting of the engine, not of the game: how kindly a model's garbled tool call
 # is read ("off": as sent; "v1": arena/agents/arguments.py). Games never see it.
 ANSWER_REPAIR = "answer_repair"
-ANSWER_REPAIR_VERSIONS = ("off", "v1")
+# "v2": v1, and a broken call that is still refused after the corrections goes to a
+# Repairer (Jev, arena/jev/repair.py) that may map it to the legal move the model meant.
+ANSWER_REPAIR_VERSIONS = ("off", "v1", "v2")
 ENGINE_SETTINGS = (ANSWER_REPAIR,)
 
 
@@ -160,3 +162,44 @@ class Agent(Protocol):
     """Anything that can take a seat: a random bot, a mock LLM or a real model."""
 
     async def act(self, request: TurnRequest) -> Reply: ...
+
+
+class RepairRequest(BaseModel):
+    """What a Repairer gets for one move that stayed broken: only what the player could see.
+
+    `observation` and `summary` are the player's own; `thought` is the tail of its own last
+    reasoning; `attempts` are its refused calls with the engine's errors. Nothing about the
+    other players' hidden state is in here.
+    """
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    game: str
+    player: str
+    observation: dict[str, Any]
+    tools: list[ToolSpec]
+    summary: str | None
+    thought: str | None
+    attempts: list[dict[str, Any]]
+    raw: list[str]
+
+
+class RepairOutcome(BaseModel):
+    """A Repairer's verdict: the move it mapped the call to, if any, and why or why not."""
+
+    model_config = ConfigDict(frozen=True)
+
+    action: Action | None
+    reason: str  # "accepted", "below_threshold", "no_options", or the error's kind
+    top_probability: float | None = None
+    options: int = 0
+
+
+class Repairer(Protocol):
+    """Maps a broken call to one of the legal `candidates` the game offers. Never invents one.
+
+    `candidates` come from the engine (the game's own random legal moves, checked). A
+    Repairer may only pick among them or return no action.
+    """
+
+    async def repair(self, request: RepairRequest, candidates: list[Action]) -> RepairOutcome: ...

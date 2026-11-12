@@ -173,6 +173,18 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
   sent, as before. It is the engine's setting, not the game's: `game_settings`
   removes it before the plugin and replay see the settings; `match_started`
   records it.
+- `answer_repair: "v2"` adds Jev (`arena/jev/`, D-125): a move still refused
+  after the corrections goes to the `Repairer` given to `Match(..., repairer=)`.
+  The engine offers it the game's own random legal moves (checked, drawn from a
+  stream of their own; speech never, optional free text dropped, bets as a few
+  amounts), Jev's `choice` maps the model's broken call to one of them, and it
+  plays only above the top-probability threshold of `config/jev.yaml` (checked
+  again, marked `repaired_by: "jev"`, the verdict in `decision.jev`); otherwise
+  the random fallback, which stays. Jev reads only the player's own view, its
+  reasoning tail and its refused calls. Every call goes through `Budget.jev`
+  (booked, settled at `usage.cost`, inside the caps). No Jev call is sent unless
+  the server runs with `ARENA_ALLOW_JEV=1`; `POST /matches` refuses `"v2"`
+  otherwise. Tests use `FakeJev` only.
 
 `ModelAgent` talks to its model through one function, the `ModelCall`
 (`arena/agents/model.py`): messages and tool schemas in, text and raw tool

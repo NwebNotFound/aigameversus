@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import ROUND_CEILING, Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from arena.agents.litellm_model import LiteLLMModel
@@ -15,6 +15,11 @@ from arena.db.ledger import Ledger
 from arena.engine.types import PlayerId
 
 MICRO = 1_000_000  # money is counted in whole millionths of a euro
+
+
+if TYPE_CHECKING:
+    from arena.jev.client import JevClient
+    from arena.jev.config import JevConfig
 
 
 class Budget:
@@ -108,6 +113,59 @@ class Budget:
 
     def _cost(self, model: Model, input_tokens: int, output_tokens: int) -> int:
         return cost_micro_eur(self._config, model, input_tokens, output_tokens)
+
+    def jev(self, client: "JevClient", jev: "JevConfig", player: PlayerId) -> "JevClient":
+        """Wrap a Jev client so every call counts against this match's caps, as `player`'s.
+
+        Booked before it is sent at an upper bound (the request's bytes as input tokens at
+        `jev.input_usd_per_mtok`; Jev bills input tokens only), then settled with the
+        `usage.cost` Jev reports in US dollars. A cap that a call would pass pauses the match
+        (MatchPaused), as for a model call. A failed call keeps its booking, except a 429.
+        """
+        from arena.jev.client import JevError
+
+        rate = self._config.limits.usd_to_eur
+
+        async def metered(state, questions):
+            input_bound = len(json.dumps({"state": state, "questions": questions}))
+            bound = int(
+                (Decimal(input_bound) * jev.input_usd_per_mtok * rate).to_integral_value(
+                    rounding=ROUND_CEILING
+                )
+            )
+            call_id = await self._ledger.book(
+                self._match_id,
+                player,
+                jev.model,
+                bound,
+                match_cap=self.match_cap,
+                month_cap=self.month_cap,
+                now=self._now(),
+            )
+            sent = self._clock()
+            try:
+                result = await client(state, questions)
+            except JevError as error:
+                if error.reason in ("rate_limited", "disabled"):  # refused, nothing billed
+                    await self._ledger.settle(
+                        call_id, 0, 0, 0, latency_ms=round((self._clock() - sent) * 1000)
+                    )
+                raise
+            cost = int(
+                (Decimal(str(result.usage.cost)) * MICRO * rate).to_integral_value(
+                    rounding=ROUND_CEILING
+                )
+            )
+            await self._ledger.settle(
+                call_id,
+                result.usage.input_tokens,
+                result.usage.output_tokens,
+                cost,
+                latency_ms=round((self._clock() - sent) * 1000),
+            )
+            return result
+
+        return metered
 
 
 def cost_micro_eur(config: Config, model: Model, input_tokens: float, output_tokens: float) -> int:
