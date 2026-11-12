@@ -296,6 +296,14 @@ def test_lock_refuses_concurrent_client(tmp_path):
         pass
 
 
+def test_unrelated_running_match_holds_before_any_dispatch(tmp_path):
+    api = FakeArena()
+    api.records.append({"id": "unrelated", "status": "running", "batch": {"id": "foreign"}})
+    with pytest.raises(RunStopped, match="Another match is running"):
+        client(tmp_path, api).run(**EVIDENCE)
+    assert not api.bodies
+
+
 def test_w2_waits_for_reviewed_c1_smoke(tmp_path):
     api = FakeArena()
     with pytest.raises(RunStopped, match="review/release"):

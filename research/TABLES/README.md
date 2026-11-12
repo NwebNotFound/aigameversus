@@ -75,8 +75,8 @@ live running list immediately before each POST. Existing server per-match/month
 caps remain the authoritative financial boundary. No claim of distributed
 exactly-once dispatch is made; ambiguous cases stop instead of risking duplicates.
 
-Tests use a fake arena only. `mutations.json` records six deliberate bypasses
-(full reservation, 3x/90%, monthly hold, effective cap, dry-run dispatch and confirm_spend) that made targeted tests
+Tests use a fake arena only. `mutations.json` records seven deliberate bypasses
+(full reservation, 3x/90%, monthly hold, effective cap, dry-run dispatch, confirm_spend and unrelated-running-match exclusion) that made targeted tests
 fail. Raw live exports remain local/ignored; no player observation is created
 from the research CSV, which contains no hidden role map.
 

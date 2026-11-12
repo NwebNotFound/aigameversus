@@ -28,5 +28,10 @@
     "mutation": "effective-cap",
     "test_exit": 1,
     "killed": true
+  },
+  {
+    "mutation": "serial-running-match",
+    "test_exit": 1,
+    "killed": true
   }
 ]
