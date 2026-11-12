@@ -125,7 +125,11 @@ Three ways:
   `POST /matches/estimate` takes `null` for a bot seat. A model seat may add
   `"personality": "<id>"` (see "A personality" below); a bot seat may not.
   `GET /setup` says `mixed_seats: true` and `seat_personalities: true` on a
-  server that takes them. Model
+  server that takes them.
+  In the new-match form each model seat has a "Configure" panel: options, presets, and copy
+  to one or all seats (`web/src/lib/seat-config.ts`, D-145). The form sends a changed option as
+  `options` only when `seat_options` in `GET /setup` lists it, next to a live estimate and the
+  worst case. Model
   seats are refused (403) unless the server runs with
   `ARENA_ALLOW_MODEL_SEATS=1`, and (503) without the provider's key or its
   ledger (see Cost caps); a cap ends the match as `interrupted`. A finished
