@@ -7,6 +7,8 @@ of the prompt proposal):
 - `prompt_version`: `civ-p1` (the baseline: `rules.md` and the observation) or `civ-p2` (the same
   rules plus a short summary above the situation, worked out from the observation only: the
   standing in each way to win, what can be done now, what was refused, who is near).
+  `civ-p1.1` and `civ-p2.1` read the same text but show 120 events, not 40 (D-136): with six
+  nations that talk, one nation can get 45 new events in a turn.
 - `strategy_text`: `off` or `v1`, one strategy paragraph about playing for the whole match, the
   same words for every model.
 - `private_plan`: `off` or `on`, whether `submit_orders` takes a `plan` that comes back to the
@@ -21,7 +23,9 @@ from typing import Any
 
 from games.civ.world import distance
 
-VERSIONS = ("civ-p1", "civ-p2")
+VERSIONS = ("civ-p1", "civ-p1.1", "civ-p2", "civ-p2.1")
+WIDE = ("civ-p1.1", "civ-p2.1")  # same text as p1 / p2, but a prompt shows 120 events, not 40
+WIDE_HISTORY = 120
 DEFAULT_VERSION = "civ-p1"
 STRATEGY_TEXTS = ("off", "v1")
 PLAN_SETTINGS = ("off", "on")
@@ -73,6 +77,16 @@ def version_of(settings: Mapping[str, Any] | None) -> str:
     return _choice(settings, "prompt_version", VERSIONS, DEFAULT_VERSION)
 
 
+def summary_version(settings: Mapping[str, Any] | None) -> bool:
+    """Does this prompt version have the summary (civ-p2 and civ-p2.1)?"""
+    return version_of(settings) in ("civ-p2", "civ-p2.1")
+
+
+def history_limit(settings: Mapping[str, Any] | None) -> int:
+    """Events a prompt shows: 40 as everywhere, 120 for the `.1` versions (D-136)."""
+    return WIDE_HISTORY if version_of(settings) in WIDE else 40
+
+
 def strategy_of(settings: Mapping[str, Any] | None) -> str:
     return _choice(settings, "strategy_text", STRATEGY_TEXTS, "off")
 
@@ -95,7 +109,7 @@ def base_rules() -> str:
 def rules_text(settings: Mapping[str, Any] | None = None) -> str:
     """`rules.md` and what the settings add to it; with none set, `rules.md` itself."""
     text = base_rules()
-    if version_of(settings) == "civ-p2":
+    if summary_version(settings):
         text += SUMMARY_GUIDE
     if plan_of(settings) == "on":
         text += PLAN_ON
