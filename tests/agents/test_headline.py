@@ -5,9 +5,10 @@ import asyncio
 import pytest
 
 from arena.agents.mock_llm import MockLLM, tool_call
-from arena.agents.prompt import HEADLINE_CHARS
+from arena.agents.prompt import HEADLINE, HEADLINE_CHARS, THOUGHT, tool_schemas
 from arena.agents.runner import ModelAgent
 from arena.engine.match import Match
+from arena.engine.types import ToolSpec
 from games.poker.plugin import Poker
 from games.toy.plugin import ToyGame
 from tests.agents.test_model_match import HAND_SIZE, LOWEST, no_pause, of_type
@@ -76,3 +77,25 @@ def test_the_flag_is_true_or_false(value):
 def test_games_never_see_the_flag():
     match = Match(Poker(), {"p1": None, "p2": None}, seed=1, settings=ON)  # Poker refuses unknowns
     assert match.settings == ON
+
+
+def test_the_simple_schema_after_garbled_calls_asks_for_neither_thought_nor_headline():
+    # #114 (simple schema without `thought`) meets #124 (the headline): the headline hangs on
+    # the thought, so a model offered its tools without `thought` is not asked for one either.
+    tools = [
+        ToolSpec(
+            name="play",
+            description="Play.",
+            parameters={
+                "type": "object",
+                "properties": {"card": {"type": "integer"}},
+                "required": ["card"],
+            },
+        )
+    ]
+
+    (schema,) = tool_schemas(tools, with_thought=False, headline=True)
+
+    properties = schema["function"]["parameters"]["properties"]
+    assert THOUGHT not in properties and HEADLINE not in properties
+    assert HEADLINE not in schema["function"]["parameters"].get("required", [])

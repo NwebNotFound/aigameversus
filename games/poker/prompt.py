@@ -14,10 +14,11 @@ from collections.abc import Mapping
 from importlib import resources
 from typing import Any
 
+from arena.agents.prompt import with_thought_in_the_call
 from games.poker.cards import FULL_DECK, Card
 from games.poker.evaluator import HandCategory, best_hand
 
-VERSIONS = ("poker-p1", "poker-p2")
+VERSIONS = ("poker-p1", "poker-p1.1", "poker-p2")
 DEFAULT_VERSION = "poker-p1"
 _FILES = {"poker-p1": "rules.md", "poker-p2": "rules_v2.md"}
 SAMPLES = 400
@@ -48,6 +49,8 @@ def version_of(settings: Mapping[str, Any] | None) -> str:
 
 
 def rules_text(version: str) -> str:
+    if version == "poker-p1.1":  # p1, with the thought where the system message asks for it
+        return with_thought_in_the_call(rules_text("poker-p1"))
     return resources.files("games.poker").joinpath(_FILES[version]).read_text(encoding="utf-8")
 
 

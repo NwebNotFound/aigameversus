@@ -186,6 +186,8 @@ export interface SetupOptions {
 	model_seats: boolean;
 	/** Whether a table may mix models and random bots (`seats` in POST /matches). */
 	mixed_seats?: boolean;
+	/** Whether a model seat in `seats` may name a personality. */
+	seat_personalities?: boolean;
 	models: {
 		id: string;
 		model: string;
@@ -249,7 +251,7 @@ export interface NewMatch {
 	/** One model id per seat (config/models.yaml); without it every seat is a random bot. */
 	models?: string[];
 	/** One entry per seat, a model or a bot: a table that mixes them. Instead of `models`. */
-	seats?: ({ kind: 'model'; model: string } | { kind: 'bot' })[];
+	seats?: ({ kind: 'model'; model: string; personality?: string } | { kind: 'bot' })[];
 	/** Must be true with `models` or a model in `seats`: the match spends money. */
 	confirm_spend?: boolean;
 }
@@ -326,6 +328,10 @@ export interface LeaderboardRow extends Standing {
 	cost_per_game_micro_eur: number | null;
 	/** Share of answers the server refused (a wrong tool or an illegal move). */
 	tool_error_rate: number | null;
+	/** Share of answers that were a garbled call read anyway (answer_repair). */
+	repaired_rate: number | null;
+	/** Share of answers taken exactly as sent; refused + repaired + clean = 1. */
+	clean_rate: number | null;
 }
 
 /** Who the leaderboard shows: real models (the default), random bots, or both. */
@@ -378,6 +384,8 @@ export interface Usage {
 	cost_per_game_micro_eur: number | null;
 	answers: number;
 	tool_error_rate: number | null;
+	repaired_rate: number | null;
+	clean_rate: number | null;
 }
 
 /** `GET /models/{id}`: one model across all its matches and seats. */

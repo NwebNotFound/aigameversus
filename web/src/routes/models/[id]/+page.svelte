@@ -75,6 +75,16 @@
 				<span class="value" data-testid="tool-errors">{percent(page.usage.tool_error_rate)}</span
 				><span class="label">Tool errors</span>
 			</div>
+			<div>
+				<span class="value" data-testid="repaired">{percent(page.usage.repaired_rate)}</span><span
+					class="label">Repaired</span
+				>
+			</div>
+			<div>
+				<span class="value" data-testid="clean">{percent(page.usage.clean_rate)}</span><span
+					class="label">Clean</span
+				>
+			</div>
 		</section>
 
 		<section aria-labelledby="per-game">
@@ -90,6 +100,8 @@
 							<th scope="col" class="num">Avg place</th>
 							<th scope="col" class="num">Cost per game</th>
 							<th scope="col" class="num">Tool errors</th>
+							<th scope="col" class="num">Repaired</th>
+							<th scope="col" class="num">Clean</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -106,6 +118,8 @@
 								<td class="num">{placement(game.average_placement)}</td>
 								<td class="num">{cost(game.usage.cost_per_game_micro_eur)}</td>
 								<td class="num">{percent(game.usage.tool_error_rate)}</td>
+								<td class="num">{percent(game.usage.repaired_rate)}</td>
+								<td class="num">{percent(game.usage.clean_rate)}</td>
 							</tr>
 						{/each}
 					</tbody>

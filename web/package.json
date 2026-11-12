@@ -12,7 +12,7 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"lint": "prettier --check . && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"lint": "prettier --check . && node scripts/check-routes.mjs && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"format": "prettier --write .",
 		"test:unit": "vitest run",
 		"test:e2e": "playwright test"

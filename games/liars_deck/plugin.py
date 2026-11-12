@@ -177,7 +177,7 @@ class LiarsDeck(GamePlugin[LiarsState]):
         self, observation: Mapping[str, Any], settings: Mapping[str, Any] | None = None
     ) -> str | None:
         """A short text for the top of the turn's prompt; only version p2 has one."""
-        if prompt.version_of(settings) == "liars_deck-p1":
+        if prompt.version_of(settings) in ("liars_deck-p1", "liars_deck-p1.1"):
             return None
         return prompt.situation_summary(observation)
 
