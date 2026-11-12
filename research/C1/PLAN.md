@@ -58,3 +58,21 @@ Reviewer bot/leak checks must cover fog, public scoreboard allowlist, hidden
 orders, private plans and the requested observation-size limit before spending.
 No player receives spectator map/roles/orders. No qualification or Jev call is
 authorized by this plan. This custom YAML is not executable generic runner input.
+
+## Deployed 20-round free quotes (2026-11-12)
+
+The deployed rounds setting now works. Four planned rotations of GLM Flash,
+DeepSeek Flash, GPT Luna and Claude Haiku quote EUR 0.062185, 0.062360,
+0.062287 and 0.062269: EUR 0.249101 total. Responses in
+quotes-20-rounds.json verify cap_micro_eur 200000 for match_budget_eur 0.20.
+These are estimates using other-game history, not Civ cost measurements.
+
+Important remaining mismatch: prompt_version civ-p1 is refused as an unknown
+Civ setting. Quotes therefore omit that field and use the deployed default
+prompt; no claim that the final planned prompt was priced. Requote after Civ
+prompt support is available. Propose a EUR 1.00 baseline-stage ceiling with
+EUR 0.20 enforceable per-match bounds, serial starts and the existing 90% rule.
+Lead has not approved that ceiling or a paid match. Begin with one approved
+match, review reliability/cost, then decide whether to release the other three.
+The historical availability/pending-contract paragraphs above describe earlier
+checks and are superseded by these successful deployed rounds probes.

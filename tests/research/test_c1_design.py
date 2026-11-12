@@ -11,7 +11,7 @@ def test_c1_design_is_unapproved_and_keeps_factors_separate():
     assert plan["schema"] == "civ_design_only_v1"
     assert not plan["execution_approved"]
     assert plan["approved_budget_eur"] == 0
-    assert plan["requested_preset"]["round_limit_api_setting"] is None
+    assert plan["requested_preset"]["round_limit_api_setting"] == "rounds"
     assert plan["requested_preset"]["rounds"] == 20
     assert len(plan["models"]) == 4
     assert plan["baseline"]["expected_base_calls_upper"] == 80

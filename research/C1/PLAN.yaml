@@ -1,7 +1,7 @@
 id: C1
 schema: civ_design_only_v1
 version: 1
-status: design_waiting_for_deployment_and_quote
+status: quoted_default_prompt_waiting_approval_and_prompt_support
 owner: Arena Researcher
 date: '2026-11-12'
 execution_approved: false
@@ -11,8 +11,8 @@ requested_preset:
   nations: 4
   rounds: 20
   map: smallest_supported_for_four_nations
-  round_limit_api_setting: null
-  proposed_round_limit_contract: {pr: 157, key: rounds, value: 20, status: awaiting_merge_and_verified_deployment}
+  round_limit_api_setting: rounds
+  proposed_round_limit_contract: {pr: 157, key: rounds, value: 20, status: deployed_estimate_verified}
   note: 'Requirements, not accepted API settings; do not forward this object.'
 models: [glm-flash, deepseek-flash, gpt-luna, claude-haiku]
 seed: 2104001
@@ -41,8 +41,8 @@ later_factorial:
   reuse_baseline_only_if: identical_frozen_build_prompt_config_and_eligible_plan
   note: 'Enhanced civ-p2 context is a separate future experiment, never changed inside this 2x2.'
 budget:
-  proposed_stage_eur: null
-  free_estimate_eur: null
+  proposed_stage_eur: 1.00
+  free_estimate_eur: 0.249101
   required_estimate_per_match_below_eur: 0.40
   maximum_match_eur: 0.50
   monthly_cap_eur: 25
