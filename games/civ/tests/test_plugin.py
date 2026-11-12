@@ -325,7 +325,12 @@ def test_the_plan_comes_back_to_its_nation_only_and_is_cut_to_sixty_words():
     plan = "Hold the river. " + "more " * 80
     sender = Orders({"orders": [], "plan": plan})
     other = Orders({"orders": []})
-    match = Match(PLUGIN, random_bots(PLUGIN, FOUR, 1) | {"p1": sender, "p2": other}, seed=1)
+    match = Match(
+        PLUGIN,
+        random_bots(PLUGIN, FOUR, 1) | {"p1": sender, "p2": other},
+        seed=1,
+        settings={"private_plan": "on"},
+    )
     asyncio.run(match.run())
 
     kept = sender.requests[1].observation["your_plan_from_last_round"]
@@ -388,7 +393,7 @@ def test_a_match_of_mock_models_plays_to_the_end_with_failed_calls_and_garbled_a
         return None
 
     agent = ModelAgent(mock, PLUGIN, sleep=no_pause)
-    match = bot_match(seed=6, agents={"p1": agent})
+    match = bot_match(seed=6, agents={"p1": agent}, settings={"private_plan": "on"})
 
     assert match.events[-1].type == "match_finished"
     rejected = [e for e in of_type(match.events, "action_rejected") if e.data["player"] == "p1"]

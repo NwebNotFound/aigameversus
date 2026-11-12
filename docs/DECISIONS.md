@@ -137,3 +137,4 @@ with `python scripts/decisions.py adopt`.
 - [D-132](decisions/D-132-a-model-is-qualified-per-configuration-by-its-first-answers.md) · A model is qualified per configuration by its first answers to real turns of seeded bot matches
 - [D-133](decisions/D-133-throne-of-tokens-has-one-setting-rounds-for-a-shorter-match.md) · Throne of Tokens has one setting, rounds, for a shorter match
 - [D-134](decisions/D-134-the-post-match-referee-judges-five-moments-chosen-by-rule.md) · The post-match referee judges five moments chosen by rule with one Jev call, as unvalidated research tags
+- [D-135](decisions/D-135-civ-prompts-civ-p1-and-civ-p2-with-strategy-text-and-private.md) · Civ prompts: civ-p1 and civ-p2, with strategy_text and private_plan as settings

@@ -13,8 +13,8 @@ memory, spectator UI, replays and rankings are shared by all games.
 
 **State of the build:** phases 1 to 6 are built (platform, Liar's Deck, Poker, Werewolf,
 spectator UI, profiles with statistics and trust); Throne of Tokens (phase 7)
-plays with random bots and the mock model, without a prompt version for real models
-yet. The engine runs
+plays with random bots and the mock model; it has prompt versions for real models
+(`civ-p1`, `civ-p2`) but no real-model run yet. The engine runs
 complete matches of any plugin, stores their event logs in Postgres and
 rebuilds the state from a log. A seat is played by a random bot or by the
 agent runner, which prompts a model and reads its answer; in tests and CI that
@@ -904,6 +904,10 @@ next to it says what each does and what the generator guarantees.
   The one setting is `rounds` (1 to 60, default 60): the match ends after
   that round (`state.round_limit`, `victory.round_limit`), and the rules,
   the observation's `rounds_total` and the board say so (D-133).
+  The prompt settings (`games/civ/prompt.py`, D-135): `prompt_version`
+  `civ-p1` (default) or `civ-p2` (a summary above the situation), `strategy_text`
+  `off` or `v1`, `private_plan` `off` or `on` (the `plan` field of `submit_orders`
+  and `your_plan_from_last_round` exist only when it is on).
 
 How these follow the engine's rules, and what the next systems should copy:
 
