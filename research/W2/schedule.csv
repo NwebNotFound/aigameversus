@@ -1,0 +1,9 @@
+order,guest,guest_seat,expected_role,seed,p1,p2,p3,p4,p5,p6,p7,p8
+1,google/gemini-4-carbon,p4,werewolf,2103001,glm-flash,deepseek-flash,gpt-luna,google/gemini-4-carbon,mistral-small,claude-haiku,gpt-luna,claude-haiku
+2,moonshotai/kimi-k3.1-pro,p4,werewolf,2103001,glm-flash,deepseek-flash,gpt-luna,moonshotai/kimi-k3.1-pro,mistral-small,claude-haiku,gpt-luna,claude-haiku
+3,anthropic/claude-sonnet-5.5,p4,werewolf,2103001,glm-flash,deepseek-flash,gpt-luna,anthropic/claude-sonnet-5.5,mistral-small,claude-haiku,gpt-luna,claude-haiku
+4,openai/gpt-6.1-terra,p4,werewolf,2103001,glm-flash,deepseek-flash,gpt-luna,openai/gpt-6.1-terra,mistral-small,claude-haiku,gpt-luna,claude-haiku
+5,moonshotai/kimi-k3.1-pro,p3,seer,2103001,glm-flash,deepseek-flash,moonshotai/kimi-k3.1-pro,gpt-luna,mistral-small,claude-haiku,gpt-luna,claude-haiku
+6,anthropic/claude-sonnet-5.5,p3,seer,2103001,glm-flash,deepseek-flash,anthropic/claude-sonnet-5.5,gpt-luna,mistral-small,claude-haiku,gpt-luna,claude-haiku
+7,google/gemini-4-carbon,p3,seer,2103001,glm-flash,deepseek-flash,google/gemini-4-carbon,gpt-luna,mistral-small,claude-haiku,gpt-luna,claude-haiku
+8,openai/gpt-6.1-terra,p3,seer,2103001,glm-flash,deepseek-flash,openai/gpt-6.1-terra,gpt-luna,mistral-small,claude-haiku,gpt-luna,claude-haiku
