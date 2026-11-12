@@ -431,3 +431,16 @@ Codes: `duplicate_model` (the model sat in several seats of one match), `table_r
 among random bots), `not_rated` (none of those; the log does not say why). Read from the match
 records against `rated_matches`; running and failed matches are not counted.
 
+
+## Model export
+
+`GET /models/{id}/export` (`arena/api/model_export.py`) is a CSV, one row per seat the model
+played, oldest first, in every match that is not running (finished, failed, interrupted, aborted).
+Columns: `match_id, game, status, origin, started_at, finished_at, seat, personality, players,
+opponents` (other seats' model ids, `bot` for a random bot, joined with `;`), `rank, won` (empty
+without a result), `rated, unrated_reason` (codes as in "Played but not rated"),
+`rating_before, rating_after` (empty if unrated), `answers_accepted, answers_rejected,
+fallback_moves, repaired_answers` (counts from the engine log), `cost_micro_eur` (empty while the
+ledger is down: unknown, not 0), `prompt_version, memory, batch_id`. Public facts and counts only:
+no seed, no log, no hidden cards. A configured model without matches gives the header only;
+an unknown id is 404.
