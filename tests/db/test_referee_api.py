@@ -2,6 +2,7 @@
 ledger, tags with spoilers only. Jev is a FakeJev and the models are LiteLLM's mock."""
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +10,7 @@ from fastapi.testclient import TestClient
 from arena.api import referee
 from arena.api.app import app
 from arena.db.database import connect
-from arena.jev.client import FakeJev, JevError
+from arena.jev.client import FakeJev, JevError, parse
 from tests.db.test_model_seats_api import KEY, MODELS, PLAY_3, finish
 from tests.jev.test_referee import answer
 
@@ -136,3 +137,70 @@ def test_a_match_that_did_not_finish_is_never_judged(client, monkeypatch):
 
     assert stopped["status"] == "interrupted"
     assert response.status_code == 409 and fake.calls == []
+
+
+def set_limit(url, match_id, euros):
+    """As if the match had been started with this spend limit of its own."""
+
+    async def write():
+        pool = await connect(url)
+        try:
+            await pool.execute(
+                "UPDATE matches SET settings = settings || jsonb_build_object("
+                "'match_budget_eur', $2::float8) WHERE id = $1",
+                match_id,
+                euros,
+            )
+        finally:
+            await pool.close()
+
+    asyncio.run(write())
+
+
+def test_two_requests_at_once_pay_once(client, monkeypatch):
+    match = played(client)
+    sent = []
+
+    async def slow(state, questions):
+        sent.append(state)
+        await asyncio.sleep(0.5)  # the second request arrives while this one is paid for
+        return parse(answer(questions), questions)
+
+    monkeypatch.setattr(referee, "jev_client", lambda: slow)
+    url = f"/matches/{match['id']}/referee"
+
+    with ThreadPoolExecutor(2) as pool:
+        codes = sorted(
+            pool.map(lambda _: client.post(url, json={"confirm_spend": True}).status_code, [0, 1])
+        )
+
+    assert codes == [201, 409]
+    assert len(sent) == 1
+
+
+def test_the_matchs_own_spend_limit_holds_for_its_referee_and_an_unpaid_failure_may_run_again(
+    client, database_url, monkeypatch
+):
+    match = played(client)
+    set_limit(database_url, match["id"], 0.000001)  # below what the match has spent
+    fake = jev(monkeypatch, lambda state, questions: answer(questions))
+    url = f"/matches/{match['id']}/referee"
+
+    first = client.post(url, json={"confirm_spend": True}).json()
+
+    assert (first["status"], first["reason"]) == ("failed", "cap (match_cap)")
+    assert fake.calls == [] and ledger(database_url, match["id"]) == []
+    set_limit(database_url, match["id"], 0.5)  # nothing was paid: it may run again
+    second = client.post(url, json={"confirm_spend": True})
+    assert second.status_code == 201 and second.json()["status"] == "done"
+    assert len(fake.calls) == 1
+
+
+def test_a_failure_that_may_have_been_billed_is_final(client, monkeypatch):
+    match = played(client)
+    fake = jev(monkeypatch, JevError("timeout"), lambda state, questions: answer(questions))
+    url = f"/matches/{match['id']}/referee"
+
+    assert client.post(url, json={"confirm_spend": True}).json()["reason"] == "timeout"
+    assert client.post(url, json={"confirm_spend": True}).status_code == 409
+    assert len(fake.calls) == 1

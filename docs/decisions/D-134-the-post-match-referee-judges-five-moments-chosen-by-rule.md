@@ -14,8 +14,14 @@
       question (noul).
   - **State:** for each moment, only the events visible to that player before the move,
     its own thought and its own move.
-  - **Money:** the call goes through `Budget.jev` under the match id, inside the match
-    cap and the month cap. A cap stops it unsent (`failed`, `cap (...)`).
+  - **Money:** the call goes through `Budget.jev` under the match id, inside the match's
+    own `match_budget_eur` if it set one, the match cap and the month cap. A cap stops it
+    unsent (`failed`, `cap (...)`).
+  - **One run:** the run is claimed in the database (`running`) before Jev is called, so
+    two requests at once pay once; the other gets 409. A failure that cost nothing (Jev
+    disabled, rate limited, a cap) may be run again, and so may a `running` row older
+    than 10 minutes, left by a request that died. Every other result is final, `done`
+    or a failure that may have been billed (timeout, bad answer).
   - **Answers:** read strictly. A score must be a distribution over exactly the levels
     asked, else the run is `failed`, `bad_answer`.
   - **Tags:** stored per moment with the raw probabilities and `validated: false` (table
@@ -36,6 +42,10 @@
   - Sending the whole log: it would show other players' secrets.
   - Several calls per match: the plan caps it at one.
   - Showing the tags in the spoiler-free replay: they judge hidden play.
-- **Not verified:** the exact field name of a score question's levels (`criteria`, as for
-  the other types). JEV-FINDINGS.md says only "ordered array of descriptions". Check it
-  before the first real call.
+- **Before the first real call** (none is approved yet):
+  1. Check the field name of a score question's levels against the API. It is sent as
+     `criteria`, as for noul and choice, but JEV-FINDINGS.md says only "ordered array of
+     descriptions".
+  2. Nils approves real Jev calls, and ARENA_ALLOW_JEV is set on purpose.
+  3. Check one referee request by hand: only the actor's visible events, its thought and
+     its move.
