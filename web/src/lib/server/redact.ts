@@ -42,6 +42,31 @@ const PUBLIC: Record<string, Shape> = {
 		day: 'keep',
 		turn: 'keep',
 		seats: [{ player: 'keep', alive: 'keep', role: 'null' }]
+	},
+	// Throne of Tokens (docs/civ-interfaces.md): the map without stocks, unit lists and fog.
+	hex_map: {
+		layout: 'keep',
+		round: 'keep',
+		rounds_total: 'keep',
+		cols: 'keep',
+		rows: 'keep',
+		terrain: 'keep',
+		legend: 'keep',
+		cities: [
+			{
+				id: 'keep',
+				owner: 'keep',
+				tile: 'keep',
+				population: 'keep',
+				capital: 'keep',
+				walls: 'keep'
+			}
+		],
+		armies: [{ id: 'keep', owner: 'keep', tile: 'keep', strength: 'keep', fortified: 'keep' }],
+		nations: [{ id: 'keep', reputation: 'keep', cities: 'keep', at_war: 'keep' }],
+		treaties: 'keep',
+		wars: 'keep',
+		battles: 'keep'
 	}
 };
 

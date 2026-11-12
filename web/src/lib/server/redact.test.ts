@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import hexFixture from '../boards/fixture-hex-map.json';
 import type { LiveState, MatchEvent } from '../api.js';
 import {
 	publicBoard,
@@ -87,7 +88,7 @@ describe('publicBoard', () => {
 	});
 
 	it('gives no board for a layout without an allowlist', () => {
-		expect(publicBoard({ layout: 'hex_map', tiles: [1, 2] })).toBeNull();
+		expect(publicBoard({ layout: 'unlisted_layout', tiles: [1, 2] })).toBeNull();
 		expect(publicBoard({ cards: ['A1'] })).toBeNull();
 		expect(publicBoard(null)).toBeNull();
 	});
@@ -166,5 +167,23 @@ describe('publicState', () => {
 		const text = JSON.stringify(publicState(state));
 		expect(text).not.toContain('12345');
 		expect(text).not.toContain('J1');
+	});
+});
+
+describe('the Throne of Tokens map, spoiler-free', () => {
+	it('keeps the map and drops stocks, unit lists and fog', () => {
+		const board = publicBoard(hexFixture as Record<string, unknown>)!;
+		expect(board.terrain).toEqual(hexFixture.terrain);
+		expect(board.cities).toEqual(hexFixture.cities);
+		expect(board).not.toHaveProperty('fog');
+		const armies = board.armies as Record<string, unknown>[];
+		expect(armies).toHaveLength(hexFixture.armies.length);
+		for (const army of armies) {
+			expect(army).not.toHaveProperty('units');
+			expect(army.strength).toBeTypeOf('number');
+		}
+		for (const nation of board.nations as Record<string, unknown>[])
+			expect(nation).not.toHaveProperty('stock');
+		expect(JSON.stringify(board)).not.toMatch(/spearman|archer|"food"/);
 	});
 });
