@@ -64,7 +64,9 @@ def strike(state: CivState, data: CivData, ctx: TurnContext, event: Event, rng) 
                     "col": centre.col,
                     "row": centre.row,
                     "radius": radius,
-                    "until_round": state.round + event.duration_rounds - 1,
+                    # The events step runs after this round's production: the
+                    # drought holds for the next `duration_rounds` productions.
+                    "until_round": state.round + event.duration_rounds,
                     "modifiers": dict(event.effects.yield_modifiers),
                 },
             },

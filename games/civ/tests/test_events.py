@@ -41,10 +41,11 @@ def test_plague_takes_one_population_but_never_empties_a_city():
 
     assert world.state.city(city).population == 2
     assert (last(world).type, last(world).visible_to) == ("random_event", ("ada",))
-    world.state.city(city).population = 1
-    world.round()  # a new round, a new stream
-    events.roll(world.state, world.data, world.ctx)
-    assert world.state.city(city).population == 1
+    small = realm(only("plague"))
+    town = small.found("bo", CENTER, population=1)
+    events.roll(small.state, small.data, small.ctx)
+    assert last(small).data["population"] == 1
+    assert small.state.city(town).population == 1
 
 
 def test_gold_find_and_good_harvest_add_to_the_nations_stock():
@@ -72,15 +73,52 @@ def test_a_drought_halves_the_food_of_cities_in_its_region_for_its_rounds():
 
     (condition,) = world.state.conditions
     assert (condition.col, condition.row, condition.radius) == (*CENTER, 2)
-    assert condition.until_round == world.state.round + 2  # three rounds: this and two more
+    assert condition.until_round == world.state.round + 3  # the next three productions
     assert world.yields(city)["food"] == food - food // 2
-    for _ in range(3):
+    for _ in range(4):  # its three rounds of production, then one without
         world.round()
     # Over: the yield is what it is without the drought (the city may have grown meanwhile).
     with_it = world.yields(city)
     kept, world.state.conditions = world.state.conditions, []
     assert with_it == world.yields(city)
     world.state.conditions = kept
+
+
+def test_a_drought_cuts_exactly_its_rounds_of_production_in_the_shipped_order():
+    # Rolled at the end of a round, after its production, like turn.py runs it.
+    world = realm(only("drought"), bare_map({tile: "plains" for tile in RING}))
+    city = world.found("ada", CENTER)
+    world.end_round()
+    events.roll(world.state, world.data, world.ctx)
+    world.data = only("drought", chance=0.0)  # this one drought only
+
+    cut = 0
+    for _ in range(6):
+        world.start_round()
+        # What economy.produce books this round, with and without the drought.
+        dry = world.yields(city)["food"]
+        kept, world.state.conditions = world.state.conditions, []
+        wet = world.yields(city)["food"]
+        world.state.conditions = kept
+        cut += dry < wet
+        world.end_round()
+        events.roll(world.state, world.data, world.ctx)
+
+    assert cut == DATA.events["drought"].duration_rounds == 3
+
+
+def test_a_drought_is_news_only_to_the_nations_with_a_city_in_its_region():
+    world = realm(only("drought"), flat_map("plains"))
+    world.found("ada", CENTER)
+    world.found("bo", (6, 4))  # four steps away, outside the radius of 2
+
+    events.roll(world.state, world.data, world.ctx)
+
+    drought = last(world)
+    assert drought.type == "random_event" and drought.data["event"] == "drought"
+    centre = (drought.data["condition"]["col"], drought.data["condition"]["row"])
+    hit = "ada" if centre == CENTER else "bo"
+    assert drought.visible_to == (hit,)
 
 
 def test_rebellion_only_takes_a_recently_conquered_city_and_makes_it_neutral():
