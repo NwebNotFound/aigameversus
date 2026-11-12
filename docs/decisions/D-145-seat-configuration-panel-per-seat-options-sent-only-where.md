@@ -21,7 +21,7 @@
   - **Copy:** "Copy from seat N" and "Apply to all seats" make copies, so the seats do not
     share one configuration.
   - **What is sent:** the form sends a seat's changed options as `seats[i].options` only for
-    the keys that `GET /setup` lists in `seat_options` (Builder's per-seat backend, D-144).
+    the keys that `GET /setup` lists in `seat_options` (Builder's per-seat backend).
     An arena without the list gets exactly the request it got before. Options it does not
     take are shown greyed, "Not taken by this arena yet".
   - **Refused values:** an answer length outside 64-8000 tokens, a temperature outside 0-2,
@@ -36,7 +36,7 @@
   - **Read-only:** a read-only request (the LAN page) never reaches the form or the proxy;
     `src/hooks.server.ts` refuses both.
 - **Why:** Nils wants more ways to configure the AIs (Lead 8a69b7a2). The backend lands
-  separately (D-144). Sending only listed options lets the form ship first and switch each
+  separately, from Arena Builder. Sending only listed options lets the form ship first and switch each
   option on when the arena takes it, with no broken request in between.
 - **Alternatives:**
   - Waiting for the backend: the form structure and its tests would wait too.
