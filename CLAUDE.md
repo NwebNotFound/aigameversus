@@ -211,8 +211,14 @@ Anything with `async act(request) -> Reply` can take a seat (`Agent` in
     match.
   - The call is booked under its own uuid5 id, with a cap of EUR 0.03 for every retry
     together. A worst case above that is refused before booking.
-  - Each chapter may add no name, number, card or role word. A chapter that does keeps its
-    template text, and `checks` says why.
+  - Because of that id, the cost is in the month's total, but not under the match's
+    `/cost`.
+  - Estimates leave chronicle (`chronicler`) and qualification (`q-<case>`) answers out of
+    a model's history.
+  - Each chapter may add no name, number, card or role word. Events and verbs are not
+    checked. A chapter that does add one keeps its template text, and `checks` says why.
+  - No usable chapter is a failure (502), not cached, and may be retried. So may a running
+    row older than 10 minutes.
   - The answer is labelled AI-written and cached in `ai_chronicles` per match, style,
     language and model. `GET` serves the cached chronicle, free.
 

@@ -73,6 +73,7 @@ async def chronicle(
 # --- the AI-written chronicle (D-140) ----------------------------------------------------------
 
 CHRONICLE_CAP_EUR = Decimal("0.03")  # the most one chronicle may cost, retries included
+STALE_MINUTES = 10  # a `running` row this old was left by a request that died (D-134)
 
 
 class NewAiChronicle(BaseModel):
@@ -124,8 +125,6 @@ async def write_ai_chronicle(match_id: UUID, new: NewAiChronicle, request: Reque
     cached = await _ai_row(pool, match_id, new.style, new.lang, new.model)
     if cached is not None and cached["status"] == "done":
         return JSONResponse(_body(cached))  # already paid for: served, not written again
-    if cached is not None and cached["status"] == "running":
-        raise HTTPException(409, "This chronicle is being written now")
     if os.environ.get(ALLOW_MODEL_SEATS) != "1":
         raise HTTPException(
             403, f"AI chronicles make paid calls: off without {ALLOW_MODEL_SEATS}=1"
@@ -157,11 +156,15 @@ async def write_ai_chronicle(match_id: UUID, new: NewAiChronicle, request: Reque
             f" above its {CHRONICLE_CAP_EUR} EUR cap",
         )
     job_id = uuid5(NAMESPACE_URL, f"chronicle/{match_id}/{new.style}/{new.lang}/{new.model}")
+    # A running row is another request's, unless it is stale: the request that wrote it died
+    # (restart, cancel). Taking it over is safe: the same job id keeps the same cap.
     claimed = await pool.fetchval(
         "INSERT INTO ai_chronicles (match_id, style, lang, model, job_id, status, created_at)"
         " VALUES ($1, $2, $3, $4, $5, 'running', $6)"
         " ON CONFLICT (match_id, style, lang, model) DO UPDATE SET status = 'running',"
         " reason = NULL, created_at = EXCLUDED.created_at WHERE ai_chronicles.status = 'failed'"
+        " OR (ai_chronicles.status = 'running'"
+        "   AND ai_chronicles.created_at < $6 - make_interval(mins => $7))"
         " RETURNING job_id",
         match_id,
         new.style,
@@ -169,6 +172,7 @@ async def write_ai_chronicle(match_id: UUID, new: NewAiChronicle, request: Reque
         new.model,
         job_id,
         datetime.now(UTC),
+        STALE_MINUTES,
     )
     if claimed is None:
         raise HTTPException(409, "This chronicle is being written now")
@@ -179,7 +183,11 @@ async def write_ai_chronicle(match_id: UUID, new: NewAiChronicle, request: Reque
         written = await retell(
             story, new.style, new.lang, names, chronicle_call(budget, new.model), new.model
         )
-        body = written.model_dump(mode="json")
+        if any(check.ai for check in written.checks):
+            body = written.model_dump(mode="json")
+        else:  # not one chapter in the model's words: no AI chronicle, and a retry may be made
+            first = next((check.reason for check in written.checks), None)
+            status, reason = "failed", f"no chapter passed ({first})"
     except MatchPaused as pause:
         status, reason = "failed", f"cap ({pause.reason})"
     except Exception as error:  # noqa: BLE001 - a failed call is recorded, the cap holds

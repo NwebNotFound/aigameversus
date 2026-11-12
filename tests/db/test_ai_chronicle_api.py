@@ -7,10 +7,13 @@ from uuid import NAMESPACE_URL, uuid5
 import pytest
 from fastapi.testclient import TestClient
 
+from arena.agents.mock_llm import MockLLM
+from arena.agents.model import ModelReply
 from arena.api import chronicle
 from arena.api.app import app
 from arena.config import load_config
-from arena.db.database import connect
+from arena.db.database import connect, migrate
+from arena.db.ledger import Ledger
 from tests.chronicle.test_ai_chronicle import echo
 from tests.db.test_chronicle_api import finish, start
 
@@ -150,31 +153,77 @@ def test_a_retry_cannot_spend_past_what_earlier_attempts_left_of_the_cap(
     assert client.post(url, json=NEW).status_code == 502
 
 
-def test_two_requests_at_once_write_the_chronicle_once(client, database_url, monkeypatch):
-    match_id = start(client, "liars_deck", players=3, seed=5)
-    finish(client, match_id)
-    calls = model(monkeypatch)
-
-    async def running():
-        pool = await connect(database_url)
+def sql(url, query, *args):
+    async def go():
+        pool = await connect(url)
         try:
-            await pool.execute(
-                "INSERT INTO ai_chronicles (match_id, style, lang, model, job_id, status,"
-                " created_at) VALUES ($1, 'news', 'en', $2, $3, 'running', now())",
-                match_id,
-                MODEL,
-                uuid5(NAMESPACE_URL, f"chronicle/{match_id}/news/en/{MODEL}"),
-            )
+            return await pool.fetch(query, *args)
         finally:
             await pool.close()
 
-    asyncio.run(running())
+    return asyncio.run(go())
 
-    async def missed(*args):  # the other request claimed it after this one looked
-        return None
 
-    monkeypatch.setattr(chronicle, "_ai_row", missed)
+def test_a_running_chronicle_is_another_requests_until_it_is_stale(
+    client, database_url, monkeypatch
+):
+    match_id = start(client, "liars_deck", players=3, seed=5)
+    finish(client, match_id)
+    calls = model(monkeypatch)
+    sql(
+        database_url,
+        "INSERT INTO ai_chronicles (match_id, style, lang, model, job_id, status, created_at)"
+        " VALUES ($1, 'news', 'en', $2, $3, 'running', now())",
+        match_id,
+        MODEL,
+        uuid5(NAMESPACE_URL, f"chronicle/{match_id}/news/en/{MODEL}"),
+    )
+    url = f"/matches/{match_id}/chronicle/ai"
 
-    response = client.post(f"/matches/{match_id}/chronicle/ai", json=NEW)
+    assert client.post(url, json=NEW).status_code == 409  # another request writes it now
+    assert calls == [] and booked(database_url) == []
 
-    assert response.status_code == 409 and calls == [] and booked(database_url) == []
+    # The request that claimed it died (restart, cancel): after 10 minutes it is taken over.
+    sql(database_url, "UPDATE ai_chronicles SET created_at = now() - interval '11 minutes'")
+
+    assert client.post(url, json=NEW).status_code == 201 and len(calls) == 1
+
+
+def test_an_answer_with_no_usable_chapter_is_a_failure_that_may_be_retried(
+    client, database_url, monkeypatch
+):
+    match_id = start(client, "liars_deck", players=3, seed=5)
+    finish(client, match_id)
+    model(monkeypatch, make=lambda: MockLLM(ModelReply(text="Once upon a time")))
+    url = f"/matches/{match_id}/chronicle/ai"
+
+    response = client.post(url, json=NEW)
+
+    assert response.status_code == 502 and "did not call write_chronicle" in response.text
+    assert (
+        client.get(url, params={"model": MODEL, "style": "news", "lang": "en"}).status_code == 404
+    )
+    model(monkeypatch)
+    assert client.post(url, json=NEW).status_code == 201  # tried again, under the same cap
+    own = uuid5(NAMESPACE_URL, f"chronicle/{match_id}/news/en/{MODEL}")
+    assert {job for *_, job in booked(database_url)} == {own}
+
+
+def test_a_chronicle_or_qualification_answer_is_no_move_in_the_estimates_history(database_url):
+    async def go():
+        pool = await connect(database_url)
+        try:
+            await migrate(pool)
+            for player, output in [("p1", 100), ("chronicler", 5000), ("q-A", 5000)]:
+                await pool.execute(
+                    "INSERT INTO model_calls "
+                    "(match_id, player, model, called_at, output_tokens, cost_micro_eur) "
+                    "VALUES (gen_random_uuid(), $1, 'm', now(), $2, 1)",
+                    player,
+                    output,
+                )
+            return await Ledger(pool).output_tokens(["m"])
+        finally:
+            await pool.close()
+
+    assert asyncio.run(go()) == {"m": (1, 100.0)}
